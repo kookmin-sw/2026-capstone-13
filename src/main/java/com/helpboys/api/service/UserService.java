@@ -1,0 +1,80 @@
+package com.helpboys.api.service;
+
+import com.helpboys.api.dto.LoginRequest;
+import com.helpboys.api.dto.LoginResponse;
+import com.helpboys.api.dto.RegisterRequest;
+import com.helpboys.api.dto.UserResponse;
+import com.helpboys.api.entity.User;
+import com.helpboys.api.exception.BusinessException;
+import com.helpboys.api.repository.UserRepository;
+import com.helpboys.api.util.JwtUtil;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.Collections;
+
+@Service
+@RequiredArgsConstructor
+public class UserService implements UserDetailsService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+
+    // Spring Security UserDetailsService 구현
+    @Override
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + email));
+        return new org.springframework.security.core.userdetails.User(
+                user.getEmail(),
+                user.getPassword(),
+                Collections.emptyList()
+        );
+    }
+
+    // 회원가입
+    public UserResponse register(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BusinessException("이미 사용 중인 이메일입니다.");
+        }
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .nickname(request.getNickname())
+                .userType(request.getUserType())
+                .university(request.getUniversity())
+                .build();
+
+        return UserResponse.from(userRepository.save(user));
+    }
+
+    // 로그인
+    public LoginResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BusinessException("이메일 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new BusinessException("이메일 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED);
+        }
+
+        String token = jwtUtil.generateToken(user.getEmail(), user.getId());
+        return LoginResponse.builder()
+                .accessToken(token)
+                .user(UserResponse.from(user))
+                .build();
+    }
+
+    // 사용자 조회
+    public UserResponse getUserById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        return UserResponse.from(user);
+    }
+}
