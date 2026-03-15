@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \":*)",
+      "WebSearch",
+      "WebFetch(domain:www.data.go.kr)",
+      "WebFetch(domain:kosis.kr)",
+      "WebFetch(domain:kess.kedi.re.kr)"
+    ]
+  }
+}
