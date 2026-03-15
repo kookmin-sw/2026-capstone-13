@@ -48,6 +48,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(main)" />
         <Stack.Screen name="request-detail" />
+        <Stack.Screen name="chatroom" />
       </Stack>
       <StatusBar style="dark" />
     </>
