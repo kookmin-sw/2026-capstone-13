@@ -3,9 +3,9 @@ import type { HelpCategory, HelpMethod, RequestStatus } from '../types';
 
 export const Colors = {
   // 메인 색상
-  primary: '#4A90D9',
-  primaryDark: '#357ABD',
-  primaryLight: '#7FB3E8',
+  primary: '#4F46E5',
+  primaryDark: '#4338CA',
+  primaryLight: '#EEF2FF',
 
   // 배경
   background: '#F5F7FA',

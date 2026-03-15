@@ -28,7 +28,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: '도와줘코리안',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),

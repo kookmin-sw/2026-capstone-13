@@ -1,51 +1,69 @@
-// 홈 화면 - 도움 요청 피드 (당근마켓 스타일)
-import { useState, useEffect, useCallback } from 'react';
+// 홈 화면 - 도움 요청 피드 (리디자인)
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ScrollView,
   RefreshControl,
   ActivityIndicator,
+  Platform,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors, CategoryLabels, MethodLabels } from '../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
 import { MOCK_REQUESTS } from '../../constants/mockData';
 import { getHelpRequests } from '../../services/helpService';
-import type { HelpCategory, HelpRequest } from '../../types';
+import type { HelpCategory, HelpMethod, HelpRequest } from '../../types';
 
-// 카테고리 필터 탭 정의
-const CATEGORY_FILTERS: { key: HelpCategory | 'ALL'; label: string }[] = [
-  { key: 'ALL', label: '전체' },
-  { key: 'BANK', label: '🏦 은행' },
-  { key: 'HOSPITAL', label: '🏥 병원' },
-  { key: 'SCHOOL', label: '🏫 학교행정' },
-  { key: 'DAILY', label: '🏠 생활' },
-  { key: 'OTHER', label: '📌 기타' },
+const PRIMARY = '#4F46E5';
+const PRIMARY_LIGHT = '#EEF2FF';
+const BANNER_WIDTH = Dimensions.get('window').width - 40;
+
+const BANNER_SLIDES = [
+  {
+    id: 1,
+    sub: '국민대학교 · 지금 활동중',
+    main: '도움 요청 ',
+    highlight: '23개',
+    tail: ' 대기중이에요',
+    bg: ['#4F46E5', '#7C3AED'],
+  },
+  {
+    id: 2,
+    sub: '📢 중요 공지',
+    main: '수강정정 기간 ',
+    highlight: '3/16~3/20',
+    tail: '',
+    bg: ['#0EA5E9', '#6366F1'],
+  },
+  {
+    id: 3,
+    sub: '내 활동 요약',
+    main: '이번 달 도움 ',
+    highlight: '3회',
+    tail: ' · 평점 4.8 ⭐',
+    bg: ['#059669', '#0EA5E9'],
+  },
 ];
 
-// 카테고리별 이모지 (카드 썸네일 대용)
+
 const CATEGORY_EMOJI: Record<HelpCategory, string> = {
-  BANK: '🏦',
-  HOSPITAL: '🏥',
-  SCHOOL: '🏫',
-  DAILY: '🏠',
-  OTHER: '📌',
+  BANK: '🏦', HOSPITAL: '🏥', SCHOOL: '🏫', DAILY: '🏠', OTHER: '📌',
 };
 
-// 카테고리별 배경색
 const CATEGORY_BG: Record<HelpCategory, string> = {
-  BANK: '#FEF3C7',
-  HOSPITAL: '#FEE2E2',
-  SCHOOL: '#EDE9FE',
-  DAILY: '#D1FAE5',
-  OTHER: '#F3F4F6',
+  BANK: '#FEF3C7', HOSPITAL: '#FEE2E2', SCHOOL: '#EDE9FE', DAILY: '#D1FAE5', OTHER: '#F3F4F6',
 };
 
+const METHOD_BADGE: Record<HelpMethod, { bg: string; color: string; dot: string; label: string }> = {
+  CHAT:       { bg: '#EEF2FF', color: PRIMARY,    dot: PRIMARY,    label: '채팅' },
+  VIDEO_CALL: { bg: '#F5F3FF', color: '#7C3AED',  dot: '#7C3AED',  label: '영상통화' },
+  OFFLINE:    { bg: '#FFFBEB', color: '#D97706',  dot: '#D97706',  label: '오프라인' },
+};
 
-// 시간 포맷 (예: "방금 전", "3시간 전")
 function formatTime(createdAt: string): string {
   const diff = Date.now() - new Date(createdAt).getTime();
   const minutes = Math.floor(diff / 60000);
@@ -61,7 +79,22 @@ export default function HomeScreen() {
   const [requests, setRequests] = useState<HelpRequest[]>(MOCK_REQUESTS);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<HelpCategory | 'ALL'>('ALL');
+  const [selectedCategory] = useState<HelpCategory | 'ALL'>('ALL');
+  const [sortMode, setSortMode] = useState<'LATEST' | 'OPEN'>('LATEST');
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const bannerRef = useRef<ScrollView>(null);
+
+  // 3초마다 자동 슬라이드
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setBannerIndex((prev) => {
+        const next = (prev + 1) % BANNER_SLIDES.length;
+        bannerRef.current?.scrollTo({ x: next * BANNER_WIDTH, animated: true });
+        return next;
+      });
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -86,76 +119,137 @@ export default function HomeScreen() {
     fetchRequests();
   };
 
-  const filteredRequests = selectedCategory === 'ALL'
+  const filteredRequests = (selectedCategory === 'ALL'
     ? requests
-    : requests.filter((r) => r.category === selectedCategory);
+    : requests.filter((r) => r.category === selectedCategory)
+  ).filter((r) => sortMode === 'OPEN' ? r.status === 'WAITING' : true)
+   .sort((a, b) => sortMode === 'LATEST'
+     ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+     : 0
+   );
 
-  const renderItem = useCallback(({ item }: { item: HelpRequest }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push({ pathname: '/request-detail', params: { id: item.id } })}
-    >
-      {/* 왼쪽 썸네일 */}
-      <View style={[styles.thumbnail, { backgroundColor: CATEGORY_BG[item.category] }]}>
-        <Text style={styles.thumbnailEmoji}>{CATEGORY_EMOJI[item.category]}</Text>
-      </View>
+  const renderItem = useCallback(({ item }: { item: HelpRequest }) => {
+    const method = METHOD_BADGE[item.helpMethod];
+    const isMatched = item.status === 'MATCHED';
 
-      {/* 오른쪽 내용 */}
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
-        <View style={styles.cardMeta}>
-          <Text style={styles.metaText}>{item.requester.university}</Text>
-          <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.metaText}>{formatTime(item.createdAt)}</Text>
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => router.push({ pathname: '/request-detail', params: { id: item.id } })}
+        activeOpacity={0.85}
+      >
+
+        {/* 왼쪽 아이콘 */}
+        <View style={[styles.cardIcon, { backgroundColor: CATEGORY_BG[item.category] }]}>
+          <Text style={styles.cardIconEmoji}>{CATEGORY_EMOJI[item.category]}</Text>
         </View>
-        <View style={styles.cardTags}>
-          <View style={styles.methodTag}>
-            <Text style={styles.methodTagText}>{MethodLabels[item.helpMethod]}</Text>
-          </View>
-          {item.status === 'MATCHED' && (
-            <View style={styles.matchedTag}>
-              <Text style={styles.matchedTagText}>매칭완료</Text>
+
+        {/* 오른쪽 내용 */}
+        <View style={styles.cardBody}>
+          <View style={styles.cardTop}>
+            <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+            <View style={[styles.statusBadge, isMatched ? styles.statusMatched : styles.statusOpen]}>
+              <Text style={[styles.statusText, isMatched ? styles.statusMatchedText : styles.statusOpenText]}>
+                {isMatched ? '매칭됨' : '모집중'}
+              </Text>
             </View>
-          )}
+          </View>
+          <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
+          <View style={styles.cardMeta}>
+            <View style={styles.cardInfo}>
+              <View style={styles.schoolTag}><Text style={styles.schoolTagText}>국민대</Text></View>
+              <Text style={styles.timeTag}>{formatTime(item.createdAt)}</Text>
+            </View>
+            <View style={[styles.methodBadge, { backgroundColor: method.bg }]}>
+              <View style={[styles.methodDot, { backgroundColor: method.dot }]} />
+              <Text style={[styles.methodText, { color: method.color }]}>{method.label}</Text>
+            </View>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  ), []);
+      </TouchableOpacity>
+    );
+  }, []);
+
+  const ListHeader = (
+    <View style={styles.sectionHeader}>
+      <TouchableOpacity
+        style={[styles.sortBtn, sortMode === 'LATEST' && styles.sortBtnActive]}
+        onPress={() => setSortMode('LATEST')}
+      >
+        <Text style={[styles.sortBtnText, sortMode === 'LATEST' && styles.sortBtnTextActive]}>최신순</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.sortBtn, sortMode === 'OPEN' && styles.sortBtnActive]}
+        onPress={() => setSortMode('OPEN')}
+      >
+        <Text style={[styles.sortBtnText, sortMode === 'OPEN' && styles.sortBtnTextActive]}>모집중</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      {/* 카테고리 필터 탭 */}
-      <View style={styles.filterContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterScroll}
-        >
-          {CATEGORY_FILTERS.map((cat) => (
-            <TouchableOpacity
-              key={cat.key}
-              style={[
-                styles.filterTab,
-                selectedCategory === cat.key && styles.filterTabActive,
-              ]}
-              onPress={() => setSelectedCategory(cat.key)}
-            >
-              <Text style={[
-                styles.filterTabText,
-                selectedCategory === cat.key && styles.filterTabTextActive,
-              ]}>
-                {cat.label}
-              </Text>
+      {/* 커스텀 헤더 */}
+      <View style={styles.header}>
+        {/* 로고 + 버튼 */}
+        <View style={styles.headerTop}>
+          <View style={styles.logoRow}>
+            <View style={styles.logoMark}>
+              <Text style={styles.logoMarkEmoji}>🤝</Text>
+            </View>
+            <Text style={styles.appName}>
+              도와줘<Text style={styles.appNameAccent}>코리안</Text>
+            </Text>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.iconBtn}>
+              <Ionicons name="search-outline" size={18} color={PRIMARY} />
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+            <TouchableOpacity style={styles.iconBtnRelative}>
+              <Ionicons name="notifications-outline" size={18} color={PRIMARY} />
+              <View style={styles.notifDot} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 배너 캐러셀 */}
+        <View style={styles.bannerWrap}>
+          <ScrollView
+            ref={bannerRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onMomentumScrollEnd={(e) => {
+              const idx = Math.round(e.nativeEvent.contentOffset.x / BANNER_WIDTH);
+              setBannerIndex(idx);
+            }}
+          >
+            {BANNER_SLIDES.map((slide) => (
+              <View key={slide.id} style={[styles.bannerSlide, { backgroundColor: slide.bg[0] }]}>
+                <Text style={styles.bannerSub}>{slide.sub}</Text>
+                <Text style={styles.bannerMain}>
+                  {slide.main}
+                  <Text style={styles.bannerHighlight}>{slide.highlight}</Text>
+                  {slide.tail}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+          {/* 닷 인디케이터 */}
+          <View style={styles.dots}>
+            {BANNER_SLIDES.map((_, i) => (
+              <View key={i} style={[styles.dot, bannerIndex === i && styles.dotActive]} />
+            ))}
+          </View>
+        </View>
+
       </View>
 
-      {/* 도움 요청 피드 */}
+      {/* 피드 */}
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={PRIMARY} />
         </View>
       ) : (
         <FlatList
@@ -163,9 +257,9 @@ export default function HomeScreen() {
           renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.list}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ListHeaderComponent={ListHeader}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />
           }
           ListEmptyComponent={
             <View style={styles.emptyState}>
@@ -177,12 +271,16 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* 도움 요청하기 FAB */}
+      {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => router.push('/(main)/write')}
+        activeOpacity={0.88}
       >
-        <Text style={styles.fabText}>+ 도움요청하기</Text>
+        <View style={styles.fabPlus}>
+          <Text style={styles.fabPlusText}>+</Text>
+        </View>
+        <Text style={styles.fabText}>도움 요청하기</Text>
       </TouchableOpacity>
     </View>
   );
@@ -191,7 +289,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
   },
   center: {
     flex: 1,
@@ -199,119 +297,312 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // 카테고리 필터
-  filterContainer: {
-    backgroundColor: Colors.surface,
+  // 헤더
+  header: {
+    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'ios' ? 60 : 32,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: 'rgba(79,70,229,0.1)',
   },
-  filterScroll: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  filterTab: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  logoMark: {
+    width: 32,
+    height: 32,
+    backgroundColor: PRIMARY,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  filterTabActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+  logoMarkEmoji: {
+    fontSize: 16,
   },
-  filterTabText: {
+  appName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E1B4B',
+    letterSpacing: -0.5,
+  },
+  appNameAccent: {
+    color: PRIMARY,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: PRIMARY_LIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconBtnRelative: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: PRIMARY_LIGHT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  notifDot: {
+    position: 'absolute',
+    width: 7,
+    height: 7,
+    backgroundColor: '#EF4444',
+    borderRadius: 4,
+    top: 6,
+    right: 6,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+
+  // 배너 캐러셀
+  bannerWrap: {
+    marginHorizontal: 20,
+    marginBottom: 14,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  bannerSlide: {
+    width: BANNER_WIDTH,
+    padding: 18,
+    paddingBottom: 30,
+    borderRadius: 16,
+  },
+  bannerSub: {
     fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textSecondary,
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: '500',
+    marginBottom: 4,
   },
-  filterTabTextActive: {
-    color: Colors.textWhite,
+  bannerMain: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  bannerHighlight: {
+    color: '#FCD34D',
+  },
+  dots: {
+    position: 'absolute',
+    bottom: 10,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 5,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  dotActive: {
+    width: 16,
+    backgroundColor: '#FFFFFF',
+  },
+
+  // 필터 칩
+  filterScroll: {
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    gap: 7,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(79,70,229,0.1)',
+    flexShrink: 0,
+  },
+  chipActive: {
+    backgroundColor: PRIMARY,
+    borderColor: PRIMARY,
+  },
+  chipEmoji: {
+    fontSize: 13,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  chipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 
   // 리스트
   list: {
+    padding: 14,
     paddingBottom: 100,
+    gap: 10,
+    backgroundColor: '#FFFFFF',
   },
-  separator: {
-    height: 1,
-    backgroundColor: Colors.divider,
-    marginLeft: 16,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginBottom: 10,
+  },
+  sortBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(79,70,229,0.15)',
+    backgroundColor: '#FFFFFF',
+  },
+  sortBtnActive: {
+    backgroundColor: PRIMARY,
+    borderColor: PRIMARY,
+  },
+  sortBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  sortBtnTextActive: {
+    color: '#FFFFFF',
   },
 
-  // 카드 (당근마켓 스타일)
+  // 카드
   card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
     flexDirection: 'row',
-    padding: 16,
-    backgroundColor: Colors.surface,
     gap: 12,
+    alignItems: 'flex-start',
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(79,70,229,0.06)',
+    position: 'relative',
   },
-  thumbnail: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
+  cardIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
-  thumbnailEmoji: {
-    fontSize: 36,
+  cardIconEmoji: {
+    fontSize: 26,
   },
-  cardContent: {
+  cardBody: {
     flex: 1,
-    gap: 4,
+    minWidth: 0,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+    gap: 8,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#1E1B4B',
+    letterSpacing: -0.3,
+    lineHeight: 20,
+    flex: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 20,
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  statusOpen: {
+    backgroundColor: '#D1FAE5',
+  },
+  statusMatched: {
+    backgroundColor: PRIMARY_LIGHT,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  statusOpenText: {
+    color: '#065F46',
+  },
+  statusMatchedText: {
+    color: '#3730A3',
   },
   cardDesc: {
-    fontSize: 13,
-    color: Colors.textSecondary,
+    fontSize: 12,
+    color: '#6B7280',
     lineHeight: 18,
+    marginBottom: 8,
   },
   cardMeta: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
   },
-  metaText: {
-    fontSize: 12,
-    color: Colors.textLight,
-  },
-  metaDot: {
-    fontSize: 12,
-    color: Colors.textLight,
-  },
-  cardTags: {
+  cardInfo: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
-    marginTop: 4,
   },
-  methodTag: {
-    backgroundColor: Colors.divider,
+  schoolTag: {
+    backgroundColor: PRIMARY_LIGHT,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderRadius: 6,
   },
-  methodTagText: {
+  schoolTagText: {
     fontSize: 11,
-    color: Colors.textSecondary,
+    color: PRIMARY,
     fontWeight: '600',
   },
-  matchedTag: {
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  matchedTagText: {
+  timeTag: {
     fontSize: 11,
-    color: Colors.success,
-    fontWeight: '700',
+    color: '#9CA3AF',
+  },
+  methodBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  methodDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  methodText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 
   // 빈 상태
@@ -326,32 +617,50 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textSecondary,
+    color: '#6B7280',
     marginBottom: 4,
   },
   emptySubtext: {
     fontSize: 14,
-    color: Colors.textLight,
+    color: '#9CA3AF',
   },
 
   // FAB
   fab: {
     position: 'absolute',
     bottom: 24,
-    right: 20,
-    backgroundColor: Colors.primary,
+    right: 16,
+    backgroundColor: PRIMARY,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderRadius: 30,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    borderRadius: 28,
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  fabPlus: {
+    width: 22,
+    height: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fabPlusText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '300',
+    lineHeight: 20,
   },
   fabText: {
-    color: Colors.textWhite,
-    fontSize: 15,
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '700',
+    letterSpacing: -0.2,
   },
 });

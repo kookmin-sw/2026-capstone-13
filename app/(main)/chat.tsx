@@ -1,9 +1,11 @@
 // 채팅 목록 화면
 import { View, Text, StyleSheet, FlatList } from 'react-native';
-import { Colors } from '../../constants/colors';
+import { Ionicons } from '@expo/vector-icons';
 import type { ChatRoom } from '../../types';
 
-// TODO: 실제 채팅 데이터 연동
+const PRIMARY = '#4F46E5';
+const PRIMARY_LIGHT = '#EEF2FF';
+
 const MOCK_CHATS: ChatRoom[] = [];
 
 export default function ChatScreen() {
@@ -16,10 +18,12 @@ export default function ChatScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>💬</Text>
-            <Text style={styles.emptyText}>채팅이 없습니다</Text>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="chatbubbles-outline" size={36} color={PRIMARY} />
+            </View>
+            <Text style={styles.emptyText}>아직 채팅이 없어요</Text>
             <Text style={styles.emptySubtext}>
-              도움 요청이 매칭되면 여기서 대화할 수 있습니다
+              도움 요청이 매칭되면{'\n'}여기서 대화할 수 있어요
             </Text>
           </View>
         }
@@ -29,32 +33,18 @@ export default function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  list: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 48,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Colors.textSecondary,
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  list: { flexGrow: 1, justifyContent: 'center' },
+  emptyState: { alignItems: 'center', paddingVertical: 48, gap: 10 },
+  emptyIconWrap: {
+    width: 72, height: 72, borderRadius: 24,
+    backgroundColor: PRIMARY_LIGHT,
+    justifyContent: 'center', alignItems: 'center',
     marginBottom: 4,
   },
+  emptyText: { fontSize: 17, fontWeight: '700', color: '#1E1B4B' },
   emptySubtext: {
-    fontSize: 14,
-    color: Colors.textLight,
-    textAlign: 'center',
-    paddingHorizontal: 32,
+    fontSize: 14, color: '#9CA3AF',
+    textAlign: 'center', lineHeight: 21,
   },
 });
