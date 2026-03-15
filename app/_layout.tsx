@@ -47,6 +47,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(main)" />
+        <Stack.Screen name="request-detail" />
       </Stack>
       <StatusBar style="dark" />
     </>
