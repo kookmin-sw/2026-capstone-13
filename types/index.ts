@@ -20,6 +20,7 @@ export interface User {
   userType: UserType;
   university: string;
   profileImage?: string;
+  bio?: string;
   rating: number;
   helpCount: number;
   createdAt: string;
@@ -81,6 +82,24 @@ export interface Review {
   targetId: number;
   rating: number;
   content: string;
+  createdAt: string;
+}
+
+// 커뮤니티 게시글 카테고리
+export type PostCategory = 'INFO' | 'QUESTION' | 'CHAT' | 'CULTURE';
+
+// 커뮤니티 게시글
+export interface CommunityPost {
+  id: number;
+  category: PostCategory;
+  title: string;
+  content: string;
+  images: string[];
+  author: string;
+  university: string;
+  userType: UserType;
+  likes: number;
+  comments: number;
   createdAt: string;
 }
 

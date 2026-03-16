@@ -19,3 +19,22 @@ export const getMyProfile = async (): Promise<ApiResponse<User>> => {
   const response = await api.get<ApiResponse<User>>('/auth/me');
   return response.data;
 };
+
+// 자기소개 수정
+export const updateBio = async (bio: string): Promise<ApiResponse<User>> => {
+  const response = await api.patch<ApiResponse<User>>('/auth/bio', { bio });
+  return response.data;
+};
+
+// 프로필 이미지 업로드
+export const uploadProfileImage = async (imageUri: string): Promise<ApiResponse<User>> => {
+  const formData = new FormData();
+  const fileName = imageUri.split('/').pop() ?? 'profile.jpg';
+  const fileType = fileName.endsWith('.png') ? 'image/png' : 'image/jpeg';
+  formData.append('image', { uri: imageUri, name: fileName, type: fileType } as unknown as Blob);
+
+  const response = await api.post<ApiResponse<User>>('/auth/profile-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};

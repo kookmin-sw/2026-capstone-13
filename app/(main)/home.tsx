@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { MOCK_REQUESTS } from '../../constants/mockData';
 import { getHelpRequests } from '../../services/helpService';
+import { useHelpRequestStore } from '../../stores/helpRequestStore';
 import type { HelpCategory, HelpMethod, HelpRequest } from '../../types';
 
 const PRIMARY = '#4F46E5';
@@ -76,6 +77,7 @@ function formatTime(createdAt: string): string {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { myRequests } = useHelpRequestStore();
   const [requests, setRequests] = useState<HelpRequest[]>(MOCK_REQUESTS);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -119,9 +121,16 @@ export default function HomeScreen() {
     fetchRequests();
   };
 
+  // 내가 작성한 글 + 기존 목록 합치기 (중복 id 제거)
+  const existingIds = new Set(requests.map((r) => r.id));
+  const allRequests = [
+    ...myRequests.filter((r) => !existingIds.has(r.id)),
+    ...requests,
+  ];
+
   const filteredRequests = (selectedCategory === 'ALL'
-    ? requests
-    : requests.filter((r) => r.category === selectedCategory)
+    ? allRequests
+    : allRequests.filter((r) => r.category === selectedCategory)
   ).filter((r) => sortMode === 'OPEN' ? r.status === 'WAITING' : true)
    .sort((a, b) => sortMode === 'LATEST'
      ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -202,7 +211,7 @@ export default function HomeScreen() {
             </Text>
           </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.iconBtn}>
+            <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/search')}>
               <Ionicons name="search-outline" size={18} color={PRIMARY} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtnRelative}>

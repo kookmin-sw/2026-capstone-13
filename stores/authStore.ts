@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import type { User } from '../types';
-import { login as loginApi, register as registerApi, getMyProfile } from '../services/authService';
+import { login as loginApi, register as registerApi, getMyProfile, uploadProfileImage, updateBio as updateBioApi } from '../services/authService';
 import type { LoginRequest, RegisterRequest } from '../types';
 
 interface AuthState {
@@ -19,6 +19,8 @@ interface AuthState {
   loadUser: () => Promise<void>;
   loginAsGuest: () => void;
   clearError: () => void;
+  updateProfileImage: (imageUri: string) => Promise<boolean>;
+  updateBio: (bio: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -97,4 +99,26 @@ export const useAuthStore = create<AuthState>((set) => ({
   loginAsGuest: () => set({ isGuest: true, user: { id: 0, email: '', nickname: '게스트', userType: 'INTERNATIONAL', university: '', rating: 0, helpCount: 0, createdAt: '' } }),
 
   clearError: () => set({ error: null }),
+
+  // 자기소개 수정 (로컬 즉시 반영 후 서버 동기화)
+  updateBio: async (bio: string) => {
+    set((state) => ({ user: state.user ? { ...state.user, bio } : null }));
+    try {
+      await updateBioApi(bio);
+    } catch {
+      // 서버 업로드 실패해도 로컬 표시는 유지
+    }
+  },
+
+  // 프로필 이미지 변경 (로컬 즉시 반영 후 서버 동기화)
+  updateProfileImage: async (imageUri: string) => {
+    // 선택한 이미지를 즉시 로컬에 반영
+    set((state) => ({ user: state.user ? { ...state.user, profileImage: imageUri } : null }));
+    try {
+      await uploadProfileImage(imageUri);
+    } catch {
+      // 서버 업로드 실패해도 로컬 표시는 유지
+    }
+    return true;
+  },
 }));

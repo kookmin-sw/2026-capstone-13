@@ -16,6 +16,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, CategoryLabels, MethodLabels } from '../../constants/colors';
 import { createHelpRequest } from '../../services/helpService';
+import { useHelpRequestStore } from '../../stores/helpRequestStore';
+import { useAuthStore } from '../../stores/authStore';
 import type { HelpCategory, HelpMethod } from '../../types';
 
 const CATEGORIES: HelpCategory[] = ['BANK', 'HOSPITAL', 'SCHOOL', 'DAILY', 'OTHER'];
@@ -37,6 +39,8 @@ const METHOD_ICON: Record<HelpMethod, string> = {
 
 export default function WriteScreen() {
   const router = useRouter();
+  const { addMyRequest } = useHelpRequestStore();
+  const { user } = useAuthStore();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -63,25 +67,34 @@ export default function WriteScreen() {
     }
 
     setIsSubmitting(true);
+
+    // 로컬 스토어에 즉시 저장
+    if (user) {
+      addMyRequest({
+        title: title.trim(),
+        description: description.trim(),
+        category: selectedCategory,
+        helpMethod: selectedMethod,
+        requester: user,
+      });
+    }
+
     try {
-      const response = await createHelpRequest({
+      await createHelpRequest({
         title: title.trim(),
         description: description.trim(),
         category: selectedCategory,
         helpMethod: selectedMethod,
       });
-      if (response.success) {
-        Alert.alert('완료', '도움 요청이 등록되었습니다!', [
-          { text: '확인', onPress: () => router.back() },
-        ]);
-      } else {
-        Alert.alert('오류', '등록에 실패했습니다. 다시 시도해주세요.');
-      }
     } catch {
-      Alert.alert('오류', '서버에 연결할 수 없습니다.');
+      // 서버 실패해도 로컬에는 저장됨
     } finally {
       setIsSubmitting(false);
     }
+
+    Alert.alert('완료', '도움 요청이 등록되었습니다!', [
+      { text: '확인', onPress: () => router.back() },
+    ]);
   };
 
   return (
