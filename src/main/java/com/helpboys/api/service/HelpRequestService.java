@@ -82,6 +82,25 @@ public class HelpRequestService {
         return HelpRequestResponse.from(helpRequestRepository.save(helpRequest));
     }
 
+    // 도움 요청 수정 (작성자만)
+    @Transactional
+    public HelpRequestResponse updateRequest(Long requestId, HelpRequestRequest request, Long userId) {
+        HelpRequest req = findById(requestId);
+
+        if (!req.getRequester().getId().equals(userId)) {
+            throw new BusinessException("본인의 요청만 수정할 수 있습니다.", HttpStatus.FORBIDDEN);
+        }
+        if (req.getStatus() != HelpRequest.RequestStatus.WAITING) {
+            throw new BusinessException("대기 중인 요청만 수정할 수 있습니다.");
+        }
+
+        req.setTitle(request.getTitle());
+        req.setDescription(request.getDescription());
+        req.setCategory(request.getCategory());
+        req.setHelpMethod(request.getHelpMethod());
+        return HelpRequestResponse.from(helpRequestRepository.save(req));
+    }
+
     // 도움 수락 (한국인 학생이 매칭)
     @Transactional
     public HelpRequestResponse acceptRequest(Long requestId, Long helperId) {

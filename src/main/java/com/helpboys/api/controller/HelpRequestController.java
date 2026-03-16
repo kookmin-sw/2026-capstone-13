@@ -67,6 +67,16 @@ public class HelpRequestController {
                 .body(ApiResponse.success("도움 요청이 등록되었습니다.", response));
     }
 
+    // PUT /api/requests/{id} - 도움 요청 수정 (작성자만)
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<HelpRequestResponse>> updateRequest(
+            @PathVariable Long id,
+            @Valid @RequestBody HelpRequestRequest request,
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        return ResponseEntity.ok(ApiResponse.success("수정되었습니다.", helpRequestService.updateRequest(id, request, userId)));
+    }
+
     // POST /api/requests/{id}/accept - 도움 수락 (한국인 학생)
     @PostMapping("/{id}/accept")
     public ResponseEntity<ApiResponse<HelpRequestResponse>> acceptRequest(
