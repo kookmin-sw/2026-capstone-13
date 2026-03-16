@@ -41,6 +41,12 @@ export const completeHelpRequest = async (id: number): Promise<ApiResponse<HelpR
   return response.data;
 };
 
+// 도움 요청 수정
+export const updateHelpRequest = async (id: number, data: CreateHelpRequest): Promise<ApiResponse<HelpRequest>> => {
+  const response = await api.put<ApiResponse<HelpRequest>>(`/requests/${id}`, data);
+  return response.data;
+};
+
 // 도움 요청 취소 (삭제 대용)
 export const cancelHelpRequest = async (id: number): Promise<ApiResponse<HelpRequest>> => {
   const response = await api.patch<ApiResponse<HelpRequest>>(`/requests/${id}/status`, null, {

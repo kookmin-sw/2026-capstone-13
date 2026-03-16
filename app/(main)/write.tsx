@@ -15,7 +15,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, CategoryLabels, MethodLabels } from '../../constants/colors';
-import { createHelpRequest, cancelHelpRequest } from '../../services/helpService';
+import { createHelpRequest, updateHelpRequest } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
 import type { HelpCategory, HelpMethod } from '../../types';
 
@@ -92,17 +92,16 @@ export default function WriteScreen() {
       : description.trim();
 
     try {
-      // 수정 모드: 기존 글 취소 후 새 글 등록
-      if (isEditMode && params.editId) {
-        await cancelHelpRequest(Number(params.editId));
-      }
-
-      const response = await createHelpRequest({
+      const payload = {
         title: title.trim(),
         description: fullDescription,
         category: selectedCategory,
         helpMethod: selectedMethod,
-      });
+      };
+
+      const response = isEditMode && params.editId
+        ? await updateHelpRequest(Number(params.editId), payload)
+        : await createHelpRequest(payload);
 
       if (response.success) {
         Alert.alert('완료', isEditMode ? '수정이 완료됐습니다!' : '도움 요청이 등록되었습니다!', [
