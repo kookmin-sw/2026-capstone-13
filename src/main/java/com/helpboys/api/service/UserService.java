@@ -77,4 +77,22 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
         return UserResponse.from(user);
     }
+
+    // 자기소개 수정
+    @org.springframework.transaction.annotation.Transactional
+    public UserResponse updateBio(Long userId, String bio) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        user.setBio(bio);
+        return UserResponse.from(userRepository.save(user));
+    }
+
+    // 프로필 이미지 URL 저장
+    @org.springframework.transaction.annotation.Transactional
+    public UserResponse updateProfileImage(Long userId, String imageUrl) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        user.setProfileImage(imageUrl);
+        return UserResponse.from(userRepository.save(user));
+    }
 }

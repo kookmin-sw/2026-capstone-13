@@ -37,6 +37,9 @@ public class User {
     @Column(name = "profile_image")
     private String profileImage;
 
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
     @Column(nullable = false)
     @Builder.Default
     private Double rating = 0.0;

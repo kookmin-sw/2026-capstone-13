@@ -16,6 +16,7 @@ public class UserResponse {
     private String userType;
     private String university;
     private String profileImage;
+    private String bio;
     private Double rating;
     private Integer helpCount;
     private String createdAt;
@@ -28,6 +29,7 @@ public class UserResponse {
                 .userType(user.getUserType().name())
                 .university(user.getUniversity())
                 .profileImage(user.getProfileImage())
+                .bio(user.getBio())
                 .rating(user.getRating())
                 .helpCount(user.getHelpCount())
                 .createdAt(user.getCreatedAt().toString())

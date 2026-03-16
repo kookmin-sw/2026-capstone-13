@@ -7,6 +7,14 @@ import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
@@ -28,5 +36,28 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success("조회 성공", userService.getUserById(id)));
+    }
+
+    // PATCH /api/users/bio - 자기소개 수정
+    @PatchMapping("/bio")
+    public ResponseEntity<ApiResponse<UserResponse>> updateBio(
+            @RequestBody Map<String, String> body,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        return ResponseEntity.ok(ApiResponse.success("수정 완료", userService.updateBio(userId, body.get("bio"))));
+    }
+
+    // POST /api/users/profile-image - 프로필 이미지 업로드
+    @PostMapping("/profile-image")
+    public ResponseEntity<ApiResponse<UserResponse>> uploadProfileImage(
+            @RequestParam("image") MultipartFile file,
+            @RequestHeader("Authorization") String token) throws IOException {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        Path uploadDir = Paths.get("uploads");
+        Files.createDirectories(uploadDir);
+        Files.copy(file.getInputStream(), uploadDir.resolve(fileName));
+        String imageUrl = "/uploads/" + fileName;
+        return ResponseEntity.ok(ApiResponse.success("업로드 완료", userService.updateProfileImage(userId, imageUrl)));
     }
 }
