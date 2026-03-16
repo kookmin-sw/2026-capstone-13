@@ -120,6 +120,23 @@ public class HelpRequestService {
         return HelpRequestResponse.from(helpRequestRepository.save(req));
     }
 
+    // 도움 신청 거절 (외국인 학생이 helper를 거절 → WAITING으로 복귀)
+    @Transactional
+    public HelpRequestResponse rejectHelper(Long requestId, Long requesterId) {
+        HelpRequest req = findById(requestId);
+
+        if (!req.getRequester().getId().equals(requesterId)) {
+            throw new BusinessException("본인의 요청만 거절할 수 있습니다.", HttpStatus.FORBIDDEN);
+        }
+        if (req.getStatus() != HelpRequest.RequestStatus.MATCHED) {
+            throw new BusinessException("매칭 대기 중인 요청만 거절할 수 있습니다.");
+        }
+
+        req.setHelper(null);
+        req.setStatus(HelpRequest.RequestStatus.WAITING);
+        return HelpRequestResponse.from(helpRequestRepository.save(req));
+    }
+
     // 상태 변경 (진행 중 / 완료 / 취소)
     @Transactional
     public HelpRequestResponse updateStatus(Long requestId, HelpRequest.RequestStatus newStatus, Long userId) {

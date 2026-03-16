@@ -86,6 +86,15 @@ public class HelpRequestController {
         return ResponseEntity.ok(ApiResponse.success("도움 요청을 수락했습니다.", helpRequestService.acceptRequest(id, userId)));
     }
 
+    // POST /api/requests/{id}/reject - 도움 신청 거절 (외국인 학생)
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<ApiResponse<HelpRequestResponse>> rejectHelper(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        return ResponseEntity.ok(ApiResponse.success("거절되었습니다.", helpRequestService.rejectHelper(id, userId)));
+    }
+
     // PATCH /api/requests/{id}/status - 상태 변경
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<HelpRequestResponse>> updateStatus(
