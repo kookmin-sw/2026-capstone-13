@@ -1,5 +1,5 @@
-// 채팅방 화면
-import { useState, useRef } from 'react';
+// 채팅방 화면 (WebSocket STOMP 실시간 채팅)
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,76 +10,134 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Client } from '@stomp/stompjs';
+import * as SecureStore from 'expo-secure-store';
+import { getChatMessages, type ChatMessageDto } from '../services/chatService';
+import { useAuthStore } from '../stores/authStore';
 
 const PRIMARY = '#4F46E5';
 const PRIMARY_LIGHT = '#EEF2FF';
 
-interface Message {
-  id: number;
-  senderId: number;
-  content: string;
-  time: string;
-  read: boolean;
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api';
+const WS_URL = BASE_URL.replace(/^https?/, 'wss').replace('/api', '') + '/ws-native';
+
+type ListItem = ChatMessageDto | { type: 'date'; label: string; id: string };
+
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 }
 
-const MY_ID = 0;
-
-const INITIAL_MESSAGES: Message[] = [
-  { id: 1, senderId: 1, content: '안녕하세요! 은행 계좌 개설 도움 요청 보고 연락드려요 😊', time: '오후 2:10', read: true },
-  { id: 2, senderId: MY_ID, content: '안녕하세요! 저도 반가워요. 어느 은행 가실 건가요?', time: '오후 2:11', read: true },
-  { id: 3, senderId: 1, content: '신한은행이요. 국민대 근처 지점으로 가려고 해요.', time: '오후 2:12', read: true },
-  { id: 4, senderId: MY_ID, content: '아 거기 가봤어요!\n외국인 계좌 개설 서류는\n① 여권\n② 외국인등록증\n③ 재학증명서\n이렇게 3가지 필요해요.', time: '오후 2:13', read: true },
-  { id: 5, senderId: 1, content: '오 감사합니다! 재학증명서는 어디서 받아요?', time: '오후 2:14', read: true },
-  { id: 6, senderId: MY_ID, content: '포털 사이트에서 발급받을 수 있어요.\n학교 홈페이지 → 증명서 발급 메뉴에서요!', time: '오후 2:20', read: true },
-  { id: 7, senderId: 1, content: '네, 내일 오전 10시에 신한은행 앞에서 만나요! 😄', time: '오후 2:34', read: true },
-];
-
-// 날짜 구분선 데이터
-type ListItem = Message | { type: 'date'; label: string; id: string };
-
-const LIST_DATA: ListItem[] = [
-  { type: 'date', label: '2026년 3월 15일', id: 'date-1' },
-  ...INITIAL_MESSAGES,
-];
+function todayLabel(): string {
+  const d = new Date();
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
 
 export default function ChatRoomScreen() {
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const { user } = useAuthStore();
+  const params = useLocalSearchParams<{
+    roomId: string;
+    requestTitle: string;
+    partnerNickname: string;
+  }>();
+
+  const roomId = Number(params.roomId);
+  const partnerNickname = params.partnerNickname ?? '상대방';
+  const requestTitle = params.requestTitle ?? '도움 요청';
+
+  const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [input, setInput] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const clientRef = useRef<Client | null>(null);
   const listRef = useRef<FlatList>(null);
 
-  const listData: ListItem[] = [
-    { type: 'date', label: '2026년 3월 15일', id: 'date-1' },
-    ...messages,
-  ];
+  // 이전 메시지 조회
+  const loadHistory = useCallback(async () => {
+    try {
+      const res = await getChatMessages(roomId);
+      if (res.success) setMessages(res.data);
+    } catch {
+      // 이력 조회 실패는 무시 (새 채팅방일 수 있음)
+    } finally {
+      setIsLoading(false);
+    }
+  }, [roomId]);
+
+  // WebSocket 연결
+  useEffect(() => {
+    loadHistory();
+
+    let client: Client;
+
+    SecureStore.getItemAsync('accessToken').then((token) => {
+    client = new Client({
+      brokerURL: WS_URL,
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+      reconnectDelay: 5000,
+      onConnect: () => {
+        setIsConnected(true);
+        client.subscribe(`/topic/chat/${roomId}`, (frame) => {
+          try {
+            const msg: ChatMessageDto = JSON.parse(frame.body);
+            setMessages((prev) => [...prev, msg]);
+            setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+          } catch {
+            // 파싱 실패 무시
+          }
+        });
+      },
+      onDisconnect: () => setIsConnected(false),
+      onStompError: () => setIsConnected(false),
+    });
+
+      client.activate();
+      clientRef.current = client;
+    });
+
+    return () => {
+      clientRef.current?.deactivate();
+    };
+  }, [roomId, loadHistory]);
 
   const sendMessage = () => {
     const text = input.trim();
-    if (!text) return;
-    const newMsg: Message = {
-      id: messages.length + 1,
-      senderId: MY_ID,
+    if (!text || !clientRef.current?.connected || !user) return;
+
+    const payload: ChatMessageDto = {
+      roomId,
+      senderId: user.id,
+      senderNickname: user.nickname,
       content: text,
-      time: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-      read: false,
+      createdAt: new Date().toISOString(),
     };
-    setMessages((prev) => [...prev, newMsg]);
+
+    clientRef.current.publish({
+      destination: '/app/chat/send',
+      body: JSON.stringify(payload),
+    });
+
     setInput('');
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   const handleVideoCall = () => {
-    Alert.alert('영상통화', '김민준님과 영상통화를 시작할까요?', [
+    Alert.alert('영상통화', `${partnerNickname}님과 영상통화를 시작할까요?`, [
       { text: '취소', style: 'cancel' },
       { text: '시작', onPress: () => Alert.alert('연결 중...', '영상통화 기능은 준비 중이에요.') },
     ]);
   };
 
+  const listData: ListItem[] = [
+    { type: 'date', label: todayLabel(), id: 'date-today' },
+    ...messages,
+  ];
+
   const renderItem = ({ item }: { item: ListItem }) => {
-    // 날짜 구분선
     if ('type' in item && item.type === 'date') {
       return (
         <View style={styles.dateSeparator}>
@@ -90,41 +148,31 @@ export default function ChatRoomScreen() {
       );
     }
 
-    const msg = item as Message;
-    const isMine = msg.senderId === MY_ID;
+    const msg = item as ChatMessageDto;
+    const isMine = msg.senderId === user?.id;
 
     return (
       <View style={[styles.msgRow, isMine ? styles.msgRowMine : styles.msgRowOther]}>
-        {/* 상대방 아바타 */}
         {!isMine && (
           <View style={styles.msgAvatar}>
-            <Text style={styles.msgAvatarText}>김</Text>
+            <Text style={styles.msgAvatarText}>{msg.senderNickname.charAt(0)}</Text>
           </View>
         )}
-
         <View style={[styles.msgGroup, isMine && styles.msgGroupMine]}>
-          {/* 상대방 이름 */}
-          {!isMine && <Text style={styles.senderName}>김민준</Text>}
-
+          {!isMine && <Text style={styles.senderName}>{msg.senderNickname}</Text>}
           <View style={[styles.bubbleRow, isMine && styles.bubbleRowMine]}>
-            {/* 읽음 + 시간 (내 메시지 왼쪽) */}
             {isMine && (
               <View style={styles.msgMeta}>
-                {msg.read && <Text style={styles.readText}>읽음</Text>}
-                <Text style={styles.msgTime}>{msg.time}</Text>
+                <Text style={styles.msgTime}>{formatTime(msg.createdAt)}</Text>
               </View>
             )}
-
-            {/* 말풍선 */}
             <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}>
               <Text style={[styles.bubbleText, isMine && styles.bubbleTextMine]}>
                 {msg.content}
               </Text>
             </View>
-
-            {/* 시간 (상대방 메시지 오른쪽) */}
             {!isMine && (
-              <Text style={[styles.msgTime, styles.msgTimeOther]}>{msg.time}</Text>
+              <Text style={[styles.msgTime, styles.msgTimeOther]}>{formatTime(msg.createdAt)}</Text>
             )}
           </View>
         </View>
@@ -143,20 +191,18 @@ export default function ChatRoomScreen() {
         <TouchableOpacity style={styles.navBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={18} color={PRIMARY} />
         </TouchableOpacity>
-
-        {/* 파트너 정보 */}
         <TouchableOpacity style={styles.headerCenter} activeOpacity={0.7}>
           <View style={styles.headerAvatar}>
-            <Text style={styles.headerAvatarText}>김</Text>
-            <View style={styles.headerOnline} />
+            <Text style={styles.headerAvatarText}>{partnerNickname.charAt(0)}</Text>
+            {isConnected && <View style={styles.headerOnline} />}
           </View>
           <View>
-            <Text style={styles.headerName}>김민준</Text>
-            <Text style={styles.headerSub}>🟢 온라인</Text>
+            <Text style={styles.headerName}>{partnerNickname}</Text>
+            <Text style={[styles.headerSub, !isConnected && styles.headerSubOffline]}>
+              {isConnected ? '🟢 연결됨' : '⚪ 연결 중...'}
+            </Text>
           </View>
         </TouchableOpacity>
-
-        {/* 우측 버튼들 */}
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.actionBtn} onPress={handleVideoCall}>
             <Ionicons name="videocam" size={18} color={PRIMARY} />
@@ -170,22 +216,28 @@ export default function ChatRoomScreen() {
       {/* 요청 컨텍스트 배너 */}
       <View style={styles.contextBanner}>
         <Ionicons name="document-text-outline" size={13} color={PRIMARY} />
-        <Text style={styles.contextText} numberOfLines={1}>은행 계좌 개설 도와주실 분 구해요</Text>
+        <Text style={styles.contextText} numberOfLines={1}>{requestTitle}</Text>
         <View style={styles.contextBadge}>
           <Text style={styles.contextBadgeText}>매칭됨</Text>
         </View>
       </View>
 
       {/* 메시지 목록 */}
-      <FlatList
-        ref={listRef}
-        data={listData}
-        renderItem={renderItem}
-        keyExtractor={(item) => ('type' in item ? item.id : item.id.toString())}
-        contentContainerStyle={styles.messageList}
-        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-        showsVerticalScrollIndicator={false}
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={PRIMARY} />
+        </View>
+      ) : (
+        <FlatList
+          ref={listRef}
+          data={listData}
+          renderItem={renderItem}
+          keyExtractor={(item) => ('type' in item ? item.id : `${item.senderId}-${item.createdAt}`)}
+          contentContainerStyle={styles.messageList}
+          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
       {/* 입력창 */}
       <View style={styles.inputBar}>
@@ -203,9 +255,9 @@ export default function ChatRoomScreen() {
           returnKeyType="default"
         />
         <TouchableOpacity
-          style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
+          style={[styles.sendBtn, (!input.trim() || !isConnected) && styles.sendBtnDisabled]}
           onPress={sendMessage}
-          disabled={!input.trim()}
+          disabled={!input.trim() || !isConnected}
           activeOpacity={0.85}
         >
           <Ionicons name="send" size={16} color="#FFFFFF" />
@@ -217,8 +269,8 @@ export default function ChatRoomScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F8' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  // 헤더
   header: {
     backgroundColor: '#FFFFFF',
     paddingTop: Platform.OS === 'ios' ? 52 : 16,
@@ -258,6 +310,7 @@ const styles = StyleSheet.create({
   },
   headerName: { fontSize: 15, fontWeight: '700', color: '#1E1B4B' },
   headerSub: { fontSize: 11, color: '#10B981', fontWeight: '500' },
+  headerSubOffline: { color: '#9CA3AF' },
   headerActions: { flexDirection: 'row', gap: 6 },
   actionBtn: {
     width: 36, height: 36, borderRadius: 10,
@@ -265,7 +318,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
 
-  // 컨텍스트 배너
   contextBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -284,10 +336,8 @@ const styles = StyleSheet.create({
   },
   contextBadgeText: { fontSize: 10, fontWeight: '700', color: '#065F46' },
 
-  // 메시지 리스트
   messageList: { padding: 16, paddingBottom: 12 },
 
-  // 날짜 구분선
   dateSeparator: {
     flexDirection: 'row', alignItems: 'center',
     gap: 10, marginVertical: 16,
@@ -295,7 +345,6 @@ const styles = StyleSheet.create({
   dateLine: { flex: 1, height: 1, backgroundColor: 'rgba(79,70,229,0.1)' },
   dateLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
 
-  // 메시지 행
   msgRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -350,9 +399,7 @@ const styles = StyleSheet.create({
   msgMeta: { alignItems: 'flex-end', gap: 2, paddingBottom: 2 },
   msgTime: { fontSize: 10, color: '#9CA3AF' },
   msgTimeOther: { paddingBottom: 2 },
-  readText: { fontSize: 10, color: PRIMARY, fontWeight: '600' },
 
-  // 입력창
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',

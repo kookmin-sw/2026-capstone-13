@@ -106,6 +106,8 @@ export default function RequestDetailScreen() {
 
   const { body, meta } = parseDescription(item.description);
   const isMyPost = user?.id === item.requester.id;
+  const isHelper = user?.id === item.helper?.id;
+  const isInChat = item.status === 'MATCHED' && (isMyPost || isHelper);
   const canHelp = !isMyPost && item.status === 'WAITING' && user?.userType === 'KOREAN';
 
   const handleDelete = () => {
@@ -149,6 +151,17 @@ export default function RequestDetailScreen() {
     });
   };
 
+  const goToChatRoom = () => {
+    router.push({
+      pathname: '/chatroom',
+      params: {
+        roomId: item.id,
+        requestTitle: item.title,
+        partnerNickname: user?.userType === 'KOREAN' ? item.requester.nickname : (item.helper?.nickname ?? ''),
+      },
+    });
+  };
+
   const handleHelp = () => {
     Alert.alert(
       '도움 신청',
@@ -163,7 +176,9 @@ export default function RequestDetailScreen() {
               const response = await acceptHelpRequest(item.id);
               if (response.success) {
                 setItem(response.data);
-                Alert.alert('신청 완료', '도움 신청이 완료됐어요!');
+                Alert.alert('신청 완료', '도움 신청을 보냈어요!\n상대방이 수락하면 채팅이 시작됩니다.', [
+                  { text: '확인', onPress: () => router.back() },
+                ]);
               } else {
                 Alert.alert('실패', response.message);
               }
@@ -331,7 +346,11 @@ export default function RequestDetailScreen() {
         <TouchableOpacity style={styles.bookmarkBtn}>
           <Ionicons name="bookmark-outline" size={20} color={PRIMARY} />
         </TouchableOpacity>
-        {isMyPost ? (
+        {isInChat ? (
+          <TouchableOpacity style={styles.helpBtn} onPress={goToChatRoom}>
+            <Text style={styles.helpBtnText}>💬 채팅방으로 이동</Text>
+          </TouchableOpacity>
+        ) : isMyPost ? (
           <View style={styles.myPostActions}>
             <TouchableOpacity style={styles.editBtn} onPress={handleEdit}>
               <Text style={styles.editBtnText}>수정</Text>

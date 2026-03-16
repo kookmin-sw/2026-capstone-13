@@ -54,3 +54,29 @@ export const cancelHelpRequest = async (id: number): Promise<ApiResponse<HelpReq
   });
   return response.data;
 };
+
+// 도움 신청 거절 (외국인 학생이 helper 거절 → WAITING 복귀)
+export const rejectHelper = async (id: number): Promise<ApiResponse<HelpRequest>> => {
+  const response = await api.post<ApiResponse<HelpRequest>>(`/requests/${id}/reject`);
+  return response.data;
+};
+
+// 도움 진행 시작 (외국인 수락 → IN_PROGRESS)
+export const startHelpRequest = async (id: number): Promise<ApiResponse<HelpRequest>> => {
+  const response = await api.patch<ApiResponse<HelpRequest>>(`/requests/${id}/status`, null, {
+    params: { status: 'IN_PROGRESS' },
+  });
+  return response.data;
+};
+
+// 내가 등록한 도움 요청 목록
+export const getMyRequests = async (): Promise<ApiResponse<HelpRequest[]>> => {
+  const response = await api.get<ApiResponse<HelpRequest[]>>('/requests/my');
+  return response.data;
+};
+
+// 내가 도움을 준 요청 목록
+export const getHelpedRequests = async (): Promise<ApiResponse<HelpRequest[]>> => {
+  const response = await api.get<ApiResponse<HelpRequest[]>>('/requests/helped');
+  return response.data;
+};
