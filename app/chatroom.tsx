@@ -23,13 +23,18 @@ const PRIMARY = '#4F46E5';
 const PRIMARY_LIGHT = '#EEF2FF';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api';
-const WS_URL = BASE_URL.replace(/^https?/, 'wss').replace('/api', '') + '/ws-native';
+// https://xxx.up.railway.app/api → wss://xxx.up.railway.app/ws-native
+const WS_URL = BASE_URL.replace(/^http/, 'ws').replace(/\/api$/, '') + '/ws-native';
 
 type ListItem = ChatMessageDto | { type: 'date'; label: string; id: string };
 
 function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
 }
 
 function todayLabel(): string {
@@ -61,53 +66,92 @@ export default function ChatRoomScreen() {
   const loadHistory = useCallback(async () => {
     try {
       const res = await getChatMessages(roomId);
-      if (res.success) setMessages(res.data);
+      if (res.success && res.data.length > 0) {
+        setMessages(res.data);
+      }
     } catch {
-      // 이력 조회 실패는 무시 (새 채팅방일 수 있음)
+      // 새 채팅방이면 이력 없음 - 무시
     } finally {
       setIsLoading(false);
     }
   }, [roomId]);
 
-  // WebSocket 연결
+  // WebSocket STOMP 연결
   useEffect(() => {
     loadHistory();
 
-    let client: Client;
+    let mounted = true;
 
-    SecureStore.getItemAsync('accessToken').then((token) => {
-    client = new Client({
-      brokerURL: WS_URL,
-      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
-      reconnectDelay: 5000,
-      onConnect: () => {
-        setIsConnected(true);
-        client.subscribe(`/topic/chat/${roomId}`, (frame) => {
-          try {
-            const msg: ChatMessageDto = JSON.parse(frame.body);
-            setMessages((prev) => [...prev, msg]);
-            setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-          } catch {
-            // 파싱 실패 무시
-          }
-        });
-      },
-      onDisconnect: () => setIsConnected(false),
-      onStompError: () => setIsConnected(false),
-    });
+    const connect = async () => {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!mounted) return;
+
+      const wsUrl = WS_URL;
+
+      const client = new Client({
+        // React Native 환경에서 webSocketFactory 명시 (TextEncoder 이슈 방지)
+        webSocketFactory: () => new WebSocket(wsUrl),
+        connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+        reconnectDelay: 5000,
+        onConnect: () => {
+          if (!mounted) return;
+          setIsConnected(true);
+          client.subscribe(`/topic/chat/${roomId}`, (frame) => {
+            try {
+              const msg: ChatMessageDto = JSON.parse(frame.body);
+              if (mounted) {
+                setMessages((prev) => {
+                  // 내가 보낸 메시지가 돌아온 경우 중복 방지 (createdAt 기준)
+                  const isDuplicate = prev.some(
+                    (m) => m.senderId === msg.senderId &&
+                           m.content === msg.content &&
+                           m.createdAt === msg.createdAt
+                  );
+                  if (isDuplicate) return prev;
+                  return [...prev, msg];
+                });
+                setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+              }
+            } catch {
+              // 파싱 오류 무시
+            }
+          });
+        },
+        onDisconnect: () => {
+          if (mounted) setIsConnected(false);
+        },
+        onStompError: (frame) => {
+          console.warn('STOMP error', frame.headers['message']);
+          if (mounted) setIsConnected(false);
+        },
+        onWebSocketError: (event) => {
+          console.warn('WebSocket error', event);
+          if (mounted) setIsConnected(false);
+        },
+      });
 
       client.activate();
       clientRef.current = client;
-    });
+    };
+
+    connect();
 
     return () => {
+      mounted = false;
       clientRef.current?.deactivate();
+      clientRef.current = null;
     };
   }, [roomId, loadHistory]);
 
   const sendMessage = () => {
     const text = input.trim();
-    if (!text || !clientRef.current?.connected || !user) return;
+    if (!text || !user) return;
+
+    const client = clientRef.current;
+    if (!client?.connected) {
+      Alert.alert('연결 오류', '채팅 서버에 연결되지 않았습니다.\n잠시 후 다시 시도해주세요.');
+      return;
+    }
 
     const payload: ChatMessageDto = {
       roomId,
@@ -117,7 +161,7 @@ export default function ChatRoomScreen() {
       createdAt: new Date().toISOString(),
     };
 
-    clientRef.current.publish({
+    client.publish({
       destination: '/app/chat/send',
       body: JSON.stringify(payload),
     });
@@ -128,7 +172,7 @@ export default function ChatRoomScreen() {
   const handleVideoCall = () => {
     Alert.alert('영상통화', `${partnerNickname}님과 영상통화를 시작할까요?`, [
       { text: '취소', style: 'cancel' },
-      { text: '시작', onPress: () => Alert.alert('연결 중...', '영상통화 기능은 준비 중이에요.') },
+      { text: '시작', onPress: () => Alert.alert('준비 중', '영상통화 기능은 준비 중이에요.') },
     ]);
   };
 
@@ -162,9 +206,7 @@ export default function ChatRoomScreen() {
           {!isMine && <Text style={styles.senderName}>{msg.senderNickname}</Text>}
           <View style={[styles.bubbleRow, isMine && styles.bubbleRowMine]}>
             {isMine && (
-              <View style={styles.msgMeta}>
-                <Text style={styles.msgTime}>{formatTime(msg.createdAt)}</Text>
-              </View>
+              <Text style={styles.msgTime}>{formatTime(msg.createdAt)}</Text>
             )}
             <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}>
               <Text style={[styles.bubbleText, isMine && styles.bubbleTextMine]}>
@@ -191,6 +233,7 @@ export default function ChatRoomScreen() {
         <TouchableOpacity style={styles.navBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={18} color={PRIMARY} />
         </TouchableOpacity>
+
         <TouchableOpacity style={styles.headerCenter} activeOpacity={0.7}>
           <View style={styles.headerAvatar}>
             <Text style={styles.headerAvatarText}>{partnerNickname.charAt(0)}</Text>
@@ -203,6 +246,7 @@ export default function ChatRoomScreen() {
             </Text>
           </View>
         </TouchableOpacity>
+
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.actionBtn} onPress={handleVideoCall}>
             <Ionicons name="videocam" size={18} color={PRIMARY} />
@@ -218,7 +262,7 @@ export default function ChatRoomScreen() {
         <Ionicons name="document-text-outline" size={13} color={PRIMARY} />
         <Text style={styles.contextText} numberOfLines={1}>{requestTitle}</Text>
         <View style={styles.contextBadge}>
-          <Text style={styles.contextBadgeText}>매칭됨</Text>
+          <Text style={styles.contextBadgeText}>진행 중</Text>
         </View>
       </View>
 
@@ -232,11 +276,31 @@ export default function ChatRoomScreen() {
           ref={listRef}
           data={listData}
           renderItem={renderItem}
-          keyExtractor={(item) => ('type' in item ? item.id : `${item.senderId}-${item.createdAt}`)}
-          contentContainerStyle={styles.messageList}
+          keyExtractor={(item) =>
+            'type' in item ? item.id : `${item.senderId}-${item.createdAt}-${item.content.slice(0, 8)}`
+          }
+          contentContainerStyle={[
+            styles.messageList,
+            listData.length <= 1 && styles.messageListEmpty,
+          ]}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyChat}>
+              <Text style={styles.emptyChatText}>
+                첫 메시지를 보내보세요! 👋
+              </Text>
+            </View>
+          }
         />
+      )}
+
+      {/* 연결 안됨 배너 */}
+      {!isConnected && !isLoading && (
+        <View style={styles.disconnectedBanner}>
+          <Ionicons name="wifi-outline" size={13} color="#DC2626" />
+          <Text style={styles.disconnectedText}>서버 연결 중...</Text>
+        </View>
       )}
 
       {/* 입력창 */}
@@ -253,11 +317,13 @@ export default function ChatRoomScreen() {
           multiline
           maxLength={500}
           returnKeyType="default"
+          onSubmitEditing={sendMessage}
+          blurOnSubmit={false}
         />
         <TouchableOpacity
-          style={[styles.sendBtn, (!input.trim() || !isConnected) && styles.sendBtnDisabled]}
+          style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
           onPress={sendMessage}
-          disabled={!input.trim() || !isConnected}
+          disabled={!input.trim()}
           activeOpacity={0.85}
         >
           <Ionicons name="send" size={16} color="#FFFFFF" />
@@ -336,7 +402,28 @@ const styles = StyleSheet.create({
   },
   contextBadgeText: { fontSize: 10, fontWeight: '700', color: '#065F46' },
 
-  messageList: { padding: 16, paddingBottom: 12 },
+  messageList: { padding: 16, paddingBottom: 12, flexGrow: 1 },
+  messageListEmpty: { flex: 1 },
+
+  emptyChat: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyChatText: { fontSize: 14, color: '#9CA3AF' },
+
+  disconnectedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#FECACA',
+  },
+  disconnectedText: { fontSize: 12, color: '#DC2626' },
 
   dateSeparator: {
     flexDirection: 'row', alignItems: 'center',
@@ -396,9 +483,8 @@ const styles = StyleSheet.create({
   bubbleText: { fontSize: 14, color: '#1E1B4B', lineHeight: 21 },
   bubbleTextMine: { color: '#FFFFFF' },
 
-  msgMeta: { alignItems: 'flex-end', gap: 2, paddingBottom: 2 },
-  msgTime: { fontSize: 10, color: '#9CA3AF' },
-  msgTimeOther: { paddingBottom: 2 },
+  msgTime: { fontSize: 10, color: '#9CA3AF', paddingBottom: 2 },
+  msgTimeOther: {},
 
   inputBar: {
     flexDirection: 'row',
