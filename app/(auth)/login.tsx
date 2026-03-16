@@ -17,7 +17,7 @@ import { Colors } from '../../constants/colors';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, isLoading, clearError, loginAsGuest } = useAuthStore();
+  const { login, isLoading, clearError } = useAuthStore();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -95,16 +95,44 @@ export default function LoginScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* 건너뛰기 */}
-        <TouchableOpacity
-          style={styles.skipLink}
-          onPress={() => {
-            loginAsGuest();
-            router.replace('/(main)/home');
-          }}
-        >
-          <Text style={styles.skipText}>로그인 없이 둘러보기</Text>
-        </TouchableOpacity>
+        {/* 개발용 테스트 계정 */}
+        <View style={styles.testContainer}>
+          <Text style={styles.testLabel}>개발용 테스트</Text>
+          <View style={styles.testButtons}>
+            <TouchableOpacity
+              style={[styles.testButton, styles.testButtonInternational]}
+              onPress={async () => {
+                const success = await login({
+                  email: 'sang020531@naver.com',
+                  password: 'sang3036828@',
+                });
+                if (success) {
+                  router.replace('/(main)/home');
+                } else {
+                  Alert.alert('실패', '외국인 테스트 계정 로그인 실패');
+                }
+              }}
+            >
+              <Text style={styles.testButtonText}>🌍 외국인 계정</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.testButton, styles.testButtonKorean]}
+              onPress={async () => {
+                const success = await login({
+                  email: 'sang020531@kookmin.ac.kr',
+                  password: 'sang3036828@',
+                });
+                if (success) {
+                  router.replace('/(main)/home');
+                } else {
+                  Alert.alert('실패', '한국인 테스트 계정 로그인 실패');
+                }
+              }}
+            >
+              <Text style={styles.testButtonText}>🇰🇷 한국인 계정</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -178,13 +206,38 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '700',
   },
-  skipLink: {
-    marginTop: 12,
+  testContainer: {
+    marginTop: 24,
     alignItems: 'center',
+    gap: 10,
   },
-  skipText: {
-    fontSize: 13,
+  testLabel: {
+    fontSize: 11,
     color: Colors.textLight,
-    textDecorationLine: 'underline',
+    letterSpacing: 1,
+  },
+  testButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  testButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  testButtonInternational: {
+    borderColor: Colors.primary,
+    backgroundColor: '#EBF5FF',
+  },
+  testButtonKorean: {
+    borderColor: '#E53935',
+    backgroundColor: '#FFEBEE',
+  },
+  testButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textPrimary,
   },
 });

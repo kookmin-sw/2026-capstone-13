@@ -1,4 +1,5 @@
 // 도움 요청 상세 화면 (리디자인)
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,13 +8,14 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryLabels } from '../constants/colors';
-import { MOCK_REQUESTS } from '../constants/mockData';
+import { getHelpRequestById, acceptHelpRequest, cancelHelpRequest } from '../services/helpService';
 import { useAuthStore } from '../stores/authStore';
-import type { HelpCategory, HelpMethod } from '../types';
+import type { HelpCategory, HelpMethod, HelpRequest } from '../types';
 
 const PRIMARY = '#4F46E5';
 const PRIMARY_LIGHT = '#EEF2FF';
@@ -36,11 +38,19 @@ const METHOD_DOT: Record<HelpMethod, string> = {
   OFFLINE: '#D97706',
 };
 
-// 목업 헬퍼 데이터 (백엔드 연결 전)
-const MOCK_HELPERS = [
-  { id: 10, name: '김민준', detail: '경영학과 3학년 · 도움 12회', rating: 4.9, recommended: true, initial: '김' },
-  { id: 11, name: '이서연', detail: '국어국문 2학년 · 도움 5회', rating: 4.6, recommended: false, initial: '이' },
-];
+
+function parseDescription(raw: string) {
+  const parts = raw.split('\n\n[정보]\n');
+  if (parts.length === 2) {
+    const meta: Record<string, string> = {};
+    parts[1].split('\n').forEach((line) => {
+      const idx = line.indexOf(':');
+      if (idx !== -1) meta[line.slice(0, idx)] = line.slice(idx + 1);
+    });
+    return { body: parts[0], meta };
+  }
+  return { body: raw, meta: {} };
+}
 
 function formatTime(createdAt: string): string {
   const diff = Date.now() - new Date(createdAt).getTime();
@@ -57,7 +67,31 @@ export default function RequestDetailScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
 
-  const item = MOCK_REQUESTS.find((r) => r.id === Number(id));
+  const [item, setItem] = useState<HelpRequest | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAccepting, setIsAccepting] = useState(false);
+
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const response = await getHelpRequestById(Number(id));
+        if (response.success) setItem(response.data);
+      } catch {
+        Alert.alert('오류', '게시글을 불러오지 못했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetch();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.errorContainer}>
+        <ActivityIndicator size="large" color={PRIMARY} />
+      </View>
+    );
+  }
 
   if (!item) {
     return (
@@ -70,9 +104,50 @@ export default function RequestDetailScreen() {
     );
   }
 
+  const { body, meta } = parseDescription(item.description);
   const isMyPost = user?.id === item.requester.id;
   const canHelp = !isMyPost && item.status === 'WAITING' && user?.userType === 'KOREAN';
-  const isUrgent = item.id === 1; // 첫 번째 항목 긴급 표시 (임시)
+
+  const handleDelete = () => {
+    Alert.alert('글 삭제', '도움 요청을 삭제하시겠어요?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const response = await cancelHelpRequest(item.id);
+            if (response.success) {
+              Alert.alert('삭제 완료', '도움 요청이 삭제됐습니다.', [
+                { text: '확인', onPress: () => router.back() },
+              ]);
+            } else {
+              Alert.alert('실패', response.message);
+            }
+          } catch {
+            Alert.alert('오류', '서버 오류가 발생했습니다.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleEdit = () => {
+    router.push({
+      pathname: '/(main)/write',
+      params: {
+        editId: item.id,
+        editTitle: item.title,
+        editDescription: body,
+        editCategory: item.category,
+        editMethod: item.helpMethod,
+        editSchedule: meta['희망일정'] ?? '',
+        editDuration: meta['소요시간'] ?? '',
+        editLanguage: meta['언어'] ?? '',
+        editLocation: meta['장소'] ?? '',
+      },
+    });
+  };
 
   const handleHelp = () => {
     Alert.alert(
@@ -82,8 +157,21 @@ export default function RequestDetailScreen() {
         { text: '취소', style: 'cancel' },
         {
           text: '도와드릴게요!',
-          onPress: () => {
-            Alert.alert('신청 완료', '도움 신청이 완료됐어요! 상대방이 수락하면 채팅이 시작됩니다.');
+          onPress: async () => {
+            setIsAccepting(true);
+            try {
+              const response = await acceptHelpRequest(item.id);
+              if (response.success) {
+                setItem(response.data);
+                Alert.alert('신청 완료', '도움 신청이 완료됐어요!');
+              } else {
+                Alert.alert('실패', response.message);
+              }
+            } catch {
+              Alert.alert('오류', '서버 오류가 발생했습니다.');
+            } finally {
+              setIsAccepting(false);
+            }
           },
         },
       ]
@@ -119,11 +207,6 @@ export default function RequestDetailScreen() {
                 <View style={styles.tagCat}>
                   <Text style={styles.tagCatText}>{CategoryLabels[item.category].replace(/\S+\s/, '')}</Text>
                 </View>
-                {isUrgent && (
-                  <View style={styles.tagUrgent}>
-                    <Text style={styles.tagUrgentText}>긴급</Text>
-                  </View>
-                )}
                 <View style={item.status === 'MATCHED' ? styles.tagMatched : styles.tagOpen}>
                   <Text style={item.status === 'MATCHED' ? styles.tagMatchedText : styles.tagOpenText}>
                     {item.status === 'MATCHED' ? '매칭됨' : '모집중'}
@@ -152,32 +235,42 @@ export default function RequestDetailScreen() {
           </View>
 
           {/* 본문 */}
-          <Text style={styles.bodyText}>{item.description}</Text>
+          <Text style={styles.bodyText}>{body}</Text>
         </View>
 
         {/* 정보 카드 섹션 */}
         <View style={styles.infoSection}>
 
-          {/* 요청 정보 */}
-          <View style={styles.infoCard}>
-            <Text style={styles.infoCardTitle}>요청 정보</Text>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}><Text style={styles.infoIcon}>📅</Text> 희망 일정</Text>
-              <Text style={styles.infoValue}>이번 주 내</Text>
+          {/* 요청 정보 - 입력한 항목만 표시 */}
+          {(meta['희망일정'] || meta['소요시간'] || meta['장소'] || meta['언어']) && (
+            <View style={styles.infoCard}>
+              <Text style={styles.infoCardTitle}>요청 정보</Text>
+              {meta['희망일정'] && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}><Text style={styles.infoIcon}>📅</Text> 희망 일정</Text>
+                  <Text style={styles.infoValue}>{meta['희망일정']}</Text>
+                </View>
+              )}
+              {meta['소요시간'] && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}><Text style={styles.infoIcon}>⏱</Text> 소요 시간</Text>
+                  <Text style={styles.infoValue}>{meta['소요시간']}</Text>
+                </View>
+              )}
+              {meta['장소'] && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}><Text style={styles.infoIcon}>📍</Text> 장소</Text>
+                  <Text style={styles.infoValue}>{meta['장소']}</Text>
+                </View>
+              )}
+              {meta['언어'] && (
+                <View style={[styles.infoRow, styles.infoRowLast]}>
+                  <Text style={styles.infoLabel}><Text style={styles.infoIcon}>🌐</Text> 언어</Text>
+                  <Text style={styles.infoValue}>{meta['언어']}</Text>
+                </View>
+              )}
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}><Text style={styles.infoIcon}>⏱</Text> 소요 시간</Text>
-              <Text style={styles.infoValue}>1~2시간 이내</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}><Text style={styles.infoIcon}>📍</Text> 장소</Text>
-              <Text style={styles.infoValue}>국민대 근처</Text>
-            </View>
-            <View style={[styles.infoRow, styles.infoRowLast]}>
-              <Text style={styles.infoLabel}><Text style={styles.infoIcon}>🌐</Text> 언어</Text>
-              <Text style={styles.infoValue}>한국어·영어</Text>
-            </View>
-          </View>
+          )}
 
           {/* 소통 방식 */}
           <View style={styles.infoCard}>
@@ -209,33 +302,24 @@ export default function RequestDetailScreen() {
             )}
           </View>
 
-          {/* 도움 신청한 학생 */}
-          <View style={styles.infoCard}>
-            <Text style={styles.infoCardTitle}>
-              도움 신청한 학생{' '}
-              <Text style={styles.helperCount}>{MOCK_HELPERS.length}명</Text>
-            </Text>
-            {MOCK_HELPERS.map((helper, idx) => (
-              <View key={helper.id} style={[styles.helperItem, idx > 0 && styles.helperItemBorder]}>
-                <View style={[styles.helperAvatar, idx === 0 ? styles.helperAvatarGreen : styles.helperAvatarPurple]}>
-                  <Text style={styles.helperAvatarText}>{helper.initial}</Text>
-                  {idx === 0 && <View style={styles.onlineDot} />}
+          {/* 매칭된 헬퍼 정보 (매칭된 경우에만) */}
+          {item.helper && (
+            <View style={styles.infoCard}>
+              <Text style={styles.infoCardTitle}>도움을 주는 학생</Text>
+              <View style={styles.helperItem}>
+                <View style={[styles.helperAvatar, styles.helperAvatarGreen]}>
+                  <Text style={styles.helperAvatarText}>{item.helper.nickname.charAt(0)}</Text>
                 </View>
                 <View style={styles.helperInfo}>
-                  <Text style={styles.helperName}>{helper.name}</Text>
-                  <Text style={styles.helperDetail}>{helper.detail}</Text>
+                  <Text style={styles.helperName}>{item.helper.nickname}</Text>
+                  <Text style={styles.helperDetail}>{item.helper.university} · 도움 {item.helper.helpCount}회</Text>
                   <Text style={styles.helperRating}>
-                    {'★★★★★'} <Text style={styles.helperRatingNum}>{helper.rating.toFixed(1)}</Text>
+                    {'★★★★★'} <Text style={styles.helperRatingNum}>{item.helper.rating.toFixed(1)}</Text>
                   </Text>
                 </View>
-                {helper.recommended && (
-                  <View style={styles.recommendBadge}>
-                    <Text style={styles.recommendBadgeText}>추천</Text>
-                  </View>
-                )}
               </View>
-            ))}
-          </View>
+            </View>
+          )}
 
         </View>
 
@@ -248,8 +332,13 @@ export default function RequestDetailScreen() {
           <Ionicons name="bookmark-outline" size={20} color={PRIMARY} />
         </TouchableOpacity>
         {isMyPost ? (
-          <View style={styles.myPostNote}>
-            <Text style={styles.myPostNoteText}>내가 작성한 요청입니다</Text>
+          <View style={styles.myPostActions}>
+            <TouchableOpacity style={styles.editBtn} onPress={handleEdit}>
+              <Text style={styles.editBtnText}>수정</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+              <Text style={styles.deleteBtnText}>삭제</Text>
+            </TouchableOpacity>
           </View>
         ) : item.status !== 'WAITING' ? (
           <View style={styles.closedBtn}>
@@ -257,13 +346,16 @@ export default function RequestDetailScreen() {
           </View>
         ) : (
           <TouchableOpacity
-            style={[styles.helpBtn, !canHelp && styles.helpBtnDisabled]}
-            onPress={canHelp ? handleHelp : undefined}
+            style={[styles.helpBtn, (!canHelp || isAccepting) && styles.helpBtnDisabled]}
+            onPress={canHelp && !isAccepting ? handleHelp : undefined}
             activeOpacity={0.88}
           >
-            <Text style={styles.helpBtnText}>
-              {user?.userType === 'INTERNATIONAL' ? '내 요청이에요' : '🤝 도와드릴게요!'}
-            </Text>
+            {isAccepting
+              ? <ActivityIndicator color="#FFFFFF" />
+              : <Text style={styles.helpBtnText}>
+                  {user?.userType === 'INTERNATIONAL' ? '내 요청이에요' : '🤝 도와드릴게요!'}
+                </Text>
+            }
           </TouchableOpacity>
         )}
       </View>
@@ -579,6 +671,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   myPostNoteText: { fontSize: 14, color: '#9CA3AF' },
+  myPostActions: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: PRIMARY,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: PRIMARY,
+  },
+  deleteBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
   closedBtn: {
     flex: 1,
     height: 48,

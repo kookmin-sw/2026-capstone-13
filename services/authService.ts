@@ -16,13 +16,13 @@ export const register = async (data: RegisterRequest): Promise<ApiResponse<User>
 
 // 내 프로필 조회
 export const getMyProfile = async (): Promise<ApiResponse<User>> => {
-  const response = await api.get<ApiResponse<User>>('/auth/me');
+  const response = await api.get<ApiResponse<User>>('/users/me');
   return response.data;
 };
 
 // 자기소개 수정
 export const updateBio = async (bio: string): Promise<ApiResponse<User>> => {
-  const response = await api.patch<ApiResponse<User>>('/auth/bio', { bio });
+  const response = await api.patch<ApiResponse<User>>('/users/bio', { bio });
   return response.data;
 };
 
@@ -33,7 +33,7 @@ export const uploadProfileImage = async (imageUri: string): Promise<ApiResponse<
   const fileType = fileName.endsWith('.png') ? 'image/png' : 'image/jpeg';
   formData.append('image', { uri: imageUri, name: fileName, type: fileType } as unknown as Blob);
 
-  const response = await api.post<ApiResponse<User>>('/auth/profile-image', formData, {
+  const response = await api.post<ApiResponse<User>>('/users/profile-image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return response.data;

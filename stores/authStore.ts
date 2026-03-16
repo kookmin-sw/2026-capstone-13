@@ -18,6 +18,8 @@ interface AuthState {
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
   loginAsGuest: () => void;
+  loginAsTestInternational: () => void;
+  loginAsTestKorean: () => void;
   clearError: () => void;
   updateProfileImage: (imageUri: string) => Promise<boolean>;
   updateBio: (bio: string) => Promise<void>;
@@ -97,6 +99,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   // 게스트로 둘러보기
   loginAsGuest: () => set({ isGuest: true, user: { id: 0, email: '', nickname: '게스트', userType: 'INTERNATIONAL', university: '', rating: 0, helpCount: 0, createdAt: '' } }),
+
+  // 개발용 테스트 로그인
+  loginAsTestInternational: () => set({ isGuest: false, user: { id: 1, email: 'international@test.com', nickname: '테스트유학생', userType: 'INTERNATIONAL', university: '국민대학교', rating: 0, helpCount: 0, createdAt: '' } }),
+  loginAsTestKorean: () => set({ isGuest: false, user: { id: 2, email: 'korean@test.com', nickname: '테스트한국인', userType: 'KOREAN', university: '국민대학교', rating: 0, helpCount: 0, createdAt: '' } }),
 
   clearError: () => set({ error: null }),
 

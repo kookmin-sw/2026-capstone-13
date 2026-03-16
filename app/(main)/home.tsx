@@ -14,9 +14,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MOCK_REQUESTS } from '../../constants/mockData';
 import { getHelpRequests } from '../../services/helpService';
-import { useHelpRequestStore } from '../../stores/helpRequestStore';
+import { useAuthStore } from '../../stores/authStore';
 import type { HelpCategory, HelpMethod, HelpRequest } from '../../types';
 
 const PRIMARY = '#4F46E5';
@@ -77,9 +76,9 @@ function formatTime(createdAt: string): string {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { myRequests } = useHelpRequestStore();
-  const [requests, setRequests] = useState<HelpRequest[]>(MOCK_REQUESTS);
-  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuthStore();
+  const [requests, setRequests] = useState<HelpRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory] = useState<HelpCategory | 'ALL'>('ALL');
   const [sortMode, setSortMode] = useState<'LATEST' | 'OPEN'>('LATEST');
@@ -101,11 +100,11 @@ export default function HomeScreen() {
   const fetchRequests = useCallback(async () => {
     try {
       const response = await getHelpRequests();
-      if (response.success && response.data.length > 0) {
+      if (response.success) {
         setRequests(response.data);
       }
     } catch {
-      // 백엔드 미연결 시 목업 데이터 유지
+      setRequests([]);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -121,16 +120,9 @@ export default function HomeScreen() {
     fetchRequests();
   };
 
-  // 내가 작성한 글 + 기존 목록 합치기 (중복 id 제거)
-  const existingIds = new Set(requests.map((r) => r.id));
-  const allRequests = [
-    ...myRequests.filter((r) => !existingIds.has(r.id)),
-    ...requests,
-  ];
-
   const filteredRequests = (selectedCategory === 'ALL'
-    ? allRequests
-    : allRequests.filter((r) => r.category === selectedCategory)
+    ? requests
+    : requests.filter((r) => r.category === selectedCategory)
   ).filter((r) => sortMode === 'OPEN' ? r.status === 'WAITING' : true)
    .sort((a, b) => sortMode === 'LATEST'
      ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -280,17 +272,19 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/(main)/write')}
-        activeOpacity={0.88}
-      >
-        <View style={styles.fabPlus}>
-          <Text style={styles.fabPlusText}>+</Text>
-        </View>
-        <Text style={styles.fabText}>도움 요청하기</Text>
-      </TouchableOpacity>
+      {/* FAB - 유학생만 표시 */}
+      {user?.userType === 'INTERNATIONAL' && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => router.push('/(main)/write')}
+          activeOpacity={0.88}
+        >
+          <View style={styles.fabPlus}>
+            <Text style={styles.fabPlusText}>+</Text>
+          </View>
+          <Text style={styles.fabText}>도움 요청하기</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

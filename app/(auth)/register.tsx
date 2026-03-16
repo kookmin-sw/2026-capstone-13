@@ -153,7 +153,7 @@ export default function RegisterScreen() {
 
     if (success) {
       Alert.alert('회원가입 완료', '로그인해주세요.', [
-        { text: '확인', onPress: () => router.back() },
+        { text: '확인', onPress: () => router.replace('/(auth)/login') },
       ]);
     } else {
       const currentError = useAuthStore.getState().error;
@@ -170,7 +170,7 @@ export default function RegisterScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 헤더 */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/login')}>
             <Text style={styles.backButton}>← 뒤로</Text>
           </TouchableOpacity>
           <Text style={styles.title}>회원가입</Text>
