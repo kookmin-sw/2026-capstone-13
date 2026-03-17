@@ -17,16 +17,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
 import { getChatMessages, type ChatMessageDto } from '../services/chatService';
+import { rejectHelper, startHelpRequest } from '../services/helpService';
 import { useAuthStore } from '../stores/authStore';
+import { useChatStore } from '../stores/chatStore';
 
 const PRIMARY = '#4F46E5';
 const PRIMARY_LIGHT = '#EEF2FF';
+const SYS_LEAVE = 'SYS_LEAVE:';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api';
 // https://xxx.up.railway.app/api → wss://xxx.up.railway.app/ws-native
 const WS_URL = BASE_URL.replace(/^http/, 'ws').replace(/\/api$/, '') + '/ws-native';
 
-type ListItem = ChatMessageDto | { type: 'date'; label: string; id: string };
+type ListItem = ChatMessageDto | { type: 'date'; label: string; id: string } | { type: 'system'; content: string; id: string };
 
 function formatTime(iso: string): string {
   try {
@@ -49,25 +52,49 @@ export default function ChatRoomScreen() {
     roomId: string;
     requestTitle: string;
     partnerNickname: string;
+    requestStatus?: string;
+    requesterId?: string;
   }>();
 
   const roomId = Number(params.roomId);
   const partnerNickname = params.partnerNickname ?? '상대방';
   const requestTitle = params.requestTitle ?? '도움 요청';
+  const isRequester = user?.id === Number(params.requesterId);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [input, setInput] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [helpStatus, setHelpStatus] = useState(params.requestStatus ?? '');
+  const [isActing, setIsActing] = useState(false);
+  const [systemMessages, setSystemMessages] = useState<{ type: 'system'; content: string; id: string }[]>([]);
+  const [chatEnded, setChatEnded] = useState(false);
+  const { clearUnread, setActiveChatroom, leaveRoom } = useChatStore();
   const clientRef = useRef<Client | null>(null);
   const listRef = useRef<FlatList>(null);
 
   // 이전 메시지 조회
   const loadHistory = useCallback(async () => {
+    // 내가 나간 방이면 메시지 로드 안 함
+    const { hasLeft } = useChatStore.getState();
+    const { user: currentUser } = useAuthStore.getState();
+    if (currentUser && hasLeft(roomId, currentUser.id)) {
+      setChatEnded(true);
+      setIsLoading(false);
+      return;
+    }
     try {
       const res = await getChatMessages(roomId);
       if (res.success && res.data.length > 0) {
-        setMessages(res.data);
+        // SYS_LEAVE 메시지 분리: 일반 메시지에는 포함 안 함
+        const leaveMsg = res.data.find((m) => m.content?.startsWith(SYS_LEAVE));
+        const normalMsgs = res.data.filter((m) => !m.content?.startsWith(SYS_LEAVE));
+        setMessages(normalMsgs);
+        if (leaveMsg) {
+          const nickname = leaveMsg.content.slice(SYS_LEAVE.length);
+          setChatEnded(true);
+          setSystemMessages([{ type: 'system', content: `${nickname}님이 채팅방을 나갔습니다`, id: 'sys-leave' }]);
+        }
       }
     } catch {
       // 새 채팅방이면 이력 없음 - 무시
@@ -75,6 +102,15 @@ export default function ChatRoomScreen() {
       setIsLoading(false);
     }
   }, [roomId]);
+
+  // 채팅방 입장 시 뱃지 초기화 + 활성 채팅방 등록
+  useEffect(() => {
+    setActiveChatroom(roomId);
+    clearUnread();
+    return () => {
+      setActiveChatroom(null);
+    };
+  }, [roomId, setActiveChatroom, clearUnread]);
 
   // WebSocket STOMP 연결
   useEffect(() => {
@@ -89,9 +125,13 @@ export default function ChatRoomScreen() {
       const wsUrl = WS_URL;
 
       const client = new Client({
-        // React Native 환경에서 webSocketFactory 명시 (TextEncoder 이슈 방지)
         webSocketFactory: () => new WebSocket(wsUrl),
         connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+        // React Native WebSocket 바이너리 프레임 호환성 옵션
+        forceBinaryWSFrames: true,
+        appendMissingNULLonIncoming: true,
+        heartbeatIncoming: 0,
+        heartbeatOutgoing: 0,
         reconnectDelay: 5000,
         onConnect: () => {
           if (!mounted) return;
@@ -99,19 +139,32 @@ export default function ChatRoomScreen() {
           client.subscribe(`/topic/chat/${roomId}`, (frame) => {
             try {
               const msg: ChatMessageDto = JSON.parse(frame.body);
-              if (mounted) {
-                setMessages((prev) => {
-                  // 내가 보낸 메시지가 돌아온 경우 중복 방지 (createdAt 기준)
-                  const isDuplicate = prev.some(
-                    (m) => m.senderId === msg.senderId &&
-                           m.content === msg.content &&
-                           m.createdAt === msg.createdAt
-                  );
-                  if (isDuplicate) return prev;
-                  return [...prev, msg];
-                });
+              if (!mounted) return;
+
+              // 나가기 시스템 메시지 처리
+              if (msg.content?.startsWith(SYS_LEAVE)) {
+                // 내가 보낸 나가기 메시지는 무시 (이미 router.back() 처리)
+                if (msg.senderId === user?.id) return;
+                const nickname = msg.content.slice(SYS_LEAVE.length);
+                setChatEnded(true);
+                setSystemMessages((prev) => [
+                  ...prev,
+                  { type: 'system', content: `${nickname}님이 채팅방을 나갔습니다`, id: `sys-leave-${Date.now()}` },
+                ]);
                 setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+                return;
               }
+
+              setMessages((prev) => {
+                const isDuplicate = prev.some(
+                  (m) => m.senderId === msg.senderId &&
+                         m.content === msg.content &&
+                         m.createdAt === msg.createdAt
+                );
+                if (isDuplicate) return prev;
+                return [...prev, msg];
+              });
+              setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
             } catch {
               // 파싱 오류 무시
             }
@@ -121,11 +174,11 @@ export default function ChatRoomScreen() {
           if (mounted) setIsConnected(false);
         },
         onStompError: (frame) => {
-          console.warn('STOMP error', frame.headers['message']);
+          console.warn('STOMP error:', frame.headers['message'], frame.body);
           if (mounted) setIsConnected(false);
         },
         onWebSocketError: (event) => {
-          console.warn('WebSocket error', event);
+          console.warn('WebSocket error:', event);
           if (mounted) setIsConnected(false);
         },
       });
@@ -169,6 +222,74 @@ export default function ChatRoomScreen() {
     setInput('');
   };
 
+  const handleLeave = () => {
+    Alert.alert('채팅방 나가기', '채팅방을 나가시겠어요?\n상대방에게 알림이 전송됩니다.', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '나가기',
+        style: 'destructive',
+        onPress: () => {
+          const client = clientRef.current;
+          if (client?.connected && user) {
+            client.publish({
+              destination: '/app/chat/send',
+              body: JSON.stringify({
+                roomId,
+                senderId: user.id,
+                senderNickname: user.nickname,
+                content: `${SYS_LEAVE}${user.nickname}`,
+                createdAt: new Date().toISOString(),
+              }),
+            });
+          }
+          if (user) leaveRoom(Number(roomId), Number(user.id));
+          setMessages([]);
+          router.back();
+        },
+      },
+    ]);
+  };
+
+  const handleAccept = async () => {
+    setIsActing(true);
+    try {
+      const res = await startHelpRequest(roomId);
+      if (res.success) {
+        setHelpStatus('IN_PROGRESS');
+        setSystemMessages((prev) => [
+          ...prev,
+          { type: 'system', content: '✅ 도움이 수락되었습니다! 채팅을 시작해보세요 🎉', id: `sys-${Date.now()}` },
+        ]);
+        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
+      } else {
+        Alert.alert('실패', res.message);
+      }
+    } catch {
+      Alert.alert('오류', '서버 오류가 발생했습니다.');
+    } finally {
+      setIsActing(false);
+    }
+  };
+
+  const handleReject = async () => {
+    setIsActing(true);
+    try {
+      const res = await rejectHelper(roomId);
+      if (res.success) {
+        setHelpStatus('WAITING');
+        Alert.alert('거절 완료', '도움 신청을 거절했어요.', [
+          { text: '확인', onPress: () => router.back() },
+        ]);
+      } else {
+        Alert.alert('실패', res.message);
+      }
+    } catch {
+      Alert.alert('오류', '서버 오류가 발생했습니다.');
+    } finally {
+      setIsActing(false);
+    }
+  };
+
   const handleVideoCall = () => {
     Alert.alert('영상통화', `${partnerNickname}님과 영상통화를 시작할까요?`, [
       { text: '취소', style: 'cancel' },
@@ -179,6 +300,7 @@ export default function ChatRoomScreen() {
   const listData: ListItem[] = [
     { type: 'date', label: todayLabel(), id: 'date-today' },
     ...messages,
+    ...systemMessages,
   ];
 
   const renderItem = ({ item }: { item: ListItem }) => {
@@ -188,6 +310,14 @@ export default function ChatRoomScreen() {
           <View style={styles.dateLine} />
           <Text style={styles.dateLabel}>{item.label}</Text>
           <View style={styles.dateLine} />
+        </View>
+      );
+    }
+
+    if ('type' in item && item.type === 'system') {
+      return (
+        <View style={styles.systemMsgWrap}>
+          <Text style={styles.systemMsgText}>{item.content}</Text>
         </View>
       );
     }
@@ -251,8 +381,8 @@ export default function ChatRoomScreen() {
           <TouchableOpacity style={styles.actionBtn} onPress={handleVideoCall}>
             <Ionicons name="videocam" size={18} color={PRIMARY} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn}>
-            <Ionicons name="ellipsis-vertical" size={16} color={PRIMARY} />
+          <TouchableOpacity style={styles.actionBtn} onPress={handleLeave}>
+            <Ionicons name="exit-outline" size={18} color="#EF4444" />
           </TouchableOpacity>
         </View>
       </View>
@@ -265,6 +395,44 @@ export default function ChatRoomScreen() {
           <Text style={styles.contextBadgeText}>진행 중</Text>
         </View>
       </View>
+
+      {/* 수락/거절 공지 배너 */}
+      {helpStatus === 'MATCHED' && (
+        <View style={styles.noticeBanner}>
+          <View style={styles.noticeHeader}>
+            <Text style={styles.noticeIcon}>🤝</Text>
+            <View style={styles.noticeTextWrap}>
+              <Text style={styles.noticeTitle}>도움 신청이 도착했어요!</Text>
+              <Text style={styles.noticeSub}>
+                {isRequester
+                  ? `${partnerNickname}님이 도움을 드리겠다고 했어요.`
+                  : `${partnerNickname}님의 수락을 기다리고 있어요.`}
+              </Text>
+            </View>
+          </View>
+          {isRequester && (
+            <View style={styles.noticeActions}>
+              <TouchableOpacity
+                style={[styles.rejectBtn, isActing && styles.actionBtnDisabled]}
+                onPress={handleReject}
+                disabled={isActing}
+              >
+                <Text style={styles.rejectBtnText}>거절</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.acceptBtn, isActing && styles.actionBtnDisabled]}
+                onPress={handleAccept}
+                disabled={isActing}
+              >
+                {isActing
+                  ? <ActivityIndicator size="small" color="#FFFFFF" />
+                  : <Text style={styles.acceptBtnText}>수락</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* 메시지 목록 */}
       {isLoading ? (
@@ -304,7 +472,15 @@ export default function ChatRoomScreen() {
       )}
 
       {/* 입력창 */}
-      <View style={styles.inputBar}>
+      {(helpStatus === 'MATCHED' || chatEnded) && (
+        <View style={styles.inputBarLocked}>
+          <Ionicons name={chatEnded ? 'close-circle-outline' : 'lock-closed-outline'} size={14} color="#9CA3AF" />
+          <Text style={styles.inputLockedText}>
+            {chatEnded ? '채팅이 종료되었습니다' : '수락 후 채팅이 가능해요'}
+          </Text>
+        </View>
+      )}
+      <View style={[styles.inputBar, (helpStatus === 'MATCHED' || chatEnded) && styles.inputBarHidden]}>
         <TouchableOpacity style={styles.attachBtn}>
           <Ionicons name="add" size={22} color="#6B7280" />
         </TouchableOpacity>
@@ -402,6 +578,46 @@ const styles = StyleSheet.create({
   },
   contextBadgeText: { fontSize: 10, fontWeight: '700', color: '#065F46' },
 
+  noticeBanner: {
+    backgroundColor: '#FFFBEB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FDE68A',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  noticeHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  noticeIcon: { fontSize: 22 },
+  noticeTextWrap: { flex: 1 },
+  noticeTitle: { fontSize: 13, fontWeight: '700', color: '#92400E' },
+  noticeSub: { fontSize: 12, color: '#B45309', marginTop: 2 },
+  noticeActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  rejectBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+  },
+  rejectBtnText: { fontSize: 13, fontWeight: '700', color: '#6B7280' },
+  acceptBtn: {
+    flex: 2,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: PRIMARY,
+    alignItems: 'center',
+  },
+  acceptBtnText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+  actionBtnDisabled: { opacity: 0.5 },
+
   messageList: { padding: 16, paddingBottom: 12, flexGrow: 1 },
   messageListEmpty: { flex: 1 },
 
@@ -485,6 +701,35 @@ const styles = StyleSheet.create({
 
   msgTime: { fontSize: 10, color: '#9CA3AF', paddingBottom: 2 },
   msgTimeOther: {},
+
+  systemMsgWrap: {
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  systemMsgText: {
+    fontSize: 13,
+    color: '#059669',
+    fontWeight: '600',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+
+  inputBarLocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 14,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 14,
+    backgroundColor: '#F9FAFB',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(79,70,229,0.08)',
+  },
+  inputLockedText: { fontSize: 13, color: '#9CA3AF' },
+  inputBarHidden: { display: 'none' },
 
   inputBar: {
     flexDirection: 'row',

@@ -11,8 +11,10 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
+import { useChatStore } from '../../stores/chatStore';
 import {
   getMyRequests,
   getHelpedRequests,
@@ -33,6 +35,16 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actioningId, setActioningId] = useState<number | null>(null);
+
+  const { clearUnread, hasLeft } = useChatStore();
+
+  // 채팅 탭 포커스 시 뱃지 초기화 + 데이터 갱신
+  useFocusEffect(
+    useCallback(() => {
+      clearUnread();
+      fetchData();
+    }, [clearUnread, fetchData])
+  );
 
   const fetchData = useCallback(async () => {
     try {
@@ -121,6 +133,8 @@ export default function ChatScreen() {
         roomId: req.id,
         requestTitle: req.title,
         partnerNickname,
+        requestStatus: req.status,
+        requesterId: req.requester.id,
       },
     });
   };
@@ -130,9 +144,9 @@ export default function ChatScreen() {
     const isActioning = actioningId === item.id;
 
     if (item.status === 'MATCHED' && item.helper) {
-      // 도움 신청이 들어온 상태 → 수락/거절
+      // 도움 신청이 들어온 상태 → 채팅방에서 수락/거절
       return (
-        <View style={styles.requestCard}>
+        <TouchableOpacity style={styles.requestCard} onPress={() => goToChat(item)} activeOpacity={0.85}>
           <View style={styles.cardHeader}>
             <View style={styles.newBadge}>
               <Text style={styles.newBadgeText}>새 도움 신청</Text>
@@ -153,27 +167,11 @@ export default function ChatScreen() {
             </View>
           </View>
 
-          {/* 수락 / 거절 */}
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={styles.rejectBtn}
-              onPress={() => handleReject(item)}
-              disabled={isActioning}
-            >
-              <Text style={styles.rejectBtnText}>거절</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.acceptBtn, isActioning && styles.btnDisabled]}
-              onPress={() => handleAccept(item)}
-              disabled={isActioning}
-            >
-              {isActioning
-                ? <ActivityIndicator color="#FFFFFF" size="small" />
-                : <Text style={styles.acceptBtnText}>수락하고 채팅 시작</Text>
-              }
-            </TouchableOpacity>
+          <View style={styles.enterRow}>
+            <Text style={styles.enterHint}>채팅방에서 수락 또는 거절할 수 있어요</Text>
+            <Ionicons name="chevron-forward" size={14} color="#9CA3AF" />
           </View>
-        </View>
+        </TouchableOpacity>
       );
     }
 
@@ -207,7 +205,7 @@ export default function ChatScreen() {
   const renderKoreanItem = ({ item }: { item: HelpRequest }) => {
     if (item.status === 'MATCHED') {
       return (
-        <View style={styles.requestCard}>
+        <TouchableOpacity style={styles.requestCard} onPress={() => goToChat(item)} activeOpacity={0.85}>
           <View style={styles.cardHeader}>
             <View style={styles.waitBadge}>
               <Text style={styles.waitBadgeText}>수락 대기 중</Text>
@@ -224,8 +222,11 @@ export default function ChatScreen() {
               <Text style={styles.helperUniv}>{item.requester.university}</Text>
             </View>
           </View>
-          <Text style={styles.waitingNote}>상대방이 수락하면 채팅이 시작됩니다.</Text>
-        </View>
+          <View style={styles.enterRow}>
+            <Text style={styles.enterHint}>채팅방에서 상대방의 수락을 기다려요</Text>
+            <Ionicons name="chevron-forward" size={14} color="#9CA3AF" />
+          </View>
+        </TouchableOpacity>
       );
     }
 
@@ -254,8 +255,10 @@ export default function ChatScreen() {
     return null;
   };
 
+  const myId = Number(user?.id);
   const visibleItems = requests.filter((r) =>
-    r.status === 'MATCHED' || r.status === 'IN_PROGRESS'
+    (r.status === 'MATCHED' || r.status === 'IN_PROGRESS') &&
+    !hasLeft(r.id, myId)
   );
 
   if (isLoading) {
@@ -406,11 +409,12 @@ const styles = StyleSheet.create({
   acceptBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
   btnDisabled: { opacity: 0.6 },
 
-  waitingNote: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    textAlign: 'center',
+  enterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
+  enterHint: { fontSize: 12, color: '#9CA3AF' },
 
   // 채팅 목록 행 (IN_PROGRESS)
   roomCard: {

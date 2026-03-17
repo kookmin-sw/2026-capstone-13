@@ -111,11 +111,13 @@ export default function WriteScreen() {
         Alert.alert('실패', response.message ?? '등록에 실패했습니다.');
       }
     } catch (e: unknown) {
-      const status = (e as { response?: { status?: number } })?.response?.status;
+      const err = e as { response?: { status?: number; data?: { message?: string } } };
+      const status = err?.response?.status;
+      const serverMsg = err?.response?.data?.message;
       if (status === 401 || status === 403) {
         Alert.alert('로그인 필요', '실제 계정으로 로그인해야 요청을 올릴 수 있습니다.');
       } else {
-        Alert.alert('오류', '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+        Alert.alert('오류', `서버 오류 (${status ?? '?'}): ${serverMsg ?? '잠시 후 다시 시도해주세요.'}`);
       }
     } finally {
       setIsSubmitting(false);

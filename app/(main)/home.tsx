@@ -123,7 +123,8 @@ export default function HomeScreen() {
   const filteredRequests = (selectedCategory === 'ALL'
     ? requests
     : requests.filter((r) => r.category === selectedCategory)
-  ).filter((r) => sortMode === 'OPEN' ? r.status === 'WAITING' : true)
+  ).filter((r) => r.status !== 'CANCELLED')
+   .filter((r) => sortMode === 'OPEN' ? r.status === 'WAITING' : true)
    .sort((a, b) => sortMode === 'LATEST'
      ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
      : 0

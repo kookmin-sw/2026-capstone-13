@@ -158,6 +158,8 @@ export default function RequestDetailScreen() {
         roomId: item.id,
         requestTitle: item.title,
         partnerNickname: user?.userType === 'KOREAN' ? item.requester.nickname : (item.helper?.nickname ?? ''),
+        requestStatus: item.status,
+        requesterId: item.requester.id,
       },
     });
   };
@@ -175,10 +177,16 @@ export default function RequestDetailScreen() {
             try {
               const response = await acceptHelpRequest(item.id);
               if (response.success) {
-                setItem(response.data);
-                Alert.alert('신청 완료', '도움 신청을 보냈어요!\n상대방이 수락하면 채팅이 시작됩니다.', [
-                  { text: '확인', onPress: () => router.back() },
-                ]);
+                router.replace({
+                  pathname: '/chatroom',
+                  params: {
+                    roomId: item.id,
+                    requestTitle: item.title,
+                    partnerNickname: item.requester.nickname,
+                    requestStatus: 'MATCHED',
+                    requesterId: item.requester.id,
+                  },
+                });
               } else {
                 Alert.alert('실패', response.message);
               }
@@ -350,7 +358,7 @@ export default function RequestDetailScreen() {
           <TouchableOpacity style={styles.helpBtn} onPress={goToChatRoom}>
             <Text style={styles.helpBtnText}>💬 채팅방으로 이동</Text>
           </TouchableOpacity>
-        ) : isMyPost ? (
+        ) : isMyPost && item.status === 'WAITING' ? (
           <View style={styles.myPostActions}>
             <TouchableOpacity style={styles.editBtn} onPress={handleEdit}>
               <Text style={styles.editBtnText}>수정</Text>
@@ -358,6 +366,10 @@ export default function RequestDetailScreen() {
             <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
               <Text style={styles.deleteBtnText}>삭제</Text>
             </TouchableOpacity>
+          </View>
+        ) : isMyPost ? (
+          <View style={styles.closedBtn}>
+            <Text style={styles.closedBtnText}>매칭 후 수정·삭제 불가</Text>
           </View>
         ) : item.status !== 'WAITING' ? (
           <View style={styles.closedBtn}>

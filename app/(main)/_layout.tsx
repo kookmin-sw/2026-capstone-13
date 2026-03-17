@@ -1,9 +1,85 @@
 // 메인 탭 네비게이션 레이아웃
+import { useEffect, useRef } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Client } from '@stomp/stompjs';
+import * as SecureStore from 'expo-secure-store';
 import { Colors } from '../../constants/colors';
+import { useChatStore } from '../../stores/chatStore';
+import { useAuthStore } from '../../stores/authStore';
+import { getMyRequests, getHelpedRequests } from '../../services/helpService';
+
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api';
+const WS_URL = BASE_URL.replace(/^http/, 'ws').replace(/\/api$/, '') + '/ws-native';
 
 export default function MainLayout() {
+  const { unreadCount, incrementUnread } = useChatStore();
+  const { user } = useAuthStore();
+  const globalClientRef = useRef<Client | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let mounted = true;
+
+    const connect = async () => {
+      const token = await SecureStore.getItemAsync('accessToken');
+      if (!mounted) return;
+
+      // 활성 채팅방 ID 수집
+      const results = await Promise.allSettled([getMyRequests(), getHelpedRequests()]);
+      if (!mounted) return;
+
+      const activeRoomIds = new Set<number>();
+      results.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value.success) {
+          result.value.data
+            .filter((r) => r.status === 'IN_PROGRESS' || r.status === 'MATCHED')
+            .forEach((r) => activeRoomIds.add(r.id));
+        }
+      });
+
+      if (activeRoomIds.size === 0) return;
+
+      const client = new Client({
+        webSocketFactory: () => new WebSocket(WS_URL),
+        connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+        forceBinaryWSFrames: true,
+        appendMissingNULLonIncoming: true,
+        heartbeatIncoming: 0,
+        heartbeatOutgoing: 0,
+        reconnectDelay: 10000,
+        onConnect: () => {
+          if (!mounted) return;
+          activeRoomIds.forEach((roomId) => {
+            client.subscribe(`/topic/chat/${roomId}`, (frame) => {
+              if (!mounted) return;
+              try {
+                const msg = JSON.parse(frame.body);
+                // 상대방 메시지이고 현재 그 채팅방 안에 없을 때만 뱃지 증가
+                const { activeChatroomId } = useChatStore.getState();
+                if (msg.senderId !== user.id && activeChatroomId !== roomId) {
+                  incrementUnread();
+                }
+              } catch {}
+            });
+          });
+        },
+      });
+
+      client.activate();
+      globalClientRef.current = client;
+    };
+
+    connect();
+
+    return () => {
+      mounted = false;
+      globalClientRef.current?.deactivate();
+      globalClientRef.current = null;
+    };
+  }, [user?.id]);
+
   return (
     <Tabs
       screenOptions={{
@@ -62,6 +138,8 @@ export default function MainLayout() {
         name="chat"
         options={{
           title: '채팅',
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: '#EF4444', fontSize: 10, minWidth: 18, height: 18, borderRadius: 9 },
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
