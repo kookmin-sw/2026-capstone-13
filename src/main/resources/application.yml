@@ -2,11 +2,11 @@ spring:
   application:
     name: helpboys-api
 
-  # MySQL 설정
+  # MySQL 설정 (로컬: localhost, Railway: 환경변수로 자동 교체)
   datasource:
-    url: jdbc:mysql://localhost:3306/helpboys?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: helpboys
-    password: helpboys1234
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/helpboys?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${SPRING_DATASOURCE_USERNAME:helpboys}
+    password: ${SPRING_DATASOURCE_PASSWORD:helpboys1234}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   # JPA 설정
@@ -21,9 +21,19 @@ spring:
 
 # 서버 설정
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 # JWT 설정
 jwt:
-  secret: helpboys-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
+  secret: ${JWT_SECRET:helpboys-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256}
   expiration: 86400000  # 24시간 (밀리초)
+
+# Actuator - 헬스체크 엔드포인트 활성화
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always

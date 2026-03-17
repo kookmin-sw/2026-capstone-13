@@ -95,6 +95,16 @@ public class HelpRequestController {
         return ResponseEntity.ok(ApiResponse.success("거절되었습니다.", helpRequestService.rejectHelper(id, userId)));
     }
 
+    // POST /api/requests/{id}/complete - 도움 완료 처리
+    @PostMapping("/{id}/complete")
+    public ResponseEntity<ApiResponse<HelpRequestResponse>> completeRequest(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        return ResponseEntity.ok(ApiResponse.success("도움이 완료되었습니다.",
+                helpRequestService.updateStatus(id, HelpRequest.RequestStatus.COMPLETED, userId)));
+    }
+
     // PATCH /api/requests/{id}/status - 상태 변경
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<HelpRequestResponse>> updateStatus(
