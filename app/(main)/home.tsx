@@ -1,16 +1,8 @@
-// 홈 화면 - 도움 요청 피드 (리디자인)
-import { useState, useEffect, useCallback, useRef } from 'react';
+// 홈 화면 - Bento Grid 디자인
+import { useState, useEffect, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Platform,
-  ScrollView,
-  Dimensions,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  RefreshControl, ActivityIndicator, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,60 +10,52 @@ import { getHelpRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
 import type { HelpCategory, HelpMethod, HelpRequest } from '../../types';
 
-const PRIMARY = '#4F46E5';
-const PRIMARY_LIGHT = '#EEF2FF';
-const BANNER_WIDTH = Dimensions.get('window').width - 40;
+// ── Design tokens (HTML 디자인 기준) ──
+const BLUE     = '#1A73C8';
+const TEAL     = '#00A88E';
+const ORANGE   = '#F07A1A';
+const T1       = '#0A1E2E';
+const T2       = '#4A6070';
+const T3       = '#9BB0BF';
+const BLUE_L   = '#E8F3FD';
+const TEAL_L   = '#E0F5F2';
+const GREEN_L  = '#E8F5E9';
+const ORANGE_L = '#FEF0E0';
+const YELLOW_L = '#FEF9E0';
+const BG       = '#FFFFFF';
 
-const BANNER_SLIDES = [
-  {
-    id: 1,
-    sub: '국민대학교 · 지금 활동중',
-    main: '도움 요청 ',
-    highlight: '23개',
-    tail: ' 대기중이에요',
-    bg: ['#4F46E5', '#7C3AED'],
-  },
-  {
-    id: 2,
-    sub: '📢 중요 공지',
-    main: '수강정정 기간 ',
-    highlight: '3/16~3/20',
-    tail: '',
-    bg: ['#0EA5E9', '#6366F1'],
-  },
-  {
-    id: 3,
-    sub: '내 활동 요약',
-    main: '이번 달 도움 ',
-    highlight: '3회',
-    tail: ' · 평점 4.8 ⭐',
-    bg: ['#059669', '#0EA5E9'],
-  },
+
+type SortMode = 'LATEST' | 'OLDEST' | 'MATCHED' | 'URGENT';
+
+const FILTER_CHIPS: { key: SortMode; label: string }[] = [
+  { key: 'LATEST',  label: '최신순'  },
+  { key: 'OLDEST',  label: '오래된순' },
+  { key: 'MATCHED', label: '매칭중'  },
+  { key: 'URGENT',  label: '긴급'    },
 ];
 
-
-const CATEGORY_EMOJI: Record<HelpCategory, string> = {
+const CAT_EMOJI: Record<HelpCategory, string> = {
   BANK: '🏦', HOSPITAL: '🏥', SCHOOL: '🏫', DAILY: '🏠', OTHER: '📌',
 };
-
-const CATEGORY_BG: Record<HelpCategory, string> = {
-  BANK: '#FEF3C7', HOSPITAL: '#FEE2E2', SCHOOL: '#EDE9FE', DAILY: '#D1FAE5', OTHER: '#F3F4F6',
+const CAT_BG: Record<HelpCategory, string> = {
+  BANK: YELLOW_L, HOSPITAL: '#FEE2E2', SCHOOL: TEAL_L, DAILY: GREEN_L, OTHER: '#F3F4F6',
+};
+const METHOD: Record<HelpMethod, { bg: string; color: string; dot: string; label: string }> = {
+  CHAT:       { bg: BLUE_L,   color: '#0D4F8C', dot: BLUE,   label: '채팅'    },
+  VIDEO_CALL: { bg: TEAL_L,   color: '#005E4F', dot: TEAL,   label: '영상통화' },
+  OFFLINE:    { bg: ORANGE_L, color: '#7A3300', dot: ORANGE, label: '오프라인' },
 };
 
-const METHOD_BADGE: Record<HelpMethod, { bg: string; color: string; dot: string; label: string }> = {
-  CHAT:       { bg: '#EEF2FF', color: PRIMARY,    dot: PRIMARY,    label: '채팅' },
-  VIDEO_CALL: { bg: '#F5F3FF', color: '#7C3AED',  dot: '#7C3AED',  label: '영상통화' },
-  OFFLINE:    { bg: '#FFFBEB', color: '#D97706',  dot: '#D97706',  label: '오프라인' },
-};
-
-function formatTime(createdAt: string): string {
-  const diff = Date.now() - new Date(createdAt).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return '방금 전';
-  if (minutes < 60) return `${minutes}분 전`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  return `${Math.floor(hours / 24)}일 전`;
+function isUrgent(createdAt: string) {
+  return Date.now() - new Date(createdAt).getTime() > 2 * 60 * 60 * 1000;
+}
+function formatTime(iso: string) {
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (m < 1) return '방금 전';
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  return `${Math.floor(h / 24)}일 전`;
 }
 
 export default function HomeScreen() {
@@ -80,29 +64,12 @@ export default function HomeScreen() {
   const [requests, setRequests] = useState<HelpRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedCategory] = useState<HelpCategory | 'ALL'>('ALL');
-  const [sortMode, setSortMode] = useState<'LATEST' | 'OPEN'>('LATEST');
-  const [bannerIndex, setBannerIndex] = useState(0);
-  const bannerRef = useRef<ScrollView>(null);
-
-  // 3초마다 자동 슬라이드
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setBannerIndex((prev) => {
-        const next = (prev + 1) % BANNER_SLIDES.length;
-        bannerRef.current?.scrollTo({ x: next * BANNER_WIDTH, animated: true });
-        return next;
-      });
-    }, 3000);
-    return () => clearInterval(timer);
-  }, []);
+  const [sortMode, setSortMode] = useState<SortMode>('LATEST');
 
   const fetchRequests = useCallback(async () => {
     try {
-      const response = await getHelpRequests();
-      if (response.success) {
-        setRequests(response.data);
-      }
+      const res = await getHelpRequests();
+      if (res.success) setRequests(res.data);
     } catch {
       setRequests([]);
     } finally {
@@ -111,560 +78,361 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
+  useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchRequests();
-  };
+  const onRefresh = () => { setRefreshing(true); fetchRequests(); };
 
-  const filteredRequests = (selectedCategory === 'ALL'
-    ? requests
-    : requests.filter((r) => r.category === selectedCategory)
-  ).filter((r) => r.status !== 'CANCELLED')
-   .filter((r) => sortMode === 'OPEN' ? r.status === 'WAITING' : true)
-   .sort((a, b) => sortMode === 'LATEST'
-     ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-     : 0
-   );
+  // Stats
+  const activeCount = requests.filter(r => r.status === 'WAITING').length;
+  const totalCount  = requests.filter(r => r.status !== 'CANCELLED').length;
+  const now = new Date();
+  const monthCount  = requests.filter(r => {
+    const d = new Date(r.createdAt);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
 
-  const renderItem = useCallback(({ item }: { item: HelpRequest }) => {
-    const method = METHOD_BADGE[item.helpMethod];
-    const isMatched = item.status === 'MATCHED';
+  const filtered = requests
+    .filter(r => r.status !== 'CANCELLED')
+    .filter(r => {
+      if (sortMode === 'MATCHED') return r.status === 'MATCHED';
+      if (sortMode === 'URGENT')  return r.status === 'WAITING' && isUrgent(r.createdAt);
+      return true;
+    })
+    .sort((a, b) =>
+      sortMode === 'OLDEST'
+        ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
+  const goTo = (item: HelpRequest) =>
+    router.push({ pathname: '/request-detail', params: { id: item.id } });
+
+  // ── Card renderer ───────────────────────────────────
+  const renderCard = (item: HelpRequest) => {
+    const m = METHOD[item.helpMethod];
+    const isDone = item.status !== 'WAITING';
+    const urgent = isUrgent(item.createdAt) && item.status === 'WAITING';
     return (
       <TouchableOpacity
-        style={styles.card}
-        onPress={() => router.push({ pathname: '/request-detail', params: { id: item.id } })}
+        key={item.id}
+        style={[s.card, urgent && s.cardUrgent]}
+        onPress={() => goTo(item)}
         activeOpacity={0.85}
       >
-
-        {/* 왼쪽 아이콘 */}
-        <View style={[styles.cardIcon, { backgroundColor: CATEGORY_BG[item.category] }]}>
-          <Text style={styles.cardIconEmoji}>{CATEGORY_EMOJI[item.category]}</Text>
+        <View style={[s.cardIcon, { backgroundColor: CAT_BG[item.category] }]}>
+          <Text style={s.iconEmoji}>{CAT_EMOJI[item.category]}</Text>
         </View>
-
-        {/* 오른쪽 내용 */}
-        <View style={styles.cardBody}>
-          <View style={styles.cardTop}>
-            <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
-            <View style={[styles.statusBadge, isMatched ? styles.statusMatched : styles.statusOpen]}>
-              <Text style={[styles.statusText, isMatched ? styles.statusMatchedText : styles.statusOpenText]}>
-                {isMatched ? '매칭됨' : '모집중'}
+        <View style={s.cardBody}>
+          <View style={s.cardTop}>
+            {urgent && <View style={s.urgBadge}><Text style={s.urgBadgeText}>긴급</Text></View>}
+            <View style={isDone ? s.statusDone : s.statusOpen}>
+              <Text style={[s.statusTxt, isDone ? s.statusDoneTxt : s.statusOpenTxt]}>
+                {isDone ? '완료' : '모집중'}
               </Text>
             </View>
           </View>
-          <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
-          <View style={styles.cardMeta}>
-            <View style={styles.cardInfo}>
-              <View style={styles.schoolTag}><Text style={styles.schoolTagText}>국민대</Text></View>
-              <Text style={styles.timeTag}>{formatTime(item.createdAt)}</Text>
+          <Text style={s.cardTitle} numberOfLines={2}>{item.title}</Text>
+          <Text style={s.cardDesc}  numberOfLines={2}>{item.description}</Text>
+          <View style={s.cardFooter}>
+            <View style={s.metaRow}>
+              <View style={s.schoolTag}><Text style={s.schoolTagText}>국민대</Text></View>
+              <Text style={s.timeText}>{formatTime(item.createdAt)}</Text>
             </View>
-            <View style={[styles.methodBadge, { backgroundColor: method.bg }]}>
-              <View style={[styles.methodDot, { backgroundColor: method.dot }]} />
-              <Text style={[styles.methodText, { color: method.color }]}>{method.label}</Text>
+            <View style={[s.methodBadge, { backgroundColor: m.bg }]}>
+              <View style={[s.dot, { backgroundColor: m.dot }]} />
+              <Text style={[s.methodText, { color: m.color }]}>{m.label}</Text>
             </View>
           </View>
         </View>
       </TouchableOpacity>
     );
-  }, []);
+  };
 
-  const ListHeader = (
-    <View style={styles.sectionHeader}>
-      <TouchableOpacity
-        style={[styles.sortBtn, sortMode === 'LATEST' && styles.sortBtnActive]}
-        onPress={() => setSortMode('LATEST')}
-      >
-        <Text style={[styles.sortBtnText, sortMode === 'LATEST' && styles.sortBtnTextActive]}>최신순</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.sortBtn, sortMode === 'OPEN' && styles.sortBtnActive]}
-        onPress={() => setSortMode('OPEN')}
-      >
-        <Text style={[styles.sortBtnText, sortMode === 'OPEN' && styles.sortBtnTextActive]}>모집중</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  // ── List layout ──────────────────────────────────────
+  const renderList = () => {
+    if (filtered.length === 0) {
+      return (
+        <View style={s.empty}>
+          <Text style={s.emptyEmoji}>📋</Text>
+          <Text style={s.emptyTitle}>해당하는 요청이 없어요</Text>
+          <Text style={s.emptySub}>다른 필터를 선택해보세요</Text>
+        </View>
+      );
+    }
+    return filtered.map(renderCard);
+  };
 
   return (
-    <View style={styles.container}>
-      {/* 커스텀 헤더 */}
-      <View style={styles.header}>
-        {/* 로고 + 버튼 */}
-        <View style={styles.headerTop}>
-          <View style={styles.logoRow}>
-            <View style={styles.logoMark}>
-              <Text style={styles.logoMarkEmoji}>🤝</Text>
+    <View style={s.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={TEAL} />}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
+        {/* ── Hero ─────────────────────────────────── */}
+        <View style={s.hero}>
+          <View style={s.bubble1} />
+          <View style={s.bubble2} />
+
+          {/* 로고 + 아이콘 */}
+          <View style={s.heroTop}>
+            <View style={s.logoRow}>
+              <View style={s.logoPill}><Text style={s.logoPillText}>🤝</Text></View>
+              <Text style={s.logoName}>도와줘<Text style={s.logoAccent}>코리안</Text></Text>
             </View>
-            <Text style={styles.appName}>
-              도와줘<Text style={styles.appNameAccent}>코리안</Text>
+            <View style={s.heroBtns}>
+              <TouchableOpacity style={s.hBtn} onPress={() => router.push('/search' as never)}>
+                <Ionicons name="search-outline" size={17} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity style={s.hBtn}>
+                <Ionicons name="notifications-outline" size={17} color="#fff" />
+                <View style={s.notifDot} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* 헤드라인 */}
+          <View style={s.heroHeadline}>
+            <Text style={s.heroSub}>국민대학교 · 지금 활동중</Text>
+            <Text style={s.heroTitle}>
+              지금 <Text style={s.heroHL}>{activeCount}명</Text>이{'\n'}도움을 기다려요
             </Text>
           </View>
-          <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/search')}>
-              <Ionicons name="search-outline" size={18} color={PRIMARY} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtnRelative}>
-              <Ionicons name="notifications-outline" size={18} color={PRIMARY} />
-              <View style={styles.notifDot} />
-            </TouchableOpacity>
+
+          {/* 통계 pill */}
+          <View style={s.statRow}>
+            <View style={s.statPill}>
+              <Text style={s.statNum}>{totalCount}</Text>
+              <Text style={s.statLbl}>전체 도움 요청</Text>
+            </View>
+            <View style={s.statPill}>
+              <Text style={s.statNum}>{user?.rating?.toFixed(1) ?? '4.9'}</Text>
+              <Text style={s.statLbl}>평균 만족도</Text>
+            </View>
+            <View style={s.statPill}>
+              <Text style={s.statNum}>{monthCount}</Text>
+              <Text style={s.statLbl}>이번 달 활동</Text>
+            </View>
           </View>
         </View>
 
-        {/* 배너 캐러셀 */}
-        <View style={styles.bannerWrap}>
-          <ScrollView
-            ref={bannerRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={16}
-            onMomentumScrollEnd={(e) => {
-              const idx = Math.round(e.nativeEvent.contentOffset.x / BANNER_WIDTH);
-              setBannerIndex(idx);
-            }}
-          >
-            {BANNER_SLIDES.map((slide) => (
-              <View key={slide.id} style={[styles.bannerSlide, { backgroundColor: slide.bg[0] }]}>
-                <Text style={styles.bannerSub}>{slide.sub}</Text>
-                <Text style={styles.bannerMain}>
-                  {slide.main}
-                  <Text style={styles.bannerHighlight}>{slide.highlight}</Text>
-                  {slide.tail}
-                </Text>
-              </View>
+        {/* ── 필터 칩 ──────────────────────────────── */}
+        <View style={s.filterWrap}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll}>
+            {FILTER_CHIPS.map(({ key, label }) => (
+              <TouchableOpacity
+                key={key}
+                style={[s.chip, sortMode === key && s.chipOn]}
+                onPress={() => setSortMode(key)}
+                activeOpacity={0.8}
+              >
+                <Text style={[s.chipText, sortMode === key && s.chipTextOn]}>{label}</Text>
+              </TouchableOpacity>
             ))}
           </ScrollView>
-          {/* 닷 인디케이터 */}
-          <View style={styles.dots}>
-            {BANNER_SLIDES.map((_, i) => (
-              <View key={i} style={[styles.dot, bannerIndex === i && styles.dotActive]} />
-            ))}
+        </View>
+
+        {/* ── Bento 그리드 ─────────────────────────── */}
+        <View style={s.bento}>
+          <View style={s.sectionRow}>
+            <Text style={s.sectionLabel}>최신 도움 요청</Text>
+            <TouchableOpacity style={s.moreBtn}>
+              <Text style={s.moreBtnText}>전체보기</Text>
+            </TouchableOpacity>
           </View>
-        </View>
 
-      </View>
-
-      {/* 피드 */}
-      {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={PRIMARY} />
-        </View>
-      ) : (
-        <FlatList
-          data={filteredRequests}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.list}
-          ListHeaderComponent={ListHeader}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />
+          {isLoading
+            ? <View style={s.center}><ActivityIndicator size="large" color={TEAL} /></View>
+            : renderList()
           }
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>📋</Text>
-              <Text style={styles.emptyText}>도움 요청이 없습니다</Text>
-              <Text style={styles.emptySubtext}>첫 번째 요청을 등록해보세요!</Text>
-            </View>
-          }
-        />
-      )}
+        </View>
+      </ScrollView>
 
-      {/* FAB - 유학생만 표시 */}
+      {/* FAB - 유학생만 */}
       {user?.userType === 'INTERNATIONAL' && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => router.push('/(main)/write')}
-          activeOpacity={0.88}
-        >
-          <View style={styles.fabPlus}>
-            <Text style={styles.fabPlusText}>+</Text>
-          </View>
-          <Text style={styles.fabText}>도움 요청하기</Text>
+        <TouchableOpacity style={s.fab} onPress={() => router.push('/(main)/write' as never)} activeOpacity={0.88}>
+          <View style={s.fabPlus}><Text style={s.fabPlusText}>+</Text></View>
+          <Text style={s.fabText}>도움 요청하기</Text>
         </TouchableOpacity>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
+
+  // ── Hero ─────────────────────────────────────────────
+  hero: {
+    backgroundColor: BLUE,
+    paddingTop: Platform.OS === 'ios' ? 56 : 28,
+    paddingBottom: 28,
+    paddingHorizontal: 20,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  bubble1: {
+    position: 'absolute', width: 180, height: 180, borderRadius: 90,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    top: -60, right: -40,
+  },
+  bubble2: {
+    position: 'absolute', width: 100, height: 100, borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    bottom: -30, left: 30,
   },
 
-  // 헤더
-  header: {
-    backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'ios' ? 60 : 32,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(79,70,229,0.1)',
+  heroTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: 22, zIndex: 2,
   },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 14,
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  logoPill: {
+    width: 34, height: 34, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+    justifyContent: 'center', alignItems: 'center',
   },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  logoMark: {
-    width: 32,
-    height: 32,
-    backgroundColor: PRIMARY,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoMarkEmoji: {
-    fontSize: 16,
-  },
-  appName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E1B4B',
-    letterSpacing: -0.5,
-  },
-  appNameAccent: {
-    color: PRIMARY,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: PRIMARY_LIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconBtnRelative: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: PRIMARY_LIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
+  logoPillText: { fontSize: 16 },
+  logoName: { fontSize: 16, fontWeight: '700', color: '#fff', letterSpacing: -0.4 },
+  logoAccent: { color: '#F5C518' },
+
+  heroBtns: { flexDirection: 'row', gap: 8 },
+  hBtn: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
+    justifyContent: 'center', alignItems: 'center',
     position: 'relative',
   },
   notifDot: {
-    position: 'absolute',
-    width: 7,
-    height: 7,
-    backgroundColor: '#EF4444',
-    borderRadius: 4,
-    top: 6,
-    right: 6,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
+    position: 'absolute', top: -2, right: -2,
+    width: 7, height: 7, borderRadius: 4,
+    backgroundColor: '#F07A1A', borderWidth: 1.5, borderColor: BLUE,
   },
 
-  // 배너 캐러셀
-  bannerWrap: {
-    marginHorizontal: 20,
-    marginBottom: 14,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  bannerSlide: {
-    width: BANNER_WIDTH,
-    padding: 18,
-    paddingBottom: 30,
-    borderRadius: 16,
-  },
-  bannerSub: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  bannerMain: {
-    fontSize: 20,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  bannerHighlight: {
-    color: '#FCD34D',
-  },
-  dots: {
-    position: 'absolute',
-    bottom: 10,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 5,
-  },
-  dot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-  },
-  dotActive: {
-    width: 16,
-    backgroundColor: '#FFFFFF',
-  },
+  heroHeadline: { marginBottom: 18, zIndex: 2 },
+  heroSub:   { fontSize: 11, color: 'rgba(255,255,255,0.65)', fontWeight: '500', marginBottom: 4, letterSpacing: 0.4 },
+  heroTitle: { fontSize: 26, fontWeight: '900', color: '#fff', lineHeight: 32, letterSpacing: -0.8 },
+  heroHL:    { color: '#F5C518' },
 
-  // 필터 칩
-  filterScroll: {
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    gap: 7,
+  statRow:  { flexDirection: 'row', gap: 8, zIndex: 2 },
+  statPill: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 14, padding: 10,
   },
+  statNum: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: -0.5, lineHeight: 24 },
+  statLbl: { fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: '500', marginTop: 2 },
+
+  // ── Filter ───────────────────────────────────────────
+  filterWrap: {
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(26,115,200,0.08)',
+  },
+  filterScroll: { paddingHorizontal: 16, gap: 7 },
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderRadius: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: 40, flexShrink: 0,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: 'rgba(79,70,229,0.1)',
-    flexShrink: 0,
+    borderWidth: 1.5, borderColor: 'rgba(26,115,200,0.1)',
   },
-  chipActive: {
-    backgroundColor: PRIMARY,
-    borderColor: PRIMARY,
-  },
-  chipEmoji: {
-    fontSize: 13,
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-  },
-  chipTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
+  chipOn:   { backgroundColor: TEAL, borderColor: TEAL },
+  chipText:  { fontSize: 12, fontWeight: '600', color: T2 },
+  chipTextOn:{ color: '#fff' },
 
-  // 리스트
-  list: {
-    padding: 14,
-    paddingBottom: 100,
-    gap: 10,
-    backgroundColor: '#FFFFFF',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    marginBottom: 10,
-  },
-  sortBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(79,70,229,0.15)',
-    backgroundColor: '#FFFFFF',
-  },
-  sortBtnActive: {
-    backgroundColor: PRIMARY,
-    borderColor: PRIMARY,
-  },
-  sortBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#9CA3AF',
-  },
-  sortBtnTextActive: {
-    color: '#FFFFFF',
-  },
+  // ── List ─────────────────────────────────────────────
+  bento: { paddingHorizontal: 16, paddingTop: 14, gap: 10 },
 
-  // 카드
+  sectionRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: 2,
+  },
+  sectionLabel: { fontSize: 13, fontWeight: '700', color: T1 },
+  moreBtn: {
+    backgroundColor: TEAL_L, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
+  },
+  moreBtnText: { fontSize: 12, fontWeight: '600', color: TEAL },
+
+  // ── Card ─────────────────────────────────────────────
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 14,
     flexDirection: 'row',
     gap: 12,
     alignItems: 'flex-start',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(79,70,229,0.06)',
-    position: 'relative',
+    borderWidth: 1, borderColor: 'rgba(26,115,200,0.08)',
+    shadowColor: BLUE, shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07, shadowRadius: 10, elevation: 3,
+  },
+  cardUrgent: {
+    backgroundColor: '#FEF4EC',
+    borderColor: 'rgba(240,122,26,0.2)',
   },
   cardIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
+    width: 52, height: 52, borderRadius: 14,
+    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
   },
-  cardIconEmoji: {
-    fontSize: 26,
+  iconEmoji: { fontSize: 24 },
+  cardBody:  { flex: 1, gap: 5 },
+  cardTop:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cardTitle: { fontSize: 14, fontWeight: '700', color: T1, lineHeight: 20, letterSpacing: -0.3 },
+  cardDesc:  { fontSize: 12, color: T2, lineHeight: 18 },
+  cardFooter:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+
+  urgBadge: {
+    backgroundColor: ORANGE, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,
   },
-  cardBody: {
-    flex: 1,
-    minWidth: 0,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 4,
-    gap: 8,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#1E1B4B',
-    letterSpacing: -0.3,
-    lineHeight: 20,
-    flex: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 20,
-    flexShrink: 0,
-    marginTop: 1,
-  },
+  urgBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+
+  // ── Shared badge styles ───────────────────────────────
   statusOpen: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: TEAL_L, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20,
   },
-  statusMatched: {
-    backgroundColor: PRIMARY_LIGHT,
+  statusDone: {
+    backgroundColor: '#F3F4F6', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20,
   },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  statusOpenText: {
-    color: '#065F46',
-  },
-  statusMatchedText: {
-    color: '#3730A3',
-  },
-  cardDesc: {
-    fontSize: 12,
-    color: '#6B7280',
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-  cardMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  schoolTag: {
-    backgroundColor: PRIMARY_LIGHT,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  schoolTagText: {
-    fontSize: 11,
-    color: PRIMARY,
-    fontWeight: '600',
-  },
-  timeTag: {
-    fontSize: 11,
-    color: '#9CA3AF',
-  },
+  statusTxt:     { fontSize: 10, fontWeight: '700' },
+  statusOpenTxt: { color: '#005E4F' },
+  statusDoneTxt: { color: '#6B7280' },
+
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  schoolTag: { backgroundColor: BLUE_L, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  schoolTagText: { fontSize: 11, fontWeight: '600', color: BLUE },
+  timeText: { fontSize: 11, color: T3 },
+
   methodBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8,
   },
-  methodDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  methodText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
+  dot:        { width: 5, height: 5, borderRadius: 3 },
+  methodText: { fontSize: 11, fontWeight: '600' },
 
-  // 빈 상태
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 80,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
-  },
+  // ── Empty ────────────────────────────────────────────
+  empty: { alignItems: 'center', paddingVertical: 60, gap: 8 },
+  emptyEmoji: { fontSize: 44, marginBottom: 4 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: T2 },
+  emptySub:   { fontSize: 14, color: T3 },
 
-  // FAB
+  // ── FAB ──────────────────────────────────────────────
   fab: {
-    position: 'absolute',
-    bottom: 24,
-    right: 16,
-    backgroundColor: PRIMARY,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 28,
-    shadowColor: PRIMARY,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    elevation: 8,
+    position: 'absolute', bottom: 24, right: 16,
+    backgroundColor: TEAL,
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 20, paddingVertical: 14, borderRadius: 28,
+    shadowColor: TEAL, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35, shadowRadius: 24, elevation: 8,
   },
   fabPlus: {
-    width: 22,
-    height: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 22, height: 22, backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8, justifyContent: 'center', alignItems: 'center',
   },
-  fabPlusText: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '300',
-    lineHeight: 20,
-  },
-  fabText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: -0.2,
-  },
+  fabPlusText: { fontSize: 16, color: '#fff', fontWeight: '300', lineHeight: 20 },
+  fabText:     { color: '#fff', fontSize: 14, fontWeight: '700', letterSpacing: -0.2 },
 });
