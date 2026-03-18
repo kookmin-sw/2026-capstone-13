@@ -1,6 +1,7 @@
 # simple_server.py - Python 3.15 호환 간단한 번역 서버
 import asyncio
 import json
+import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 import sys
@@ -10,6 +11,8 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 from translator.service import translation_service
 from crawler.kookmin import crawl_all
+from speech.service import speech_service
+from speech.realtime import run_ws_server
 
 # 지원 언어 목록 (유학생 주요 언어)
 SUPPORTED_LANGUAGES = ["en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es"]
@@ -100,9 +103,45 @@ class TranslationHandler(BaseHTTPRequestHandler):
             })
         return result
 
+    def _handle_speech_to_text(self):
+        """오디오 파일 → 텍스트 변환 (음성 메시지용)"""
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+            audio_data = self.rfile.read(content_length)
+            language = self.headers.get('X-Language')  # 선택적 언어 헤더
+
+            result = speech_service.transcribe_audio(audio_data, language)
+
+            mode_message = "Azure 음성 인식 완료" if result.get("mode") == "azure" else "더미 모드 (Azure Speech 키 필요)"
+            response = {
+                "success": True,
+                "message": mode_message,
+                "data": result
+            }
+
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+
+        except Exception as e:
+            print(f"[음성 인식] 오류: {e}")
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "success": False,
+                "message": f"음성 인식 실패: {str(e)}",
+                "data": None
+            }, ensure_ascii=False).encode('utf-8'))
+
     def do_POST(self):
         """POST 요청 처리"""
-        if self.path == '/api/translate':
+        if self.path == '/api/speech-to-text':
+            self._handle_speech_to_text()
+
+        elif self.path == '/api/translate':
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             
@@ -171,8 +210,17 @@ def run_server(port=8000):
     print(f"  GET  http://localhost:{port}/")
     print(f"  GET  http://localhost:{port}/health")
     print(f"  POST http://localhost:{port}/api/translate")
+    print(f"  POST http://localhost:{port}/api/speech-to-text")
+    print(f"  WS   ws://localhost:8001/ws/speech")
     print(f"\n종료하려면 Ctrl+C를 누르세요.\n")
-    
+
+    # WebSocket 서버를 별도 스레드에서 실행
+    ws_thread = threading.Thread(
+        target=lambda: asyncio.run(run_ws_server(8001)),
+        daemon=True
+    )
+    ws_thread.start()
+
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
