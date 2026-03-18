@@ -335,14 +335,27 @@ export default function ChatRoomScreen() {
     }
   };
 
-  const handleVideoCall = () => {
-    Alert.alert('통화', `${partnerNickname}님과 통화를 시작할까요?`, [
+  const handleVoiceCall = () => {
+    Alert.alert('음성통화', `${partnerNickname}님과 음성통화를 시작할까요?`, [
       { text: '취소', style: 'cancel' },
       {
         text: '시작',
         onPress: () => router.push({
           pathname: '/videocall',
-          params: { roomId: String(roomId), partnerNickname },
+          params: { roomId: String(roomId), partnerNickname, voiceOnly: 'true' },
+        }),
+      },
+    ]);
+  };
+
+  const handleVideoCall = () => {
+    Alert.alert('영상통화', `${partnerNickname}님과 영상통화를 시작할까요?`, [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '시작',
+        onPress: () => router.push({
+          pathname: '/videocall',
+          params: { roomId: String(roomId), partnerNickname, voiceOnly: 'false' },
         }),
       },
     ]);
@@ -429,6 +442,9 @@ export default function ChatRoomScreen() {
         </TouchableOpacity>
 
         <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleVoiceCall}>
+            <Ionicons name="call" size={18} color={PRIMARY} />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={handleVideoCall}>
             <Ionicons name="videocam" size={18} color={PRIMARY} />
           </TouchableOpacity>

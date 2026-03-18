@@ -27,11 +27,13 @@ export default function VideoCallScreen() {
   const params = useLocalSearchParams<{
     roomId: string;
     partnerNickname: string;
-    language?: string; // 내 언어 (음성 인식용)
+    language?: string;
+    voiceOnly?: string;
   }>();
 
   const partnerNickname = params.partnerNickname ?? '상대방';
   const myLanguage = params.language ?? 'ko-KR';
+  const isVoiceOnly = params.voiceOnly === 'true';
 
   const [isConnected, setIsConnected] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
