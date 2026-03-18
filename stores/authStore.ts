@@ -2,7 +2,8 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import type { User } from '../types';
-import { login as loginApi, register as registerApi, getMyProfile, uploadProfileImage, updateBio as updateBioApi } from '../services/authService';
+import { login as loginApi, register as registerApi, getMyProfile, uploadProfileImage, updateBio as updateBioApi, updateProfileDetail as updateProfileDetailApi } from '../services/authService';
+import type { UpdateProfileRequest } from '../services/authService';
 import type { LoginRequest, RegisterRequest } from '../types';
 
 interface AuthState {
@@ -23,6 +24,7 @@ interface AuthState {
   clearError: () => void;
   updateProfileImage: (imageUri: string) => Promise<boolean>;
   updateBio: (bio: string) => Promise<void>;
+  updateProfileDetail: (data: UpdateProfileRequest) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -111,6 +113,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     set((state) => ({ user: state.user ? { ...state.user, bio } : null }));
     try {
       await updateBioApi(bio);
+    } catch {
+      // 서버 업로드 실패해도 로컬 표시는 유지
+    }
+  },
+
+  // 프로필 상세 수정 (로컬 즉시 반영 후 서버 동기화)
+  updateProfileDetail: async (data: UpdateProfileRequest) => {
+    set((state) => ({ user: state.user ? { ...state.user, ...data } : null }));
+    try {
+      await updateProfileDetailApi(data);
     } catch {
       // 서버 업로드 실패해도 로컬 표시는 유지
     }

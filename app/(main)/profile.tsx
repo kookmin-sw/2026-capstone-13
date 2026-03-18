@@ -1,6 +1,6 @@
 // 마이페이지 화면
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -8,13 +8,78 @@ import { useAuthStore } from '../../stores/authStore';
 
 const PRIMARY = '#4F46E5';
 const PRIMARY_LIGHT = '#EEF2FF';
+const COLOR_MALE = '#0EA5E9';
+const COLOR_FEMALE = '#DB2777';
+
+interface ProfileDetail {
+  bio: string;
+  gender: string;
+  age: string;
+  major: string;
+  mbti: string;
+  hobbies: string[];
+}
+
+const EMPTY_DETAIL: ProfileDetail = { bio: '', gender: '', age: '', major: '', mbti: '', hobbies: [] };
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout, updateProfileImage, updateBio } = useAuthStore();
+  const { user, logout, updateProfileImage, updateProfileDetail } = useAuthStore();
   const [imageMenuVisible, setImageMenuVisible] = useState(false);
-  const [bioModalVisible, setBioModalVisible] = useState(false);
-  const [bioInput, setBioInput] = useState(user?.bio ?? '');
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [profileInput, setProfileInput] = useState<ProfileDetail>(EMPTY_DETAIL);
+  const [hobbyInput, setHobbyInput] = useState('');
+
+  const userHobbies = user?.hobbies ? user.hobbies.split(',').filter(Boolean) : [];
+
+  const filledCount = [user?.bio, user?.gender, user?.age, user?.major, user?.mbti]
+    .filter((v) => v && v.trim() !== '').length + (userHobbies.length > 0 ? 1 : 0);
+
+  const nicknameColor =
+    user?.gender === '남자' ? COLOR_MALE :
+    user?.gender === '여자' ? COLOR_FEMALE :
+    '#1E1B4B';
+
+  const handleOpenProfileModal = () => {
+    setProfileInput({
+      bio: user?.bio ?? '',
+      gender: user?.gender ?? '',
+      age: user?.age ?? '',
+      major: user?.major ?? '',
+      mbti: user?.mbti ?? '',
+      hobbies: userHobbies,
+    });
+    setHobbyInput('');
+    setProfileModalVisible(true);
+  };
+
+  const handleAddHobby = () => {
+    const tag = hobbyInput.trim();
+    if (!tag || profileInput.hobbies.length >= 5) return;
+    if (profileInput.hobbies.includes(tag)) return;
+    setProfileInput((prev) => ({ ...prev, hobbies: [...prev.hobbies, tag] }));
+    setHobbyInput('');
+  };
+
+  const handleRemoveHobby = (index: number) => {
+    setProfileInput((prev) => ({
+      ...prev,
+      hobbies: prev.hobbies.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleSaveProfile = async () => {
+    await updateProfileDetail({
+      bio: profileInput.bio,
+      gender: profileInput.gender,
+      age: profileInput.age,
+      major: profileInput.major,
+      mbti: profileInput.mbti,
+      hobbies: profileInput.hobbies.join(','),
+    });
+    setProfileModalVisible(false);
+  };
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
@@ -49,18 +114,9 @@ export default function ProfileScreen() {
       : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.8 });
 
     if (!result.canceled && result.assets[0]) {
+      setImageLoadError(false);
       await updateProfileImage(result.assets[0].uri);
     }
-  };
-
-  const handleOpenBioModal = () => {
-    setBioInput(user?.bio ?? '');
-    setBioModalVisible(true);
-  };
-
-  const handleSaveBio = async () => {
-    await updateBio(bioInput.trim());
-    setBioModalVisible(false);
   };
 
   const MENU_ITEMS = [
@@ -70,38 +126,72 @@ export default function ProfileScreen() {
   ] as const;
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       {/* 프로필 카드 */}
       <View style={styles.profileCard}>
         {/* 프로필 이미지 */}
         <TouchableOpacity style={styles.avatarWrapper} onPress={() => setImageMenuVisible(true)} activeOpacity={0.8}>
-          {user?.profileImage ? (
-            <Image source={{ uri: user.profileImage }} style={styles.avatarImage} />
-          ) : (
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{user?.nickname?.charAt(0) ?? '?'}</Text>
-            </View>
+          {/* 파란 기본 아바타는 항상 렌더링 */}
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{user?.nickname?.charAt(0) ?? '?'}</Text>
+          </View>
+          {/* 프로필 이미지가 있으면 위에 덮어씌움 */}
+          {user?.profileImage?.trim() && !imageLoadError && (
+            <Image
+              source={{ uri: user.profileImage }}
+              style={styles.avatarImageOverlay}
+              onError={() => setImageLoadError(true)}
+            />
           )}
           <View style={styles.editBadge}>
             <Ionicons name="camera" size={12} color="#FFFFFF" />
           </View>
         </TouchableOpacity>
 
-        <Text style={styles.nickname}>{user?.nickname ?? '사용자'}</Text>
+        <Text style={[styles.nickname, { color: nicknameColor }]}>
+          {user?.nickname ?? '사용자'}{user?.age ? `(${user.age})` : ''}
+        </Text>
         <View style={styles.typeBadge}>
           <Text style={styles.typeBadgeText}>
             {user?.userType === 'INTERNATIONAL' ? '🌍 유학생' : '🇰🇷 한국인 학생'}
           </Text>
         </View>
-        <Text style={styles.university}>{user?.university ?? '국민대학교'}</Text>
+        <Text style={styles.university}>
+          {user?.university ?? '국민대학교'}{user?.major ? `(${user.major})` : ''}
+        </Text>
 
         {/* 자기소개 */}
-        <TouchableOpacity style={styles.bioBox} onPress={handleOpenBioModal} activeOpacity={0.7}>
-          <Text style={user?.bio ? styles.bioText : styles.bioPlaceholder} numberOfLines={2}>
-            {user?.bio ?? '자기소개를 입력해보세요 ✏️'}
-          </Text>
-          <Ionicons name="pencil-outline" size={14} color="#9CA3AF" style={styles.bioEditIcon} />
-        </TouchableOpacity>
+        {user?.bio ? (
+          <Text style={styles.detailBio}>{user.bio}</Text>
+        ) : null}
+
+        {/* MBTI */}
+        {user?.mbti ? (
+          <View style={styles.mbtiBlock}>
+            <Text style={styles.detailLabel}>MBTI</Text>
+            <Text style={styles.detailValue}>{user.mbti}</Text>
+          </View>
+        ) : null}
+
+        {/* 취미 태그 */}
+        {userHobbies.length > 0 && (
+          <View style={styles.hobbyBlock}>
+            <Text style={styles.detailLabel}>취미</Text>
+            <View style={styles.hobbyRow}>
+              {userHobbies.map((h) => (
+                <View key={h} style={styles.hobbyTag}>
+                  <Text style={styles.hobbyTagText}>#{h}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+        {filledCount < 6 && (
+          <TouchableOpacity style={styles.profileCompleteButton} onPress={handleOpenProfileModal} activeOpacity={0.8}>
+            <Ionicons name="person-add-outline" size={15} color={PRIMARY} />
+            <Text style={styles.profileCompleteText}>프로필 완성하기 ({filledCount}/6)</Text>
+          </TouchableOpacity>
+        )}
 
         {/* 통계 */}
         <View style={styles.statsRow}>
@@ -168,44 +258,144 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* 자기소개 편집 모달 */}
-      <Modal transparent animationType="fade" visible={bioModalVisible} onRequestClose={() => setBioModalVisible(false)}>
+      {/* 프로필 상세 편집 모달 */}
+      <Modal transparent animationType="slide" visible={profileModalVisible} onRequestClose={() => setProfileModalVisible(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setBioModalVisible(false)}>
-            <View style={styles.bioSheet} onStartShouldSetResponder={() => true}>
-              <View style={styles.bottomSheetHandle} />
-              <Text style={styles.bottomSheetTitle}>자기소개</Text>
+          <View style={styles.profileSheet}>
+            <View style={styles.bottomSheetHandle} />
+            <Text style={styles.bottomSheetTitle}>프로필 완성하기</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
 
-              <TextInput
-                style={styles.bioInput}
-                value={bioInput}
-                onChangeText={setBioInput}
-                placeholder="자신을 소개해주세요 (최대 100자)"
-                placeholderTextColor="#9CA3AF"
-                multiline
-                maxLength={100}
-                autoFocus
-              />
-              <Text style={styles.bioCharCount}>{bioInput.length} / 100</Text>
-
-              <View style={styles.bioButtonRow}>
-                <TouchableOpacity style={styles.bioCancelButton} onPress={() => setBioModalVisible(false)} activeOpacity={0.7}>
-                  <Text style={styles.bioCancelText}>취소</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.bioSaveButton} onPress={handleSaveBio} activeOpacity={0.8}>
-                  <Text style={styles.bioSaveText}>저장</Text>
-                </TouchableOpacity>
+              {/* 자기소개 */}
+              <View style={styles.profileFieldWrap}>
+                <View style={styles.hobbyLabelRow}>
+                  <Text style={styles.profileFieldLabel}>자기소개</Text>
+                  <Text style={styles.hobbyCount}>{profileInput.bio.length}/100</Text>
+                </View>
+                <TextInput
+                  style={styles.bioInput}
+                  value={profileInput.bio}
+                  onChangeText={(text) => setProfileInput((prev) => ({ ...prev, bio: text }))}
+                  placeholderTextColor="#9CA3AF"
+                  multiline
+                  maxLength={100}
+                  textAlignVertical="top"
+                />
               </View>
+
+              {/* 성별 */}
+              <View style={styles.profileFieldWrap}>
+                <Text style={styles.profileFieldLabel}>성별</Text>
+                <View style={styles.genderRow}>
+                  {['남자', '여자'].map((g) => (
+                    <TouchableOpacity
+                      key={g}
+                      style={[styles.genderButton, profileInput.gender === g && styles.genderButtonActive]}
+                      onPress={() => setProfileInput((prev) => ({ ...prev, gender: g }))}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.genderButtonText, profileInput.gender === g && styles.genderButtonTextActive]}>
+                        {g}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* 나이 */}
+              <View style={styles.profileFieldWrap}>
+                <Text style={styles.profileFieldLabel}>나이</Text>
+                <TextInput
+                  style={styles.profileFieldInput}
+                  value={profileInput.age}
+                  onChangeText={(text) => setProfileInput((prev) => ({ ...prev, age: text.replace(/[^0-9]/g, '') }))}
+                  keyboardType="numeric"
+                  placeholderTextColor="#9CA3AF"
+                  maxLength={3}
+                />
+              </View>
+
+              {/* 학과 */}
+              <View style={styles.profileFieldWrap}>
+                <Text style={styles.profileFieldLabel}>학과</Text>
+                <TextInput
+                  style={styles.profileFieldInput}
+                  value={profileInput.major}
+                  onChangeText={(text) => setProfileInput((prev) => ({ ...prev, major: text }))}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              {/* MBTI */}
+              <View style={styles.profileFieldWrap}>
+                <Text style={styles.profileFieldLabel}>MBTI</Text>
+                <TextInput
+                  style={styles.profileFieldInput}
+                  value={profileInput.mbti}
+                  onChangeText={(text) => setProfileInput((prev) => ({ ...prev, mbti: text.toUpperCase() }))}
+                  placeholderTextColor="#9CA3AF"
+                  maxLength={4}
+                  autoCapitalize="characters"
+                />
+              </View>
+
+              {/* 취미 */}
+              <View style={styles.profileFieldWrap}>
+                <View style={styles.hobbyLabelRow}>
+                  <Text style={styles.profileFieldLabel}>취미</Text>
+                  <Text style={styles.hobbyCount}>({profileInput.hobbies.length}/5)</Text>
+                </View>
+                {/* 태그 목록 */}
+                {profileInput.hobbies.length > 0 && (
+                  <View style={styles.hobbyTagList}>
+                    {profileInput.hobbies.map((h, i) => (
+                      <View key={h} style={styles.hobbyTagEdit}>
+                        <Text style={styles.hobbyTagEditText}>#{h}</Text>
+                        <TouchableOpacity onPress={() => handleRemoveHobby(i)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                          <Ionicons name="close" size={13} color={PRIMARY} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {/* 입력 */}
+                {profileInput.hobbies.length < 5 && (
+                  <View style={styles.hobbyInputRow}>
+                    <TextInput
+                      style={styles.hobbyInputField}
+                      value={hobbyInput}
+                      onChangeText={setHobbyInput}
+                      onSubmitEditing={handleAddHobby}
+                      returnKeyType="done"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                    <TouchableOpacity style={styles.hobbyAddButton} onPress={handleAddHobby} activeOpacity={0.8}>
+                      <Text style={styles.hobbyAddButtonText}>추가</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+
+            </ScrollView>
+            <View style={styles.bioButtonRow}>
+              <TouchableOpacity style={styles.bioCancelButton} onPress={() => setProfileModalVisible(false)} activeOpacity={0.7}>
+                <Text style={styles.bioCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.bioSaveButton} onPress={handleSaveProfile} activeOpacity={0.8}>
+                <Text style={styles.bioSaveText}>저장</Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F8' },
+  scrollContent: { paddingBottom: 32 },
 
   profileCard: {
     backgroundColor: '#FFFFFF',
@@ -228,6 +418,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   avatarImage: { width: 80, height: 80, borderRadius: 40 },
+  avatarImageOverlay: {
+    width: 80, height: 80, borderRadius: 40,
+    position: 'absolute', top: 0, left: 0,
+  },
   avatarText: { fontSize: 32, fontWeight: '800', color: '#FFFFFF' },
   editBadge: {
     position: 'absolute', bottom: 0, right: 0,
@@ -244,16 +438,42 @@ const styles = StyleSheet.create({
   typeBadgeText: { fontSize: 13, color: PRIMARY, fontWeight: '600' },
   university: { fontSize: 13, color: '#9CA3AF', marginBottom: 10 },
 
-  bioBox: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB',
-    paddingHorizontal: 14, paddingVertical: 10,
-    marginBottom: 18, width: '100%', gap: 8,
+  detailBio: {
+    fontSize: 13, color: '#374151', lineHeight: 18,
+    marginBottom: 10, textAlign: 'center',
   },
-  bioText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 18 },
-  bioPlaceholder: { flex: 1, fontSize: 13, color: '#9CA3AF', lineHeight: 18 },
-  bioEditIcon: { flexShrink: 0 },
+
+  profileCompleteButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: PRIMARY_LIGHT,
+    borderRadius: 12, borderWidth: 1, borderColor: 'rgba(79,70,229,0.2)',
+    paddingHorizontal: 16, paddingVertical: 10,
+    marginBottom: 18,
+  },
+  profileCompleteText: { fontSize: 13, color: PRIMARY, fontWeight: '600' },
+
+  detailContainer: {
+    width: '100%', marginTop: 6, marginBottom: 6,
+    backgroundColor: '#F9FAFB', borderRadius: 14,
+    borderWidth: 1, borderColor: '#E5E7EB',
+    paddingHorizontal: 12, paddingVertical: 8,
+  },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  detailItem: { flex: 1, alignItems: 'center' },
+  detailLabel: { fontSize: 11, color: '#9CA3AF', marginBottom: 3, fontWeight: '500' },
+  detailValue: { fontSize: 13, color: '#374151', fontWeight: '700' },
+  mbtiBlock: {
+    alignItems: 'center', marginBottom: 8,
+  },
+  hobbyBlock: {
+    alignItems: 'center', marginBottom: 12,
+  },
+  hobbyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 4 },
+  hobbyTag: {
+    backgroundColor: PRIMARY_LIGHT, borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
+  hobbyTagText: { fontSize: 12, color: PRIMARY, fontWeight: '600' },
 
   statsRow: { flexDirection: 'row', alignItems: 'center', gap: 32 },
   statItem: { alignItems: 'center' },
@@ -332,21 +552,12 @@ const styles = StyleSheet.create({
   },
   bottomSheetCancelText: { fontSize: 15, color: '#6B7280', fontWeight: '600' },
 
-  bioSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: 16, paddingBottom: 40, paddingTop: 12,
-  },
   bioInput: {
     backgroundColor: '#F9FAFB',
     borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB',
     padding: 14, fontSize: 14, color: '#1E1B4B',
     minHeight: 100, textAlignVertical: 'top', lineHeight: 20,
     marginBottom: 6,
-  },
-  bioCharCount: {
-    fontSize: 12, color: '#9CA3AF',
-    textAlign: 'right', marginBottom: 16,
   },
   bioButtonRow: { flexDirection: 'row', gap: 10 },
   bioCancelButton: {
@@ -359,4 +570,50 @@ const styles = StyleSheet.create({
     alignItems: 'center', backgroundColor: PRIMARY,
   },
   bioSaveText: { fontSize: 15, color: '#FFFFFF', fontWeight: '700' },
+
+  profileSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 16, paddingBottom: 40, paddingTop: 12,
+    maxHeight: '85%',
+  },
+  profileFieldWrap: { marginBottom: 18 },
+  profileFieldLabel: { fontSize: 13, color: '#374151', fontWeight: '700', marginBottom: 8 },
+  profileFieldInput: {
+    backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1,
+    borderColor: '#E5E7EB', paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 14, color: '#1E1B4B',
+  },
+
+  genderRow: { flexDirection: 'row', gap: 10 },
+  genderButton: {
+    flex: 1, paddingVertical: 12, borderRadius: 12,
+    alignItems: 'center', backgroundColor: '#F9FAFB',
+    borderWidth: 1.5, borderColor: '#E5E7EB',
+  },
+  genderButtonActive: { backgroundColor: PRIMARY_LIGHT, borderColor: PRIMARY },
+  genderButtonText: { fontSize: 14, color: '#6B7280', fontWeight: '600' },
+  genderButtonTextActive: { color: PRIMARY },
+
+  hobbyLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  hobbyCount: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
+  hobbyTagList: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  hobbyTagEdit: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: PRIMARY_LIGHT, borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 5,
+  },
+  hobbyTagEditText: { fontSize: 12, color: PRIMARY, fontWeight: '600' },
+  hobbyInputRow: { flexDirection: 'row', gap: 8 },
+  hobbyInputField: {
+    flex: 1, backgroundColor: '#F9FAFB', borderRadius: 12,
+    borderWidth: 1, borderColor: '#E5E7EB',
+    paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 14, color: '#1E1B4B',
+  },
+  hobbyAddButton: {
+    paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: PRIMARY, justifyContent: 'center',
+  },
+  hobbyAddButtonText: { fontSize: 14, color: '#FFFFFF', fontWeight: '700' },
 });

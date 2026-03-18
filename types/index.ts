@@ -21,6 +21,11 @@ export interface User {
   university: string;
   profileImage?: string;
   bio?: string;
+  gender?: string;
+  age?: string;
+  major?: string;
+  mbti?: string;
+  hobbies?: string;
   rating: number;
   helpCount: number;
   createdAt: string;

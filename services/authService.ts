@@ -26,6 +26,21 @@ export const updateBio = async (bio: string): Promise<ApiResponse<User>> => {
   return response.data;
 };
 
+// 프로필 상세 수정 (bio, gender, age, major, mbti, hobbies)
+export interface UpdateProfileRequest {
+  bio?: string;
+  gender?: string;
+  age?: string;
+  major?: string;
+  mbti?: string;
+  hobbies?: string;
+}
+
+export const updateProfileDetail = async (data: UpdateProfileRequest): Promise<ApiResponse<User>> => {
+  const response = await api.patch<ApiResponse<User>>('/users/profile', data);
+  return response.data;
+};
+
 // 프로필 이미지 업로드
 export const uploadProfileImage = async (imageUri: string): Promise<ApiResponse<User>> => {
   const formData = new FormData();
