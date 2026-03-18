@@ -41,6 +41,7 @@ export default function VideoCallScreen() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const isStreamingRef = useRef<boolean>(false);
   const streamIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -105,34 +106,40 @@ export default function VideoCallScreen() {
 
     await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
     connectWebSocket();
+    isStreamingRef.current = true;
     setIsStreaming(true);
 
-    // 3초마다 녹음 청크를 잘라서 WebSocket으로 전송
-    const recordChunk = async () => {
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      recordingRef.current = recording;
+    // 3초 청크씩 순차적으로 녹음해서 WebSocket으로 전송
+    const loopRecording = async () => {
+      while (isStreamingRef.current) {
+        if (recordingRef.current) {
+          await recordingRef.current.stopAndUnloadAsync().catch(() => {});
+          recordingRef.current = null;
+        }
+        const { recording } = await Audio.Recording.createAsync(
+          Audio.RecordingOptionsPresets.HIGH_QUALITY
+        );
+        recordingRef.current = recording;
 
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
 
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      if (!uri || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+        await recording.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current = null;
+        const uri = recording.getURI();
+        if (!uri || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) continue;
 
-      // URI → ArrayBuffer → WebSocket 전송
-      const response = await fetch(uri);
-      const arrayBuffer = await response.arrayBuffer();
-      wsRef.current.send(arrayBuffer);
+        const response = await fetch(uri);
+        const arrayBuffer = await response.arrayBuffer();
+        wsRef.current.send(arrayBuffer);
+      }
     };
 
-    // 반복 청크 녹음
-    streamIntervalRef.current = setInterval(recordChunk, 3500);
-    recordChunk();
+    loopRecording();
   };
 
   // 음성 스트리밍 중지
   const stopStreaming = async () => {
+    isStreamingRef.current = false;
     setIsStreaming(false);
     if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
     await recordingRef.current?.stopAndUnloadAsync();
