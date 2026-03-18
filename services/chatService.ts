@@ -17,3 +17,20 @@ export const getChatMessages = async (roomId: number): Promise<ApiResponse<ChatM
   const response = await api.get<ApiResponse<ChatMessageDto[]>>(`/chat/rooms/${roomId}/messages`);
   return response.data;
 };
+
+// 음성 메시지 전송 (REST) - 오디오 파일 → 텍스트 변환 후 채팅 저장
+export const sendVoiceMessage = async (roomId: number, audioUri: string): Promise<ApiResponse<ChatMessageDto>> => {
+  const formData = new FormData();
+  formData.append('audio', {
+    uri: audioUri,
+    name: 'voice.wav',
+    type: 'audio/wav',
+  } as unknown as Blob);
+
+  const response = await api.post<ApiResponse<ChatMessageDto>>(
+    `/chat/rooms/${roomId}/voice-message`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
+  return response.data;
+};
