@@ -36,6 +36,8 @@ public class SecurityConfig {
                 .requestMatchers("/ws-native/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/api/notices").permitAll()
+                .requestMatchers("/api/notices/crawl").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

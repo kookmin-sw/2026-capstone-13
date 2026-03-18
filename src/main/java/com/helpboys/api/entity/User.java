@@ -37,6 +37,11 @@ public class User {
     @Column(name = "profile_image")
     private String profileImage;
 
+    // 선호 언어 (en, zh-Hans, zh-Hant, ja, vi, mn, fr, de, es 등)
+    @Column(name = "preferred_language", nullable = false)
+    @Builder.Default
+    private String preferredLanguage = "en";
+
     @Column(columnDefinition = "TEXT")
     private String bio;
 

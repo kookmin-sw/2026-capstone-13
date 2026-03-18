@@ -28,6 +28,11 @@ jwt:
   secret: ${JWT_SECRET:helpboys-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256}
   expiration: 86400000  # 24시간 (밀리초)
 
+# AI 서버 설정
+ai:
+  server:
+    url: ${AI_SERVER_URL:http://localhost:8000}
+
 # Actuator - 헬스체크 엔드포인트 활성화
 management:
   endpoints:
