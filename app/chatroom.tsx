@@ -16,7 +16,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
-import { getChatMessages, type ChatMessageDto } from '../services/chatService';
+import { Audio } from 'expo-av';
+import { getChatMessages, sendVoiceMessage, type ChatMessageDto } from '../services/chatService';
 import { rejectHelper, startHelpRequest } from '../services/helpService';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
@@ -69,9 +70,12 @@ export default function ChatRoomScreen() {
   const [isActing, setIsActing] = useState(false);
   const [systemMessages, setSystemMessages] = useState<{ type: 'system'; content: string; id: string }[]>([]);
   const [chatEnded, setChatEnded] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isSendingVoice, setIsSendingVoice] = useState(false);
   const { clearUnread, setActiveChatroom, leaveRoom } = useChatStore();
   const clientRef = useRef<Client | null>(null);
   const listRef = useRef<FlatList>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
 
   // 이전 메시지 조회
   const loadHistory = useCallback(async () => {
@@ -290,10 +294,57 @@ export default function ChatRoomScreen() {
     }
   };
 
+  const handleVoiceRecord = async () => {
+    if (isRecording) {
+      // 녹음 종료 → 전송
+      try {
+        setIsRecording(false);
+        await recordingRef.current?.stopAndUnloadAsync();
+        const uri = recordingRef.current?.getURI();
+        recordingRef.current = null;
+
+        if (!uri) return;
+
+        setIsSendingVoice(true);
+        const res = await sendVoiceMessage(roomId, uri);
+        if (!res.success) {
+          Alert.alert('오류', '음성 메시지 전송에 실패했습니다.');
+        }
+      } catch (e) {
+        Alert.alert('오류', '음성 메시지 처리 중 오류가 발생했습니다.');
+      } finally {
+        setIsSendingVoice(false);
+      }
+    } else {
+      // 녹음 시작
+      try {
+        const { granted } = await Audio.requestPermissionsAsync();
+        if (!granted) {
+          Alert.alert('권한 필요', '마이크 권한을 허용해주세요.');
+          return;
+        }
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+        const { recording } = await Audio.Recording.createAsync(
+          Audio.RecordingOptionsPresets.HIGH_QUALITY
+        );
+        recordingRef.current = recording;
+        setIsRecording(true);
+      } catch (e) {
+        Alert.alert('오류', '녹음을 시작할 수 없습니다.');
+      }
+    }
+  };
+
   const handleVideoCall = () => {
-    Alert.alert('영상통화', `${partnerNickname}님과 영상통화를 시작할까요?`, [
+    Alert.alert('통화', `${partnerNickname}님과 통화를 시작할까요?`, [
       { text: '취소', style: 'cancel' },
-      { text: '시작', onPress: () => Alert.alert('준비 중', '영상통화 기능은 준비 중이에요.') },
+      {
+        text: '시작',
+        onPress: () => router.push({
+          pathname: '/videocall',
+          params: { roomId: String(roomId), partnerNickname },
+        }),
+      },
     ]);
   };
 
@@ -496,6 +547,17 @@ export default function ChatRoomScreen() {
           onSubmitEditing={sendMessage}
           blurOnSubmit={false}
         />
+        <TouchableOpacity
+          style={[styles.micBtn, isRecording && styles.micBtnActive]}
+          onPress={handleVoiceRecord}
+          disabled={isSendingVoice}
+          activeOpacity={0.85}
+        >
+          {isSendingVoice
+            ? <ActivityIndicator size="small" color="#FFFFFF" />
+            : <Ionicons name={isRecording ? 'stop' : 'mic'} size={16} color="#FFFFFF" />
+          }
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
           onPress={sendMessage}
@@ -763,6 +825,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(79,70,229,0.1)',
     lineHeight: 20,
   },
+  micBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: '#6B7280',
+    justifyContent: 'center', alignItems: 'center',
+    flexShrink: 0,
+  },
+  micBtnActive: { backgroundColor: '#EF4444' },
   sendBtn: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: PRIMARY,
