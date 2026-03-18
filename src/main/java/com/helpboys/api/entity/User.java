@@ -45,6 +45,22 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
+    @Column
+    private String gender;
+
+    @Column
+    private String age;
+
+    @Column
+    private String major;
+
+    @Column
+    private String mbti;
+
+    // 취미 (쉼표 구분, 예: "독서,운동,게임")
+    @Column(columnDefinition = "TEXT")
+    private String hobbies;
+
     @Column(nullable = false)
     @Builder.Default
     private Double rating = 0.0;

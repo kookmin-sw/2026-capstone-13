@@ -4,6 +4,7 @@ import com.helpboys.api.dto.LoginRequest;
 import com.helpboys.api.dto.LoginResponse;
 import com.helpboys.api.dto.RegisterRequest;
 import com.helpboys.api.dto.UserResponse;
+import java.util.Map;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.UserRepository;
@@ -84,6 +85,20 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
         user.setBio(bio);
+        return UserResponse.from(userRepository.save(user));
+    }
+
+    // 프로필 상세 수정 (bio, gender, age, major, mbti, hobbies)
+    @org.springframework.transaction.annotation.Transactional
+    public UserResponse updateProfile(Long userId, Map<String, String> body) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        if (body.containsKey("bio")) user.setBio(body.get("bio"));
+        if (body.containsKey("gender")) user.setGender(body.get("gender"));
+        if (body.containsKey("age")) user.setAge(body.get("age"));
+        if (body.containsKey("major")) user.setMajor(body.get("major"));
+        if (body.containsKey("mbti")) user.setMbti(body.get("mbti"));
+        if (body.containsKey("hobbies")) user.setHobbies(body.get("hobbies"));
         return UserResponse.from(userRepository.save(user));
     }
 

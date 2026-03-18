@@ -47,6 +47,15 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("수정 완료", userService.updateBio(userId, body.get("bio"))));
     }
 
+    // PATCH /api/users/profile - 프로필 상세 수정 (bio, gender, age, major, mbti, hobbies)
+    @PatchMapping("/profile")
+    public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
+            @RequestBody Map<String, String> body,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        return ResponseEntity.ok(ApiResponse.success("수정 완료", userService.updateProfile(userId, body)));
+    }
+
     // POST /api/users/profile-image - 프로필 이미지 업로드
     @PostMapping("/profile-image")
     public ResponseEntity<ApiResponse<UserResponse>> uploadProfileImage(

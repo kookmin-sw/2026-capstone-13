@@ -17,6 +17,11 @@ public class UserResponse {
     private String university;
     private String profileImage;
     private String bio;
+    private String gender;
+    private String age;
+    private String major;
+    private String mbti;
+    private String hobbies;
     private Double rating;
     private Integer helpCount;
     private String createdAt;
@@ -30,6 +35,11 @@ public class UserResponse {
                 .university(user.getUniversity())
                 .profileImage(user.getProfileImage())
                 .bio(user.getBio())
+                .gender(user.getGender())
+                .age(user.getAge())
+                .major(user.getMajor())
+                .mbti(user.getMbti())
+                .hobbies(user.getHobbies())
                 .rating(user.getRating())
                 .helpCount(user.getHelpCount())
                 .createdAt(user.getCreatedAt().toString())
