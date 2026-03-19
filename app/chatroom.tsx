@@ -22,8 +22,8 @@ import { rejectHelper, startHelpRequest } from '../services/helpService';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 
-const PRIMARY = '#4F46E5';
-const PRIMARY_LIGHT = '#EEF2FF';
+const PRIMARY = '#3B6FE8';
+const PRIMARY_LIGHT = '#EEF4FF';
 const SYS_LEAVE = 'SYS_LEAVE:';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api';
@@ -425,7 +425,7 @@ export default function ChatRoomScreen() {
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.navBtn} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={18} color={PRIMARY} />
+          <Ionicons name="chevron-back" size={20} color="#6B9DF0" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.headerCenter} activeOpacity={0.7}>
@@ -436,30 +436,32 @@ export default function ChatRoomScreen() {
           <View>
             <Text style={styles.headerName}>{partnerNickname}</Text>
             <Text style={[styles.headerSub, !isConnected && styles.headerSubOffline]}>
-              {isConnected ? '🟢 연결됨' : '⚪ 연결 중...'}
+              {isConnected ? '● 연결됨' : '연결 중...'}
             </Text>
           </View>
         </TouchableOpacity>
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.actionBtn} onPress={handleVoiceCall}>
-            <Ionicons name="call" size={18} color={PRIMARY} />
+            <Ionicons name="call-outline" size={14} color="#6B9DF0" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={handleVideoCall}>
-            <Ionicons name="videocam" size={18} color={PRIMARY} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={handleLeave}>
-            <Ionicons name="exit-outline" size={18} color="#EF4444" />
+            <Ionicons name="videocam-outline" size={14} color="#6B9DF0" />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* 요청 컨텍스트 배너 */}
       <View style={styles.contextBanner}>
-        <Ionicons name="document-text-outline" size={13} color={PRIMARY} />
-        <Text style={styles.contextText} numberOfLines={1}>{requestTitle}</Text>
+        <View style={styles.contextIconBox}>
+          <Ionicons name="document-text-outline" size={14} color="#fff" />
+        </View>
+        <View style={styles.contextBody}>
+          <Text style={styles.contextText} numberOfLines={1}>{requestTitle}</Text>
+          <Text style={styles.contextSub}>진행중 · 국민대학교</Text>
+        </View>
         <View style={styles.contextBadge}>
-          <Text style={styles.contextBadgeText}>진행 중</Text>
+          <Text style={styles.contextBadgeText}>진행중</Text>
         </View>
       </View>
 
@@ -588,9 +590,10 @@ export default function ChatRoomScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F4F8' },
+  container: { flex: 1, backgroundColor: '#F5F8FF' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
+  // ── Header ──
   header: {
     backgroundColor: '#FFFFFF',
     paddingTop: Platform.OS === 'ios' ? 52 : 16,
@@ -600,62 +603,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(79,70,229,0.1)',
+    borderBottomColor: '#EEF4FF',
     gap: 10,
   },
   navBtn: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: PRIMARY_LIGHT,
+    width: 32, height: 32,
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
   headerCenter: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   headerAvatar: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#059669',
+    backgroundColor: PRIMARY,
     justifyContent: 'center', alignItems: 'center',
     position: 'relative',
   },
-  headerAvatarText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
+  headerAvatarText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
   headerOnline: {
-    position: 'absolute', bottom: 0, right: 0,
+    position: 'absolute', bottom: 1, right: 1,
     width: 10, height: 10, borderRadius: 5,
-    backgroundColor: '#10B981',
-    borderWidth: 2, borderColor: '#FFFFFF',
+    backgroundColor: '#22C55E', borderWidth: 2, borderColor: '#FFFFFF',
   },
-  headerName: { fontSize: 15, fontWeight: '700', color: '#1E1B4B' },
-  headerSub: { fontSize: 11, color: '#10B981', fontWeight: '500' },
-  headerSubOffline: { color: '#9CA3AF' },
-  headerActions: { flexDirection: 'row', gap: 6 },
+  headerName: { fontSize: 13, fontWeight: '800', color: '#0C1C3C' },
+  headerSub: { fontSize: 10, color: '#22C55E', fontWeight: '600' },
+  headerSubOffline: { color: '#A8C8FA' },
+  headerActions: { flexDirection: 'row', gap: 8 },
   actionBtn: {
-    width: 36, height: 36, borderRadius: 10,
+    width: 32, height: 32, borderRadius: 16,
     backgroundColor: PRIMARY_LIGHT,
     justifyContent: 'center', alignItems: 'center',
   },
 
+  // ── Context banner ──
   contextBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
     backgroundColor: PRIMARY_LIGHT,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(79,70,229,0.08)',
+    marginHorizontal: 14,
+    marginTop: 10,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#D0E0F8',
   },
-  contextText: { flex: 1, fontSize: 12, color: PRIMARY, fontWeight: '500' },
+  contextIconBox: {
+    width: 32, height: 32, borderRadius: 10,
+    backgroundColor: PRIMARY,
+    justifyContent: 'center', alignItems: 'center',
+    flexShrink: 0,
+  },
+  contextBody: { flex: 1, minWidth: 0 },
+  contextText: { fontSize: 10, fontWeight: '800', color: '#0C1C3C', marginBottom: 1 },
+  contextSub:  { fontSize: 9, color: '#6B9DF0', fontWeight: '500' },
   contextBadge: {
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 7, paddingVertical: 2,
-    borderRadius: 6,
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 6, flexShrink: 0,
   },
-  contextBadgeText: { fontSize: 10, fontWeight: '700', color: '#065F46' },
+  contextBadgeText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
 
+  // ── Notice banner ──
   noticeBanner: {
     backgroundColor: '#FFFBEB',
     borderBottomWidth: 1,
@@ -664,195 +675,143 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 10,
   },
-  noticeHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
+  noticeHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   noticeIcon: { fontSize: 22 },
   noticeTextWrap: { flex: 1 },
   noticeTitle: { fontSize: 13, fontWeight: '700', color: '#92400E' },
   noticeSub: { fontSize: 12, color: '#B45309', marginTop: 2 },
-  noticeActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+  noticeActions: { flexDirection: 'row', gap: 8 },
   rejectBtn: {
-    flex: 1,
-    paddingVertical: 9,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
+    flex: 1, paddingVertical: 9, borderRadius: 10,
+    borderWidth: 1.5, borderColor: '#D0E0F8', alignItems: 'center',
   },
-  rejectBtnText: { fontSize: 13, fontWeight: '700', color: '#6B7280' },
+  rejectBtnText: { fontSize: 13, fontWeight: '700', color: '#6B9DF0' },
   acceptBtn: {
-    flex: 2,
-    paddingVertical: 9,
-    borderRadius: 10,
-    backgroundColor: PRIMARY,
-    alignItems: 'center',
+    flex: 2, paddingVertical: 9, borderRadius: 10,
+    backgroundColor: PRIMARY, alignItems: 'center',
   },
   acceptBtnText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
   actionBtnDisabled: { opacity: 0.5 },
 
-  messageList: { padding: 16, paddingBottom: 12, flexGrow: 1 },
+  // ── Message list ──
+  messageList: { padding: 14, paddingBottom: 12, flexGrow: 1 },
   messageListEmpty: { flex: 1 },
-
-  emptyChat: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyChatText: { fontSize: 14, color: '#9CA3AF' },
+  emptyChat: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
+  emptyChatText: { fontSize: 14, color: '#A8C8FA' },
 
   disconnectedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#FEF2F2',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#FECACA',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#FEF2F2', paddingHorizontal: 16, paddingVertical: 6,
+    borderTopWidth: 1, borderTopColor: '#FECACA',
   },
   disconnectedText: { fontSize: 12, color: '#DC2626' },
 
+  // ── Date separator ──
   dateSeparator: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 10, marginVertical: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 14,
   },
-  dateLine: { flex: 1, height: 1, backgroundColor: 'rgba(79,70,229,0.1)' },
-  dateLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '500' },
+  dateLine:  { flex: 1, height: 1, backgroundColor: '#D0E0F8' },
+  dateLabel: { fontSize: 10, color: '#A8C8FA', fontWeight: '500' },
 
+  // ── Messages ──
   msgRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    marginBottom: 10,
+    flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 10,
   },
   msgRowOther: { justifyContent: 'flex-start' },
-  msgRowMine: { justifyContent: 'flex-end' },
+  msgRowMine:  { justifyContent: 'flex-end' },
   msgAvatar: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: '#059669',
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: PRIMARY,
     justifyContent: 'center', alignItems: 'center',
-    flexShrink: 0,
-    alignSelf: 'flex-start',
-    marginTop: 18,
+    flexShrink: 0, alignSelf: 'flex-start', marginTop: 16,
   },
-  msgAvatarText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+  msgAvatarText: { fontSize: 11, fontWeight: '800', color: '#FFFFFF' },
 
-  msgGroup: { maxWidth: '75%', gap: 4 },
+  msgGroup:     { maxWidth: '75%', gap: 4 },
   msgGroupMine: { alignItems: 'flex-end' },
 
-  senderName: { fontSize: 11, fontWeight: '600', color: '#6B7280', marginBottom: 2 },
+  senderName: { fontSize: 10, fontWeight: '600', color: '#6B9DF0', marginBottom: 3 },
 
-  bubbleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 5,
-  },
+  bubbleRow:     { flexDirection: 'row', alignItems: 'flex-end', gap: 5 },
   bubbleRowMine: { flexDirection: 'row-reverse' },
 
   bubble: {
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: 20,
-    maxWidth: 240,
+    paddingHorizontal: 13, paddingVertical: 10,
+    borderRadius: 16, maxWidth: 220,
   },
   bubbleOther: {
     backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: '#D0E0F8',
     borderTopLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
   },
   bubbleMine: {
     backgroundColor: PRIMARY,
     borderTopRightRadius: 4,
   },
-  bubbleText: { fontSize: 14, color: '#1E1B4B', lineHeight: 21 },
+  bubbleText:     { fontSize: 12, color: '#0C1C3C', lineHeight: 18 },
   bubbleTextMine: { color: '#FFFFFF' },
 
-  msgTime: { fontSize: 10, color: '#9CA3AF', paddingBottom: 2 },
+  msgTime:      { fontSize: 9, color: '#A8C8FA', paddingBottom: 2 },
   msgTimeOther: {},
 
-  systemMsgWrap: {
-    alignItems: 'center',
-    marginVertical: 8,
-  },
+  systemMsgWrap: { alignItems: 'center', marginVertical: 8 },
   systemMsgText: {
-    fontSize: 13,
-    color: '#059669',
-    fontWeight: '600',
+    fontSize: 12, color: '#059669', fontWeight: '600',
     backgroundColor: '#D1FAE5',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    overflow: 'hidden',
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderRadius: 20, overflow: 'hidden',
   },
 
+  // ── Input ──
   inputBarLocked: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     paddingVertical: 14,
     paddingBottom: Platform.OS === 'ios' ? 30 : 14,
-    backgroundColor: '#F9FAFB',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(79,70,229,0.08)',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1, borderTopColor: '#EEF4FF',
   },
-  inputLockedText: { fontSize: 13, color: '#9CA3AF' },
+  inputLockedText: { fontSize: 13, color: '#A8C8FA' },
   inputBarHidden: { display: 'none' },
 
   inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 12,
+    flexDirection: 'row', alignItems: 'flex-end', gap: 8,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 18,
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(79,70,229,0.08)',
+    borderTopWidth: 1, borderTopColor: '#EEF4FF',
   },
   attachBtn: {
-    width: 38, height: 38,
-    borderRadius: 19,
-    backgroundColor: '#F3F4F8',
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#F5F8FF',
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
   input: {
     flex: 1,
-    backgroundColor: '#F3F4F8',
-    borderRadius: 20,
-    paddingHorizontal: 16,
+    backgroundColor: '#F5F8FF',
+    borderRadius: 22,
+    paddingHorizontal: 14,
     paddingTop: Platform.OS === 'ios' ? 10 : 8,
     paddingBottom: 10,
-    fontSize: 14,
-    color: '#1E1B4B',
+    fontSize: 12,
+    color: '#0C1C3C',
     maxHeight: 100,
-    borderWidth: 1,
-    borderColor: 'rgba(79,70,229,0.1)',
-    lineHeight: 20,
+    borderWidth: 1, borderColor: '#D0E0F8',
+    lineHeight: 18,
   },
   micBtn: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#6B7280',
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#6B9DF0',
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
   micBtnActive: { backgroundColor: '#EF4444' },
   sendBtn: {
-    width: 38, height: 38, borderRadius: 19,
+    width: 36, height: 36, borderRadius: 18,
     backgroundColor: PRIMARY,
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
-  sendBtnDisabled: { backgroundColor: '#D1D5DB' },
+  sendBtnDisabled: { backgroundColor: '#C2D4F0' },
 });

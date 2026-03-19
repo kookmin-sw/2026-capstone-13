@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -23,22 +24,44 @@ import {
 } from '../../services/helpService';
 import type { HelpRequest } from '../../types';
 
-const PRIMARY = '#4F46E5';
-const PRIMARY_LIGHT = '#EEF2FF';
+const BLUE     = '#3B6FE8';
+const BLUE_BG  = '#F5F8FF';
+const BLUE_L   = '#EEF4FF';
+const BORDER   = '#D0E0F8';
+const T1       = '#0C1C3C';
+const T2       = '#A8C8FA';
+const T3       = '#6B9DF0';
+const GREEN    = '#22C55E';
+
+type FilterTab = 'ALL' | 'IN_PROGRESS' | 'COMPLETED';
+
+const FILTER_TABS: { key: FilterTab; label: string }[] = [
+  { key: 'ALL',         label: '전체'   },
+  { key: 'IN_PROGRESS', label: '진행중' },
+  { key: 'COMPLETED',   label: '완료'   },
+];
+
+const AVATAR_COLORS = ['#3B6FE8', '#6B9DF0', '#A8C8FA', '#5B8DEF', '#4A7CE0'];
+
+function avatarColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i)) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[h];
+}
 
 export default function ChatScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const isInternational = user?.userType === 'INTERNATIONAL';
 
-  const [requests, setRequests] = useState<HelpRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [requests, setRequests]     = useState<HelpRequest[]>([]);
+  const [isLoading, setIsLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actioningId, setActioningId] = useState<number | null>(null);
+  const [filter, setFilter]         = useState<FilterTab>('ALL');
 
   const { clearUnread, hasLeft } = useChatStore();
 
-  // 채팅 탭 포커스 시 뱃지 초기화 + 데이터 갱신
   useFocusEffect(
     useCallback(() => {
       clearUnread();
@@ -58,16 +81,9 @@ export default function ChatScreen() {
     }
   }, [isInternational]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+  const onRefresh = () => { setRefreshing(true); fetchData(); };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchData();
-  };
-
-  // 외국인: 수락 버튼
   const handleAccept = async (req: HelpRequest) => {
     setActioningId(req.id);
     try {
@@ -92,7 +108,6 @@ export default function ChatScreen() {
     }
   };
 
-  // 외국인: 거절 버튼
   const handleReject = (req: HelpRequest) => {
     Alert.alert(
       '도움 거절',
@@ -106,11 +121,8 @@ export default function ChatScreen() {
             setActioningId(req.id);
             try {
               const res = await rejectHelper(req.id);
-              if (res.success) {
-                fetchData();
-              } else {
-                Alert.alert('실패', res.message);
-              }
+              if (res.success) fetchData();
+              else Alert.alert('실패', res.message);
             } catch {
               Alert.alert('오류', '서버 오류가 발생했습니다.');
             } finally {
@@ -122,7 +134,6 @@ export default function ChatScreen() {
     );
   };
 
-  // 채팅방 이동
   const goToChat = (req: HelpRequest) => {
     const partnerNickname = isInternational
       ? (req.helper?.nickname ?? '')
@@ -139,143 +150,126 @@ export default function ChatScreen() {
     });
   };
 
-  // 외국인용: MATCHED(신청 대기) + IN_PROGRESS(채팅 중) 항목 렌더
-  const renderInternationalItem = ({ item }: { item: HelpRequest }) => {
-    const isActioning = actioningId === item.id;
-
-    if (item.status === 'MATCHED' && item.helper) {
-      // 도움 신청이 들어온 상태 → 채팅방에서 수락/거절
-      return (
-        <TouchableOpacity style={styles.requestCard} onPress={() => goToChat(item)} activeOpacity={0.85}>
-          <View style={styles.cardHeader}>
-            <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>새 도움 신청</Text>
-            </View>
-            <Text style={styles.cardTime}>{formatTime(item.updatedAt)}</Text>
-          </View>
-          <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-
-          {/* 신청자 프로필 */}
-          <View style={styles.helperProfile}>
-            <View style={styles.helperAvatar}>
-              <Text style={styles.helperAvatarText}>{item.helper.nickname.charAt(0)}</Text>
-            </View>
-            <View style={styles.helperInfo}>
-              <Text style={styles.helperName}>{item.helper.nickname}</Text>
-              <Text style={styles.helperUniv}>{item.helper.university}</Text>
-              <Text style={styles.helperStats}>도움 {item.helper.helpCount}회 · ★ {item.helper.rating.toFixed(1)}</Text>
-            </View>
-          </View>
-
-          <View style={styles.enterRow}>
-            <Text style={styles.enterHint}>채팅방에서 수락 또는 거절할 수 있어요</Text>
-            <Ionicons name="chevron-forward" size={14} color="#9CA3AF" />
-          </View>
-        </TouchableOpacity>
-      );
-    }
-
-    if (item.status === 'IN_PROGRESS') {
-      // 채팅 진행 중
-      return (
-        <TouchableOpacity style={styles.roomCard} onPress={() => goToChat(item)} activeOpacity={0.8}>
-          <View style={styles.avatarWrap}>
-            <View style={[styles.avatar, { backgroundColor: '#059669' }]}>
-              <Text style={styles.avatarText}>{(item.helper?.nickname ?? '?').charAt(0)}</Text>
-            </View>
-            <View style={styles.onlineDot} />
-          </View>
-          <View style={styles.roomBody}>
-            <View style={styles.roomTop}>
-              <Text style={styles.partnerName}>{item.helper?.nickname ?? ''}</Text>
-              <Text style={styles.time}>{formatTime(item.updatedAt)}</Text>
-            </View>
-            <Text style={styles.requestLabel} numberOfLines={1}>{item.title}</Text>
-            <Text style={styles.lastMessage}>채팅 진행 중</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-        </TouchableOpacity>
-      );
-    }
-
-    return null;
-  };
-
-  // 한국인용: MATCHED(대기 중) + IN_PROGRESS(채팅 중) 항목 렌더
-  const renderKoreanItem = ({ item }: { item: HelpRequest }) => {
-    if (item.status === 'MATCHED') {
-      return (
-        <TouchableOpacity style={styles.requestCard} onPress={() => goToChat(item)} activeOpacity={0.85}>
-          <View style={styles.cardHeader}>
-            <View style={styles.waitBadge}>
-              <Text style={styles.waitBadgeText}>수락 대기 중</Text>
-            </View>
-            <Text style={styles.cardTime}>{formatTime(item.updatedAt)}</Text>
-          </View>
-          <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-          <View style={styles.helperProfile}>
-            <View style={[styles.helperAvatar, { backgroundColor: PRIMARY }]}>
-              <Text style={styles.helperAvatarText}>{item.requester.nickname.charAt(0)}</Text>
-            </View>
-            <View style={styles.helperInfo}>
-              <Text style={styles.helperName}>{item.requester.nickname}</Text>
-              <Text style={styles.helperUniv}>{item.requester.university}</Text>
-            </View>
-          </View>
-          <View style={styles.enterRow}>
-            <Text style={styles.enterHint}>채팅방에서 상대방의 수락을 기다려요</Text>
-            <Ionicons name="chevron-forward" size={14} color="#9CA3AF" />
-          </View>
-        </TouchableOpacity>
-      );
-    }
-
-    if (item.status === 'IN_PROGRESS') {
-      return (
-        <TouchableOpacity style={styles.roomCard} onPress={() => goToChat(item)} activeOpacity={0.8}>
-          <View style={styles.avatarWrap}>
-            <View style={[styles.avatar, { backgroundColor: PRIMARY }]}>
-              <Text style={styles.avatarText}>{item.requester.nickname.charAt(0)}</Text>
-            </View>
-            <View style={styles.onlineDot} />
-          </View>
-          <View style={styles.roomBody}>
-            <View style={styles.roomTop}>
-              <Text style={styles.partnerName}>{item.requester.nickname}</Text>
-              <Text style={styles.time}>{formatTime(item.updatedAt)}</Text>
-            </View>
-            <Text style={styles.requestLabel} numberOfLines={1}>{item.title}</Text>
-            <Text style={styles.lastMessage}>채팅 진행 중</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-        </TouchableOpacity>
-      );
-    }
-
-    return null;
-  };
-
   const myId = Number(user?.id);
-  const visibleItems = requests.filter((r) =>
-    (r.status === 'MATCHED' || r.status === 'IN_PROGRESS') &&
-    !hasLeft(r.id, myId)
-  );
+
+  const visibleItems = requests.filter((r) => {
+    if (hasLeft(r.id, myId)) return false;
+    if (filter === 'ALL')         return r.status === 'MATCHED' || r.status === 'IN_PROGRESS';
+    if (filter === 'IN_PROGRESS') return r.status === 'IN_PROGRESS';
+    if (filter === 'COMPLETED')   return r.status === 'COMPLETED';
+    return false;
+  });
+
+  const getPartner = (item: HelpRequest) =>
+    isInternational ? item.helper : item.requester;
+
+  const renderItem = ({ item }: { item: HelpRequest }) => {
+    const partner        = getPartner(item);
+    const name           = partner?.nickname ?? '?';
+    const isActioning    = actioningId === item.id;
+    const isOnline       = item.status === 'IN_PROGRESS' || item.status === 'MATCHED';
+    const isCompleted    = item.status === 'COMPLETED';
+    const isMatchPending = item.status === 'MATCHED';
+
+    const statusLabel = isCompleted ? '완료' : '진행중';
+    const statusBg    = isCompleted ? '#F0F4F0' : BLUE_L;
+    const statusColor = isCompleted ? T3 : BLUE;
+
+    return (
+      <TouchableOpacity
+        style={[s.item, isCompleted && s.itemDimmed]}
+        onPress={() => goToChat(item)}
+        activeOpacity={0.85}
+      >
+        {/* 아바타 */}
+        <View style={s.avatarWrap}>
+          <View style={[s.avatar, { backgroundColor: avatarColor(name) }]}>
+            <Text style={s.avatarText}>{name.charAt(0)}</Text>
+          </View>
+          {isOnline && <View style={s.onlineDot} />}
+        </View>
+
+        {/* 본문 */}
+        <View style={s.itemBody}>
+          <View style={s.itemTop}>
+            <View style={s.itemTitleRow}>
+              <Text style={s.itemName}>{name}</Text>
+              <View style={[s.statusBadge, { backgroundColor: statusBg }]}>
+                <Text style={[s.statusText, { color: statusColor }]}>{statusLabel}</Text>
+              </View>
+            </View>
+            <Text style={s.itemTime}>{formatTime(item.updatedAt)}</Text>
+          </View>
+          <View style={s.itemBottom}>
+            <Text style={s.itemPreview} numberOfLines={1}>
+              {isMatchPending
+                ? (isInternational ? '새 도움 신청이 도착했어요!' : '수락을 기다리고 있어요')
+                : item.title}
+            </Text>
+            {isMatchPending && !isActioning && (
+              <View style={s.unreadDot} />
+            )}
+          </View>
+          {/* MATCHED + 외국인: 수락/거절 */}
+          {isMatchPending && isInternational && (
+            <View style={s.actionRow}>
+              <TouchableOpacity
+                style={s.rejectBtn}
+                onPress={() => handleReject(item)}
+                disabled={isActioning}
+              >
+                <Text style={s.rejectBtnText}>거절</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.acceptBtn, isActioning && s.btnDisabled]}
+                onPress={() => handleAccept(item)}
+                disabled={isActioning}
+              >
+                {isActioning
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={s.acceptBtnText}>수락</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (isLoading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={PRIMARY} />
-      </View>
-    );
+    return <View style={s.center}><ActivityIndicator size="large" color={BLUE} /></View>;
   }
 
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
+      {/* 헤더 */}
+      <View style={s.header}>
+        <Text style={s.headerTitle}>채팅</Text>
+        <TouchableOpacity style={s.iconBtn}>
+          <Ionicons name="search-outline" size={14} color={T3} />
+        </TouchableOpacity>
+      </View>
+
+      {/* 필터 탭 */}
+      <View style={s.filterRow}>
+        {FILTER_TABS.map(({ key, label }) => (
+          <TouchableOpacity
+            key={key}
+            style={[s.chip, filter === key && s.chipOn]}
+            onPress={() => setFilter(key)}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.chipText, filter === key && s.chipTextOn]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {visibleItems.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyIcon}>💬</Text>
-          <Text style={styles.emptyTitle}>아직 채팅이 없어요</Text>
-          <Text style={styles.emptySub}>
+        <View style={s.empty}>
+          <Text style={s.emptyIcon}>💬</Text>
+          <Text style={s.emptyTitle}>아직 채팅이 없어요</Text>
+          <Text style={s.emptySub}>
             {isInternational
               ? '도움 요청을 올리면 도움을 줄 분이 나타나요!'
               : '도움 요청 목록에서 도움을 신청해보세요!'}
@@ -284,11 +278,11 @@ export default function ChatScreen() {
       ) : (
         <FlatList
           data={visibleItems}
-          renderItem={isInternational ? renderInternationalItem : renderKoreanItem}
+          renderItem={renderItem}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.list}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />}
+          contentContainerStyle={s.list}
+          ItemSeparatorComponent={() => <View style={s.separator} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
         />
       )}
     </View>
@@ -296,155 +290,113 @@ export default function ChatScreen() {
 }
 
 function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const diff = Date.now() - d.getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return '방금 전';
-  if (minutes < 60) return `${minutes}분 전`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  return `${Math.floor(hours / 24)}일 전`;
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return '방금 전';
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  return `${Math.floor(h / 24)}일 전`;
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  list: { paddingVertical: 8 },
-  separator: { height: 8, backgroundColor: '#F3F4F8' },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: BLUE_BG },
+  center:    { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  empty: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 32,
-  },
-  emptyIcon: { fontSize: 48, marginBottom: 8 },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#1E1B4B' },
-  emptySub: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 22 },
-
-  // 신청 카드 (수락/거절)
-  requestCard: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(79,70,229,0.12)',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
-    gap: 12,
-  },
-  cardHeader: {
+  // ── Header ──
+  header: {
+    backgroundColor: BLUE_BG,
+    paddingTop: Platform.OS === 'ios' ? 56 : 28,
+    paddingBottom: 0,
+    paddingHorizontal: 18,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  newBadge: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  newBadgeText: { fontSize: 11, fontWeight: '700', color: '#92400E' },
-  waitBadge: {
-    backgroundColor: PRIMARY_LIGHT,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  waitBadgeText: { fontSize: 11, fontWeight: '700', color: '#3730A3' },
-  cardTime: { fontSize: 11, color: '#9CA3AF' },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: '#1E1B4B' },
-
-  helperProfile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 12,
-  },
-  helperAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#059669',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
-  },
-  helperAvatarText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
-  helperInfo: { flex: 1, gap: 2 },
-  helperName: { fontSize: 14, fontWeight: '700', color: '#1E1B4B' },
-  helperUniv: { fontSize: 12, color: '#9CA3AF' },
-  helperStats: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
-
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  rejectBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    justifyContent: 'center',
     alignItems: 'center',
   },
-  rejectBtnText: { fontSize: 14, fontWeight: '700', color: '#6B7280' },
-  acceptBtn: {
-    flex: 2,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: PRIMARY,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  acceptBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
-  btnDisabled: { opacity: 0.6 },
-
-  enterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  enterHint: { fontSize: 12, color: '#9CA3AF' },
-
-  // 채팅 목록 행 (IN_PROGRESS)
-  roomCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  avatarWrap: { position: 'relative' },
-  avatar: {
-    width: 50, height: 50, borderRadius: 25,
+  headerTitle: { fontSize: 17, fontWeight: '900', color: T1, letterSpacing: -0.5 },
+  iconBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
   },
-  avatarText: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
+
+  // ── Filter ──
+  filterRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 18, paddingVertical: 12 },
+  chip: {
+    paddingHorizontal: 14, paddingVertical: 5,
+    borderRadius: 20, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: BORDER,
+  },
+  chipOn:      { backgroundColor: BLUE, borderColor: BLUE },
+  chipText:    { fontSize: 10, fontWeight: '700', color: T2 },
+  chipTextOn:  { color: '#fff' },
+
+  // ── List ──
+  list:      { paddingVertical: 0 },
+  separator: { height: 0, backgroundColor: BLUE_L },
+
+  // ── Item ──
+  item: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: BLUE_L,
+    backgroundColor: BLUE_BG,
+  },
+  itemDimmed: { opacity: 0.7 },
+
+  avatarWrap: { position: 'relative', flexShrink: 0 },
+  avatar: {
+    width: 46, height: 46, borderRadius: 23,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  avatarText: { fontSize: 16, fontWeight: '800', color: '#fff' },
   onlineDot: {
     position: 'absolute', bottom: 1, right: 1,
-    width: 12, height: 12, borderRadius: 6,
-    backgroundColor: '#10B981', borderWidth: 2, borderColor: '#FFFFFF',
+    width: 11, height: 11, borderRadius: 6,
+    backgroundColor: '#22C55E', borderWidth: 2, borderColor: BLUE_BG,
   },
-  roomBody: { flex: 1, gap: 3 },
-  roomTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  partnerName: { fontSize: 15, fontWeight: '700', color: '#1E1B4B' },
-  time: { fontSize: 12, color: '#9CA3AF' },
-  requestLabel: {
-    fontSize: 11, color: PRIMARY, fontWeight: '600',
-    backgroundColor: PRIMARY_LIGHT,
-    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5,
-    alignSelf: 'flex-start',
+
+  itemBody: { flex: 1, gap: 3 },
+  itemTop: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 3,
   },
-  lastMessage: { fontSize: 13, color: '#6B7280' },
+  itemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  itemName:   { fontSize: 13, fontWeight: '800', color: T1 },
+  statusBadge:{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
+  statusText: { fontSize: 9, fontWeight: '700' },
+  itemTime:   { fontSize: 10, color: T2 },
+
+  itemBottom: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  itemPreview: { fontSize: 11, color: T2, fontWeight: '500', flex: 1 },
+  unreadDot: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: BLUE, flexShrink: 0,
+  },
+
+  actionRow:     { flexDirection: 'row', gap: 7, marginTop: 8 },
+  rejectBtn: {
+    flex: 1, paddingVertical: 7, borderRadius: 8,
+    borderWidth: 1, borderColor: BORDER, alignItems: 'center',
+  },
+  rejectBtnText: { fontSize: 12, fontWeight: '700', color: T3 },
+  acceptBtn: {
+    flex: 2, paddingVertical: 7, borderRadius: 8,
+    backgroundColor: BLUE, alignItems: 'center',
+  },
+  acceptBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  btnDisabled:   { opacity: 0.6 },
+
+  // ── Empty ──
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8, paddingHorizontal: 32 },
+  emptyIcon:  { fontSize: 48, marginBottom: 8 },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: T1 },
+  emptySub:   { fontSize: 14, color: T2, textAlign: 'center', lineHeight: 22 },
 });

@@ -5,7 +5,19 @@
       "WebSearch",
       "WebFetch(domain:www.data.go.kr)",
       "WebFetch(domain:kosis.kr)",
-      "WebFetch(domain:kess.kedi.re.kr)"
+      "WebFetch(domain:kess.kedi.re.kr)",
+      "Bash(curl -s -X POST https://backend-production-0a6f.up.railway.app/api/auth/register -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"test123@test.com\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"test1234\"\"\"\",\"\"\"\"nickname\"\"\"\":\"\"\"\"테스트유저\"\"\"\",\"\"\"\"userType\"\"\"\":\"\"\"\"KOREAN\"\"\"\",\"\"\"\"university\"\"\"\":\"\"\"\"국민대학교\"\"\"\"}')",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s -X POST https://backend-production-0a6f.up.railway.app/api/auth/register -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"test123@test.com\"\",\"\"password\"\":\"\"test1234\"\",\"\"nickname\"\":\"\"테스트유저\"\",\"\"userType\"\":\"\"KOREAN\"\",\"\"university\"\":\"\"국민대학교\"\"}')",
+      "Bash(curl -s -v -X POST https://backend-production-0a6f.up.railway.app/api/auth/register -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"test123@test.com\"\",\"\"password\"\":\"\"test1234\"\",\"\"nickname\"\":\"\"테스트유저\"\",\"\"userType\"\":\"\"KOREAN\"\",\"\"university\"\":\"\"국민대학교\"\"}')",
+      "Bash(find /c/Users/sang0/OneDrive/Desktop/backend/src -name application*.properties -o -name application*.yml)",
+      "Bash(xargs ls:*)",
+      "Bash(railway --version)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx expo:*)"
     ]
   }
 }

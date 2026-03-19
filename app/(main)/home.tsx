@@ -1,4 +1,3 @@
-// 홈 화면 - Bento Grid 디자인
 import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
@@ -8,43 +7,35 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getHelpRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
-import type { HelpCategory, HelpMethod, HelpRequest } from '../../types';
+import type { HelpCategory, HelpRequest } from '../../types';
 
-// ── Design tokens (HTML 디자인 기준) ──
-const BLUE     = '#1A73C8';
-const TEAL     = '#00A88E';
-const ORANGE   = '#F07A1A';
-const T1       = '#0A1E2E';
-const T2       = '#4A6070';
-const T3       = '#9BB0BF';
-const BLUE_L   = '#E8F3FD';
-const TEAL_L   = '#E0F5F2';
-const GREEN_L  = '#E8F5E9';
-const ORANGE_L = '#FEF0E0';
-const YELLOW_L = '#FEF9E0';
-const BG       = '#FFFFFF';
+// ── Design tokens ──
+const BLUE     = '#3B6FE8';
+const BLUE_BG  = '#F5F8FF';
+const BLUE_L   = '#EEF4FF';
+const BLUE_MID = '#A8C8FA';
+const BORDER   = '#D4E4FA';
+const ORANGE   = '#F97316';
+const T1       = '#0E1E40';
+const T3       = '#6B9DF0';
 
+// ── Category config ──
+type CategoryFilter = 'ALL' | HelpCategory;
 
-type SortMode = 'LATEST' | 'OLDEST' | 'MATCHED' | 'URGENT';
-
-const FILTER_CHIPS: { key: SortMode; label: string }[] = [
-  { key: 'LATEST',  label: '최신순'  },
-  { key: 'OLDEST',  label: '오래된순' },
-  { key: 'MATCHED', label: '매칭중'  },
-  { key: 'URGENT',  label: '긴급'    },
+const CATEGORIES: { key: CategoryFilter; label: string; emoji: string }[] = [
+  { key: 'ALL',      label: '전체',  emoji: '🌐' },
+  { key: 'SCHOOL',   label: '학교',  emoji: '🎓' },
+  { key: 'HOSPITAL', label: '건강',  emoji: '🏥' },
+  { key: 'DAILY',    label: '주거',  emoji: '🏠' },
+  { key: 'OTHER',    label: '취업',  emoji: '💼' },
+  { key: 'BANK',     label: '금융',  emoji: '🏦' },
 ];
 
-const CAT_EMOJI: Record<HelpCategory, string> = {
-  BANK: '🏦', HOSPITAL: '🏥', SCHOOL: '🏫', DAILY: '🏠', OTHER: '📌',
+const CAT_AVATAR_COLOR: Record<HelpCategory, string> = {
+  BANK: '#F0A040', HOSPITAL: '#F06060', SCHOOL: BLUE, DAILY: '#90C4F0', OTHER: '#A0A8B0',
 };
-const CAT_BG: Record<HelpCategory, string> = {
-  BANK: YELLOW_L, HOSPITAL: '#FEE2E2', SCHOOL: TEAL_L, DAILY: GREEN_L, OTHER: '#F3F4F6',
-};
-const METHOD: Record<HelpMethod, { bg: string; color: string; dot: string; label: string }> = {
-  CHAT:       { bg: BLUE_L,   color: '#0D4F8C', dot: BLUE,   label: '채팅'    },
-  VIDEO_CALL: { bg: TEAL_L,   color: '#005E4F', dot: TEAL,   label: '영상통화' },
-  OFFLINE:    { bg: ORANGE_L, color: '#7A3300', dot: ORANGE, label: '오프라인' },
-};
+
+type CardType = 'urgent' | 'new' | 'info';
 
 function isUrgent(createdAt: string) {
   return Date.now() - new Date(createdAt).getTime() > 2 * 60 * 60 * 1000;
@@ -57,14 +48,27 @@ function formatTime(iso: string) {
   if (h < 24) return `${h}시간 전`;
   return `${Math.floor(h / 24)}일 전`;
 }
+function getCardType(item: HelpRequest): CardType {
+  if (item.status === 'WAITING' && isUrgent(item.createdAt)) return 'urgent';
+  if (item.status === 'WAITING') return 'new';
+  return 'info';
+}
+
+const CARD_BAR: Record<CardType, string>        = { urgent: ORANGE,    new: BLUE,    info: BLUE_MID };
+const CARD_BADGE_BG: Record<CardType, string>   = { urgent: '#FFF3E8', new: BLUE_L,  info: BLUE_L   };
+const CARD_BADGE_FG: Record<CardType, string>   = { urgent: '#C45A10', new: BLUE,    info: T3       };
+const CARD_BADGE_LABEL: Record<CardType, string>= { urgent: '긴급',    new: '신규',  info: '정보'   };
+
+const HELP_GOAL = 20;
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const [requests, setRequests] = useState<HelpRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [sortMode, setSortMode] = useState<SortMode>('LATEST');
+  const [requests, setRequests]         = useState<HelpRequest[]>([]);
+  const [isLoading, setIsLoading]       = useState(true);
+  const [refreshing, setRefreshing]     = useState(false);
+  const [catFilter, setCatFilter]       = useState<CategoryFilter>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('ALL');
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -79,360 +83,431 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
-
   const onRefresh = () => { setRefreshing(true); fetchRequests(); };
 
   // Stats
   const activeCount = requests.filter(r => r.status === 'WAITING').length;
   const totalCount  = requests.filter(r => r.status !== 'CANCELLED').length;
+  const urgentCount = requests.filter(r => r.status === 'WAITING' && isUrgent(r.createdAt)).length;
   const now = new Date();
   const monthCount  = requests.filter(r => {
     const d = new Date(r.createdAt);
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
 
+  // Streak dots (based on helpCount, max 7)
+  const helpCount  = user?.helpCount ?? 0;
+  const streakDays = Math.min(helpCount, 7);
+
   const filtered = requests
     .filter(r => r.status !== 'CANCELLED')
+    .filter(r => catFilter === 'ALL' || r.category === catFilter)
     .filter(r => {
-      if (sortMode === 'MATCHED') return r.status === 'MATCHED';
-      if (sortMode === 'URGENT')  return r.status === 'WAITING' && isUrgent(r.createdAt);
+      if (statusFilter === 'MATCHED') return r.status === 'MATCHED';
+      if (statusFilter === 'URGENT')  return r.status === 'WAITING' && isUrgent(r.createdAt);
       return true;
     })
-    .sort((a, b) =>
-      sortMode === 'OLDEST'
-        ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const goTo = (item: HelpRequest) =>
     router.push({ pathname: '/request-detail', params: { id: item.id } });
 
-  // ── Card renderer ───────────────────────────────────
   const renderCard = (item: HelpRequest) => {
-    const m = METHOD[item.helpMethod];
-    const isDone = item.status !== 'WAITING';
-    const urgent = isUrgent(item.createdAt) && item.status === 'WAITING';
+    const type     = getCardType(item);
+    const initial  = item.requester.nickname.charAt(0);
+    const avatarBg = CAT_AVATAR_COLOR[item.category];
     return (
       <TouchableOpacity
         key={item.id}
-        style={[s.card, urgent && s.cardUrgent]}
+        style={s.card}
         onPress={() => goTo(item)}
         activeOpacity={0.85}
       >
-        <View style={[s.cardIcon, { backgroundColor: CAT_BG[item.category] }]}>
-          <Text style={s.iconEmoji}>{CAT_EMOJI[item.category]}</Text>
-        </View>
-        <View style={s.cardBody}>
-          <View style={s.cardTop}>
-            {urgent && <View style={s.urgBadge}><Text style={s.urgBadgeText}>긴급</Text></View>}
-            <View style={isDone ? s.statusDone : s.statusOpen}>
-              <Text style={[s.statusTxt, isDone ? s.statusDoneTxt : s.statusOpenTxt]}>
-                {isDone ? '완료' : '모집중'}
-              </Text>
-            </View>
-          </View>
-          <Text style={s.cardTitle} numberOfLines={2}>{item.title}</Text>
-          <Text style={s.cardDesc}  numberOfLines={2}>{item.description}</Text>
-          <View style={s.cardFooter}>
-            <View style={s.metaRow}>
-              <View style={s.schoolTag}><Text style={s.schoolTagText}>국민대</Text></View>
+        <View style={[s.cardBar, { backgroundColor: CARD_BAR[type] }]} />
+        <View style={s.cardContent}>
+          <View style={s.cardHeader}>
+            <View style={s.cardHeaderLeft}>
+              <View style={[s.badge, { backgroundColor: CARD_BADGE_BG[type] }]}>
+                <Text style={[s.badgeText, { color: CARD_BADGE_FG[type] }]}>
+                  {CARD_BADGE_LABEL[type]}
+                </Text>
+              </View>
               <Text style={s.timeText}>{formatTime(item.createdAt)}</Text>
             </View>
-            <View style={[s.methodBadge, { backgroundColor: m.bg }]}>
-              <View style={[s.dot, { backgroundColor: m.dot }]} />
-              <Text style={[s.methodText, { color: m.color }]}>{m.label}</Text>
+            <TouchableOpacity style={s.helpBtn} onPress={() => goTo(item)}>
+              <Text style={s.helpBtnText}>도와주기</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={s.cardTitle} numberOfLines={2}>{item.title}</Text>
+          <View style={s.cardFooter}>
+            <View style={[s.avatar, { backgroundColor: avatarBg }]}>
+              <Text style={s.avatarText}>{initial}</Text>
             </View>
+            <Text style={s.schoolText}>{item.requester.nickname} · 국민대</Text>
           </View>
         </View>
       </TouchableOpacity>
     );
   };
 
-  // ── List layout ──────────────────────────────────────
-  const renderList = () => {
-    if (filtered.length === 0) {
-      return (
-        <View style={s.empty}>
-          <Text style={s.emptyEmoji}>📋</Text>
-          <Text style={s.emptyTitle}>해당하는 요청이 없어요</Text>
-          <Text style={s.emptySub}>다른 필터를 선택해보세요</Text>
-        </View>
-      );
-    }
-    return filtered.map(renderCard);
-  };
-
   return (
     <View style={s.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={TEAL} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
-        {/* ── Hero ─────────────────────────────────── */}
-        <View style={s.hero}>
-          <View style={s.bubble1} />
-          <View style={s.bubble2} />
-
-          {/* 로고 + 아이콘 */}
-          <View style={s.heroTop}>
-            <View style={s.logoRow}>
-              <View style={s.logoPill}><Text style={s.logoPillText}>🤝</Text></View>
-              <Text style={s.logoName}>도와줘<Text style={s.logoAccent}>코리안</Text></Text>
+        {/* ── NAV ── */}
+        <View style={s.nav}>
+          <View>
+            <View style={s.locationRow}>
+              <Ionicons name="location-sharp" size={11} color={BLUE} />
+              <Text style={s.locationText}>{user?.university ?? '국민대학교'}</Text>
+              <Ionicons name="chevron-down" size={9} color={BLUE} />
             </View>
-            <View style={s.heroBtns}>
-              <TouchableOpacity style={s.hBtn} onPress={() => router.push('/search' as never)}>
-                <Ionicons name="search-outline" size={17} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity style={s.hBtn}>
-                <Ionicons name="notifications-outline" size={17} color="#fff" />
-                <View style={s.notifDot} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* 헤드라인 */}
-          <View style={s.heroHeadline}>
-            <Text style={s.heroSub}>국민대학교 · 지금 활동중</Text>
-            <Text style={s.heroTitle}>
-              지금 <Text style={s.heroHL}>{activeCount}명</Text>이{'\n'}도움을 기다려요
+            <Text style={s.greeting}>
+              안녕하세요, <Text style={s.greetingName}>{user?.nickname ?? ''}님</Text>!
             </Text>
           </View>
+          <TouchableOpacity style={s.notifBtn}>
+            <Ionicons name="notifications-outline" size={15} color={T3} />
+            <View style={s.notifDot} />
+          </TouchableOpacity>
+        </View>
 
-          {/* 통계 pill */}
-          <View style={s.statRow}>
-            <View style={s.statPill}>
-              <Text style={s.statNum}>{totalCount}</Text>
-              <Text style={s.statLbl}>전체 도움 요청</Text>
+        {/* ── 스트릭 카드 ── */}
+        <View style={s.streakCard}>
+          <View style={s.streakLeft}>
+            <View style={s.streakEmoji}><Text style={s.streakEmojiText}>🔥</Text></View>
+            <View>
+              <Text style={s.streakTitle}>{streakDays}일 연속 활동중!</Text>
+              <Text style={s.streakSub}>오늘도 도움을 드려보세요</Text>
             </View>
-            <View style={s.statPill}>
-              <Text style={s.statNum}>{user?.rating?.toFixed(1) ?? '4.9'}</Text>
-              <Text style={s.statLbl}>평균 만족도</Text>
+          </View>
+          <View style={s.streakDots}>
+            {Array.from({ length: 7 }).map((_, i) => (
+              <View
+                key={i}
+                style={[s.dot, i < streakDays ? s.dotOn : s.dotOff]}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* ── Hero 배너 ── */}
+        <View style={s.heroWrap}>
+          <View style={s.hero}>
+            <View style={s.heroBubble1} />
+            <View style={s.heroBubble2} />
+            <View style={s.heroMain}>
+              <View style={s.heroLeft}>
+                <Text style={s.heroSub}>지금 활동중</Text>
+                <Text style={s.heroTitle}>
+                  <Text style={s.heroHL}>{activeCount}명</Text>이 기다려요
+                </Text>
+              </View>
+              <View style={s.heroMiniBox}>
+                <Text style={s.heroMiniNum}>{totalCount}</Text>
+                <Text style={s.heroMiniLbl}>전체요청</Text>
+              </View>
             </View>
-            <View style={s.statPill}>
-              <Text style={s.statNum}>{monthCount}</Text>
-              <Text style={s.statLbl}>이번 달 활동</Text>
+            {/* 진행 바 */}
+            <View style={s.progressSection}>
+              <View style={s.progressLabelRow}>
+                <Text style={s.progressLabel}>이번달 도움 목표</Text>
+                <Text style={s.progressValue}>{monthCount} / {HELP_GOAL}</Text>
+              </View>
+              <View style={s.progressTrack}>
+                <View style={[s.progressFill, { width: `${Math.min((monthCount / HELP_GOAL) * 100, 100)}%` }]} />
+              </View>
+            </View>
+            {/* Pills */}
+            <View style={s.heroPills}>
+              <View style={s.heroPill}>
+                <View style={[s.pillDot, { backgroundColor: '#A8F0C8' }]} />
+                <Text style={s.pillText}>평균 2분 매칭</Text>
+              </View>
+              <View style={s.heroPill}>
+                <View style={[s.pillDot, { backgroundColor: '#FDE68A' }]} />
+                <Text style={s.pillText}>긴급 {urgentCount}건</Text>
+              </View>
             </View>
           </View>
         </View>
 
-        {/* ── 필터 칩 ──────────────────────────────── */}
-        <View style={s.filterWrap}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll}>
-            {FILTER_CHIPS.map(({ key, label }) => (
-              <TouchableOpacity
-                key={key}
-                style={[s.chip, sortMode === key && s.chipOn]}
-                onPress={() => setSortMode(key)}
-                activeOpacity={0.8}
-              >
-                <Text style={[s.chipText, sortMode === key && s.chipTextOn]}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+        {/* ── 카테고리 ── */}
+        <View style={s.section}>
+          <Text style={s.sectionLabel}>카테고리</Text>
         </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.catScroll}
+        >
+          {CATEGORIES.map(({ key, label, emoji }) => (
+            <TouchableOpacity
+              key={key}
+              style={s.catItem}
+              onPress={() => setCatFilter(key)}
+              activeOpacity={0.8}
+            >
+              <View style={[s.catIcon, catFilter === key && s.catIconOn]}>
+                <Text style={s.catEmoji}>{emoji}</Text>
+              </View>
+              <Text style={s.catLabel}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-        {/* ── Bento 그리드 ─────────────────────────── */}
-        <View style={s.bento}>
-          <View style={s.sectionRow}>
+        {/* ── 최신 도움 요청 ── */}
+        <View style={s.listSection}>
+          <View style={s.listHeader}>
             <Text style={s.sectionLabel}>최신 도움 요청</Text>
-            <TouchableOpacity style={s.moreBtn}>
-              <Text style={s.moreBtnText}>전체보기</Text>
+            <TouchableOpacity>
+              <Text style={s.viewAll}>전체보기</Text>
             </TouchableOpacity>
           </View>
 
-          {isLoading
-            ? <View style={s.center}><ActivityIndicator size="large" color={TEAL} /></View>
-            : renderList()
-          }
+          {/* 필터 칩 */}
+          <View style={s.filterRow}>
+            {(['ALL', 'MATCHED', 'URGENT'] as const).map(key => (
+              <TouchableOpacity
+                key={key}
+                style={[s.chip, statusFilter === key && s.chipOn]}
+                onPress={() => setStatusFilter(key)}
+                activeOpacity={0.8}
+              >
+                <Text style={[s.chipText, statusFilter === key && s.chipTextOn]}>
+                  {key === 'ALL' ? '전체' : key === 'MATCHED' ? '매칭중' : '긴급'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* 카드 목록 */}
+          <View style={s.cardList}>
+            {isLoading ? (
+              <View style={s.center}><ActivityIndicator size="large" color={BLUE} /></View>
+            ) : filtered.length === 0 ? (
+              <View style={s.empty}>
+                <Text style={s.emptyEmoji}>📋</Text>
+                <Text style={s.emptyTitle}>해당하는 요청이 없어요</Text>
+                <Text style={s.emptySub}>다른 필터를 선택해보세요</Text>
+              </View>
+            ) : (
+              filtered.map(renderCard)
+            )}
+          </View>
         </View>
       </ScrollView>
 
-      {/* FAB - 유학생만 */}
+      {/* ── FAB ── */}
       {user?.userType === 'INTERNATIONAL' && (
-        <TouchableOpacity style={s.fab} onPress={() => router.push('/(main)/write' as never)} activeOpacity={0.88}>
-          <View style={s.fabPlus}><Text style={s.fabPlusText}>+</Text></View>
-          <Text style={s.fabText}>도움 요청하기</Text>
-        </TouchableOpacity>
+        <View style={s.fabWrap}>
+          <TouchableOpacity
+            style={s.fab}
+            onPress={() => router.push('/(main)/write' as never)}
+            activeOpacity={0.88}
+          >
+            <Ionicons name="add" size={13} color="#fff" />
+            <Text style={s.fabText}>도움 요청하기</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
+  container: { flex: 1, backgroundColor: BLUE_BG },
+  center:    { paddingVertical: 60, alignItems: 'center' },
 
-  // ── Hero ─────────────────────────────────────────────
-  hero: {
-    backgroundColor: BLUE,
+  // ── NAV ──
+  nav: {
+    backgroundColor: BLUE_BG,
     paddingTop: Platform.OS === 'ios' ? 56 : 28,
-    paddingBottom: 28,
+    paddingBottom: 0,
     paddingHorizontal: 20,
-    overflow: 'hidden',
-    position: 'relative',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  bubble1: {
-    position: 'absolute', width: 180, height: 180, borderRadius: 90,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    top: -60, right: -40,
-  },
-  bubble2: {
-    position: 'absolute', width: 100, height: 100, borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    bottom: -30, left: 30,
-  },
-
-  heroTop: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 22, zIndex: 2,
-  },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoPill: {
-    width: 34, height: 34, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  logoPillText: { fontSize: 16 },
-  logoName: { fontSize: 16, fontWeight: '700', color: '#fff', letterSpacing: -0.4 },
-  logoAccent: { color: '#F5C518' },
-
-  heroBtns: { flexDirection: 'row', gap: 8 },
-  hBtn: {
-    width: 34, height: 34, borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)',
+  locationRow:  { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
+  locationText: { fontSize: 13, color: BLUE, fontWeight: '700' },
+  greeting:     { fontSize: 22, fontWeight: '900', color: T1, letterSpacing: -0.5 },
+  greetingName: { color: BLUE },
+  notifBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
     position: 'relative',
   },
   notifDot: {
-    position: 'absolute', top: -2, right: -2,
+    position: 'absolute', top: 5, right: 5,
     width: 7, height: 7, borderRadius: 4,
-    backgroundColor: '#F07A1A', borderWidth: 1.5, borderColor: BLUE,
+    backgroundColor: ORANGE, borderWidth: 1.5, borderColor: BLUE_BG,
   },
 
-  heroHeadline: { marginBottom: 18, zIndex: 2 },
-  heroSub:   { fontSize: 11, color: 'rgba(255,255,255,0.65)', fontWeight: '500', marginBottom: 4, letterSpacing: 0.4 },
-  heroTitle: { fontSize: 26, fontWeight: '900', color: '#fff', lineHeight: 32, letterSpacing: -0.8 },
-  heroHL:    { color: '#F5C518' },
-
-  statRow:  { flexDirection: 'row', gap: 8, zIndex: 2 },
-  statPill: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
-    borderRadius: 14, padding: 10,
-  },
-  statNum: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: -0.5, lineHeight: 24 },
-  statLbl: { fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: '500', marginTop: 2 },
-
-  // ── Filter ───────────────────────────────────────────
-  filterWrap: {
+  // ── Streak ──
+  streakCard: {
+    marginHorizontal: 16, marginTop: 12,
     backgroundColor: '#fff',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(26,115,200,0.08)',
+    borderRadius: 16, borderWidth: 1, borderColor: BORDER,
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  filterScroll: { paddingHorizontal: 16, gap: 7 },
+  streakLeft:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  streakEmoji: {
+    width: 38, height: 38, borderRadius: 12,
+    backgroundColor: '#FFF7ED',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  streakEmojiText: { fontSize: 24 },
+  streakTitle:     { fontSize: 16, fontWeight: '900', color: T1, letterSpacing: -0.3 },
+  streakSub:       { fontSize: 12, color: BLUE_MID, fontWeight: '500' },
+  streakDots:      { flexDirection: 'row', gap: 4 },
+  dot:             { width: 7, height: 7, borderRadius: 4 },
+  dotOn:           { backgroundColor: BLUE },
+  dotOff:          { backgroundColor: BORDER },
+
+  // ── Hero ──
+  heroWrap: { marginHorizontal: 16, marginTop: 12 },
+  hero: {
+    backgroundColor: BLUE,
+    borderRadius: 22, padding: 18,
+    overflow: 'hidden', position: 'relative',
+  },
+  heroBubble1: {
+    position: 'absolute', top: -28, right: -28,
+    width: 96, height: 96, borderRadius: 48,
+    backgroundColor: '#4E7FEF',
+  },
+  heroBubble2: {
+    position: 'absolute', bottom: -22, left: -14,
+    width: 68, height: 68, borderRadius: 34,
+    backgroundColor: '#3262D4',
+  },
+  heroMain: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'flex-start', marginBottom: 10,
+  },
+  heroLeft:    {},
+  heroSub:     { fontSize: 13, color: BLUE_MID, fontWeight: '600', marginBottom: 4, letterSpacing: 0.3 },
+  heroTitle:   { fontSize: 30, fontWeight: '900', color: '#fff', lineHeight: 36, letterSpacing: -0.7 },
+  heroHL: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 7, overflow: 'hidden',
+  },
+  heroMiniBox: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12, padding: 8, alignItems: 'center',
+  },
+  heroMiniNum: { fontSize: 24, fontWeight: '900', color: '#fff', lineHeight: 28 },
+  heroMiniLbl: { fontSize: 12, color: BLUE_MID, fontWeight: '500' },
+
+  progressSection: { marginBottom: 12 },
+  progressLabelRow:{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  progressLabel:   { fontSize: 12, color: BLUE_MID, fontWeight: '500' },
+  progressValue:   { fontSize: 12, color: '#fff', fontWeight: '700' },
+  progressTrack: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 10, height: 7, overflow: 'hidden',
+  },
+  progressFill: {
+    backgroundColor: BLUE_MID, borderRadius: 10, height: '100%',
+  },
+
+  heroPills:  { flexDirection: 'row', gap: 7 },
+  heroPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 20, paddingHorizontal: 11, paddingVertical: 5,
+  },
+  pillDot:  { width: 5, height: 5, borderRadius: 3 },
+  pillText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+
+  // ── Category ──
+  section:      { paddingHorizontal: 16, paddingTop: 14 },
+  sectionLabel: { fontSize: 17, fontWeight: '900', color: T1, letterSpacing: -0.3 },
+  catScroll:    { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  catItem:      { alignItems: 'center', gap: 5, flexShrink: 0 },
+  catIcon: {
+    width: 52, height: 52, borderRadius: 16,
+    backgroundColor: BLUE_L,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  catIconOn:    { backgroundColor: BLUE },
+  catEmoji:     { fontSize: 24 },
+  catLabel:     { fontSize: 11, fontWeight: '700', color: T1 },
+
+  // ── List section ──
+  listSection:  { paddingHorizontal: 16, paddingTop: 0 },
+  listHeader: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 10,
+  },
+  viewAll:      { fontSize: 13, fontWeight: '700', color: BLUE },
+  filterRow:    { flexDirection: 'row', gap: 6, marginBottom: 10 },
   chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 40, flexShrink: 0,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5, borderColor: 'rgba(26,115,200,0.1)',
+    paddingHorizontal: 13, paddingVertical: 5,
+    borderRadius: 20, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: BORDER,
   },
-  chipOn:   { backgroundColor: TEAL, borderColor: TEAL },
-  chipText:  { fontSize: 12, fontWeight: '600', color: T2 },
-  chipTextOn:{ color: '#fff' },
+  chipOn:       { backgroundColor: BLUE, borderColor: BLUE },
+  chipText:     { fontSize: 12, fontWeight: '700', color: BLUE_MID },
+  chipTextOn:   { color: '#fff' },
+  cardList:     { gap: 8 },
 
-  // ── List ─────────────────────────────────────────────
-  bento: { paddingHorizontal: 16, paddingTop: 14, gap: 10 },
-
-  sectionRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 2,
-  },
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: T1 },
-  moreBtn: {
-    backgroundColor: TEAL_L, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
-  },
-  moreBtnText: { fontSize: 12, fontWeight: '600', color: TEAL },
-
-  // ── Card ─────────────────────────────────────────────
+  // ── Card ──
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 14, overflow: 'hidden',
+    borderWidth: 1, borderColor: BORDER,
     flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
-    borderWidth: 1, borderColor: 'rgba(26,115,200,0.08)',
-    shadowColor: BLUE, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07, shadowRadius: 10, elevation: 3,
   },
-  cardUrgent: {
-    backgroundColor: '#FEF4EC',
-    borderColor: 'rgba(240,122,26,0.2)',
+  cardBar:     { width: 4, flexShrink: 0 },
+  cardContent: { flex: 1, padding: 12 },
+  cardHeader: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 5,
   },
-  cardIcon: {
-    width: 52, height: 52, borderRadius: 14,
+  cardHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  badge:       { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  badgeText:   { fontSize: 11, fontWeight: '800' },
+  timeText:    { fontSize: 12, color: BLUE_MID },
+  helpBtn: {
+    backgroundColor: BLUE_L,
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+  },
+  helpBtnText: { fontSize: 12, fontWeight: '800', color: BLUE },
+  cardTitle:   { fontSize: 15, fontWeight: '700', color: T1, lineHeight: 22, marginBottom: 7 },
+  cardFooter:  { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  avatar: {
+    width: 20, height: 20, borderRadius: 10,
     justifyContent: 'center', alignItems: 'center', flexShrink: 0,
   },
-  iconEmoji: { fontSize: 24 },
-  cardBody:  { flex: 1, gap: 5 },
-  cardTop:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: T1, lineHeight: 20, letterSpacing: -0.3 },
-  cardDesc:  { fontSize: 12, color: T2, lineHeight: 18 },
-  cardFooter:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  avatarText:  { fontSize: 9, color: '#fff', fontWeight: '700' },
+  schoolText:  { fontSize: 12, color: BLUE_MID, fontWeight: '500' },
 
-  urgBadge: {
-    backgroundColor: ORANGE, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,
-  },
-  urgBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff' },
-
-  // ── Shared badge styles ───────────────────────────────
-  statusOpen: {
-    backgroundColor: TEAL_L, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20,
-  },
-  statusDone: {
-    backgroundColor: '#F3F4F6', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20,
-  },
-  statusTxt:     { fontSize: 10, fontWeight: '700' },
-  statusOpenTxt: { color: '#005E4F' },
-  statusDoneTxt: { color: '#6B7280' },
-
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  schoolTag: { backgroundColor: BLUE_L, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  schoolTagText: { fontSize: 11, fontWeight: '600', color: BLUE },
-  timeText: { fontSize: 11, color: T3 },
-
-  methodBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8,
-  },
-  dot:        { width: 5, height: 5, borderRadius: 3 },
-  methodText: { fontSize: 11, fontWeight: '600' },
-
-  // ── Empty ────────────────────────────────────────────
-  empty: { alignItems: 'center', paddingVertical: 60, gap: 8 },
+  // ── Empty ──
+  empty:      { alignItems: 'center', paddingVertical: 60, gap: 8 },
   emptyEmoji: { fontSize: 44, marginBottom: 4 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: T2 },
-  emptySub:   { fontSize: 14, color: T3 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: T1 },
+  emptySub:   { fontSize: 16, color: BLUE_MID },
 
-  // ── FAB ──────────────────────────────────────────────
+  // ── FAB ──
+  fabWrap: {
+    position: 'absolute', bottom: 24, left: 0, right: 0,
+    alignItems: 'center',
+  },
   fab: {
-    position: 'absolute', bottom: 24, right: 16,
-    backgroundColor: TEAL,
     flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingHorizontal: 20, paddingVertical: 14, borderRadius: 28,
-    shadowColor: TEAL, shadowOffset: { width: 0, height: 6 },
+    backgroundColor: BLUE,
+    borderRadius: 26, paddingHorizontal: 28, paddingVertical: 12,
+    shadowColor: BLUE, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35, shadowRadius: 24, elevation: 8,
   },
-  fabPlus: {
-    width: 22, height: 22, backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 8, justifyContent: 'center', alignItems: 'center',
-  },
-  fabPlusText: { fontSize: 16, color: '#fff', fontWeight: '300', lineHeight: 20 },
-  fabText:     { color: '#fff', fontSize: 14, fontWeight: '700', letterSpacing: -0.2 },
+  fabText: { color: '#fff', fontSize: 14, fontWeight: '800', letterSpacing: -0.2 },
 });

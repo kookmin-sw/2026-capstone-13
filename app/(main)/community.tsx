@@ -1,42 +1,55 @@
 // 커뮤니티 화면
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, RefreshControl, Image,
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  ScrollView, RefreshControl, Image, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
 import { useCommunityStore } from '../../stores/communityStore';
 import type { CommunityPost, PostCategory } from '../../types';
 
-const PRIMARY = '#4F46E5';
+const BLUE    = '#3B6FE8';
+const BLUE_BG = '#F5F8FF';
+const BLUE_L  = '#EEF4FF';
+const BORDER  = '#D0E0F8';
+const T1      = '#0C1C3C';
+const T2      = '#A8C8FA';
+const T3      = '#6B9DF0';
 
 type FilterCategory = 'ALL' | PostCategory;
 
 const CATEGORY_FILTERS: { key: FilterCategory; label: string }[] = [
-  { key: 'ALL',      label: '전체' },
+  { key: 'ALL',      label: '전체'    },
   { key: 'INFO',     label: '정보공유' },
-  { key: 'QUESTION', label: '질문' },
-  { key: 'CHAT',     label: '잡담' },
+  { key: 'QUESTION', label: '질문'    },
+  { key: 'CHAT',     label: '잡담'    },
   { key: 'CULTURE',  label: '문화교류' },
 ];
 
-const CATEGORY_LABEL: Record<FilterCategory, string> = {
-  ALL: '전체', INFO: '정보공유', QUESTION: '질문', CHAT: '잡담', CULTURE: '문화교류',
+const CATEGORY_LABEL: Record<PostCategory, string> = {
+  INFO: '정보공유', QUESTION: '질문', CHAT: '잡담', CULTURE: '문화교류',
 };
 
-const CATEGORY_COLOR: Record<FilterCategory, string> = {
-  ALL: '#9CA3AF', INFO: '#3B82F6', QUESTION: '#F59E0B', CHAT: '#10B981', CULTURE: '#8B5CF6',
+const CATEGORY_COLOR: Record<PostCategory, string> = {
+  INFO: BLUE, QUESTION: BLUE, CHAT: T3, CULTURE: BLUE,
 };
+
+const AVATAR_COLORS = ['#3B6FE8', '#6B9DF0', '#A8C8FA', '#5B8DEF', '#4A7CE0'];
+function avatarColor(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i)) % AVATAR_COLORS.length;
+  return AVATAR_COLORS[h];
+}
 
 function formatTime(createdAt: string): string {
   const diff = Date.now() - new Date(createdAt).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return '방금 전';
-  if (minutes < 60) return `${minutes}분 전`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  return `${Math.floor(hours / 24)}일 전`;
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return '방금 전';
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  return `${Math.floor(h / 24)}일 전`;
 }
 
 export default function CommunityScreen() {
@@ -54,152 +67,238 @@ export default function CommunityScreen() {
     ? posts
     : posts.filter((p) => p.category === selectedCategory);
 
-  const renderPost = useCallback(({ item }: { item: CommunityPost }) => (
-    <TouchableOpacity style={styles.postCard} activeOpacity={0.85}>
-      <View style={styles.postHeader}>
-        <View style={[styles.categoryBadge, { backgroundColor: CATEGORY_COLOR[item.category] + '22' }]}>
-          <Text style={[styles.categoryBadgeText, { color: CATEGORY_COLOR[item.category] }]}>
-            {CATEGORY_LABEL[item.category]}
-          </Text>
-        </View>
-        {item.userType === 'INTERNATIONAL' && (
-          <View style={styles.internationalBadge}>
-            <Text style={styles.internationalBadgeText}>유학생</Text>
+  const isHot = (item: CommunityPost) => item.likes >= 30;
+
+  const renderPost = useCallback(({ item }: { item: CommunityPost }) => {
+    const catColor = CATEGORY_COLOR[item.category];
+    const hot = isHot(item);
+    return (
+      <TouchableOpacity style={s.card} activeOpacity={0.85}>
+        {/* 상단 메타 */}
+        <View style={s.cardMeta}>
+          <View style={[s.catBadge, { backgroundColor: BLUE_L }]}>
+            <Text style={[s.catBadgeText, { color: catColor }]}>
+              {CATEGORY_LABEL[item.category]}
+            </Text>
           </View>
+          {item.userType === 'INTERNATIONAL' && (
+            <View style={s.intlBadge}>
+              <Text style={s.intlBadgeText}>유학생</Text>
+            </View>
+          )}
+          <View style={s.dotSep} />
+          <Text style={s.metaTime}>{formatTime(item.createdAt)}</Text>
+          {hot && (
+            <View style={s.hotBadge}>
+              <View style={s.hotDot} />
+              <Text style={s.hotBadgeText}>인기</Text>
+            </View>
+          )}
+        </View>
+
+        {/* 제목 */}
+        <Text style={s.title} numberOfLines={2}>{item.title}</Text>
+
+        {/* 내용 미리보기 */}
+        <Text style={s.content} numberOfLines={2}>{item.content}</Text>
+
+        {/* 이미지 미리보기 */}
+        {item.images.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.imageScroll}>
+            {item.images.map((uri, idx) => (
+              <Image key={idx} source={{ uri }} style={s.imageThumbnail} />
+            ))}
+          </ScrollView>
         )}
-      </View>
-      <Text style={styles.postTitle} numberOfLines={1}>{item.title}</Text>
-      <Text style={styles.postContent} numberOfLines={2}>{item.content}</Text>
 
-      {/* 첨부 사진 미리보기 */}
-      {item.images.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
-          {item.images.map((uri, idx) => (
-            <Image key={idx} source={{ uri }} style={styles.imageThumbnail} />
-          ))}
-        </ScrollView>
-      )}
-
-      <View style={styles.postFooter}>
-        <View style={styles.authorInfo}>
-          <Text style={styles.authorName}>{item.author}</Text>
-          <Text style={styles.dot}>·</Text>
-          <Text style={styles.time}>{formatTime(item.createdAt)}</Text>
-        </View>
-        <View style={styles.reactions}>
-          <View style={styles.reactionItem}>
-            <Ionicons name="heart-outline" size={13} color="#9CA3AF" />
-            <Text style={styles.reactionCount}>{item.likes}</Text>
+        {/* 푸터 */}
+        <View style={s.footer}>
+          <View style={s.authorRow}>
+            <View style={[s.avatar, { backgroundColor: avatarColor(item.author) }]}>
+              <Text style={s.avatarText}>{item.author.charAt(0)}</Text>
+            </View>
+            <Text style={s.authorName}>{item.author}</Text>
           </View>
-          <View style={styles.reactionItem}>
-            <Ionicons name="chatbubble-outline" size={13} color="#9CA3AF" />
-            <Text style={styles.reactionCount}>{item.comments}</Text>
+          <View style={s.reactions}>
+            <View style={s.reactionItem}>
+              <Ionicons name="heart-outline" size={12} color={T2} />
+              <Text style={s.reactionCount}>{item.likes}</Text>
+            </View>
+            <View style={s.reactionItem}>
+              <Ionicons name="chatbubble-outline" size={12} color={T2} />
+              <Text style={s.reactionCount}>{item.comments}</Text>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  ), []);
+      </TouchableOpacity>
+    );
+  }, []);
 
   return (
-    <View style={styles.container}>
-      {/* 필터 칩 */}
-      <View style={styles.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-          {CATEGORY_FILTERS.map((cat) => (
+    <View style={s.container}>
+      {/* 헤더 */}
+      <View style={s.header}>
+        <Text style={s.headerTitle}>커뮤니티</Text>
+        <View style={s.headerIcons}>
+          <TouchableOpacity style={s.iconBtn}>
+            <Ionicons name="search-outline" size={14} color={T3} />
+          </TouchableOpacity>
+          <TouchableOpacity style={s.iconBtn}>
+            <Ionicons name="menu-outline" size={14} color={T3} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* 카테고리 필터 */}
+      <View style={s.filterWrap}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll}>
+          {CATEGORY_FILTERS.map(({ key, label }) => (
             <TouchableOpacity
-              key={cat.key}
-              style={[styles.chip, selectedCategory === cat.key && styles.chipActive]}
-              onPress={() => setSelectedCategory(cat.key)}
+              key={key}
+              style={[s.chip, selectedCategory === key && s.chipOn]}
+              onPress={() => setSelectedCategory(key)}
+              activeOpacity={0.8}
             >
-              <Text style={[styles.chipText, selectedCategory === cat.key && styles.chipTextActive]}>
-                {cat.label}
+              <Text style={[s.chipText, selectedCategory === key && s.chipTextOn]}>
+                {label}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
+      {/* 게시글 목록 */}
       <FlatList
         data={filteredPosts}
         renderItem={renderPost}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.list}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />}
+        contentContainerStyle={s.list}
+        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>💬</Text>
-            <Text style={styles.emptyText}>게시글이 없습니다</Text>
-            <Text style={styles.emptySubtext}>첫 번째 글을 작성해보세요!</Text>
+          <View style={s.empty}>
+            <Text style={s.emptyEmoji}>💬</Text>
+            <Text style={s.emptyTitle}>게시글이 없습니다</Text>
+            <Text style={s.emptySub}>첫 번째 글을 작성해보세요!</Text>
           </View>
         }
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/community-write')} activeOpacity={0.88}>
-        <View style={styles.fabPlus}><Text style={styles.fabPlusText}>+</Text></View>
-        <Text style={styles.fabText}>글쓰기</Text>
-      </TouchableOpacity>
+      {/* FAB */}
+      <View style={s.fabWrap}>
+        <TouchableOpacity
+          style={s.fab}
+          onPress={() => router.push('/community-write')}
+          activeOpacity={0.88}
+        >
+          <Ionicons name="add" size={12} color="#fff" />
+          <Text style={s.fabText}>글쓰기</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: BLUE_BG },
 
-  filterContainer: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(79,70,229,0.1)',
+  // ── Header ──
+  header: {
+    backgroundColor: BLUE_BG,
+    paddingTop: Platform.OS === 'ios' ? 56 : 28,
+    paddingBottom: 0,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  filterScroll: { paddingHorizontal: 16, paddingVertical: 12, gap: 7 },
+  headerTitle: { fontSize: 17, fontWeight: '900', color: T1, letterSpacing: -0.5 },
+  headerIcons: { flexDirection: 'row', gap: 8 },
+  iconBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: BLUE_L,
+    justifyContent: 'center', alignItems: 'center',
+  },
+
+  // ── Filter ──
+  filterWrap: { paddingTop: 12 },
+  filterScroll: { paddingHorizontal: 18, gap: 6 },
   chip: {
-    paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: 'rgba(79,70,229,0.1)',
+    paddingHorizontal: 13, paddingVertical: 5,
+    borderRadius: 20, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: BORDER, flexShrink: 0,
   },
-  chipActive: { backgroundColor: PRIMARY, borderColor: PRIMARY },
-  chipText: { fontSize: 12, fontWeight: '500', color: '#6B7280' },
-  chipTextActive: { color: '#FFFFFF', fontWeight: '700' },
+  chipOn:      { backgroundColor: BLUE, borderColor: BLUE },
+  chipText:    { fontSize: 10, fontWeight: '700', color: T2 },
+  chipTextOn:  { color: '#fff' },
 
-  list: { paddingBottom: 100, backgroundColor: '#FFFFFF' },
-  separator: { height: 1, backgroundColor: 'rgba(79,70,229,0.06)', marginHorizontal: 16 },
+  // ── List ──
+  list: { padding: 14, paddingBottom: 100 },
 
-  postCard: { backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, gap: 6 },
-  postHeader: { flexDirection: 'row', gap: 6, alignItems: 'center' },
-  categoryBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  categoryBadgeText: { fontSize: 11, fontWeight: '700' },
-  internationalBadge: { backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  internationalBadgeText: { fontSize: 11, fontWeight: '700', color: '#D97706' },
-  postTitle: { fontSize: 15, fontWeight: '700', color: '#1E1B4B' },
-  postContent: { fontSize: 13, color: '#6B7280', lineHeight: 19 },
+  // ── Card ──
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 16, borderWidth: 1, borderColor: BORDER,
+    overflow: 'hidden', padding: 14,
+  },
 
-  imageScroll: { marginTop: 4 },
-  imageThumbnail: { width: 72, height: 72, borderRadius: 8, marginRight: 6 },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  catBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  catBadgeText: { fontSize: 9, fontWeight: '800' },
+  intlBadge: {
+    paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6,
+    backgroundColor: '#FFF0E6',
+  },
+  intlBadgeText: { fontSize: 9, fontWeight: '800', color: '#C45A10' },
+  dotSep: {
+    width: 4, height: 4, borderRadius: 2, backgroundColor: BORDER,
+  },
+  metaTime: { fontSize: 9, color: T2, fontWeight: '500' },
+  hotBadge: {
+    marginLeft: 'auto',
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#FFF3E6', borderRadius: 6,
+    paddingHorizontal: 7, paddingVertical: 2,
+  },
+  hotDot:      { width: 5, height: 5, borderRadius: 3, backgroundColor: '#F97316' },
+  hotBadgeText:{ fontSize: 9, fontWeight: '800', color: '#C45A10' },
 
-  postFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 },
-  authorInfo: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
-  authorName: { fontSize: 12, fontWeight: '600', color: '#9CA3AF' },
-  dot: { fontSize: 12, color: '#9CA3AF' },
-  time: { fontSize: 12, color: '#9CA3AF' },
-  reactions: { flexDirection: 'row', gap: 10 },
-  reactionItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  reactionCount: { fontSize: 12, color: '#9CA3AF' },
+  title:   { fontSize: 13, fontWeight: '800', color: T1, lineHeight: 18, marginBottom: 5, letterSpacing: -0.2 },
+  content: { fontSize: 11, color: T3, lineHeight: 16, marginBottom: 10 },
 
-  emptyState: { alignItems: 'center', paddingVertical: 80 },
+  imageScroll:    { marginBottom: 10 },
+  imageThumbnail: { width: 66, height: 66, borderRadius: 8, marginRight: 6 },
+
+  footer: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  authorRow:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  avatar: {
+    width: 20, height: 20, borderRadius: 10,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  avatarText:  { fontSize: 8, fontWeight: '700', color: '#fff' },
+  authorName:  { fontSize: 10, color: T3, fontWeight: '600' },
+  reactions:   { flexDirection: 'row', gap: 10 },
+  reactionItem:{ flexDirection: 'row', alignItems: 'center', gap: 3 },
+  reactionCount:{ fontSize: 10, color: T2, fontWeight: '600' },
+
+  // ── Empty ──
+  empty:      { alignItems: 'center', paddingVertical: 80 },
   emptyEmoji: { fontSize: 48, marginBottom: 16 },
-  emptyText: { fontSize: 16, fontWeight: '700', color: '#6B7280', marginBottom: 4 },
-  emptySubtext: { fontSize: 14, color: '#9CA3AF' },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: T1, marginBottom: 4 },
+  emptySub:   { fontSize: 14, color: T2 },
 
-  fab: {
+  // ── FAB ──
+  fabWrap: {
     position: 'absolute', bottom: 24, right: 16,
-    backgroundColor: PRIMARY, flexDirection: 'row', alignItems: 'center',
-    gap: 7, paddingHorizontal: 20, paddingVertical: 14, borderRadius: 28,
-    shadowColor: PRIMARY, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 24, elevation: 8,
   },
-  fabPlus: {
-    width: 22, height: 22, backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 8, justifyContent: 'center', alignItems: 'center',
+  fab: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: BLUE,
+    borderRadius: 24, paddingHorizontal: 18, paddingVertical: 11,
+    shadowColor: BLUE, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3, shadowRadius: 20, elevation: 8,
   },
-  fabPlusText: { fontSize: 16, color: '#FFFFFF', fontWeight: '300', lineHeight: 20 },
-  fabText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', letterSpacing: -0.2 },
+  fabText: { color: '#fff', fontSize: 12, fontWeight: '800' },
 });
