@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/api/notices").permitAll()
                 .requestMatchers("/api/notices/crawl").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/community", "/api/community/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

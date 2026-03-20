@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface CommunityPostRepository extends JpaRepository<CommunityPost, Long> {
 
-    @Query("SELECT p FROM CommunityPost p ORDER BY p.createdAt DESC")
+    @Query("SELECT p FROM CommunityPost p JOIN FETCH p.author ORDER BY p.createdAt DESC")
     List<CommunityPost> findAllByOrderByCreatedAtDesc();
 
     @Query("SELECT p FROM CommunityPost p WHERE p.category = :category ORDER BY p.createdAt DESC")

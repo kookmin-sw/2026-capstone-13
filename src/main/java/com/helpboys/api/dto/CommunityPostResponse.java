@@ -29,8 +29,8 @@ public class CommunityPostResponse {
     private boolean liked;
     private String createdAt;
 
-    // 목록용 (댓글 미포함)
-    public static CommunityPostResponse fromList(CommunityPost post, boolean liked) {
+    // 목록용 (댓글 미포함, commentCount는 별도 count 쿼리로 전달)
+    public static CommunityPostResponse fromList(CommunityPost post, boolean liked, int commentCount) {
         return CommunityPostResponse.builder()
                 .id(post.getId())
                 .category(post.getCategory().name())
@@ -41,7 +41,7 @@ public class CommunityPostResponse {
                 .university(post.getAuthor().getUniversity())
                 .userType(post.getAuthor().getUserType().name())
                 .likes(post.getLikes())
-                .comments(post.getCommentList().size())
+                .comments(commentCount)
                 .commentList(Collections.emptyList())
                 .liked(liked)
                 .createdAt(post.getCreatedAt().toString())

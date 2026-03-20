@@ -23,20 +23,20 @@ public class CommunityController {
     private final CommunityService communityService;
     private final JwtUtil jwtUtil;
 
-    // GET /api/community - 게시글 목록
+    // GET /api/community - 게시글 목록 (로그인 없이도 조회 가능, 로그인 시 liked 상태 포함)
     @GetMapping
     public ResponseEntity<ApiResponse<List<CommunityPostResponse>>> getAllPosts(
-            @RequestHeader("Authorization") String token) {
-        Long userId = extractUserId(token);
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        Long userId = extractUserIdOptional(token);
         return ResponseEntity.ok(ApiResponse.success("조회 성공", communityService.getAllPosts(userId)));
     }
 
-    // GET /api/community/{id} - 게시글 상세 (댓글 포함)
+    // GET /api/community/{id} - 게시글 상세 (댓글 포함, 로그인 없이도 조회 가능)
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CommunityPostResponse>> getPostById(
             @PathVariable Long id,
-            @RequestHeader("Authorization") String token) {
-        Long userId = extractUserId(token);
+            @RequestHeader(value = "Authorization", required = false) String token) {
+        Long userId = extractUserIdOptional(token);
         return ResponseEntity.ok(ApiResponse.success("조회 성공", communityService.getPostById(id, userId)));
     }
 
@@ -73,5 +73,14 @@ public class CommunityController {
 
     private Long extractUserId(String bearerToken) {
         return jwtUtil.extractUserId(bearerToken.replace("Bearer ", ""));
+    }
+
+    private Long extractUserIdOptional(String bearerToken) {
+        if (bearerToken == null || bearerToken.isBlank()) return null;
+        try {
+            return jwtUtil.extractUserId(bearerToken.replace("Bearer ", ""));
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
