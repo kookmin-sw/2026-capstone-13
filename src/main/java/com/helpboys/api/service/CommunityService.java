@@ -32,23 +32,21 @@ public class CommunityService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
-    // 게시글 목록 조회 (userId null = 비로그인, liked = false)
+    // 게시글 목록 조회
     @Transactional(readOnly = true)
     public List<CommunityPostResponse> getAllPosts(Long userId) {
         return communityPostRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
-                .map(post -> CommunityPostResponse.fromList(
-                        post,
-                        userId != null && postLikeRepository.existsByPostIdAndUserId(post.getId(), userId),
-                        (int) postCommentRepository.countByPostId(post.getId())))
+                .map(post -> CommunityPostResponse.fromList(post,
+                        postLikeRepository.existsByPostIdAndUserId(post.getId(), userId)))
                 .collect(Collectors.toList());
     }
 
-    // 게시글 상세 조회 (댓글 포함, userId null = 비로그인)
+    // 게시글 상세 조회 (댓글 포함)
     @Transactional(readOnly = true)
     public CommunityPostResponse getPostById(Long postId, Long userId) {
         CommunityPost post = findPostById(postId);
-        boolean liked = userId != null && postLikeRepository.existsByPostIdAndUserId(postId, userId);
+        boolean liked = postLikeRepository.existsByPostIdAndUserId(postId, userId);
         return CommunityPostResponse.fromDetail(post, liked);
     }
 
@@ -68,7 +66,7 @@ public class CommunityService {
                 .build();
 
         CommunityPost saved = communityPostRepository.save(post);
-        return CommunityPostResponse.fromList(saved, false, 0);
+        return CommunityPostResponse.fromList(saved, false);
     }
 
     // 댓글 추가
