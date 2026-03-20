@@ -27,7 +27,7 @@ import {
 import type { HelpRequest } from '../../types';
 
 const BLUE     = '#3B6FE8';
-const BLUE_BG  = '#F5F8FF';
+const BLUE_BG  = '#FFFFFF';
 const BLUE_L   = '#EEF4FF';
 const BORDER   = '#D0E0F8';
 const T1       = '#0C1C3C';
@@ -166,7 +166,7 @@ export default function ChatScreen() {
   const visibleItems = requests
     .filter((r) => {
       if (hasLeft(r.id, myId)) return false;
-      if (filter === 'ALL')         return r.status === 'MATCHED' || r.status === 'IN_PROGRESS';
+      if (filter === 'ALL')         return r.status === 'MATCHED' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED';
       if (filter === 'IN_PROGRESS') return r.status === 'IN_PROGRESS';
       if (filter === 'COMPLETED')   return r.status === 'COMPLETED';
       return false;
@@ -185,13 +185,34 @@ export default function ChatScreen() {
   const getPartner = (item: HelpRequest) =>
     isInternational ? item.helper : item.requester;
 
+  // 섹션 헤더 포함 리스트 데이터
+  type ListData = HelpRequest | { type: 'sectionHeader'; label: string; id: string };
+
+  const listDataWithSections: ListData[] = (() => {
+    if (filter !== 'ALL') return visibleItems;
+    const inProgress = visibleItems.filter(r => r.status === 'IN_PROGRESS' || r.status === 'MATCHED');
+    const completed  = visibleItems.filter(r => r.status === 'COMPLETED');
+    const result: ListData[] = [];
+    if (inProgress.length > 0) {
+      result.push({ type: 'sectionHeader', label: `진행중 ${inProgress.length}`, id: 'sec-progress' });
+      result.push(...inProgress);
+    }
+    if (completed.length > 0) {
+      result.push({ type: 'sectionHeader', label: `완료 ${completed.length}`, id: 'sec-done' });
+      result.push(...completed);
+    }
+    return result;
+  })();
+
   const swipeableRefs = useRef<Map<number, Swipeable>>(new Map());
   const openSwipeableId = useRef<number | null>(null);
+  const [isAnySwipeOpen, setIsAnySwipeOpen] = useState(false);
 
   const closeOpenSwipeable = () => {
     if (openSwipeableId.current !== null) {
       swipeableRefs.current.get(openSwipeableId.current)?.close();
       openSwipeableId.current = null;
+      setIsAnySwipeOpen(false);
     }
   };
 
@@ -219,50 +240,57 @@ export default function ChatScreen() {
     );
   };
 
-  const renderRightActions = (item: HelpRequest) => (
+  const renderRightActions = (item: HelpRequest) => () => (
     <TouchableOpacity style={s.deleteAction} onPress={() => handleDelete(item)}>
       <Ionicons name="trash-outline" size={22} color="#fff" />
       <Text style={s.deleteActionText}>나가기</Text>
     </TouchableOpacity>
   );
 
-  const renderItem = ({ item }: { item: HelpRequest }) => {
-    const partner        = getPartner(item);
+  const renderItem = ({ item }: { item: ListData }) => {
+    // 섹션 헤더
+    if ('type' in item && item.type === 'sectionHeader') {
+      return <Text style={s.sectionLabel}>{item.label}</Text>;
+    }
+
+    const req            = item as HelpRequest;
+    const partner        = getPartner(req);
     const name           = partner?.nickname ?? '?';
-    const isActioning    = actioningId === item.id;
-    const isOnline       = item.status === 'IN_PROGRESS' || item.status === 'MATCHED';
-    const isCompleted    = item.status === 'COMPLETED';
-    const isMatchPending = item.status === 'MATCHED';
+    const isActioning    = actioningId === req.id;
+    const isOnline       = req.status === 'IN_PROGRESS' || req.status === 'MATCHED';
+    const isCompleted    = req.status === 'COMPLETED';
+    const isMatchPending = req.status === 'MATCHED';
 
     const statusLabel = isCompleted ? '완료' : '진행중';
-    const statusBg    = isCompleted ? '#F0F4F0' : BLUE_L;
+    const statusBg    = isCompleted ? '#F0F4F8' : BLUE_L;
     const statusColor = isCompleted ? T3 : BLUE;
 
     return (
       <Swipeable
         ref={(ref) => {
-          if (ref) swipeableRefs.current.set(item.id, ref);
-          else swipeableRefs.current.delete(item.id);
+          if (ref) swipeableRefs.current.set(req.id, ref);
+          else swipeableRefs.current.delete(req.id);
         }}
-        renderRightActions={() => renderRightActions(item)}
+        renderRightActions={renderRightActions(req)}
         rightThreshold={60}
         overshootRight={false}
         onSwipeableOpen={() => {
-          // 이미 열린 다른 항목이 있으면 닫기
-          if (openSwipeableId.current !== null && openSwipeableId.current !== item.id) {
+          if (openSwipeableId.current !== null && openSwipeableId.current !== req.id) {
             swipeableRefs.current.get(openSwipeableId.current)?.close();
           }
-          openSwipeableId.current = item.id;
+          openSwipeableId.current = req.id;
+          setIsAnySwipeOpen(true);
         }}
         onSwipeableClose={() => {
-          if (openSwipeableId.current === item.id) {
+          if (openSwipeableId.current === req.id) {
             openSwipeableId.current = null;
+            setIsAnySwipeOpen(false);
           }
         }}
       >
         <TouchableOpacity
-          style={[s.item, isCompleted && s.itemDimmed]}
-          onPress={() => { closeOpenSwipeable(); goToChat(item); }}
+          style={s.item}
+          onPress={() => { closeOpenSwipeable(); goToChat(req); }}
           activeOpacity={0.85}
         >
           {/* 아바타 */}
@@ -282,16 +310,18 @@ export default function ChatScreen() {
                   <Text style={[s.statusText, { color: statusColor }]}>{statusLabel}</Text>
                 </View>
               </View>
-              <Text style={s.itemTime}>{formatTime(item.updatedAt)}</Text>
+              <Text style={s.itemTime}>{formatTime(req.updatedAt)}</Text>
             </View>
             <View style={s.itemBottom}>
               <Text style={s.itemPreview} numberOfLines={1}>
                 {isMatchPending
                   ? (isInternational ? '새 도움 신청이 도착했어요!' : '수락을 기다리고 있어요')
-                  : item.title}
+                  : req.title}
               </Text>
               {isMatchPending && !isActioning && (
-                <View style={s.unreadDot} />
+                <View style={s.unreadBadge}>
+                  <Text style={s.unreadText}>N</Text>
+                </View>
               )}
             </View>
             {/* MATCHED + 외국인: 수락/거절 */}
@@ -299,14 +329,14 @@ export default function ChatScreen() {
               <View style={s.actionRow}>
                 <TouchableOpacity
                   style={s.rejectBtn}
-                  onPress={() => handleReject(item)}
+                  onPress={() => handleReject(req)}
                   disabled={isActioning}
                 >
                   <Text style={s.rejectBtnText}>거절</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[s.acceptBtn, isActioning && s.btnDisabled]}
-                  onPress={() => handleAccept(item)}
+                  onPress={() => handleAccept(req)}
                   disabled={isActioning}
                 >
                   {isActioning
@@ -388,13 +418,21 @@ export default function ChatScreen() {
         </View>
       ) : (
         <FlatList
-          data={visibleItems}
+          data={listDataWithSections}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => 'type' in item ? item.id : item.id.toString()}
           contentContainerStyle={s.list}
-          ItemSeparatorComponent={() => <View style={s.separator} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
           onScrollBeginDrag={closeOpenSwipeable}
+        />
+      )}
+
+      {/* 스와이프 열렸을 때 빈 곳 터치하면 닫히는 투명 오버레이 */}
+      {isAnySwipeOpen && (
+        <TouchableOpacity
+          style={s.swipeOverlay}
+          onPress={closeOpenSwipeable}
+          activeOpacity={1}
         />
       )}
     </View>
@@ -425,9 +463,9 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  headerTitle: { fontSize: 17, fontWeight: '900', color: T1, letterSpacing: -0.5 },
+  headerTitle: { fontSize: 24, fontWeight: '900', color: T1, letterSpacing: -0.6 },
   iconBtn: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
   },
@@ -448,77 +486,88 @@ const s = StyleSheet.create({
   searchCancelText: { fontSize: 13, color: BLUE, fontWeight: '700' },
 
   // ── Filter ──
-  filterRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 18, paddingVertical: 12 },
+  filterRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 22, paddingBottom: 14 },
   chip: {
-    paddingHorizontal: 14, paddingVertical: 5,
-    borderRadius: 20, backgroundColor: '#fff',
+    paddingHorizontal: 22, paddingVertical: 10,
+    borderRadius: 22, backgroundColor: '#fff',
     borderWidth: 1, borderColor: BORDER,
   },
   chipOn:      { backgroundColor: BLUE, borderColor: BLUE },
-  chipText:    { fontSize: 10, fontWeight: '700', color: T2 },
+  chipText:    { fontSize: 13, fontWeight: '700', color: T2 },
   chipTextOn:  { color: '#fff' },
 
   // ── List ──
   list:      { paddingVertical: 0 },
-  separator: { height: 0, backgroundColor: BLUE_L },
+  separator: { height: 0 },
+
+  // ── Section label ──
+  sectionLabel: {
+    fontSize: 12, fontWeight: '700', color: T2,
+    letterSpacing: 0.3,
+    paddingHorizontal: 22, paddingVertical: 8,
+    backgroundColor: BLUE_BG,
+  },
 
   // ── Item ──
   item: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    gap: 12,
+    alignItems: 'center',
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    gap: 14,
     borderBottomWidth: 1,
-    borderBottomColor: BLUE_L,
-    backgroundColor: BLUE_BG,
+    borderBottomColor: '#EEF4FF',
+    backgroundColor: '#FFFFFF',
   },
-  itemDimmed: { opacity: 0.7 },
+  itemDimmed: { opacity: 0.55 },
 
   avatarWrap: { position: 'relative', flexShrink: 0 },
   avatar: {
-    width: 46, height: 46, borderRadius: 23,
+    width: 52, height: 52, borderRadius: 26,
     justifyContent: 'center', alignItems: 'center',
   },
-  avatarText: { fontSize: 16, fontWeight: '800', color: '#fff' },
+  avatarText: { fontSize: 18, fontWeight: '800', color: '#fff' },
   onlineDot: {
     position: 'absolute', bottom: 1, right: 1,
-    width: 11, height: 11, borderRadius: 6,
-    backgroundColor: '#22C55E', borderWidth: 2, borderColor: BLUE_BG,
+    width: 13, height: 13, borderRadius: 7,
+    backgroundColor: '#22C55E', borderWidth: 2, borderColor: '#FFFFFF',
   },
 
-  itemBody: { flex: 1, gap: 3 },
+  itemBody: { flex: 1, minWidth: 0 },
   itemTop: {
     flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 3,
+    alignItems: 'center', marginBottom: 4,
   },
-  itemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  itemName:   { fontSize: 13, fontWeight: '800', color: T1 },
-  statusBadge:{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 5 },
-  statusText: { fontSize: 9, fontWeight: '700' },
-  itemTime:   { fontSize: 10, color: T2 },
+  itemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  itemName:   { fontSize: 15, fontWeight: '800', color: T1 },
+  statusBadge:{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  statusText: { fontSize: 10, fontWeight: '700' },
+  itemTime:   { fontSize: 11, color: T2 },
 
   itemBottom: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center',
   },
-  itemPreview: { fontSize: 11, color: T2, fontWeight: '500', flex: 1 },
-  unreadDot: {
-    width: 8, height: 8, borderRadius: 4,
-    backgroundColor: BLUE, flexShrink: 0,
+  itemPreview: { fontSize: 13, color: T2, fontWeight: '500', flex: 1, marginRight: 8 },
+  unreadBadge: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: BLUE,
+    justifyContent: 'center', alignItems: 'center',
+    flexShrink: 0,
   },
+  unreadText: { fontSize: 10, fontWeight: '800', color: '#fff' },
 
-  actionRow:     { flexDirection: 'row', gap: 7, marginTop: 8 },
+  actionRow:     { flexDirection: 'row', gap: 8, marginTop: 10 },
   rejectBtn: {
-    flex: 1, paddingVertical: 7, borderRadius: 8,
+    flex: 1, paddingVertical: 10, borderRadius: 10,
     borderWidth: 1, borderColor: BORDER, alignItems: 'center',
   },
-  rejectBtnText: { fontSize: 12, fontWeight: '700', color: T3 },
+  rejectBtnText: { fontSize: 13, fontWeight: '700', color: T3 },
   acceptBtn: {
-    flex: 2, paddingVertical: 7, borderRadius: 8,
+    flex: 2, paddingVertical: 10, borderRadius: 10,
     backgroundColor: BLUE, alignItems: 'center',
   },
-  acceptBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  acceptBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   btnDisabled:   { opacity: 0.6 },
 
   // ── Swipe Delete ──
@@ -526,10 +575,16 @@ const s = StyleSheet.create({
     backgroundColor: '#EF4444',
     justifyContent: 'center',
     alignItems: 'center',
-    width: 80,
-    gap: 4,
+    width: 90,
+    gap: 5,
   },
-  deleteActionText: { fontSize: 10, fontWeight: '700', color: '#fff' },
+  deleteActionText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+
+  // ── Swipe overlay ──
+  swipeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 5,
+  },
 
   // ── Empty ──
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8, paddingHorizontal: 32 },

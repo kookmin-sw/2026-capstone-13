@@ -1,24 +1,25 @@
 // 채팅방 화면 (WebSocket STOMP 실시간 채팅)
-import { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Client } from '@stomp/stompjs';
-import * as SecureStore from 'expo-secure-store';
 import { Audio } from 'expo-av';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { getChatMessages, sendVoiceMessage, type ChatMessageDto } from '../services/chatService';
-import { rejectHelper, startHelpRequest } from '../services/helpService';
+import { completeHelpRequest, rejectHelper, startHelpRequest } from '../services/helpService';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 
@@ -74,6 +75,8 @@ export default function ChatRoomScreen() {
   const [chatEnded, setChatEnded] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isSendingVoice, setIsSendingVoice] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [translateEnabled, setTranslateEnabled] = useState(false);
   const { clearUnread, setActiveChatroom, leaveRoom } = useChatStore();
   const clientRef = useRef<Client | null>(null);
   const listRef = useRef<FlatList>(null);
@@ -421,13 +424,46 @@ export default function ChatRoomScreen() {
     ]);
   };
 
+  const handleComplete = () => {
+    Alert.alert(
+      '매칭 완료',
+      '도움이 완료되었나요? 매칭을 완료 처리합니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '완료',
+          onPress: async () => {
+            setIsActing(true);
+            try {
+              const res = await completeHelpRequest(roomId);
+              if (res.success) {
+                setHelpStatus('COMPLETED');
+                setSystemMessages((prev) => [
+                  ...prev,
+                  { type: 'system', content: '🎉 매칭이 완료되었습니다!', id: `sys-complete-${Date.now()}` },
+                ]);
+                setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
+              } else {
+                Alert.alert('실패', res.message);
+              }
+            } catch {
+              Alert.alert('오류', '서버 오류가 발생했습니다.');
+            } finally {
+              setIsActing(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const listData: ListItem[] = [
     { type: 'date', label: todayLabel(), id: 'date-today' },
     ...messages,
     ...systemMessages,
   ];
 
-  const renderItem = ({ item }: { item: ListItem }) => {
+  const renderItem = ({ item, index }: { item: ListItem; index: number }) => {
     if ('type' in item && item.type === 'date') {
       return (
         <View style={styles.dateSeparator}>
@@ -449,15 +485,22 @@ export default function ChatRoomScreen() {
     const msg = item as ChatMessageDto;
     const isMine = msg.senderId === user?.id;
 
+    // 이전 메시지와 같은 발신자인지 확인 (아바타 표시 여부)
+    const prevItem = listData[index - 1];
+    const prevMsg = prevItem && !('type' in prevItem) ? prevItem as ChatMessageDto : null;
+    const showAvatar = !isMine && (prevMsg === null || prevMsg.senderId !== msg.senderId);
+
     return (
       <View style={[styles.msgRow, isMine ? styles.msgRowMine : styles.msgRowOther]}>
         {!isMine && (
-          <View style={styles.msgAvatar}>
-            <Text style={styles.msgAvatarText}>{msg.senderNickname.charAt(0)}</Text>
-          </View>
+          showAvatar
+            ? <View style={styles.msgAvatar}>
+                <Text style={styles.msgAvatarText}>{msg.senderNickname.charAt(0)}</Text>
+              </View>
+            : <View style={styles.msgAvatarSpacer} />
         )}
         <View style={[styles.msgGroup, isMine && styles.msgGroupMine]}>
-          {!isMine && <Text style={styles.senderName}>{msg.senderNickname}</Text>}
+          {showAvatar && <Text style={styles.senderName}>{msg.senderNickname}</Text>}
           <View style={[styles.bubbleRow, isMine && styles.bubbleRowMine]}>
             {isMine && (
               <Text style={styles.msgTime}>{formatTime(msg.createdAt)}</Text>
@@ -480,7 +523,7 @@ export default function ChatRoomScreen() {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* 헤더 */}
       <View style={styles.header}>
@@ -495,21 +538,59 @@ export default function ChatRoomScreen() {
           </View>
           <View>
             <Text style={styles.headerName}>{partnerNickname}</Text>
-            <Text style={[styles.headerSub, !isConnected && styles.headerSubOffline]}>
-              {isConnected ? '● 연결됨' : '연결 중...'}
-            </Text>
           </View>
         </TouchableOpacity>
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.actionBtn} onPress={handleVoiceCall}>
-            <Ionicons name="call-outline" size={14} color="#6B9DF0" />
+            <Ionicons name="call-outline" size={18} color="#6B9DF0" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={handleVideoCall}>
-            <Ionicons name="videocam-outline" size={14} color="#6B9DF0" />
+            <Ionicons name="videocam-outline" size={18} color="#6B9DF0" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, translateEnabled && styles.actionBtnActive]}
+            onPress={() => setTranslateEnabled((prev) => !prev)}
+          >
+            <Ionicons name="language-outline" size={18} color={translateEnabled ? '#fff' : '#6B9DF0'} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => setMenuVisible(true)}>
+            <Ionicons name="ellipsis-vertical" size={18} color="#6B9DF0" />
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* 점세개 드롭다운 메뉴 */}
+      <Modal
+        transparent
+        visible={menuVisible}
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          onPress={() => setMenuVisible(false)}
+          activeOpacity={1}
+        >
+          <View style={styles.menuDropdown}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => { setMenuVisible(false); handleComplete(); }}
+            >
+              <Ionicons name="checkmark-circle-outline" size={18} color={PRIMARY} />
+              <Text style={styles.menuItemText}>매칭완료하기</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => { setMenuVisible(false); handleLeave(); }}
+            >
+              <Ionicons name="exit-outline" size={18} color="#EF4444" />
+              <Text style={[styles.menuItemText, styles.menuItemDanger]}>나가기</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* 요청 컨텍스트 배너 */}
       <View style={styles.contextBanner}>
@@ -596,13 +677,6 @@ export default function ChatRoomScreen() {
         />
       )}
 
-      {/* 연결 안됨 배너 */}
-      {!isConnected && !isLoading && (
-        <View style={styles.disconnectedBanner}>
-          <Ionicons name="wifi-outline" size={13} color="#DC2626" />
-          <Text style={styles.disconnectedText}>서버 연결 중...</Text>
-        </View>
-      )}
 
       {/* 입력창 */}
       {(helpStatus === 'MATCHED' || chatEnded) && (
@@ -654,14 +728,14 @@ export default function ChatRoomScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F8FF' },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   // ── Header ──
   header: {
     backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'ios' ? 52 : 16,
-    paddingBottom: 12,
+    paddingTop: Platform.OS === 'ios' ? 70 : 14,
+    paddingBottom: 10,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -671,7 +745,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   navBtn: {
-    width: 32, height: 32,
+    width: 44, height: 44,
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
@@ -679,56 +753,57 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   headerAvatar: {
-    width: 38, height: 38, borderRadius: 19,
+    width: 42, height: 42, borderRadius: 21,
     backgroundColor: PRIMARY,
     justifyContent: 'center', alignItems: 'center',
     position: 'relative',
   },
-  headerAvatarText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+  headerAvatarText: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
   headerOnline: {
     position: 'absolute', bottom: 1, right: 1,
-    width: 10, height: 10, borderRadius: 5,
+    width: 11, height: 11, borderRadius: 6,
     backgroundColor: '#22C55E', borderWidth: 2, borderColor: '#FFFFFF',
   },
-  headerName: { fontSize: 13, fontWeight: '800', color: '#0C1C3C' },
-  headerSub: { fontSize: 10, color: '#22C55E', fontWeight: '600' },
+  headerName: { fontSize: 17, fontWeight: '800', color: '#0C1C3C' },
+  headerSub: { fontSize: 13, color: '#22C55E', fontWeight: '600' },
   headerSubOffline: { color: '#A8C8FA' },
   headerActions: { flexDirection: 'row', gap: 8 },
   actionBtn: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: PRIMARY_LIGHT,
     justifyContent: 'center', alignItems: 'center',
   },
+  actionBtnActive: { backgroundColor: PRIMARY },
 
   // ── Context banner ──
   contextBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     backgroundColor: PRIMARY_LIGHT,
     marginHorizontal: 14,
     marginTop: 10,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderWidth: 1,
     borderColor: '#D0E0F8',
   },
   contextIconBox: {
-    width: 32, height: 32, borderRadius: 10,
+    width: 38, height: 38, borderRadius: 12,
     backgroundColor: PRIMARY,
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
   contextBody: { flex: 1, minWidth: 0 },
-  contextText: { fontSize: 10, fontWeight: '800', color: '#0C1C3C', marginBottom: 1 },
-  contextSub:  { fontSize: 9, color: '#6B9DF0', fontWeight: '500' },
+  contextText: { fontSize: 13, fontWeight: '800', color: '#0C1C3C', marginBottom: 3 },
+  contextSub:  { fontSize: 12, color: '#6B9DF0', fontWeight: '500' },
   contextBadge: {
     backgroundColor: PRIMARY,
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 6, flexShrink: 0,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 8, flexShrink: 0,
   },
-  contextBadgeText: { fontSize: 9, fontWeight: '700', color: '#FFFFFF' },
+  contextBadgeText: { fontSize: 12, fontWeight: '700', color: '#FFFFFF' },
 
   // ── Notice banner ──
   noticeBanner: {
@@ -779,43 +854,44 @@ const styles = StyleSheet.create({
 
   // ── Messages ──
   msgRow: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 10,
+    flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 4,
   },
   msgRowOther: { justifyContent: 'flex-start' },
   msgRowMine:  { justifyContent: 'flex-end' },
   msgAvatar: {
-    width: 30, height: 30, borderRadius: 15,
+    width: 32, height: 32, borderRadius: 16,
     backgroundColor: PRIMARY,
     justifyContent: 'center', alignItems: 'center',
-    flexShrink: 0, alignSelf: 'flex-start', marginTop: 16,
+    flexShrink: 0, alignSelf: 'flex-end', marginBottom: 16,
   },
-  msgAvatarText: { fontSize: 11, fontWeight: '800', color: '#FFFFFF' },
+  msgAvatarSpacer: { width: 32, flexShrink: 0 },
+  msgAvatarText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
 
-  msgGroup:     { maxWidth: '75%', gap: 4 },
+  msgGroup:     { maxWidth: '72%', gap: 3 },
   msgGroupMine: { alignItems: 'flex-end' },
 
-  senderName: { fontSize: 10, fontWeight: '600', color: '#6B9DF0', marginBottom: 3 },
+  senderName: { fontSize: 13, fontWeight: '600', color: '#6B9DF0', marginBottom: 4, marginLeft: 2 },
 
-  bubbleRow:     { flexDirection: 'row', alignItems: 'flex-end', gap: 5 },
+  bubbleRow:     { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
   bubbleRowMine: { flexDirection: 'row-reverse' },
 
   bubble: {
-    paddingHorizontal: 13, paddingVertical: 10,
-    borderRadius: 16, maxWidth: 220,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 18,
   },
   bubbleOther: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1, borderColor: '#D0E0F8',
-    borderTopLeftRadius: 4,
+    borderBottomLeftRadius: 4,
   },
   bubbleMine: {
     backgroundColor: PRIMARY,
-    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
   },
-  bubbleText:     { fontSize: 12, color: '#0C1C3C', lineHeight: 18 },
+  bubbleText:     { fontSize: 16, color: '#0C1C3C', lineHeight: 22 },
   bubbleTextMine: { color: '#FFFFFF' },
 
-  msgTime:      { fontSize: 9, color: '#A8C8FA', paddingBottom: 2 },
+  msgTime:      { fontSize: 12, color: '#A8C8FA', paddingBottom: 2 },
   msgTimeOther: {},
 
   systemMsgWrap: { alignItems: 'center', marginVertical: 8 },
@@ -830,7 +906,7 @@ const styles = StyleSheet.create({
   inputBarLocked: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     paddingVertical: 14,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 14,
+    paddingBottom: Platform.OS === 'ios' ? 12 : 14,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1, borderTopColor: '#EEF4FF',
   },
@@ -838,16 +914,16 @@ const styles = StyleSheet.create({
   inputBarHidden: { display: 'none' },
 
   inputBar: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 8,
-    paddingHorizontal: 14,
+    flexDirection: 'row', alignItems: 'flex-end', gap: 10,
+    paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 18,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1, borderTopColor: '#EEF4FF',
   },
   attachBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#F5F8FF',
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: '#EEF4FF',
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
@@ -855,27 +931,89 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F8FF',
     borderRadius: 22,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 10 : 8,
     paddingBottom: 10,
-    fontSize: 12,
+    fontSize: 14,
     color: '#0C1C3C',
-    maxHeight: 100,
+    maxHeight: 120,
     borderWidth: 1, borderColor: '#D0E0F8',
-    lineHeight: 18,
+    lineHeight: 20,
   },
   micBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: '#6B9DF0',
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
   micBtnActive: { backgroundColor: '#EF4444' },
   sendBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 42, height: 42, borderRadius: 21,
     backgroundColor: PRIMARY,
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
   sendBtnDisabled: { backgroundColor: '#C2D4F0' },
+
+  // ── 점세개 메뉴 ──
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  menuDropdown: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 108 : 72,
+    right: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 4,
+    minWidth: 160,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#EEF4FF',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  menuItemText: { fontSize: 14, fontWeight: '700', color: '#0C1C3C' },
+  menuItemDanger: { color: '#EF4444' },
+  menuDivider: { height: 1, backgroundColor: '#EEF4FF', marginHorizontal: 12 },
+
+  // ── 자동번역 바 ──
+  translateBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 14,
+    marginTop: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#F5F8FF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#D0E0F8',
+  },
+  translateBarText: { flex: 1, fontSize: 13, fontWeight: '600', color: '#A8C8FA' },
+  translateBarTextOn: { color: PRIMARY },
+  translateToggle: {
+    width: 40, height: 22, borderRadius: 11,
+    backgroundColor: '#D0E0F8',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  translateToggleOn: { backgroundColor: PRIMARY },
+  translateThumb: {
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: '#fff',
+    alignSelf: 'flex-start',
+  },
+  translateThumbOn: { alignSelf: 'flex-end' },
 });

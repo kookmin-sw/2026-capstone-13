@@ -137,6 +137,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="chat"
         options={{
+          headerShown: false,
           title: '채팅',
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
           tabBarBadgeStyle: { backgroundColor: '#EF4444', fontSize: 10, minWidth: 18, height: 18, borderRadius: 9 },
