@@ -92,6 +92,7 @@ export default function CommunityWriteScreen() {
       content: content.trim(),
       images,
       author: user?.nickname ?? '익명',
+      authorId: user?.id,
       university: user?.university ?? '국민대학교',
       userType: user?.userType ?? 'KOREAN',
     });

@@ -101,11 +101,33 @@ export interface CommunityPost {
   content: string;
   images: string[];
   author: string;
+  authorId?: number;
   university: string;
   userType: UserType;
   likes: number;
   comments: number;
   createdAt: string;
+}
+
+// 커뮤니티 댓글
+export interface Comment {
+  id: number;
+  postId: number;
+  author: string;
+  university: string;
+  userType: UserType;
+  content: string;
+  createdAt: string;
+}
+
+// 앱 알림
+export interface AppNotification {
+  id: number;
+  type: 'COMMENT' | 'LIKE' | 'HELP_OFFER';
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  recipientId: number; // 알림을 받을 유저 ID
 }
 
 // API 공통 응답 형식
