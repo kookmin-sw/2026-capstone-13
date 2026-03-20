@@ -171,9 +171,6 @@ export default function ChatScreen() {
       if (filter === 'COMPLETED')   return r.status === 'COMPLETED';
       return false;
     })
-<<<<<<< HEAD
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-=======
     .sort((a, b) => {
       if (a.status === 'MATCHED' && b.status !== 'MATCHED') return -1;
       if (b.status === 'MATCHED' && a.status !== 'MATCHED') return 1;
@@ -184,7 +181,6 @@ export default function ChatScreen() {
       const partner = isInternational ? r.helper?.nickname : r.requester.nickname;
       return partner?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ?? false;
     });
->>>>>>> e70567edfdd92380d0fd01d15c4518876d645c45
 
   const getPartner = (item: HelpRequest) =>
     isInternational ? item.helper : item.requester;
