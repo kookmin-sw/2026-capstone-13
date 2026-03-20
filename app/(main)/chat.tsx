@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -60,6 +61,9 @@ export default function ChatScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [actioningId, setActioningId] = useState<number | null>(null);
   const [filter, setFilter]         = useState<FilterTab>('ALL');
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery]     = useState('');
+  const searchInputRef = useRef<TextInput>(null);
 
   const { clearUnread, hasLeft } = useChatStore();
 
@@ -151,6 +155,12 @@ export default function ChatScreen() {
     });
   };
 
+  const openSearch = () => {
+    setSearchVisible(true);
+    setTimeout(() => searchInputRef.current?.focus(), 100);
+  };
+  const closeSearch = () => { setSearchVisible(false); setSearchQuery(''); };
+
   const myId = Number(user?.id);
 
   const visibleItems = requests
@@ -161,7 +171,20 @@ export default function ChatScreen() {
       if (filter === 'COMPLETED')   return r.status === 'COMPLETED';
       return false;
     })
+<<<<<<< HEAD
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+=======
+    .sort((a, b) => {
+      if (a.status === 'MATCHED' && b.status !== 'MATCHED') return -1;
+      if (b.status === 'MATCHED' && a.status !== 'MATCHED') return 1;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    })
+    .filter((r) => {
+      if (!searchQuery.trim()) return true;
+      const partner = isInternational ? r.helper?.nickname : r.requester.nickname;
+      return partner?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ?? false;
+    });
+>>>>>>> e70567edfdd92380d0fd01d15c4518876d645c45
 
   const getPartner = (item: HelpRequest) =>
     isInternational ? item.helper : item.requester;
@@ -312,10 +335,36 @@ export default function ChatScreen() {
       {/* 헤더 */}
       <View style={s.header}>
         <Text style={s.headerTitle}>채팅</Text>
-        <TouchableOpacity style={s.iconBtn}>
+        <TouchableOpacity style={s.iconBtn} onPress={openSearch}>
           <Ionicons name="search-outline" size={14} color={T3} />
         </TouchableOpacity>
       </View>
+
+      {/* 검색 바 */}
+      {searchVisible && (
+        <View style={s.searchWrap}>
+          <View style={s.searchBar}>
+            <Ionicons name="search-outline" size={14} color={T2} />
+            <TextInput
+              ref={searchInputRef}
+              style={s.searchInput}
+              placeholder="닉네임으로 검색"
+              placeholderTextColor={T2}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={14} color={T2} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity style={s.searchCancel} onPress={closeSearch}>
+            <Text style={s.searchCancelText}>취소</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* 필터 탭 */}
       <View style={s.filterRow}>
@@ -386,6 +435,21 @@ const s = StyleSheet.create({
     backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
   },
+
+  // ── Search ──
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 14, paddingTop: 8, paddingBottom: 4,
+  },
+  searchBar: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#fff', borderRadius: 12,
+    borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 12, paddingVertical: 8,
+  },
+  searchInput: { flex: 1, fontSize: 13, color: T1, padding: 0 },
+  searchCancel: { paddingHorizontal: 4 },
+  searchCancelText: { fontSize: 13, color: BLUE, fontWeight: '700' },
 
   // ── Filter ──
   filterRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 18, paddingVertical: 12 },

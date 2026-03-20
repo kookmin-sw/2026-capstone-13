@@ -1,6 +1,6 @@
 // 커뮤니티 게시글 상태 관리 (Zustand)
 import { create } from 'zustand';
-import type { CommunityPost, PostCategory, UserType } from '../types';
+import type { CommunityPost, Comment, PostCategory, UserType } from '../types';
 
 const INITIAL_POSTS: CommunityPost[] = [
   {
@@ -53,35 +53,88 @@ const INITIAL_POSTS: CommunityPost[] = [
   },
 ];
 
+const INITIAL_COMMENTS: Record<number, Comment[]> = {
+  1: [
+    { id: 101, postId: 1, author: '박지혜', university: '국민대학교', userType: 'KOREAN', content: '너무 유용한 정보 감사해요!', createdAt: '2026-03-15T09:00:00' },
+    { id: 102, postId: 1, author: '소피아', university: '국민대학교', userType: 'INTERNATIONAL', content: '이 정보 찾고 있었는데 도움됐어요 😊', createdAt: '2026-03-15T10:00:00' },
+  ],
+  3: [
+    { id: 201, postId: 3, author: '이민수', university: '국민대학교', userType: 'KOREAN', content: '한국 문화에 관심 가져줘서 고마워요!', createdAt: '2026-03-14T15:00:00' },
+  ],
+};
+
 interface NewPostInput {
   category: PostCategory;
   title: string;
   content: string;
   images: string[];
   author: string;
+  authorId?: number;
   university: string;
   userType: UserType;
 }
 
 interface CommunityState {
   posts: CommunityPost[];
+  likedPostIds: Record<number, number[]>; // userId → postId[]
+  postComments: Record<number, Comment[]>;
   addPost: (input: NewPostInput) => void;
+  toggleLike: (postId: number, userId: number) => void;
+  addComment: (postId: number, content: string, author: string, university: string, userType: UserType) => void;
 }
 
-let nextId = INITIAL_POSTS.length + 1;
+let nextPostId = INITIAL_POSTS.length + 1;
+let nextCommentId = 300;
 
-export const useCommunityStore = create<CommunityState>((set) => ({
+export const useCommunityStore = create<CommunityState>((set, get) => ({
   posts: INITIAL_POSTS,
+  likedPostIds: {},
+  postComments: INITIAL_COMMENTS,
 
   addPost: (input: NewPostInput) => {
     const newPost: CommunityPost = {
-      id: nextId++,
+      id: nextPostId++,
       ...input,
       likes: 0,
       comments: 0,
       createdAt: new Date().toISOString(),
     };
-    // 새 글은 맨 앞에 추가
     set((state) => ({ posts: [newPost, ...state.posts] }));
+  },
+
+  toggleLike: (postId: number, userId: number) => {
+    const liked = (get().likedPostIds[userId] ?? []).includes(postId);
+    set((state) => ({
+      likedPostIds: {
+        ...state.likedPostIds,
+        [userId]: liked
+          ? (state.likedPostIds[userId] ?? []).filter((id) => id !== postId)
+          : [...(state.likedPostIds[userId] ?? []), postId],
+      },
+      posts: state.posts.map((p) =>
+        p.id === postId ? { ...p, likes: p.likes + (liked ? -1 : 1) } : p
+      ),
+    }));
+  },
+
+  addComment: (postId: number, content: string, author: string, university: string, userType: UserType) => {
+    const newComment: Comment = {
+      id: nextCommentId++,
+      postId,
+      author,
+      university,
+      userType,
+      content,
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      postComments: {
+        ...state.postComments,
+        [postId]: [...(state.postComments[postId] ?? []), newComment],
+      },
+      posts: state.posts.map((p) =>
+        p.id === postId ? { ...p, comments: p.comments + 1 } : p
+      ),
+    }));
   },
 }));

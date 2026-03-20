@@ -525,44 +525,6 @@ export default function ChatRoomScreen() {
         </View>
       </View>
 
-      {/* 수락/거절 공지 배너 */}
-      {helpStatus === 'MATCHED' && (
-        <View style={styles.noticeBanner}>
-          <View style={styles.noticeHeader}>
-            <Text style={styles.noticeIcon}>🤝</Text>
-            <View style={styles.noticeTextWrap}>
-              <Text style={styles.noticeTitle}>도움 신청이 도착했어요!</Text>
-              <Text style={styles.noticeSub}>
-                {isRequester
-                  ? `${partnerNickname}님이 도움을 드리겠다고 했어요.`
-                  : `${partnerNickname}님의 수락을 기다리고 있어요.`}
-              </Text>
-            </View>
-          </View>
-          {isRequester && (
-            <View style={styles.noticeActions}>
-              <TouchableOpacity
-                style={[styles.rejectBtn, isActing && styles.actionBtnDisabled]}
-                onPress={handleReject}
-                disabled={isActing}
-              >
-                <Text style={styles.rejectBtnText}>거절</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.acceptBtn, isActing && styles.actionBtnDisabled]}
-                onPress={handleAccept}
-                disabled={isActing}
-              >
-                {isActing
-                  ? <ActivityIndicator size="small" color="#FFFFFF" />
-                  : <Text style={styles.acceptBtnText}>수락</Text>
-                }
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      )}
-
       {/* 메시지 목록 */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -580,8 +542,50 @@ export default function ChatRoomScreen() {
             styles.messageList,
             listData.length <= 1 && styles.messageListEmpty,
           ]}
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+          onContentSizeChange={() => {
+            if (helpStatus === 'MATCHED') {
+              listRef.current?.scrollToOffset({ offset: 0, animated: false });
+            } else {
+              listRef.current?.scrollToEnd({ animated: false });
+            }
+          }}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={helpStatus === 'MATCHED' ? (
+            <View style={styles.noticeBanner}>
+              <View style={styles.noticeHeader}>
+                <Text style={styles.noticeIcon}>🤝</Text>
+                <View style={styles.noticeTextWrap}>
+                  <Text style={styles.noticeTitle}>도움 신청이 도착했어요!</Text>
+                  <Text style={styles.noticeSub}>
+                    {isRequester
+                      ? `${partnerNickname}님이 도움을 드리겠다고 했어요.`
+                      : `${partnerNickname}님의 수락을 기다리고 있어요.`}
+                  </Text>
+                </View>
+              </View>
+              {isRequester && (
+                <View style={styles.noticeActions}>
+                  <TouchableOpacity
+                    style={[styles.rejectBtn, isActing && styles.actionBtnDisabled]}
+                    onPress={handleReject}
+                    disabled={isActing}
+                  >
+                    <Text style={styles.rejectBtnText}>거절</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.acceptBtn, isActing && styles.actionBtnDisabled]}
+                    onPress={handleAccept}
+                    disabled={isActing}
+                  >
+                    {isActing
+                      ? <ActivityIndicator size="small" color="#FFFFFF" />
+                      : <Text style={styles.acceptBtnText}>수락</Text>
+                    }
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ) : null}
           ListEmptyComponent={
             <View style={styles.emptyChat}>
               <Text style={styles.emptyChatText}>

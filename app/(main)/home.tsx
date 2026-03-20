@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getHelpRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
+import { useNotificationStore } from '../../stores/notificationStore';
 import type { HelpCategory, HelpRequest } from '../../types';
 
 // ── Design tokens ──
@@ -64,6 +65,7 @@ const HELP_GOAL = 20;
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { hasUnreadForUser } = useNotificationStore();
   const [requests, setRequests]         = useState<HelpRequest[]>([]);
   const [isLoading, setIsLoading]       = useState(true);
   const [refreshing, setRefreshing]     = useState(false);
@@ -169,9 +171,9 @@ export default function HomeScreen() {
               안녕하세요, <Text style={s.greetingName}>{user?.nickname ?? ''}님</Text>!
             </Text>
           </View>
-          <TouchableOpacity style={s.notifBtn}>
+          <TouchableOpacity style={s.notifBtn} onPress={() => router.push('/notifications')}>
             <Ionicons name="notifications-outline" size={15} color={T3} />
-            <View style={s.notifDot} />
+            {hasUnreadForUser(user?.id ?? 0) && <View style={s.notifDot} />}
           </TouchableOpacity>
         </View>
 

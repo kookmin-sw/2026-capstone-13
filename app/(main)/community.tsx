@@ -1,8 +1,8 @@
 // 커뮤니티 화면
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ScrollView, RefreshControl, Image, Platform,
+  ScrollView, RefreshControl, Image, Platform, TextInput, Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -52,20 +52,44 @@ function formatTime(createdAt: string): string {
   return `${Math.floor(h / 24)}일 전`;
 }
 
+type SearchMode = 'title' | 'title+content';
+
 export default function CommunityScreen() {
   const router = useRouter();
   const { posts } = useCommunityStore();
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('ALL');
   const [refreshing, setRefreshing] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchMode, setSearchMode] = useState<SearchMode>('title');
+  const searchInputRef = useRef<TextInput>(null);
 
   const onRefresh = () => {
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 800);
   };
 
-  const filteredPosts = selectedCategory === 'ALL'
+  const openSearch = () => {
+    setSearchVisible(true);
+    setTimeout(() => searchInputRef.current?.focus(), 100);
+  };
+
+  const closeSearch = () => {
+    setSearchVisible(false);
+    setSearchQuery('');
+  };
+
+  const categoryFiltered = selectedCategory === 'ALL'
     ? posts
     : posts.filter((p) => p.category === selectedCategory);
+
+  const filteredPosts = searchQuery.trim()
+    ? categoryFiltered.filter((p) => {
+        const q = searchQuery.trim().toLowerCase();
+        if (searchMode === 'title') return p.title.toLowerCase().includes(q);
+        return p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q);
+      })
+    : categoryFiltered;
 
   const isHot = (item: CommunityPost) => item.likes >= 30;
 
@@ -73,7 +97,7 @@ export default function CommunityScreen() {
     const catColor = CATEGORY_COLOR[item.category];
     const hot = isHot(item);
     return (
-      <TouchableOpacity style={s.card} activeOpacity={0.85}>
+      <TouchableOpacity style={s.card} activeOpacity={0.85} onPress={() => router.push({ pathname: '/community-post', params: { id: item.id } })}>
         {/* 상단 메타 */}
         <View style={s.cardMeta}>
           <View style={[s.catBadge, { backgroundColor: BLUE_L }]}>
@@ -140,7 +164,7 @@ export default function CommunityScreen() {
       <View style={s.header}>
         <Text style={s.headerTitle}>커뮤니티</Text>
         <View style={s.headerIcons}>
-          <TouchableOpacity style={s.iconBtn}>
+          <TouchableOpacity style={s.iconBtn} onPress={openSearch}>
             <Ionicons name="search-outline" size={14} color={T3} />
           </TouchableOpacity>
           <TouchableOpacity style={s.iconBtn}>
@@ -148,6 +172,50 @@ export default function CommunityScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* 검색 바 */}
+      {searchVisible && (
+        <View style={s.searchWrap}>
+          <View style={s.searchBar}>
+            <Ionicons name="search-outline" size={14} color={T2} />
+            <TextInput
+              ref={searchInputRef}
+              style={s.searchInput}
+              placeholder="검색어를 입력하세요"
+              placeholderTextColor={T2}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={14} color={T2} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity style={s.searchCancel} onPress={closeSearch}>
+            <Text style={s.searchCancelText}>취소</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* 검색 모드 선택 */}
+      {searchVisible && (
+        <View style={s.searchModeRow}>
+          <TouchableOpacity
+            style={[s.modeChip, searchMode === 'title' && s.modeChipOn]}
+            onPress={() => setSearchMode('title')}
+          >
+            <Text style={[s.modeChipText, searchMode === 'title' && s.modeChipTextOn]}>제목</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.modeChip, searchMode === 'title+content' && s.modeChipOn]}
+            onPress={() => setSearchMode('title+content')}
+          >
+            <Text style={[s.modeChipText, searchMode === 'title+content' && s.modeChipTextOn]}>제목 + 내용</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* 카테고리 필터 */}
       <View style={s.filterWrap}>
@@ -177,9 +245,9 @@ export default function CommunityScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
         ListEmptyComponent={
           <View style={s.empty}>
-            <Text style={s.emptyEmoji}>💬</Text>
-            <Text style={s.emptyTitle}>게시글이 없습니다</Text>
-            <Text style={s.emptySub}>첫 번째 글을 작성해보세요!</Text>
+            <Text style={s.emptyEmoji}>{searchQuery ? '🔍' : '💬'}</Text>
+            <Text style={s.emptyTitle}>{searchQuery ? '검색 결과가 없습니다' : '게시글이 없습니다'}</Text>
+            <Text style={s.emptySub}>{searchQuery ? '다른 검색어로 시도해보세요' : '첫 번째 글을 작성해보세요!'}</Text>
           </View>
         }
       />
@@ -219,6 +287,33 @@ const s = StyleSheet.create({
     backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
   },
+
+  // ── Search ──
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4,
+  },
+  searchBar: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#fff', borderRadius: 12,
+    borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 12, paddingVertical: 8,
+  },
+  searchInput: { flex: 1, fontSize: 13, color: T1, padding: 0 },
+  searchCancel: { paddingHorizontal: 4 },
+  searchCancelText: { fontSize: 13, color: BLUE, fontWeight: '700' },
+  searchModeRow: {
+    flexDirection: 'row', gap: 6,
+    paddingHorizontal: 14, paddingBottom: 6,
+  },
+  modeChip: {
+    paddingHorizontal: 12, paddingVertical: 4,
+    borderRadius: 16, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: BORDER,
+  },
+  modeChipOn: { backgroundColor: BLUE, borderColor: BLUE },
+  modeChipText: { fontSize: 11, fontWeight: '700', color: T2 },
+  modeChipTextOn: { color: '#fff' },
 
   // ── Filter ──
   filterWrap: { paddingTop: 12 },
