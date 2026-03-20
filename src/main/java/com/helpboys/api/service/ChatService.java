@@ -68,7 +68,7 @@ public class ChatService {
                 .build();
     }
 
-    // 내가 참여한 채팅방 목록 조회
+    // 내가 참여한 채팅방 목록 조회 (마지막 메시지 기준 최신순)
     @Transactional(readOnly = true)
     public List<ChatRoomResponse> getChatRooms(Long userId) {
         List<HelpRequest.RequestStatus> activeStatuses = List.of(
@@ -77,6 +77,36 @@ public class ChatService {
                 HelpRequest.RequestStatus.COMPLETED
         );
         return helpRequestRepository.findChatRooms(userId, activeStatuses).stream()
+                .map(req -> {
+                    ChatMessage last = chatMessageRepository
+                            .findTopByRoomIdOrderByCreatedAtDesc(req.getId())
+                            .orElse(null);
+                    return ChatRoomResponse.from(
+                            req, userId,
+                            last != null ? last.getContent() : null,
+                            last != null ? last.getCreatedAt().toString() : null
+                    );
+                })
+                .sorted((a, b) -> {
+                    if (a.getLastMessageTime() == null) return 1;
+                    if (b.getLastMessageTime() == null) return -1;
+                    return b.getLastMessageTime().compareTo(a.getLastMessageTime());
+                })
+                .collect(Collectors.toList());
+    }
+
+    // 채팅방 검색
+    @Transactional(readOnly = true)
+    public List<ChatRoomResponse> searchChatRooms(String keyword, Long userId) {
+        List<HelpRequest.RequestStatus> activeStatuses = List.of(
+                HelpRequest.RequestStatus.MATCHED,
+                HelpRequest.RequestStatus.IN_PROGRESS,
+                HelpRequest.RequestStatus.COMPLETED
+        );
+        return helpRequestRepository.searchByKeyword(keyword).stream()
+                .filter(req -> activeStatuses.contains(req.getStatus())
+                        && (req.getRequester().getId().equals(userId)
+                        || (req.getHelper() != null && req.getHelper().getId().equals(userId))))
                 .map(req -> {
                     ChatMessage last = chatMessageRepository
                             .findTopByRoomIdOrderByCreatedAtDesc(req.getId())

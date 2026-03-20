@@ -71,6 +71,15 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.success("처리 완료", communityService.toggleLike(id, userId)));
     }
 
+    // GET /api/community/search?keyword=... - 게시글 검색
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<CommunityPostResponse>>> searchPosts(
+            @RequestParam String keyword,
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        return ResponseEntity.ok(ApiResponse.success("검색 성공", communityService.searchPosts(keyword, userId)));
+    }
+
     private Long extractUserId(String bearerToken) {
         return jwtUtil.extractUserId(bearerToken.replace("Bearer ", ""));
     }

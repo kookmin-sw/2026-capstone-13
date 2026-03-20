@@ -3,6 +3,7 @@ package com.helpboys.api.repository;
 import com.helpboys.api.entity.CommunityPost;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -13,4 +14,7 @@ public interface CommunityPostRepository extends JpaRepository<CommunityPost, Lo
 
     @Query("SELECT p FROM CommunityPost p WHERE p.category = :category ORDER BY p.createdAt DESC")
     List<CommunityPost> findByCategoryOrderByCreatedAtDesc(CommunityPost.PostCategory category);
+
+    @Query("SELECT p FROM CommunityPost p WHERE p.title LIKE %:keyword% OR p.content LIKE %:keyword% ORDER BY p.createdAt DESC")
+    List<CommunityPost> searchByKeyword(@Param("keyword") String keyword);
 }

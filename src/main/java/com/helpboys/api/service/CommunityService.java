@@ -114,10 +114,32 @@ public class CommunityService {
             PostLike like = PostLike.builder().post(post).user(user).build();
             postLikeRepository.save(like);
             post.setLikes(post.getLikes() + 1);
+
+            // 내 글이 아닌 경우 게시글 작성자에게 알림
+            if (!post.getAuthor().getId().equals(userId)) {
+                String message = user.getNickname() + "님이 '" +
+                        truncate(post.getTitle(), 15) + "' 글을 좋아해요.";
+                notificationService.createNotification(
+                        post.getAuthor().getId(),
+                        Notification.NotificationType.LIKE,
+                        message,
+                        postId
+                );
+            }
         }
 
         communityPostRepository.save(post);
         return Map.of("liked", !alreadyLiked, "likes", post.getLikes());
+    }
+
+    // 게시글 검색
+    @Transactional(readOnly = true)
+    public List<CommunityPostResponse> searchPosts(String keyword, Long userId) {
+        return communityPostRepository.searchByKeyword(keyword)
+                .stream()
+                .map(post -> CommunityPostResponse.fromList(post,
+                        postLikeRepository.existsByPostIdAndUserId(post.getId(), userId)))
+                .collect(Collectors.toList());
     }
 
     private CommunityPost findPostById(Long postId) {
