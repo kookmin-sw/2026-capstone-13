@@ -22,8 +22,8 @@ import org.springframework.stereotype.Controller;
 @Slf4j
 @Controller
 @RequiredArgsConstructor
-public class CallController {
-
+public class
+        CallController {
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
 

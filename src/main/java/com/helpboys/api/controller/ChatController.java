@@ -47,6 +47,16 @@ public class ChatController {
         return ResponseEntity.ok(ApiResponse.success("조회 성공", chatService.getChatRooms(userId)));
     }
 
+    // GET /api/chat/rooms/search?keyword=... - 채팅방 검색
+    @GetMapping("/rooms/search")
+    @ResponseBody
+    public ResponseEntity<ApiResponse<List<ChatRoomResponse>>> searchChatRooms(
+            @RequestParam String keyword,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        return ResponseEntity.ok(ApiResponse.success("검색 성공", chatService.searchChatRooms(keyword, userId)));
+    }
+
     // GET /api/chat/rooms/{roomId} - 채팅방 단건 조회
     @GetMapping("/rooms/{roomId}")
     @ResponseBody
