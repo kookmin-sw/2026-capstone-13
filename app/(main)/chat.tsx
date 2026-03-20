@@ -1,5 +1,5 @@
 // 채팅 탭: 도움 신청 수락/거절 + 채팅방 목록
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useAuthStore } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
 import {
@@ -152,16 +153,59 @@ export default function ChatScreen() {
 
   const myId = Number(user?.id);
 
-  const visibleItems = requests.filter((r) => {
-    if (hasLeft(r.id, myId)) return false;
-    if (filter === 'ALL')         return r.status === 'MATCHED' || r.status === 'IN_PROGRESS';
-    if (filter === 'IN_PROGRESS') return r.status === 'IN_PROGRESS';
-    if (filter === 'COMPLETED')   return r.status === 'COMPLETED';
-    return false;
-  });
+  const visibleItems = requests
+    .filter((r) => {
+      if (hasLeft(r.id, myId)) return false;
+      if (filter === 'ALL')         return r.status === 'MATCHED' || r.status === 'IN_PROGRESS';
+      if (filter === 'IN_PROGRESS') return r.status === 'IN_PROGRESS';
+      if (filter === 'COMPLETED')   return r.status === 'COMPLETED';
+      return false;
+    })
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   const getPartner = (item: HelpRequest) =>
     isInternational ? item.helper : item.requester;
+
+  const swipeableRefs = useRef<Map<number, Swipeable>>(new Map());
+  const openSwipeableId = useRef<number | null>(null);
+
+  const closeOpenSwipeable = () => {
+    if (openSwipeableId.current !== null) {
+      swipeableRefs.current.get(openSwipeableId.current)?.close();
+      openSwipeableId.current = null;
+    }
+  };
+
+  const handleDelete = (item: HelpRequest) => {
+    Alert.alert(
+      '채팅방 나가기',
+      '채팅방 목록에서 삭제할까요?',
+      [
+        {
+          text: '취소',
+          style: 'cancel',
+          onPress: () => swipeableRefs.current.get(item.id)?.close(),
+        },
+        {
+          text: '나가기',
+          style: 'destructive',
+          onPress: () => {
+            if (user) {
+              useChatStore.getState().leaveRoom(item.id, Number(user.id));
+              setRequests((prev) => prev.filter((r) => r.id !== item.id));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderRightActions = (item: HelpRequest) => (
+    <TouchableOpacity style={s.deleteAction} onPress={() => handleDelete(item)}>
+      <Ionicons name="trash-outline" size={22} color="#fff" />
+      <Text style={s.deleteActionText}>나가기</Text>
+    </TouchableOpacity>
+  );
 
   const renderItem = ({ item }: { item: HelpRequest }) => {
     const partner        = getPartner(item);
@@ -176,64 +220,86 @@ export default function ChatScreen() {
     const statusColor = isCompleted ? T3 : BLUE;
 
     return (
-      <TouchableOpacity
-        style={[s.item, isCompleted && s.itemDimmed]}
-        onPress={() => goToChat(item)}
-        activeOpacity={0.85}
+      <Swipeable
+        ref={(ref) => {
+          if (ref) swipeableRefs.current.set(item.id, ref);
+          else swipeableRefs.current.delete(item.id);
+        }}
+        renderRightActions={() => renderRightActions(item)}
+        rightThreshold={60}
+        overshootRight={false}
+        onSwipeableOpen={() => {
+          // 이미 열린 다른 항목이 있으면 닫기
+          if (openSwipeableId.current !== null && openSwipeableId.current !== item.id) {
+            swipeableRefs.current.get(openSwipeableId.current)?.close();
+          }
+          openSwipeableId.current = item.id;
+        }}
+        onSwipeableClose={() => {
+          if (openSwipeableId.current === item.id) {
+            openSwipeableId.current = null;
+          }
+        }}
       >
-        {/* 아바타 */}
-        <View style={s.avatarWrap}>
-          <View style={[s.avatar, { backgroundColor: avatarColor(name) }]}>
-            <Text style={s.avatarText}>{name.charAt(0)}</Text>
-          </View>
-          {isOnline && <View style={s.onlineDot} />}
-        </View>
-
-        {/* 본문 */}
-        <View style={s.itemBody}>
-          <View style={s.itemTop}>
-            <View style={s.itemTitleRow}>
-              <Text style={s.itemName}>{name}</Text>
-              <View style={[s.statusBadge, { backgroundColor: statusBg }]}>
-                <Text style={[s.statusText, { color: statusColor }]}>{statusLabel}</Text>
-              </View>
+        <TouchableOpacity
+          style={[s.item, isCompleted && s.itemDimmed]}
+          onPress={() => { closeOpenSwipeable(); goToChat(item); }}
+          activeOpacity={0.85}
+        >
+          {/* 아바타 */}
+          <View style={s.avatarWrap}>
+            <View style={[s.avatar, { backgroundColor: avatarColor(name) }]}>
+              <Text style={s.avatarText}>{name.charAt(0)}</Text>
             </View>
-            <Text style={s.itemTime}>{formatTime(item.updatedAt)}</Text>
+            {isOnline && <View style={s.onlineDot} />}
           </View>
-          <View style={s.itemBottom}>
-            <Text style={s.itemPreview} numberOfLines={1}>
-              {isMatchPending
-                ? (isInternational ? '새 도움 신청이 도착했어요!' : '수락을 기다리고 있어요')
-                : item.title}
-            </Text>
-            {isMatchPending && !isActioning && (
-              <View style={s.unreadDot} />
+
+          {/* 본문 */}
+          <View style={s.itemBody}>
+            <View style={s.itemTop}>
+              <View style={s.itemTitleRow}>
+                <Text style={s.itemName}>{name}</Text>
+                <View style={[s.statusBadge, { backgroundColor: statusBg }]}>
+                  <Text style={[s.statusText, { color: statusColor }]}>{statusLabel}</Text>
+                </View>
+              </View>
+              <Text style={s.itemTime}>{formatTime(item.updatedAt)}</Text>
+            </View>
+            <View style={s.itemBottom}>
+              <Text style={s.itemPreview} numberOfLines={1}>
+                {isMatchPending
+                  ? (isInternational ? '새 도움 신청이 도착했어요!' : '수락을 기다리고 있어요')
+                  : item.title}
+              </Text>
+              {isMatchPending && !isActioning && (
+                <View style={s.unreadDot} />
+              )}
+            </View>
+            {/* MATCHED + 외국인: 수락/거절 */}
+            {isMatchPending && isInternational && (
+              <View style={s.actionRow}>
+                <TouchableOpacity
+                  style={s.rejectBtn}
+                  onPress={() => handleReject(item)}
+                  disabled={isActioning}
+                >
+                  <Text style={s.rejectBtnText}>거절</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[s.acceptBtn, isActioning && s.btnDisabled]}
+                  onPress={() => handleAccept(item)}
+                  disabled={isActioning}
+                >
+                  {isActioning
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Text style={s.acceptBtnText}>수락</Text>
+                  }
+                </TouchableOpacity>
+              </View>
             )}
           </View>
-          {/* MATCHED + 외국인: 수락/거절 */}
-          {isMatchPending && isInternational && (
-            <View style={s.actionRow}>
-              <TouchableOpacity
-                style={s.rejectBtn}
-                onPress={() => handleReject(item)}
-                disabled={isActioning}
-              >
-                <Text style={s.rejectBtnText}>거절</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.acceptBtn, isActioning && s.btnDisabled]}
-                onPress={() => handleAccept(item)}
-                disabled={isActioning}
-              >
-                {isActioning
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={s.acceptBtnText}>수락</Text>
-                }
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </Swipeable>
     );
   };
 
@@ -283,6 +349,7 @@ export default function ChatScreen() {
           contentContainerStyle={s.list}
           ItemSeparatorComponent={() => <View style={s.separator} />}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
+          onScrollBeginDrag={closeOpenSwipeable}
         />
       )}
     </View>
@@ -393,6 +460,16 @@ const s = StyleSheet.create({
   },
   acceptBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   btnDisabled:   { opacity: 0.6 },
+
+  // ── Swipe Delete ──
+  deleteAction: {
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    gap: 4,
+  },
+  deleteActionText: { fontSize: 10, fontWeight: '700', color: '#fff' },
 
   // ── Empty ──
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8, paddingHorizontal: 32 },

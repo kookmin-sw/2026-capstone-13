@@ -17,7 +17,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(npx tsc:*)",
-      "Bash(npx expo:*)"
+      "Bash(npx expo:*)",
+      "Bash(grep -r \"notice\\\\|공지\\\\|announcement\\\\|crawl\\\\|크롤\" c:/Users/sang0/OneDrive/Desktop/frontend-main --include=*.ts --include=*.tsx)",
+      "Bash(grep -E \"\\\\.tsx?$\")"
     ]
   }
 }

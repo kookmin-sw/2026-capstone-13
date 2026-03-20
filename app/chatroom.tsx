@@ -25,6 +25,8 @@ import { useChatStore } from '../stores/chatStore';
 const PRIMARY = '#3B6FE8';
 const PRIMARY_LIGHT = '#EEF4FF';
 const SYS_LEAVE = 'SYS_LEAVE:';
+const SYS_CALL_VOICE = 'SYS_CALL_VOICE:';
+const SYS_CALL_VIDEO = 'SYS_CALL_VIDEO:';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api';
 // https://xxx.up.railway.app/api → wss://xxx.up.railway.app/ws-native
@@ -144,6 +146,32 @@ export default function ChatRoomScreen() {
             try {
               const msg: ChatMessageDto = JSON.parse(frame.body);
               if (!mounted) return;
+
+              // 통화 요청 메시지 처리 (수신자만)
+              if (msg.content?.startsWith(SYS_CALL_VOICE) || msg.content?.startsWith(SYS_CALL_VIDEO)) {
+                if (msg.senderId === user?.id) return; // 내가 보낸 신호는 무시
+                const isVideo = msg.content.startsWith(SYS_CALL_VIDEO);
+                const callerNickname = msg.content.slice(isVideo ? SYS_CALL_VIDEO.length : SYS_CALL_VOICE.length);
+                Alert.alert(
+                  isVideo ? '📹 영상통화' : '📞 음성통화',
+                  `${callerNickname}님이 ${isVideo ? '영상' : '음성'}통화를 요청했습니다.`,
+                  [
+                    { text: '거절', style: 'cancel' },
+                    {
+                      text: '수락',
+                      onPress: () => router.push({
+                        pathname: '/videocall',
+                        params: {
+                          roomId: String(roomId),
+                          partnerNickname: callerNickname,
+                          voiceOnly: isVideo ? 'false' : 'true',
+                        },
+                      }),
+                    },
+                  ]
+                );
+                return;
+              }
 
               // 나가기 시스템 메시지 처리
               if (msg.content?.startsWith(SYS_LEAVE)) {
@@ -340,10 +368,26 @@ export default function ChatRoomScreen() {
       { text: '취소', style: 'cancel' },
       {
         text: '시작',
-        onPress: () => router.push({
-          pathname: '/videocall',
-          params: { roomId: String(roomId), partnerNickname, voiceOnly: 'true' },
-        }),
+        onPress: () => {
+          // 상대방에게 통화 요청 신호 전송
+          const client = clientRef.current;
+          if (client?.connected && user) {
+            client.publish({
+              destination: '/app/chat/send',
+              body: JSON.stringify({
+                roomId,
+                senderId: user.id,
+                senderNickname: user.nickname,
+                content: `${SYS_CALL_VOICE}${user.nickname}`,
+                createdAt: new Date().toISOString(),
+              }),
+            });
+          }
+          router.push({
+            pathname: '/videocall',
+            params: { roomId: String(roomId), partnerNickname, voiceOnly: 'true' },
+          });
+        },
       },
     ]);
   };
@@ -353,10 +397,26 @@ export default function ChatRoomScreen() {
       { text: '취소', style: 'cancel' },
       {
         text: '시작',
-        onPress: () => router.push({
-          pathname: '/videocall',
-          params: { roomId: String(roomId), partnerNickname, voiceOnly: 'false' },
-        }),
+        onPress: () => {
+          // 상대방에게 통화 요청 신호 전송
+          const client = clientRef.current;
+          if (client?.connected && user) {
+            client.publish({
+              destination: '/app/chat/send',
+              body: JSON.stringify({
+                roomId,
+                senderId: user.id,
+                senderNickname: user.nickname,
+                content: `${SYS_CALL_VIDEO}${user.nickname}`,
+                createdAt: new Date().toISOString(),
+              }),
+            });
+          }
+          router.push({
+            pathname: '/videocall',
+            params: { roomId: String(roomId), partnerNickname, voiceOnly: 'false' },
+          });
+        },
       },
     ]);
   };

@@ -1,4 +1,4 @@
-// 음성/영상 통화 화면 - 실시간 자막 (WebSocket)
+// 음성/영상 통화 화면 - Agora RTC + 실시간 자막
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -7,19 +7,27 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  PermissionsAndroid,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import {
+  createAgoraRtcEngine,
+  IRtcEngine,
+  ChannelProfileType,
+  ClientRoleType,
+  RtcSurfaceView,
+  VideoSourceType,
+} from 'react-native-agora';
 
 const PRIMARY = '#4F46E5';
+const AGORA_APP_ID = process.env.EXPO_PUBLIC_AGORA_APP_ID ?? '';
 const WS_SPEECH_URL = process.env.EXPO_PUBLIC_AI_WS_URL ?? 'ws://localhost:8001';
 
-// 자막 한 줄 타입
 interface Transcript {
   id: string;
   text: string;
-  language: string;
 }
 
 export default function VideoCallScreen() {
@@ -32,165 +40,240 @@ export default function VideoCallScreen() {
   }>();
 
   const partnerNickname = params.partnerNickname ?? '상대방';
+  const channelName = `room_${params.roomId}`;
   const myLanguage = params.language ?? 'ko-KR';
   const isVoiceOnly = params.voiceOnly === 'true';
 
-  const [isConnected, setIsConnected] = useState(false);
+  const [isJoined, setIsJoined] = useState(false);
+  const [remoteUid, setRemoteUid] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [transcripts, setTranscripts] = useState<Transcript[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
 
+  // 자막
+  const [transcripts, setTranscripts] = useState<Transcript[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
-  const isStreamingRef = useRef<boolean>(false);
-  const streamIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isStreamingRef = useRef(false);
+
+  const engineRef = useRef<IRtcEngine | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 통화 시간 타이머
   useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setCallDuration((prev) => prev + 1);
-    }, 1000);
+    timerRef.current = setInterval(() => setCallDuration((p) => p + 1), 1000);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
 
-  const formatDuration = (seconds: number) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
+  const formatDuration = (s: number) =>
+    `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
+
+  // Android 권한 요청
+  const requestAndroidPermissions = async () => {
+    if (Platform.OS !== 'android') return true;
+    const permissions: string[] = [
+      PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+    ];
+    if (!isVoiceOnly) {
+      permissions.push(PermissionsAndroid.PERMISSIONS.CAMERA);
+    }
+    const results = await PermissionsAndroid.requestMultiple(permissions);
+    return Object.values(results).every((r) => r === PermissionsAndroid.RESULTS.GRANTED);
   };
 
-  // WebSocket 연결
-  const connectWebSocket = useCallback(() => {
-    const ws = new WebSocket(WS_SPEECH_URL);
+  // Agora 초기화 및 채널 참가
+  useEffect(() => {
+    if (!AGORA_APP_ID) {
+      Alert.alert('설정 오류', 'Agora App ID가 설정되지 않았습니다.');
+      return;
+    }
 
-    ws.onopen = () => {
-      setIsConnected(true);
-      // 언어 설정 전송
-      ws.send(JSON.stringify({ language: myLanguage }));
+    const init = async () => {
+      const hasPermission = await requestAndroidPermissions();
+      if (!hasPermission) {
+        Alert.alert('권한 필요', '통화에 필요한 권한을 허용해주세요.');
+        router.back();
+        return;
+      }
+
+      const engine = createAgoraRtcEngine();
+      engineRef.current = engine;
+
+      engine.initialize({
+        appId: AGORA_APP_ID,
+        channelProfile: ChannelProfileType.ChannelProfileCommunication,
+      });
+
+      engine.addListener('onJoinChannelSuccess', () => {
+        setIsJoined(true);
+      });
+
+      engine.addListener('onUserJoined', (_connection, uid) => {
+        setRemoteUid(uid);
+      });
+
+      engine.addListener('onUserOffline', (_connection, _uid) => {
+        setRemoteUid(null);
+      });
+
+      engine.addListener('onError', (err) => {
+        console.warn('Agora error:', err);
+      });
+
+      if (!isVoiceOnly) {
+        engine.enableVideo();
+        engine.startPreview();
+      } else {
+        engine.disableVideo();
+      }
+
+      // 개발 테스트용: token null (Agora 콘솔에서 토큰 인증 비활성화 필요)
+      engine.joinChannel('', channelName, 0, {
+        clientRoleType: ClientRoleType.ClientRoleBroadcaster,
+      });
     };
 
+    init();
+
+    return () => {
+      isStreamingRef.current = false;
+      recordingRef.current?.stopAndUnloadAsync().catch(() => {});
+      wsRef.current?.close();
+      engineRef.current?.leaveChannel();
+      engineRef.current?.release();
+      engineRef.current = null;
+    };
+  }, []);
+
+  // 자막 WebSocket 연결
+  const startSubtitles = useCallback(async () => {
+    const { granted } = await Audio.requestPermissionsAsync();
+    if (!granted) return;
+
+    const ws = new WebSocket(WS_SPEECH_URL);
+    ws.onopen = () => ws.send(JSON.stringify({ language: myLanguage }));
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'transcript' && data.text) {
-          setTranscripts((prev) => {
-            const updated = [...prev, {
-              id: Date.now().toString(),
-              text: data.text,
-              language: data.language,
-            }];
-            // 최근 3개만 표시
-            return updated.slice(-3);
-          });
+          setTranscripts((prev) => [...prev, { id: Date.now().toString(), text: data.text }].slice(-3));
         }
-      } catch {
-        // 파싱 오류 무시
-      }
+      } catch {}
     };
-
-    ws.onclose = () => setIsConnected(false);
-    ws.onerror = () => setIsConnected(false);
-
+    ws.onclose = () => {};
     wsRef.current = ws;
-  }, [myLanguage]);
-
-  // 음성 스트리밍 시작
-  const startStreaming = async () => {
-    const { granted } = await Audio.requestPermissionsAsync();
-    if (!granted) {
-      Alert.alert('권한 필요', '마이크 권한을 허용해주세요.');
-      return;
-    }
 
     await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-    connectWebSocket();
     isStreamingRef.current = true;
     setIsStreaming(true);
 
-    // 3초 청크씩 순차적으로 녹음해서 WebSocket으로 전송
-    const loopRecording = async () => {
+    const loop = async () => {
       while (isStreamingRef.current) {
         if (recordingRef.current) {
           await recordingRef.current.stopAndUnloadAsync().catch(() => {});
           recordingRef.current = null;
         }
-        const { recording } = await Audio.Recording.createAsync(
-          Audio.RecordingOptionsPresets.HIGH_QUALITY
-        );
+        const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
         recordingRef.current = recording;
-
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-
+        await new Promise((r) => setTimeout(r, 3000));
         await recording.stopAndUnloadAsync().catch(() => {});
         recordingRef.current = null;
         const uri = recording.getURI();
-        if (!uri || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) continue;
-
-        const response = await fetch(uri);
-        const arrayBuffer = await response.arrayBuffer();
-        wsRef.current.send(arrayBuffer);
+        if (!uri || wsRef.current?.readyState !== WebSocket.OPEN) continue;
+        const res = await fetch(uri);
+        wsRef.current.send(await res.arrayBuffer());
       }
     };
+    loop();
+  }, [myLanguage]);
 
-    loopRecording();
-  };
-
-  // 음성 스트리밍 중지
-  const stopStreaming = async () => {
+  const stopSubtitles = async () => {
     isStreamingRef.current = false;
     setIsStreaming(false);
-    if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
-    await recordingRef.current?.stopAndUnloadAsync();
+    await recordingRef.current?.stopAndUnloadAsync().catch(() => {});
     recordingRef.current = null;
     wsRef.current?.close();
     wsRef.current = null;
-    setIsConnected(false);
   };
 
-  // 통화 종료
+  const handleMute = () => {
+    engineRef.current?.muteLocalAudioStream(!isMuted);
+    setIsMuted((p) => !p);
+  };
+
+  const handleCameraToggle = () => {
+    engineRef.current?.muteLocalVideoStream(!isCameraOff);
+    setIsCameraOff((p) => !p);
+  };
+
   const handleEndCall = async () => {
-    await stopStreaming();
+    await stopSubtitles();
+    engineRef.current?.leaveChannel();
     router.back();
   };
 
-  // 음소거 토글
-  const handleMute = () => setIsMuted((prev) => !prev);
-
   return (
     <View style={styles.container}>
-      {/* 상단 통화 정보 */}
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{partnerNickname.charAt(0)}</Text>
-        </View>
-        <Text style={styles.partnerName}>{partnerNickname}</Text>
-        <Text style={styles.callDuration}>{formatDuration(callDuration)}</Text>
-        <View style={styles.statusBadge}>
-          <View style={[styles.statusDot, isConnected && styles.statusDotActive]} />
-          <Text style={styles.statusText}>{isConnected ? '자막 연결됨' : '자막 연결 중...'}</Text>
-        </View>
-      </View>
-
-      {/* 실시간 자막 영역 */}
-      <View style={styles.subtitleArea}>
-        {transcripts.length === 0 ? (
-          <Text style={styles.subtitlePlaceholder}>
-            {isStreaming ? '말씀해 주세요...' : '자막 시작 버튼을 눌러주세요'}
-          </Text>
-        ) : (
-          transcripts.map((t) => (
-            <View key={t.id} style={styles.subtitleBubble}>
-              <Text style={styles.subtitleText}>{t.text}</Text>
+      {/* 영상 영역 */}
+      {!isVoiceOnly && (
+        <View style={styles.videoArea}>
+          {/* 상대방 화면 */}
+          {remoteUid !== null ? (
+            <RtcSurfaceView
+              style={styles.remoteVideo}
+              canvas={{ uid: remoteUid, sourceType: VideoSourceType.VideoSourceRemote }}
+            />
+          ) : (
+            <View style={styles.remoteVideoPlaceholder}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{partnerNickname.charAt(0)}</Text>
+              </View>
+              <Text style={styles.waitingText}>
+                {isJoined ? '상대방 연결 대기 중...' : '채널 연결 중...'}
+              </Text>
             </View>
-          ))
-        )}
+          )}
+
+          {/* 내 화면 (PiP) */}
+          {isJoined && !isCameraOff && (
+            <RtcSurfaceView
+              style={styles.localVideo}
+              canvas={{ uid: 0, sourceType: VideoSourceType.VideoSourceCamera }}
+            />
+          )}
+        </View>
+      )}
+
+      {/* 음성통화 헤더 */}
+      {isVoiceOnly && (
+        <View style={styles.voiceHeader}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{partnerNickname.charAt(0)}</Text>
+          </View>
+          <Text style={styles.partnerName}>{partnerNickname}</Text>
+          <Text style={styles.callDuration}>{formatDuration(callDuration)}</Text>
+          <View style={styles.statusBadge}>
+            <View style={[styles.statusDot, isJoined && remoteUid !== null && styles.statusDotActive]} />
+            <Text style={styles.statusText}>
+              {!isJoined ? '연결 중...' : remoteUid !== null ? '통화 중' : '상대방 대기 중...'}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* 실시간 자막 */}
+      <View style={styles.subtitleArea}>
+        {transcripts.map((t) => (
+          <View key={t.id} style={styles.subtitleBubble}>
+            <Text style={styles.subtitleText}>{t.text}</Text>
+          </View>
+        ))}
       </View>
 
-      {/* 하단 버튼 */}
+      {/* 하단 컨트롤 */}
       <View style={styles.controls}>
         {/* 음소거 */}
         <TouchableOpacity
@@ -201,10 +284,21 @@ export default function VideoCallScreen() {
           <Text style={styles.controlLabel}>{isMuted ? '음소거 해제' : '음소거'}</Text>
         </TouchableOpacity>
 
-        {/* 자막 시작/중지 */}
+        {/* 카메라 (영상통화만) */}
+        {!isVoiceOnly && (
+          <TouchableOpacity
+            style={[styles.controlBtn, isCameraOff && styles.controlBtnActive]}
+            onPress={handleCameraToggle}
+          >
+            <Ionicons name={isCameraOff ? 'videocam-off' : 'videocam'} size={24} color="#FFFFFF" />
+            <Text style={styles.controlLabel}>{isCameraOff ? '카메라 켜기' : '카메라 끄기'}</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* 자막 */}
         <TouchableOpacity
           style={[styles.controlBtn, isStreaming && styles.controlBtnActive]}
-          onPress={isStreaming ? stopStreaming : startStreaming}
+          onPress={isStreaming ? stopSubtitles : startSubtitles}
         >
           <Ionicons name="text" size={24} color="#FFFFFF" />
           <Text style={styles.controlLabel}>{isStreaming ? '자막 중지' : '자막 시작'}</Text>
@@ -226,10 +320,44 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1B4B',
     paddingTop: Platform.OS === 'ios' ? 60 : 24,
   },
-  header: {
+
+  // 영상 영역
+  videoArea: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: '#000',
+  },
+  remoteVideo: {
+    flex: 1,
+  },
+  remoteVideoPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  waitingText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 14,
+  },
+  localVideo: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 100,
+    height: 140,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+
+  // 음성통화 헤더
+  voiceHeader: {
     alignItems: 'center',
     paddingVertical: 32,
     gap: 8,
+    flex: 1,
   },
   avatar: {
     width: 80, height: 80, borderRadius: 40,
@@ -245,25 +373,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 4,
     borderRadius: 20,
   },
-  statusDot: {
-    width: 8, height: 8, borderRadius: 4,
-    backgroundColor: '#6B7280',
-  },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#6B7280' },
   statusDotActive: { backgroundColor: '#10B981' },
   statusText: { fontSize: 12, color: '#E5E7EB' },
 
+  // 자막
   subtitleArea: {
-    flex: 1,
-    justifyContent: 'flex-end',
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 12,
     gap: 8,
-  },
-  subtitlePlaceholder: {
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.3)',
-    fontSize: 15,
-    marginBottom: 20,
   },
   subtitleBubble: {
     backgroundColor: 'rgba(0,0,0,0.6)',
@@ -280,15 +398,16 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 
+  // 컨트롤
   controls: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'flex-end',
-    gap: 24,
-    paddingHorizontal: 32,
+    gap: 20,
+    paddingHorizontal: 24,
     paddingBottom: Platform.OS === 'ios' ? 48 : 32,
     paddingTop: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
   controlBtn: {
     alignItems: 'center',
@@ -298,8 +417,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
   },
-  controlBtnActive: { backgroundColor: '#4F46E5' },
-  controlLabel: { fontSize: 11, color: '#E5E7EB', marginTop: 2 },
+  controlBtnActive: { backgroundColor: PRIMARY },
+  controlLabel: { fontSize: 10, color: '#E5E7EB' },
   endCallBtn: {
     alignItems: 'center',
     gap: 6,
