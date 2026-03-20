@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ChatState {
   unreadCount: number;
@@ -12,23 +14,33 @@ interface ChatState {
   hasLeft: (roomId: number, userId: number) => boolean;
 }
 
-export const useChatStore = create<ChatState>((set, get) => ({
-  unreadCount: 0,
-  activeChatroomId: null,
-  leftRooms: {},
-  incrementUnread: () => set((state) => ({ unreadCount: state.unreadCount + 1 })),
-  clearUnread: () => set({ unreadCount: 0 }),
-  setActiveChatroom: (id) => set({ activeChatroomId: id }),
-  leaveRoom: (roomId, userId) => {
-    const key = String(userId);
-    const existing = get().leftRooms[key] ?? [];
-    if (existing.includes(roomId)) return;
-    set((state) => ({
-      leftRooms: { ...state.leftRooms, [key]: [...existing, roomId] },
-    }));
-  },
-  hasLeft: (roomId, userId) => {
-    const key = String(userId);
-    return (get().leftRooms[key] ?? []).includes(roomId);
-  },
-}));
+export const useChatStore = create<ChatState>()(
+  persist(
+    (set, get) => ({
+      unreadCount: 0,
+      activeChatroomId: null,
+      leftRooms: {},
+      incrementUnread: () => set((state) => ({ unreadCount: state.unreadCount + 1 })),
+      clearUnread: () => set({ unreadCount: 0 }),
+      setActiveChatroom: (id) => set({ activeChatroomId: id }),
+      leaveRoom: (roomId, userId) => {
+        const key = String(userId);
+        const existing = get().leftRooms[key] ?? [];
+        if (existing.includes(roomId)) return;
+        set((state) => ({
+          leftRooms: { ...state.leftRooms, [key]: [...existing, roomId] },
+        }));
+      },
+      hasLeft: (roomId, userId) => {
+        const key = String(userId);
+        return (get().leftRooms[key] ?? []).includes(roomId);
+      },
+    }),
+    {
+      name: 'chat-store',
+      storage: createJSONStorage(() => AsyncStorage),
+      // activeChatroomId, unreadCount은 앱 재시작 시 초기화
+      partialize: (state) => ({ leftRooms: state.leftRooms }),
+    }
+  )
+);

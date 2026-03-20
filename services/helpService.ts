@@ -47,9 +47,11 @@ export const updateHelpRequest = async (id: number, data: CreateHelpRequest): Pr
   return response.data;
 };
 
-// 도움 요청 삭제
+// 도움 요청 삭제 (CANCELLED 상태로 변경)
 export const cancelHelpRequest = async (id: number): Promise<ApiResponse<HelpRequest>> => {
-  const response = await api.delete<ApiResponse<HelpRequest>>(`/requests/${id}`);
+  const response = await api.patch<ApiResponse<HelpRequest>>(`/requests/${id}/status`, null, {
+    params: { status: 'CANCELLED' },
+  });
   return response.data;
 };
 

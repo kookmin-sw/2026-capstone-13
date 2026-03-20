@@ -240,26 +240,22 @@ export default function HomeScreen() {
         {/* ── 카테고리 ── */}
         <View style={s.section}>
           <Text style={s.sectionLabel}>카테고리</Text>
+          <View style={s.catGrid}>
+            {CATEGORIES.map(({ key, label, emoji }) => (
+              <TouchableOpacity
+                key={key}
+                style={s.catItem}
+                onPress={() => setCatFilter(key)}
+                activeOpacity={0.8}
+              >
+                <View style={[s.catIcon, catFilter === key && s.catIconOn]}>
+                  <Text style={s.catEmoji}>{emoji}</Text>
+                </View>
+                <Text style={s.catLabel}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.catScroll}
-        >
-          {CATEGORIES.map(({ key, label, emoji }) => (
-            <TouchableOpacity
-              key={key}
-              style={s.catItem}
-              onPress={() => setCatFilter(key)}
-              activeOpacity={0.8}
-            >
-              <View style={[s.catIcon, catFilter === key && s.catIconOn]}>
-                <Text style={s.catEmoji}>{emoji}</Text>
-              </View>
-              <Text style={s.catLabel}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
 
         {/* ── 최신 도움 요청 ── */}
         <View style={s.listSection}>
@@ -434,6 +430,7 @@ const s = StyleSheet.create({
   section:      { paddingHorizontal: 16, paddingTop: 14 },
   sectionLabel: { fontSize: 17, fontWeight: '900', color: T1, letterSpacing: -0.3 },
   catScroll:    { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  catGrid:      { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
   catItem:      { alignItems: 'center', gap: 5, flexShrink: 0 },
   catIcon: {
     width: 52, height: 52, borderRadius: 16,
