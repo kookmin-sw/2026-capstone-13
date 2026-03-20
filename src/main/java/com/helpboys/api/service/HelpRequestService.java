@@ -3,7 +3,6 @@ package com.helpboys.api.service;
 import com.helpboys.api.dto.HelpRequestRequest;
 import com.helpboys.api.dto.HelpRequestResponse;
 import com.helpboys.api.entity.HelpRequest;
-import com.helpboys.api.entity.Notification;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.HelpRequestRepository;
@@ -22,7 +21,6 @@ public class HelpRequestService {
 
     private final HelpRequestRepository helpRequestRepository;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
 
     // 도움 요청 전체 목록 조회 (최신순)
     @Transactional(readOnly = true)
@@ -119,17 +117,7 @@ public class HelpRequestService {
 
         req.setHelper(helper);
         req.setStatus(HelpRequest.RequestStatus.MATCHED);
-        HelpRequestResponse saved = HelpRequestResponse.from(helpRequestRepository.save(req));
-
-        // 도움 요청자(유학생)에게 알림 발송
-        notificationService.createNotification(
-                req.getRequester().getId(),
-                Notification.NotificationType.HELP_OFFER,
-                helper.getNickname() + "님이 도움을 신청했어요!",
-                null
-        );
-
-        return saved;
+        return HelpRequestResponse.from(helpRequestRepository.save(req));
     }
 
     // 도움 신청 거절 (외국인 학생이 helper를 거절 → WAITING으로 복귀)
