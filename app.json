@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.helpboys.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "음성/영상 통화를 위해 마이크 권한이 필요합니다.",
-        "NSCameraUsageDescription": "영상 통화를 위해 카메라 권한이 필요합니다."
+        "NSCameraUsageDescription": "영상 통화를 위해 카메라 권한이 필요합니다.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -48,8 +49,14 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    }
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "19d27e71-abc6-4eaa-ab9b-43fceb895ae0"
+      }
+    },
+    "owner": "sangbeompark"
   }
 }
