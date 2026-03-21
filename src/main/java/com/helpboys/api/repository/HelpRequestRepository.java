@@ -8,7 +8,10 @@ import java.util.List;
 
 public interface HelpRequestRepository extends JpaRepository<HelpRequest, Long> {
     List<HelpRequest> findAllByOrderByCreatedAtDesc();
-    List<HelpRequest> findByRequesterId(Long requesterId);
+
+    @Query("SELECT h FROM HelpRequest h WHERE h.requester.id = :requesterId ORDER BY h.createdAt DESC")
+    List<HelpRequest> findByRequesterId(@Param("requesterId") Long requesterId);
+
     List<HelpRequest> findByHelperId(Long helperId);
     List<HelpRequest> findByStatus(HelpRequest.RequestStatus status);
 
