@@ -105,6 +105,7 @@ public class NoticeService {
     /**
      * 전체 공지 조회 (사용자 언어 기준)
      */
+    @Transactional(readOnly = true)
     public List<NoticeResponse> getNotices(String langCode, String categoryId) {
         List<Notice> notices = categoryId != null
                 ? noticeRepository.findByCategoryIdOrderByPubDateDescCreatedAtDesc(categoryId)
