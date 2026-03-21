@@ -6,8 +6,7 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal",
-      "prebuildCommand": "mkdir -p .expo/web && npx expo prebuild --no-install"
+      "distribution": "internal"
     },
     "preview": {
       "distribution": "internal"
