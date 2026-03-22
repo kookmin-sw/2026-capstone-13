@@ -149,6 +149,15 @@ public class HelpRequestService {
             throw new BusinessException("권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
+        // 완료 처리 시 helper의 도움 횟수 증가
+        if (newStatus == HelpRequest.RequestStatus.COMPLETED
+                && req.getStatus() != HelpRequest.RequestStatus.COMPLETED
+                && req.getHelper() != null) {
+            User helper = req.getHelper();
+            helper.setHelpCount(helper.getHelpCount() + 1);
+            userRepository.save(helper);
+        }
+
         req.setStatus(newStatus);
         return HelpRequestResponse.from(helpRequestRepository.save(req));
     }
