@@ -59,6 +59,7 @@ export default function RootLayout() {
         <Stack.Screen name="community-write" />
         <Stack.Screen name="search" />
         <Stack.Screen name="my-requests" />
+        <Stack.Screen name="my-help-history" />
       </Stack>
       <StatusBar style="dark" />
     </GestureHandlerRootView>
