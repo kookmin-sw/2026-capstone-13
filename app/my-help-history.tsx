@@ -7,7 +7,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useHelpHistoryStore, type HelpHistoryItem } from '../stores/helpHistoryStore';
-import type { HelpCategory, HelpMethod } from '../types';
+import type { HelpCategory, HelpMethod, RequestStatus } from '../types';
 
 const PRIMARY = '#4F46E5';
 const PRIMARY_LIGHT = '#EEF2FF';
@@ -26,6 +26,14 @@ const METHOD_BADGE: Record<HelpMethod, { bg: string; color: string; dot: string;
   VIDEO_CALL: { bg: '#F5F3FF', color: '#7C3AED', dot: '#7C3AED', label: '영상통화' },
   OFFLINE:    { bg: '#FFFBEB', color: '#D97706', dot: '#D97706', label: '오프라인' },
 };
+
+const STATUS_CONFIG = {
+  WAITING:     { label: '모집중',   bg: '#D1FAE5', color: '#065F46', icon: 'time-outline' },
+  MATCHED:     { label: '매칭됨',   bg: PRIMARY_LIGHT, color: '#3730A3', icon: 'checkmark-circle-outline' },
+  IN_PROGRESS: { label: '진행중',   bg: '#FEF3C7', color: '#92400E', icon: 'sync-outline' },
+  COMPLETED:   { label: '도움 완료', bg: '#D1FAE5', color: '#065F46', icon: 'checkmark-circle' },
+  CANCELLED:   { label: '취소됨',   bg: '#FEE2E2', color: '#991B1B', icon: 'close-circle-outline' },
+} as const;
 
 function formatTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -49,6 +57,7 @@ export default function MyHelpHistoryScreen() {
 
   const renderItem = useCallback(({ item }: { item: HelpHistoryItem }) => {
     const method = METHOD_BADGE[item.helpMethod];
+    const status = STATUS_CONFIG[item.status as RequestStatus];
 
     return (
       <View style={styles.card}>
@@ -61,9 +70,9 @@ export default function MyHelpHistoryScreen() {
         <View style={styles.cardBody}>
           <View style={styles.cardTop}>
             <Text style={styles.categoryLabel}>{CATEGORY_LABEL[item.category]}</Text>
-            <View style={styles.completedBadge}>
-              <Ionicons name="checkmark-circle" size={12} color="#065F46" />
-              <Text style={styles.completedText}>도움 완료</Text>
+            <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+              <Ionicons name={status.icon as never} size={12} color={status.color} />
+              <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
             </View>
           </View>
           <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
@@ -179,11 +188,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4,
   },
   categoryLabel: { fontSize: 11, fontWeight: '600', color: '#9CA3AF' },
-  completedBadge: {
+  statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#D1FAE5', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,
   },
-  completedText: { fontSize: 11, fontWeight: '700', color: '#065F46' },
+  statusText: { fontSize: 11, fontWeight: '700' },
 
   cardTitle: { fontSize: 14, fontWeight: '700', color: '#1E1B4B', lineHeight: 20, marginBottom: 3 },
   cardDesc: { fontSize: 12, color: '#6B7280', lineHeight: 17, marginBottom: 6 },

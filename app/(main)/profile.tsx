@@ -1,10 +1,11 @@
 // 마이페이지 화면
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, Modal, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../../stores/authStore';
+import { useHelpHistoryStore } from '../../stores/helpHistoryStore';
 
 const PRIMARY = '#4F46E5';
 const PRIMARY_LIGHT = '#EEF2FF';
@@ -24,8 +25,17 @@ const EMPTY_DETAIL: ProfileDetail = { bio: '', gender: '', age: '', major: '', m
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout, updateProfileImage, updateProfileDetail } = useAuthStore();
+  const { user, logout, updateProfileImage, updateProfileDetail, loadUser } = useAuthStore();
+  const { helpHistory, fetchHelpHistory } = useHelpHistoryStore();
   const [imageMenuVisible, setImageMenuVisible] = useState(false);
+
+  const isKorean = user?.userType === 'KOREAN';
+
+  // 화면 진입 시 최신 정보 갱신
+  useEffect(() => {
+    loadUser();
+    if (isKorean) fetchHelpHistory();
+  }, []);
   const [imageLoadError, setImageLoadError] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [profileInput, setProfileInput] = useState<ProfileDetail>(EMPTY_DETAIL);
@@ -119,8 +129,6 @@ export default function ProfileScreen() {
     }
   };
 
-  const isKorean = user?.userType === 'KOREAN';
-
   const MENU_ITEMS = [
     isKorean
       ? { icon: 'heart-outline' as const, label: '내 도움 내역', route: '/my-help-history' }
@@ -205,7 +213,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{user?.helpCount ?? 0}</Text>
+            <Text style={styles.statNumber}>{isKorean ? helpHistory.filter((h) => h.status === 'COMPLETED').length : (user?.helpCount ?? 0)}</Text>
             <Text style={styles.statLabel}>도움 횟수</Text>
           </View>
         </View>

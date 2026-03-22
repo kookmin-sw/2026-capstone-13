@@ -70,10 +70,9 @@ export const useHelpHistoryStore = create<HelpHistoryState>((set) => ({
     try {
       const response = await getHelpedRequests();
       if (response.success) {
-        const items: HelpHistoryItem[] = response.data.map((r) => ({
-          ...r,
-          helpedAt: r.updatedAt,
-        }));
+        const items: HelpHistoryItem[] = response.data
+          .map((r) => ({ ...r, helpedAt: r.updatedAt }))
+          .sort((a, b) => new Date(b.helpedAt).getTime() - new Date(a.helpedAt).getTime());
         set({ helpHistory: items, isLoading: false });
       } else {
         set({ helpHistory: MOCK_HELP_HISTORY, isLoading: false });
