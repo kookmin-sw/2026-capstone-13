@@ -119,11 +119,15 @@ export default function ProfileScreen() {
     }
   };
 
+  const isKorean = user?.userType === 'KOREAN';
+
   const MENU_ITEMS = [
-    { icon: 'document-text-outline', label: '내 도움 요청', route: '/my-requests' },
-    { icon: 'star-outline', label: '후기 관리', route: null },
-    { icon: 'settings-outline', label: '설정', route: null },
-  ] as const;
+    isKorean
+      ? { icon: 'heart-outline' as const, label: '내 도움 내역', route: '/my-help-history' }
+      : { icon: 'document-text-outline' as const, label: '내 도움 요청', route: '/my-requests' },
+    { icon: 'star-outline' as const, label: '후기 관리', route: null },
+    { icon: 'settings-outline' as const, label: '설정', route: null },
+  ];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
