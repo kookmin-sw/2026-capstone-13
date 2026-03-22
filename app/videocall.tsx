@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { getAgoraToken } from '../services/agoraService';
 import {
   createAgoraRtcEngine,
   IRtcEngine,
@@ -24,7 +25,6 @@ import { Audio } from 'expo-av';
 
 const PRIMARY = '#4F46E5';
 const AGORA_APP_ID = process.env.EXPO_PUBLIC_AGORA_APP_ID ?? '';
-const AGORA_TEMP_TOKEN = process.env.EXPO_PUBLIC_AGORA_TEMP_TOKEN ?? '';
 const WS_SPEECH_URL = process.env.EXPO_PUBLIC_AI_WS_URL ?? 'ws://localhost:8001';
 
 interface Transcript {
@@ -45,7 +45,7 @@ export default function VideoCallScreen() {
   const partnerNickname = params.partnerNickname ?? '상대방';
   const myLanguage = params.language ?? 'ko-KR';
   const isVoiceOnly = params.voiceOnly === 'true';
-  const channelName = 'room_1'; // TODO: 백엔드 토큰 API 연동 후 `room_${params.roomId}` 로 변경
+  const channelName = `room_${params.roomId}`;
 
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeaker, setIsSpeaker] = useState(true);
@@ -145,8 +145,10 @@ export default function VideoCallScreen() {
         engine.startPreview();
       }
 
-      // 채널 입장 (임시 토큰 사용 - 추후 백엔드 토큰 API로 교체 필요)
-      engine.joinChannel(AGORA_TEMP_TOKEN, channelName, 0, {
+      // 백엔드에서 Agora 토큰 발급
+      const agoraToken = await getAgoraToken(channelName);
+
+      engine.joinChannel(agoraToken, channelName, 0, {
         clientRoleType: ClientRoleType.ClientRoleBroadcaster,
         publishMicrophoneTrack: true,
         publishCameraTrack: !isVoiceOnly,
