@@ -33,6 +33,11 @@ ai:
   server:
     url: ${AI_SERVER_URL:http://localhost:8000}
 
+# Agora 설정
+agora:
+  app-id: ${AGORA_APP_ID:5be9cb6d40124217977bca952784cff2}
+  app-certificate: ${AGORA_APP_CERTIFICATE:e080d7b8dd2e4dadb7aef5ab616c2ca3}
+
 # Actuator - 헬스체크 엔드포인트 활성화
 management:
   endpoints:
