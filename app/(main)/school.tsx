@@ -7,11 +7,17 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const PRIMARY = '#4F46E5';
-const PRIMARY_LIGHT = '#EEF2FF';
+// ── Design tokens (홈 화면과 동일) ──
+const BLUE     = '#3B6FE8';
+const BLUE_L   = '#EEF4FF';
+const BLUE_MID = '#A8C8FA';
+const BORDER   = '#D4E4FA';
+const T1       = '#0E1E40';
+const T3       = '#6B9DF0';
 
 type TabKey = 'CAFETERIA' | 'NOTICE';
 
@@ -99,12 +105,12 @@ const MOCK_NOTICES: SchoolNotice[] = [
 
 const MEAL_TIME_COLOR = {
   아침: { bg: '#FEF3C7', text: '#D97706' },
-  점심: { bg: '#DBEAFE', text: '#2563EB' },
-  저녁: { bg: '#EDE9FE', text: '#7C3AED' },
+  점심: { bg: BLUE_L,   text: BLUE       },
+  저녁: { bg: '#F5F3FF', text: '#7C3AED' },
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
-  장학: '#10B981', 학사: '#3B82F6', 행사: '#8B5CF6', 취업: '#F59E0B', 시설: '#6B7280',
+  장학: '#10B981', 학사: BLUE, 행사: '#8B5CF6', 취업: '#F59E0B', 시설: BLUE_MID,
 };
 
 export default function SchoolScreen() {
@@ -126,11 +132,12 @@ export default function SchoolScreen() {
             key={key}
             style={[styles.tab, activeTab === key && styles.tabActive]}
             onPress={() => setActiveTab(key)}
+            activeOpacity={0.8}
           >
             <Ionicons
               name={key === 'CAFETERIA' ? 'restaurant-outline' : 'megaphone-outline'}
               size={16}
-              color={activeTab === key ? PRIMARY : '#9CA3AF'}
+              color={activeTab === key ? BLUE : BLUE_MID}
             />
             <Text style={[styles.tabText, activeTab === key && styles.tabTextActive]}>
               {key === 'CAFETERIA' ? '오늘의 학식' : '공지사항'}
@@ -142,38 +149,41 @@ export default function SchoolScreen() {
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={PRIMARY} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
       >
         {/* 학식 탭 */}
         {activeTab === 'CAFETERIA' && (
           <View style={styles.section}>
             <View style={styles.dateRow}>
-              <Ionicons name="calendar-outline" size={15} color="#6B7280" />
+              <Ionicons name="calendar-outline" size={15} color={T3} />
               <Text style={styles.dateText}>2026년 3월 15일 (일) 메뉴</Text>
             </View>
             <View style={styles.translateBadge}>
-              <Ionicons name="language-outline" size={13} color={PRIMARY} />
+              <Ionicons name="language-outline" size={13} color={BLUE} />
               <Text style={styles.translateBadgeText}>한국어 메뉴를 영어로 번역했어요</Text>
             </View>
             {MOCK_MENUS.map((menu) => (
               <View key={menu.id} style={styles.card}>
-                <View style={styles.menuHeader}>
-                  <Text style={styles.restaurantName}>{menu.restaurant}</Text>
-                  <View style={[styles.mealTimeBadge, { backgroundColor: MEAL_TIME_COLOR[menu.mealTime].bg }]}>
-                    <Text style={[styles.mealTimeBadgeText, { color: MEAL_TIME_COLOR[menu.mealTime].text }]}>
-                      {menu.mealTime}
-                    </Text>
-                  </View>
-                </View>
-                {menu.items.map((item, idx) => (
-                  <View key={idx} style={styles.menuItem}>
-                    <View style={styles.menuItemLeft}>
-                      <Text style={styles.menuKorean}>{item.korean}</Text>
-                      <Text style={styles.menuEnglish}>{item.english}</Text>
+                <View style={[styles.cardBar, { backgroundColor: MEAL_TIME_COLOR[menu.mealTime].text }]} />
+                <View style={styles.cardInner}>
+                  <View style={styles.menuHeader}>
+                    <Text style={styles.restaurantName}>{menu.restaurant}</Text>
+                    <View style={[styles.mealTimeBadge, { backgroundColor: MEAL_TIME_COLOR[menu.mealTime].bg }]}>
+                      <Text style={[styles.mealTimeBadgeText, { color: MEAL_TIME_COLOR[menu.mealTime].text }]}>
+                        {menu.mealTime}
+                      </Text>
                     </View>
-                    {item.price ? <Text style={styles.menuPrice}>{item.price.toLocaleString()}원</Text> : null}
                   </View>
-                ))}
+                  {menu.items.map((item, idx) => (
+                    <View key={idx} style={styles.menuItem}>
+                      <View style={styles.menuItemLeft}>
+                        <Text style={styles.menuKorean}>{item.korean}</Text>
+                        <Text style={styles.menuEnglish}>{item.english}</Text>
+                      </View>
+                      {item.price ? <Text style={styles.menuPrice}>{item.price.toLocaleString()}원</Text> : null}
+                    </View>
+                  ))}
+                </View>
               </View>
             ))}
           </View>
@@ -183,7 +193,7 @@ export default function SchoolScreen() {
         {activeTab === 'NOTICE' && (
           <View style={styles.section}>
             <View style={styles.translateBadge}>
-              <Ionicons name="language-outline" size={13} color={PRIMARY} />
+              <Ionicons name="language-outline" size={13} color={BLUE} />
               <Text style={styles.translateBadgeText}>공지사항 제목과 내용을 영어로 번역했어요</Text>
             </View>
             {MOCK_NOTICES.map((notice) => (
@@ -193,42 +203,45 @@ export default function SchoolScreen() {
                 onPress={() => setExpandedNotice(expandedNotice === notice.id ? null : notice.id)}
                 activeOpacity={0.85}
               >
-                <View style={styles.noticeHeaderRow}>
-                  <View style={[styles.noticeCategoryBadge, { backgroundColor: (CATEGORY_COLOR[notice.category] ?? '#9CA3AF') + '22' }]}>
-                    <Text style={[styles.noticeCategoryText, { color: CATEGORY_COLOR[notice.category] ?? '#9CA3AF' }]}>
-                      {notice.category}
+                <View style={[styles.cardBar, { backgroundColor: CATEGORY_COLOR[notice.category] ?? BLUE_MID }]} />
+                <View style={styles.cardInner}>
+                  <View style={styles.noticeHeaderRow}>
+                    <View style={[styles.noticeCategoryBadge, { backgroundColor: (CATEGORY_COLOR[notice.category] ?? BLUE_MID) + '22' }]}>
+                      <Text style={[styles.noticeCategoryText, { color: CATEGORY_COLOR[notice.category] ?? BLUE_MID }]}>
+                        {notice.category}
+                      </Text>
+                    </View>
+                    {notice.isImportant && (
+                      <View style={styles.importantBadge}>
+                        <Text style={styles.importantBadgeText}>중요</Text>
+                      </View>
+                    )}
+                    <Text style={styles.noticeDate}>{notice.date}</Text>
+                  </View>
+                  <Text style={styles.noticeTitleKo} numberOfLines={expandedNotice === notice.id ? undefined : 1}>
+                    {notice.titleKo}
+                  </Text>
+                  <View style={styles.enTitleRow}>
+                    <Ionicons name="language-outline" size={12} color={BLUE} />
+                    <Text style={styles.noticeTitleEn} numberOfLines={expandedNotice === notice.id ? undefined : 1}>
+                      {notice.titleEn}
                     </Text>
                   </View>
-                  {notice.isImportant && (
-                    <View style={styles.importantBadge}>
-                      <Text style={styles.importantBadgeText}>중요</Text>
+                  {expandedNotice === notice.id && (
+                    <View style={styles.summaryBox}>
+                      <Text style={styles.summaryLabel}>English Summary</Text>
+                      <Text style={styles.summaryText}>{notice.summaryEn}</Text>
                     </View>
                   )}
-                  <Text style={styles.noticeDate}>{notice.date}</Text>
-                </View>
-                <Text style={styles.noticeTitleKo} numberOfLines={expandedNotice === notice.id ? undefined : 1}>
-                  {notice.titleKo}
-                </Text>
-                <View style={styles.enTitleRow}>
-                  <Ionicons name="language-outline" size={12} color={PRIMARY} />
-                  <Text style={styles.noticeTitleEn} numberOfLines={expandedNotice === notice.id ? undefined : 1}>
-                    {notice.titleEn}
-                  </Text>
-                </View>
-                {expandedNotice === notice.id && (
-                  <View style={styles.summaryBox}>
-                    <Text style={styles.summaryLabel}>English Summary</Text>
-                    <Text style={styles.summaryText}>{notice.summaryEn}</Text>
+                  <View style={styles.expandRow}>
+                    <Ionicons
+                      name={expandedNotice === notice.id ? 'chevron-up' : 'chevron-down'}
+                      size={14} color={BLUE_MID}
+                    />
+                    <Text style={styles.expandText}>
+                      {expandedNotice === notice.id ? '접기' : '영문 요약 보기'}
+                    </Text>
                   </View>
-                )}
-                <View style={styles.expandRow}>
-                  <Ionicons
-                    name={expandedNotice === notice.id ? 'chevron-up' : 'chevron-down'}
-                    size={14} color="#9CA3AF"
-                  />
-                  <Text style={styles.expandText}>
-                    {expandedNotice === notice.id ? '접기' : '영문 요약 보기'}
-                  </Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -247,63 +260,68 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(79,70,229,0.1)',
+    borderBottomColor: BORDER,
+    paddingTop: Platform.OS === 'ios' ? 60 : 32,
   },
   tab: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: 13, gap: 6,
     borderBottomWidth: 2, borderBottomColor: 'transparent',
   },
-  tabActive: { borderBottomColor: PRIMARY },
-  tabText: { fontSize: 14, fontWeight: '600', color: '#9CA3AF' },
-  tabTextActive: { color: PRIMARY },
+  tabActive: { borderBottomColor: BLUE },
+  tabText: { fontSize: 14, fontWeight: '700', color: BLUE_MID },
+  tabTextActive: { color: BLUE },
 
   scroll: { flex: 1 },
   section: { padding: 16, gap: 12 },
 
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dateText: { fontSize: 14, fontWeight: '700', color: '#1E1B4B' },
+  dateText: { fontSize: 14, fontWeight: '700', color: T1 },
+
   translateBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: PRIMARY_LIGHT, paddingHorizontal: 10, paddingVertical: 6,
+    backgroundColor: BLUE_L, paddingHorizontal: 10, paddingVertical: 6,
     borderRadius: 8, alignSelf: 'flex-start',
   },
-  translateBadgeText: { fontSize: 12, color: PRIMARY, fontWeight: '600' },
+  translateBadgeText: { fontSize: 12, color: BLUE, fontWeight: '600' },
 
+  // ── Card (홈과 동일한 왼쪽 컬러 바 스타일) ──
   card: {
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, gap: 10,
-    shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 12, elevation: 3,
-    borderWidth: 1, borderColor: 'rgba(79,70,229,0.06)',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1, borderColor: BORDER,
+    flexDirection: 'row',
   },
+  cardBar:   { width: 5, flexShrink: 0 },
+  cardInner: { flex: 1, padding: 14, gap: 8 },
 
   menuHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  restaurantName: { fontSize: 15, fontWeight: '700', color: '#1E1B4B' },
+  restaurantName: { fontSize: 15, fontWeight: '800', color: T1 },
   mealTimeBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   mealTimeBadgeText: { fontSize: 12, fontWeight: '700' },
   menuItem: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 6, borderTopWidth: 1, borderTopColor: 'rgba(79,70,229,0.06)',
+    paddingVertical: 6, borderTopWidth: 1, borderTopColor: BORDER,
   },
   menuItemLeft: { flex: 1, gap: 2 },
-  menuKorean: { fontSize: 14, fontWeight: '600', color: '#1E1B4B' },
-  menuEnglish: { fontSize: 12, color: PRIMARY },
-  menuPrice: { fontSize: 13, fontWeight: '700', color: '#6B7280' },
+  menuKorean:  { fontSize: 14, fontWeight: '600', color: T1 },
+  menuEnglish: { fontSize: 12, color: T3 },
+  menuPrice:   { fontSize: 13, fontWeight: '700', color: BLUE_MID },
 
   noticeHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  noticeCategoryBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  noticeCategoryText: { fontSize: 11, fontWeight: '700' },
-  importantBadge: { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  importantBadgeText: { fontSize: 11, fontWeight: '700', color: '#EF4444' },
-  noticeDate: { fontSize: 11, color: '#9CA3AF', marginLeft: 'auto' },
-  noticeTitleKo: { fontSize: 14, fontWeight: '700', color: '#1E1B4B', lineHeight: 20 },
+  noticeCategoryBadge: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 7 },
+  noticeCategoryText:  { fontSize: 13, fontWeight: '800' },
+  importantBadge: { backgroundColor: '#FEE2E2', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 7 },
+  importantBadgeText: { fontSize: 13, fontWeight: '800', color: '#EF4444' },
+  noticeDate: { fontSize: 13, color: BLUE_MID, marginLeft: 'auto' },
+  noticeTitleKo: { fontSize: 15, fontWeight: '700', color: T1, lineHeight: 22 },
   enTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 4 },
-  noticeTitleEn: { flex: 1, fontSize: 13, color: PRIMARY, fontWeight: '500', lineHeight: 18 },
+  noticeTitleEn: { flex: 1, fontSize: 13, color: T3, fontWeight: '500', lineHeight: 18 },
   summaryBox: {
-    backgroundColor: '#F3F4F8', borderRadius: 10, padding: 12, gap: 6, marginTop: 2,
+    backgroundColor: BLUE_L, borderRadius: 10, padding: 12, gap: 6, marginTop: 2,
   },
-  summaryLabel: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryText: { fontSize: 13, color: '#6B7280', lineHeight: 20 },
-  expandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingTop: 2 },
-  expandText: { fontSize: 12, color: '#9CA3AF' },
+  summaryLabel: { fontSize: 11, fontWeight: '700', color: BLUE_MID, textTransform: 'uppercase', letterSpacing: 0.5 },
+  summaryText:  { fontSize: 13, color: T1, lineHeight: 20 },
+  expandRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingTop: 2 },
+  expandText:   { fontSize: 12, color: BLUE_MID },
 });

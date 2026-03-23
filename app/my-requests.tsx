@@ -1,8 +1,8 @@
 // 내 도움 요청 목록 화면
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList,
-  TouchableOpacity, Platform,
+  TouchableOpacity, Platform, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,7 +46,9 @@ function formatTime(createdAt: string): string {
 
 export default function MyRequestsScreen() {
   const router = useRouter();
-  const { myRequests } = useHelpRequestStore();
+  const { myRequests, isLoading, fetchMyRequests } = useHelpRequestStore();
+
+  useEffect(() => { fetchMyRequests(); }, []);
 
   const renderItem = useCallback(({ item }: { item: HelpRequest }) => {
     const method = METHOD_BADGE[item.helpMethod];
@@ -111,6 +113,11 @@ export default function MyRequestsScreen() {
         </View>
       )}
 
+      {isLoading && myRequests.length === 0 && (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={PRIMARY} />
+        </View>
+      )}
       <FlatList
         data={myRequests}
         renderItem={renderItem}
@@ -194,6 +201,7 @@ const styles = StyleSheet.create({
   methodDot: { width: 6, height: 6, borderRadius: 3 },
   methodText: { fontSize: 11, fontWeight: '600' },
 
+  loadingWrap: { paddingVertical: 60, alignItems: 'center' },
   emptyState: { alignItems: 'center', paddingVertical: 80 },
   emptyEmoji: { fontSize: 48, marginBottom: 16 },
   emptyText: { fontSize: 16, fontWeight: '700', color: '#6B7280', marginBottom: 6 },

@@ -114,6 +114,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="school"
         options={{
+          headerShown: false,
           title: '학교생활',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="school-outline" size={size} color={color} />
@@ -123,6 +124,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="community"
         options={{
+          headerShown: false,
           title: '커뮤니티',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
@@ -149,6 +151,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          headerShown: false,
           title: '마이페이지',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />

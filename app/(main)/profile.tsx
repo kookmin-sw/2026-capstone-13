@@ -7,9 +7,16 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../../stores/authStore';
 import { useHelpHistoryStore } from '../../stores/helpHistoryStore';
 
-const PRIMARY = '#4F46E5';
-const PRIMARY_LIGHT = '#EEF2FF';
-const COLOR_MALE = '#0EA5E9';
+// ── Design tokens (홈 화면과 동일) ──
+const BLUE     = '#3B6FE8';
+const BLUE_BG  = '#F5F8FF';
+const BLUE_L   = '#EEF4FF';
+const BLUE_MID = '#A8C8FA';
+const BORDER   = '#D4E4FA';
+const T1       = '#0E1E40';
+const T3       = '#6B9DF0';
+
+const COLOR_MALE   = '#0EA5E9';
 const COLOR_FEMALE = '#DB2777';
 
 interface ProfileDetail {
@@ -31,11 +38,11 @@ export default function ProfileScreen() {
 
   const isKorean = user?.userType === 'KOREAN';
 
-  // 화면 진입 시 최신 정보 갱신
   useEffect(() => {
     loadUser();
     if (isKorean) fetchHelpHistory();
   }, []);
+
   const [imageLoadError, setImageLoadError] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [profileInput, setProfileInput] = useState<ProfileDetail>(EMPTY_DETAIL);
@@ -49,7 +56,7 @@ export default function ProfileScreen() {
   const nicknameColor =
     user?.gender === '남자' ? COLOR_MALE :
     user?.gender === '여자' ? COLOR_FEMALE :
-    '#1E1B4B';
+    T1;
 
   const handleOpenProfileModal = () => {
     setProfileInput({
@@ -143,11 +150,9 @@ export default function ProfileScreen() {
       <View style={styles.profileCard}>
         {/* 프로필 이미지 */}
         <TouchableOpacity style={styles.avatarWrapper} onPress={() => setImageMenuVisible(true)} activeOpacity={0.8}>
-          {/* 파란 기본 아바타는 항상 렌더링 */}
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{user?.nickname?.charAt(0) ?? '?'}</Text>
           </View>
-          {/* 프로필 이미지가 있으면 위에 덮어씌움 */}
           {user?.profileImage?.trim() && !imageLoadError && (
             <Image
               source={{ uri: user.profileImage }}
@@ -172,12 +177,10 @@ export default function ProfileScreen() {
           {user?.university ?? '국민대학교'}{user?.major ? `(${user.major})` : ''}
         </Text>
 
-        {/* 자기소개 */}
         {user?.bio ? (
           <Text style={styles.detailBio}>{user.bio}</Text>
         ) : null}
 
-        {/* MBTI */}
         {user?.mbti ? (
           <View style={styles.mbtiBlock}>
             <Text style={styles.detailLabel}>MBTI</Text>
@@ -185,7 +188,6 @@ export default function ProfileScreen() {
           </View>
         ) : null}
 
-        {/* 취미 태그 */}
         {userHobbies.length > 0 && (
           <View style={styles.hobbyBlock}>
             <Text style={styles.detailLabel}>취미</Text>
@@ -198,9 +200,10 @@ export default function ProfileScreen() {
             </View>
           </View>
         )}
+
         {filledCount < 6 && (
           <TouchableOpacity style={styles.profileCompleteButton} onPress={handleOpenProfileModal} activeOpacity={0.8}>
-            <Ionicons name="person-add-outline" size={15} color={PRIMARY} />
+            <Ionicons name="person-add-outline" size={15} color={BLUE} />
             <Text style={styles.profileCompleteText}>프로필 완성하기 ({filledCount}/6)</Text>
           </TouchableOpacity>
         )}
@@ -229,10 +232,10 @@ export default function ProfileScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.menuIconWrap}>
-              <Ionicons name={item.icon} size={18} color={PRIMARY} />
+              <Ionicons name={item.icon} size={18} color={BLUE} />
             </View>
             <Text style={styles.menuText}>{item.label}</Text>
-            <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+            <Ionicons name="chevron-forward" size={16} color={BORDER} />
           </TouchableOpacity>
         ))}
       </View>
@@ -251,14 +254,14 @@ export default function ProfileScreen() {
 
             <TouchableOpacity style={styles.bottomSheetItem} onPress={() => handlePickImage('camera')} activeOpacity={0.7}>
               <View style={styles.bottomSheetIconWrap}>
-                <Ionicons name="camera-outline" size={20} color={PRIMARY} />
+                <Ionicons name="camera-outline" size={20} color={BLUE} />
               </View>
               <Text style={styles.bottomSheetItemText}>카메라로 촬영</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.bottomSheetItem} onPress={() => handlePickImage('gallery')} activeOpacity={0.7}>
               <View style={styles.bottomSheetIconWrap}>
-                <Ionicons name="image-outline" size={20} color={PRIMARY} />
+                <Ionicons name="image-outline" size={20} color={BLUE} />
               </View>
               <Text style={styles.bottomSheetItemText}>갤러리에서 선택</Text>
             </TouchableOpacity>
@@ -278,7 +281,6 @@ export default function ProfileScreen() {
             <Text style={styles.bottomSheetTitle}>프로필 완성하기</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
 
-              {/* 자기소개 */}
               <View style={styles.profileFieldWrap}>
                 <View style={styles.hobbyLabelRow}>
                   <Text style={styles.profileFieldLabel}>자기소개</Text>
@@ -288,14 +290,13 @@ export default function ProfileScreen() {
                   style={styles.bioInput}
                   value={profileInput.bio}
                   onChangeText={(text) => setProfileInput((prev) => ({ ...prev, bio: text }))}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={BLUE_MID}
                   multiline
                   maxLength={100}
                   textAlignVertical="top"
                 />
               </View>
 
-              {/* 성별 */}
               <View style={styles.profileFieldWrap}>
                 <Text style={styles.profileFieldLabel}>성별</Text>
                 <View style={styles.genderRow}>
@@ -314,7 +315,6 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              {/* 나이 */}
               <View style={styles.profileFieldWrap}>
                 <Text style={styles.profileFieldLabel}>나이</Text>
                 <TextInput
@@ -322,55 +322,50 @@ export default function ProfileScreen() {
                   value={profileInput.age}
                   onChangeText={(text) => setProfileInput((prev) => ({ ...prev, age: text.replace(/[^0-9]/g, '') }))}
                   keyboardType="numeric"
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={BLUE_MID}
                   maxLength={3}
                 />
               </View>
 
-              {/* 학과 */}
               <View style={styles.profileFieldWrap}>
                 <Text style={styles.profileFieldLabel}>학과</Text>
                 <TextInput
                   style={styles.profileFieldInput}
                   value={profileInput.major}
                   onChangeText={(text) => setProfileInput((prev) => ({ ...prev, major: text }))}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={BLUE_MID}
                 />
               </View>
 
-              {/* MBTI */}
               <View style={styles.profileFieldWrap}>
                 <Text style={styles.profileFieldLabel}>MBTI</Text>
                 <TextInput
                   style={styles.profileFieldInput}
                   value={profileInput.mbti}
                   onChangeText={(text) => setProfileInput((prev) => ({ ...prev, mbti: text.toUpperCase() }))}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={BLUE_MID}
                   maxLength={4}
                   autoCapitalize="characters"
                 />
               </View>
 
-              {/* 취미 */}
               <View style={styles.profileFieldWrap}>
                 <View style={styles.hobbyLabelRow}>
                   <Text style={styles.profileFieldLabel}>취미</Text>
                   <Text style={styles.hobbyCount}>({profileInput.hobbies.length}/5)</Text>
                 </View>
-                {/* 태그 목록 */}
                 {profileInput.hobbies.length > 0 && (
                   <View style={styles.hobbyTagList}>
                     {profileInput.hobbies.map((h, i) => (
                       <View key={h} style={styles.hobbyTagEdit}>
                         <Text style={styles.hobbyTagEditText}>#{h}</Text>
                         <TouchableOpacity onPress={() => handleRemoveHobby(i)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                          <Ionicons name="close" size={13} color={PRIMARY} />
+                          <Ionicons name="close" size={13} color={BLUE} />
                         </TouchableOpacity>
                       </View>
                     ))}
                   </View>
                 )}
-                {/* 입력 */}
                 {profileInput.hobbies.length < 5 && (
                   <View style={styles.hobbyInputRow}>
                     <TextInput
@@ -379,7 +374,7 @@ export default function ProfileScreen() {
                       onChangeText={setHobbyInput}
                       onSubmitEditing={handleAddHobby}
                       returnKeyType="done"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={BLUE_MID}
                     />
                     <TouchableOpacity style={styles.hobbyAddButton} onPress={handleAddHobby} activeOpacity={0.8}>
                       <Text style={styles.hobbyAddButtonText}>추가</Text>
@@ -406,8 +401,8 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F4F8' },
-  scrollContent: { paddingBottom: 32 },
+  container: { flex: 1, backgroundColor: BLUE_BG },
+  scrollContent: { paddingTop: Platform.OS === 'ios' ? 60 : 32, paddingBottom: 32 },
 
   profileCard: {
     backgroundColor: '#FFFFFF',
@@ -415,21 +410,15 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 20,
     alignItems: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
     borderWidth: 1,
-    borderColor: 'rgba(79,70,229,0.06)',
+    borderColor: BORDER,
   },
   avatarWrapper: { position: 'relative', marginBottom: 12 },
   avatar: {
     width: 80, height: 80, borderRadius: 40,
-    backgroundColor: PRIMARY,
+    backgroundColor: BLUE,
     justifyContent: 'center', alignItems: 'center',
   },
-  avatarImage: { width: 80, height: 80, borderRadius: 40 },
   avatarImageOverlay: {
     width: 80, height: 80, borderRadius: 40,
     position: 'absolute', top: 0, left: 0,
@@ -438,85 +427,70 @@ const styles = StyleSheet.create({
   editBadge: {
     position: 'absolute', bottom: 0, right: 0,
     width: 24, height: 24, borderRadius: 12,
-    backgroundColor: PRIMARY,
+    backgroundColor: BLUE,
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 2, borderColor: '#FFFFFF',
   },
-  nickname: { fontSize: 22, fontWeight: '800', color: '#1E1B4B', marginBottom: 6 },
+  nickname: { fontSize: 22, fontWeight: '900', color: T1, marginBottom: 6, letterSpacing: -0.5 },
   typeBadge: {
-    backgroundColor: PRIMARY_LIGHT, paddingHorizontal: 12, paddingVertical: 4,
+    backgroundColor: BLUE_L, paddingHorizontal: 12, paddingVertical: 4,
     borderRadius: 20, marginBottom: 6,
+    borderWidth: 1, borderColor: BORDER,
   },
-  typeBadgeText: { fontSize: 13, color: PRIMARY, fontWeight: '600' },
-  university: { fontSize: 13, color: '#9CA3AF', marginBottom: 10 },
+  typeBadgeText: { fontSize: 13, color: BLUE, fontWeight: '700' },
+  university: { fontSize: 13, color: BLUE_MID, marginBottom: 10, fontWeight: '500' },
 
   detailBio: {
-    fontSize: 13, color: '#374151', lineHeight: 18,
+    fontSize: 13, color: T1, lineHeight: 18,
     marginBottom: 10, textAlign: 'center',
   },
 
   profileCompleteButton: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: PRIMARY_LIGHT,
-    borderRadius: 12, borderWidth: 1, borderColor: 'rgba(79,70,229,0.2)',
+    backgroundColor: BLUE_L,
+    borderRadius: 12, borderWidth: 1, borderColor: BORDER,
     paddingHorizontal: 16, paddingVertical: 10,
     marginBottom: 18,
   },
-  profileCompleteText: { fontSize: 13, color: PRIMARY, fontWeight: '600' },
+  profileCompleteText: { fontSize: 13, color: BLUE, fontWeight: '700' },
 
-  detailContainer: {
-    width: '100%', marginTop: 6, marginBottom: 6,
-    backgroundColor: '#F9FAFB', borderRadius: 14,
-    borderWidth: 1, borderColor: '#E5E7EB',
-    paddingHorizontal: 12, paddingVertical: 8,
-  },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  detailItem: { flex: 1, alignItems: 'center' },
-  detailLabel: { fontSize: 11, color: '#9CA3AF', marginBottom: 3, fontWeight: '500' },
-  detailValue: { fontSize: 13, color: '#374151', fontWeight: '700' },
-  mbtiBlock: {
-    alignItems: 'center', marginBottom: 8,
-  },
-  hobbyBlock: {
-    alignItems: 'center', marginBottom: 12,
-  },
-  hobbyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 4 },
+  detailLabel: { fontSize: 11, color: BLUE_MID, marginBottom: 3, fontWeight: '500' },
+  detailValue: { fontSize: 13, color: T1, fontWeight: '700' },
+  mbtiBlock:   { alignItems: 'center', marginBottom: 8 },
+  hobbyBlock:  { alignItems: 'center', marginBottom: 12 },
+  hobbyRow:    { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginTop: 4 },
   hobbyTag: {
-    backgroundColor: PRIMARY_LIGHT, borderRadius: 20,
+    backgroundColor: BLUE_L, borderRadius: 20,
     paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: BORDER,
   },
-  hobbyTagText: { fontSize: 12, color: PRIMARY, fontWeight: '600' },
+  hobbyTagText: { fontSize: 12, color: BLUE, fontWeight: '700' },
 
-  statsRow: { flexDirection: 'row', alignItems: 'center', gap: 32 },
-  statItem: { alignItems: 'center' },
-  statNumber: { fontSize: 24, fontWeight: '800', color: '#1E1B4B' },
-  statLabel: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
-  statDivider: { width: 1, height: 32, backgroundColor: 'rgba(79,70,229,0.1)' },
+  statsRow:    { flexDirection: 'row', alignItems: 'center', gap: 32 },
+  statItem:    { alignItems: 'center' },
+  statNumber:  { fontSize: 24, fontWeight: '900', color: T1, letterSpacing: -0.5 },
+  statLabel:   { fontSize: 12, color: BLUE_MID, marginTop: 2, fontWeight: '500' },
+  statDivider: { width: 1, height: 32, backgroundColor: BORDER },
 
   menuCard: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
     borderWidth: 1,
-    borderColor: 'rgba(79,70,229,0.06)',
+    borderColor: BORDER,
   },
   menuItem: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 15, gap: 12,
   },
-  menuItemBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(79,70,229,0.08)' },
+  menuItemBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
   menuIconWrap: {
     width: 34, height: 34, borderRadius: 10,
-    backgroundColor: PRIMARY_LIGHT,
+    backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
   },
-  menuText: { flex: 1, fontSize: 15, color: '#1E1B4B', fontWeight: '500' },
+  menuText: { flex: 1, fontSize: 15, color: T1, fontWeight: '600' },
 
   logoutButton: {
     marginHorizontal: 16, marginTop: 16,
@@ -539,47 +513,47 @@ const styles = StyleSheet.create({
   },
   bottomSheetHandle: {
     width: 40, height: 4, borderRadius: 2,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: BORDER,
     alignSelf: 'center', marginBottom: 16,
   },
   bottomSheetTitle: {
-    fontSize: 16, fontWeight: '700', color: '#1E1B4B',
+    fontSize: 16, fontWeight: '800', color: T1,
     textAlign: 'center', marginBottom: 20,
   },
   bottomSheetItem: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 14, paddingHorizontal: 4,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+    borderBottomWidth: 1, borderBottomColor: BORDER,
   },
   bottomSheetIconWrap: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: PRIMARY_LIGHT,
+    backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
   },
-  bottomSheetItemText: { fontSize: 15, color: '#1E1B4B', fontWeight: '500' },
+  bottomSheetItemText: { fontSize: 15, color: T1, fontWeight: '500' },
   bottomSheetCancel: {
     marginTop: 12, paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: '#F3F4F6', borderRadius: 12,
+    backgroundColor: BLUE_L, borderRadius: 12,
   },
-  bottomSheetCancelText: { fontSize: 15, color: '#6B7280', fontWeight: '600' },
+  bottomSheetCancelText: { fontSize: 15, color: BLUE_MID, fontWeight: '600' },
 
   bioInput: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB',
-    padding: 14, fontSize: 14, color: '#1E1B4B',
+    backgroundColor: BLUE_BG,
+    borderRadius: 12, borderWidth: 1, borderColor: BORDER,
+    padding: 14, fontSize: 14, color: T1,
     minHeight: 100, textAlignVertical: 'top', lineHeight: 20,
     marginBottom: 6,
   },
   bioButtonRow: { flexDirection: 'row', gap: 10 },
   bioCancelButton: {
     flex: 1, paddingVertical: 14, borderRadius: 12,
-    alignItems: 'center', backgroundColor: '#F3F4F6',
+    alignItems: 'center', backgroundColor: BLUE_L,
   },
-  bioCancelText: { fontSize: 15, color: '#6B7280', fontWeight: '600' },
+  bioCancelText: { fontSize: 15, color: BLUE_MID, fontWeight: '600' },
   bioSaveButton: {
     flex: 2, paddingVertical: 14, borderRadius: 12,
-    alignItems: 'center', backgroundColor: PRIMARY,
+    alignItems: 'center', backgroundColor: BLUE,
   },
   bioSaveText: { fontSize: 15, color: '#FFFFFF', fontWeight: '700' },
 
@@ -590,42 +564,43 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
   },
   profileFieldWrap: { marginBottom: 18 },
-  profileFieldLabel: { fontSize: 13, color: '#374151', fontWeight: '700', marginBottom: 8 },
+  profileFieldLabel: { fontSize: 13, color: T1, fontWeight: '700', marginBottom: 8 },
   profileFieldInput: {
-    backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1,
-    borderColor: '#E5E7EB', paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: '#1E1B4B',
+    backgroundColor: BLUE_BG, borderRadius: 12, borderWidth: 1,
+    borderColor: BORDER, paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 14, color: T1,
   },
 
   genderRow: { flexDirection: 'row', gap: 10 },
   genderButton: {
     flex: 1, paddingVertical: 12, borderRadius: 12,
-    alignItems: 'center', backgroundColor: '#F9FAFB',
-    borderWidth: 1.5, borderColor: '#E5E7EB',
+    alignItems: 'center', backgroundColor: BLUE_BG,
+    borderWidth: 1.5, borderColor: BORDER,
   },
-  genderButtonActive: { backgroundColor: PRIMARY_LIGHT, borderColor: PRIMARY },
-  genderButtonText: { fontSize: 14, color: '#6B7280', fontWeight: '600' },
-  genderButtonTextActive: { color: PRIMARY },
+  genderButtonActive: { backgroundColor: BLUE_L, borderColor: BLUE },
+  genderButtonText: { fontSize: 14, color: BLUE_MID, fontWeight: '600' },
+  genderButtonTextActive: { color: BLUE },
 
   hobbyLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  hobbyCount: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
+  hobbyCount: { fontSize: 12, color: BLUE_MID, fontWeight: '500' },
   hobbyTagList: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
   hobbyTagEdit: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: PRIMARY_LIGHT, borderRadius: 20,
+    backgroundColor: BLUE_L, borderRadius: 20,
     paddingHorizontal: 10, paddingVertical: 5,
+    borderWidth: 1, borderColor: BORDER,
   },
-  hobbyTagEditText: { fontSize: 12, color: PRIMARY, fontWeight: '600' },
+  hobbyTagEditText: { fontSize: 12, color: BLUE, fontWeight: '700' },
   hobbyInputRow: { flexDirection: 'row', gap: 8 },
   hobbyInputField: {
-    flex: 1, backgroundColor: '#F9FAFB', borderRadius: 12,
-    borderWidth: 1, borderColor: '#E5E7EB',
+    flex: 1, backgroundColor: BLUE_BG, borderRadius: 12,
+    borderWidth: 1, borderColor: BORDER,
     paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: '#1E1B4B',
+    fontSize: 14, color: T1,
   },
   hobbyAddButton: {
     paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12,
-    backgroundColor: PRIMARY, justifyContent: 'center',
+    backgroundColor: BLUE, justifyContent: 'center',
   },
   hobbyAddButtonText: { fontSize: 14, color: '#FFFFFF', fontWeight: '700' },
 });

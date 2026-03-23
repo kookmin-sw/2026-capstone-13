@@ -654,8 +654,7 @@ const s = StyleSheet.create({
 
   // ── FAB ──
   fabWrap: {
-    position: 'absolute', bottom: 24, left: 0, right: 0,
-    alignItems: 'center',
+    position: 'absolute', bottom: 24, right: 16,
   },
   fab: {
     flexDirection: 'row', alignItems: 'center', gap: 7,

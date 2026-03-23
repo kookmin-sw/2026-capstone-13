@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, CategoryLabels, MethodLabels } from '../../constants/colors';
 import { createHelpRequest, updateHelpRequest } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
+import { useHelpRequestStore } from '../../stores/helpRequestStore';
 import type { HelpCategory, HelpMethod } from '../../types';
 
 const CATEGORIES: HelpCategory[] = ['BANK', 'HOSPITAL', 'SCHOOL', 'DAILY', 'OTHER'];
@@ -37,6 +38,7 @@ const LANGUAGE_OPTIONS = ['한국어', '영어', '한국어·영어'];
 export default function WriteScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { addRequest } = useHelpRequestStore();
   const params = useLocalSearchParams<{
     editId?: string;
     editTitle?: string;
@@ -104,6 +106,7 @@ export default function WriteScreen() {
         : await createHelpRequest(payload);
 
       if (response.success) {
+        if (!isEditMode) addRequest(response.data);
         Alert.alert('완료', isEditMode ? '수정이 완료됐습니다!' : '도움 요청이 등록되었습니다!', [
           { text: '확인', onPress: () => router.back() },
         ]);

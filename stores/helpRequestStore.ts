@@ -1,38 +1,32 @@
-// 내가 작성한 도움 요청 로컬 상태 관리 (Zustand)
+// 내가 작성한 도움 요청 상태 관리 (Zustand)
 import { create } from 'zustand';
-import type { HelpRequest, HelpCategory, HelpMethod, User } from '../types';
-
-interface NewHelpRequestInput {
-  title: string;
-  description: string;
-  category: HelpCategory;
-  helpMethod: HelpMethod;
-  requester: User;
-}
+import { getMyRequests } from '../services/helpService';
+import type { HelpRequest } from '../types';
 
 interface HelpRequestState {
   myRequests: HelpRequest[];
-  addMyRequest: (input: NewHelpRequestInput) => void;
+  isLoading: boolean;
+  addRequest: (request: HelpRequest) => void;
+  fetchMyRequests: () => Promise<void>;
 }
-
-let nextId = 1000; // MOCK_REQUESTS id와 충돌 방지
 
 export const useHelpRequestStore = create<HelpRequestState>((set) => ({
   myRequests: [],
+  isLoading: false,
 
-  addMyRequest: (input: NewHelpRequestInput) => {
-    const now = new Date().toISOString();
-    const newRequest: HelpRequest = {
-      id: nextId++,
-      title: input.title,
-      description: input.description,
-      category: input.category,
-      helpMethod: input.helpMethod,
-      status: 'WAITING',
-      requester: input.requester,
-      createdAt: now,
-      updatedAt: now,
-    };
-    set((state) => ({ myRequests: [newRequest, ...state.myRequests] }));
+  addRequest: (request: HelpRequest) => {
+    set((state) => ({ myRequests: [request, ...state.myRequests] }));
+  },
+
+  fetchMyRequests: async () => {
+    set({ isLoading: true });
+    try {
+      const res = await getMyRequests();
+      if (res.success) set({ myRequests: res.data });
+    } catch {
+      // 네트워크 오류 시 기존 목록 유지
+    } finally {
+      set({ isLoading: false });
+    }
   },
 }));
