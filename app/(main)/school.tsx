@@ -1,5 +1,5 @@
 // 학교생활 화면
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,11 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../../services/api';
 
 const PRIMARY = '#4F46E5';
 const PRIMARY_LIGHT = '#EEF2FF';
@@ -25,12 +28,12 @@ interface CafeteriaMenu {
 
 interface SchoolNotice {
   id: number;
-  category: string;
+  categoryId: string;
+  categoryName: string;
   titleKo: string;
-  titleEn: string;
-  summaryEn: string;
-  date: string;
-  isImportant: boolean;
+  title: string;
+  link: string;
+  pubDate: string | null;
 }
 
 const MOCK_MENUS: CafeteriaMenu[] = [
@@ -64,38 +67,6 @@ const MOCK_MENUS: CafeteriaMenu[] = [
   },
 ];
 
-const MOCK_NOTICES: SchoolNotice[] = [
-  {
-    id: 1, category: '장학', isImportant: true, date: '2026-03-14',
-    titleKo: '2026학년도 1학기 국가장학금 2차 신청 안내',
-    titleEn: '2026 Spring Semester National Scholarship (2nd Round) Application Guide',
-    summaryEn: 'Applications for the 2nd round of national scholarships are open. Eligible students can apply through the Korea Scholarship Foundation website by March 31.',
-  },
-  {
-    id: 2, category: '학사', isImportant: true, date: '2026-03-13',
-    titleKo: '2026학년도 1학기 수강정정 기간 안내',
-    titleEn: 'Course Change Period Notice – Spring 2026',
-    summaryEn: 'The course change period runs from March 16 to March 20. You may add or drop courses through the student portal during this time.',
-  },
-  {
-    id: 3, category: '행사', isImportant: false, date: '2026-03-12',
-    titleKo: '외국인 유학생 한국문화 체험 프로그램 참가자 모집',
-    titleEn: 'Korean Culture Experience Program – International Student Recruitment',
-    summaryEn: 'The International Student Support Center is recruiting participants for the Korean Culture Experience Program. Activities include temple stay, hanbok wearing, and cooking classes.',
-  },
-  {
-    id: 4, category: '취업', isImportant: false, date: '2026-03-11',
-    titleKo: '외국인 유학생 취업 특강 및 상담 프로그램 안내',
-    titleEn: 'Career Seminar & Counseling Program for International Students',
-    summaryEn: 'A special career seminar for international students will be held on March 25. Topics include job search in Korea, visa requirements for employment, and resume writing.',
-  },
-  {
-    id: 5, category: '시설', isImportant: false, date: '2026-03-10',
-    titleKo: '도서관 시험기간 연장 운영 안내',
-    titleEn: 'Extended Library Hours During Exam Period',
-    summaryEn: 'The main library will operate extended hours (07:00–02:00) during the midterm exam period from April 14 to April 25.',
-  },
-];
 
 const MEAL_TIME_COLOR = {
   아침: { bg: '#FEF3C7', text: '#D97706' },
@@ -111,10 +82,28 @@ export default function SchoolScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('CAFETERIA');
   const [refreshing, setRefreshing] = useState(false);
   const [expandedNotice, setExpandedNotice] = useState<number | null>(null);
+  const [notices, setNotices] = useState<SchoolNotice[]>([]);
+  const [noticesLoading, setNoticesLoading] = useState(false);
+
+  const fetchNotices = async () => {
+    setNoticesLoading(true);
+    try {
+      const res = await api.get('/notices');
+      setNotices(res.data.data ?? []);
+    } catch (e) {
+      // 실패 시 빈 목록 유지
+    } finally {
+      setNoticesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotices();
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
+    fetchNotices().finally(() => setRefreshing(false));
   };
 
   return (
@@ -184,54 +173,58 @@ export default function SchoolScreen() {
           <View style={styles.section}>
             <View style={styles.translateBadge}>
               <Ionicons name="language-outline" size={13} color={PRIMARY} />
-              <Text style={styles.translateBadgeText}>공지사항 제목과 내용을 영어로 번역했어요</Text>
+              <Text style={styles.translateBadgeText}>공지사항 제목을 영어로 번역했어요</Text>
             </View>
-            {MOCK_NOTICES.map((notice) => (
-              <TouchableOpacity
-                key={notice.id}
-                style={styles.card}
-                onPress={() => setExpandedNotice(expandedNotice === notice.id ? null : notice.id)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.noticeHeaderRow}>
-                  <View style={[styles.noticeCategoryBadge, { backgroundColor: (CATEGORY_COLOR[notice.category] ?? '#9CA3AF') + '22' }]}>
-                    <Text style={[styles.noticeCategoryText, { color: CATEGORY_COLOR[notice.category] ?? '#9CA3AF' }]}>
-                      {notice.category}
+            {noticesLoading ? (
+              <ActivityIndicator color={PRIMARY} style={{ marginTop: 40 }} />
+            ) : notices.length === 0 ? (
+              <Text style={styles.emptyText}>공지사항이 없습니다.</Text>
+            ) : (
+              notices.map((notice) => (
+                <TouchableOpacity
+                  key={notice.id}
+                  style={styles.card}
+                  onPress={() => setExpandedNotice(expandedNotice === notice.id ? null : notice.id)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.noticeHeaderRow}>
+                    <View style={[styles.noticeCategoryBadge, { backgroundColor: (CATEGORY_COLOR[notice.categoryName] ?? '#9CA3AF') + '22' }]}>
+                      <Text style={[styles.noticeCategoryText, { color: CATEGORY_COLOR[notice.categoryName] ?? '#9CA3AF' }]}>
+                        {notice.categoryName}
+                      </Text>
+                    </View>
+                    <Text style={styles.noticeDate}>{notice.pubDate ?? ''}</Text>
+                  </View>
+                  <Text style={styles.noticeTitleKo} numberOfLines={expandedNotice === notice.id ? undefined : 1}>
+                    {notice.titleKo}
+                  </Text>
+                  <View style={styles.enTitleRow}>
+                    <Ionicons name="language-outline" size={12} color={PRIMARY} />
+                    <Text style={styles.noticeTitleEn} numberOfLines={expandedNotice === notice.id ? undefined : 1}>
+                      {notice.title}
                     </Text>
                   </View>
-                  {notice.isImportant && (
-                    <View style={styles.importantBadge}>
-                      <Text style={styles.importantBadgeText}>중요</Text>
-                    </View>
-                  )}
-                  <Text style={styles.noticeDate}>{notice.date}</Text>
-                </View>
-                <Text style={styles.noticeTitleKo} numberOfLines={expandedNotice === notice.id ? undefined : 1}>
-                  {notice.titleKo}
-                </Text>
-                <View style={styles.enTitleRow}>
-                  <Ionicons name="language-outline" size={12} color={PRIMARY} />
-                  <Text style={styles.noticeTitleEn} numberOfLines={expandedNotice === notice.id ? undefined : 1}>
-                    {notice.titleEn}
-                  </Text>
-                </View>
-                {expandedNotice === notice.id && (
-                  <View style={styles.summaryBox}>
-                    <Text style={styles.summaryLabel}>English Summary</Text>
-                    <Text style={styles.summaryText}>{notice.summaryEn}</Text>
+                  {expandedNotice === notice.id && notice.link ? (
+                    <TouchableOpacity
+                      style={styles.linkBox}
+                      onPress={() => Linking.openURL(notice.link)}
+                    >
+                      <Ionicons name="open-outline" size={13} color={PRIMARY} />
+                      <Text style={styles.linkText}>원문 보기</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  <View style={styles.expandRow}>
+                    <Ionicons
+                      name={expandedNotice === notice.id ? 'chevron-up' : 'chevron-down'}
+                      size={14} color="#9CA3AF"
+                    />
+                    <Text style={styles.expandText}>
+                      {expandedNotice === notice.id ? '접기' : '자세히 보기'}
+                    </Text>
                   </View>
-                )}
-                <View style={styles.expandRow}>
-                  <Ionicons
-                    name={expandedNotice === notice.id ? 'chevron-up' : 'chevron-down'}
-                    size={14} color="#9CA3AF"
-                  />
-                  <Text style={styles.expandText}>
-                    {expandedNotice === notice.id ? '접기' : '영문 요약 보기'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         )}
         <View style={{ height: 30 }} />
@@ -293,17 +286,17 @@ const styles = StyleSheet.create({
   noticeHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   noticeCategoryBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   noticeCategoryText: { fontSize: 11, fontWeight: '700' },
-  importantBadge: { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  importantBadgeText: { fontSize: 11, fontWeight: '700', color: '#EF4444' },
   noticeDate: { fontSize: 11, color: '#9CA3AF', marginLeft: 'auto' },
   noticeTitleKo: { fontSize: 14, fontWeight: '700', color: '#1E1B4B', lineHeight: 20 },
   enTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 4 },
   noticeTitleEn: { flex: 1, fontSize: 13, color: PRIMARY, fontWeight: '500', lineHeight: 18 },
-  summaryBox: {
-    backgroundColor: '#F3F4F8', borderRadius: 10, padding: 12, gap: 6, marginTop: 2,
+  linkBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: PRIMARY_LIGHT, paddingHorizontal: 10, paddingVertical: 7,
+    borderRadius: 8, alignSelf: 'flex-start', marginTop: 2,
   },
-  summaryLabel: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryText: { fontSize: 13, color: '#6B7280', lineHeight: 20 },
+  linkText: { fontSize: 13, color: PRIMARY, fontWeight: '600' },
+  emptyText: { textAlign: 'center', color: '#9CA3AF', fontSize: 14, marginTop: 40 },
   expandRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingTop: 2 },
   expandText: { fontSize: 12, color: '#9CA3AF' },
 });
