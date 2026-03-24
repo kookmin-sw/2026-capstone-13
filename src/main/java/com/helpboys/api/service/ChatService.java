@@ -47,12 +47,59 @@ public class ChatService {
         User sender = userRepository.findById(dto.getSenderId())
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
+        String translatedContent = dto.getTranslatedContent();
+        String culturalNote = null;
+        String originalLanguage = dto.getOriginalLanguage();
+
+        // AI 번역 + 뉘앙스 감지 (시스템 메시지 제외)
+        String content = dto.getContent();
+        boolean isSystemMessage = content != null && (
+                content.startsWith("SYS_LEAVE:") ||
+                content.startsWith("SYS_CALL_VOICE:") ||
+                content.startsWith("SYS_CALL_VIDEO:")
+        );
+
+        if (!isSystemMessage && content != null && !content.isBlank()) {
+            try {
+                HelpRequest room = helpRequestRepository.findById(dto.getRoomId()).orElse(null);
+                if (room != null) {
+                    User partner = room.getRequester().getId().equals(dto.getSenderId())
+                            ? room.getHelper() : room.getRequester();
+                    String targetLang = (partner != null) ? partner.getPreferredLanguage() : "en";
+
+                    String translateBody = objectMapper.writeValueAsString(
+                            java.util.Map.of("text", content, "target_lang", targetLang)
+                    );
+                    HttpRequest translateRequest = HttpRequest.newBuilder()
+                            .uri(URI.create(aiServerUrl + "/api/translate"))
+                            .header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(translateBody))
+                            .build();
+
+                    HttpResponse<String> translateResponse = httpClient.send(translateRequest, HttpResponse.BodyHandlers.ofString());
+                    JsonNode result = objectMapper.readTree(translateResponse.body());
+
+                    if (result.path("success").asBoolean()) {
+                        JsonNode data = result.path("data");
+                        translatedContent = data.path("translated").asText(content);
+                        originalLanguage = data.path("source_language").asText(originalLanguage);
+                        if (!data.path("cultural_note").isNull()) {
+                            culturalNote = data.path("cultural_note").asText(null);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[채팅] AI 번역/뉘앙스 감지 실패: {}", e.getMessage());
+            }
+        }
+
         ChatMessage message = ChatMessage.builder()
                 .roomId(dto.getRoomId())
                 .sender(sender)
-                .content(dto.getContent())
-                .originalLanguage(dto.getOriginalLanguage())
-                .translatedContent(dto.getTranslatedContent())
+                .content(content)
+                .originalLanguage(originalLanguage)
+                .translatedContent(translatedContent)
+                .culturalNote(culturalNote)
                 .build();
 
         ChatMessage saved = chatMessageRepository.save(message);
@@ -64,6 +111,7 @@ public class ChatService {
                 .content(saved.getContent())
                 .originalLanguage(saved.getOriginalLanguage())
                 .translatedContent(saved.getTranslatedContent())
+                .culturalNote(saved.getCulturalNote())
                 .createdAt(saved.getCreatedAt().toString())
                 .build();
     }
@@ -245,6 +293,7 @@ public class ChatService {
                         .content(msg.getContent())
                         .originalLanguage(msg.getOriginalLanguage())
                         .translatedContent(msg.getTranslatedContent())
+                        .culturalNote(msg.getCulturalNote())
                         .createdAt(msg.getCreatedAt().toString())
                         .build())
                 .collect(Collectors.toList());

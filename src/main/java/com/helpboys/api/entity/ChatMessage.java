@@ -37,6 +37,10 @@ public class ChatMessage {
     @Column(name = "translated_content", columnDefinition = "TEXT")
     private String translatedContent;
 
+    // 한국어 문화적 뉘앙스 설명 (Gemini AI 감지)
+    @Column(name = "cultural_note", columnDefinition = "TEXT")
+    private String culturalNote;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

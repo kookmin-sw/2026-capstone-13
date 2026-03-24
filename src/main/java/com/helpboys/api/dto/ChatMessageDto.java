@@ -19,5 +19,6 @@ public class ChatMessageDto {
     private String content;
     private String originalLanguage;
     private String translatedContent;
+    private String culturalNote;
     private String createdAt;
 }
