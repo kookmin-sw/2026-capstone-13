@@ -6,6 +6,7 @@ import com.helpboys.api.entity.HelpRequest;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.HelpRequestRepository;
+import com.helpboys.api.repository.UserBlockRepository;
 import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,19 +22,24 @@ public class HelpRequestService {
 
     private final HelpRequestRepository helpRequestRepository;
     private final UserRepository userRepository;
+    private final UserBlockRepository userBlockRepository;
 
-    // 도움 요청 전체 목록 조회 (최신순)
+    // 도움 요청 전체 목록 조회 (최신순, 차단 유저 제외)
     @Transactional(readOnly = true)
-    public List<HelpRequestResponse> getAllRequests() {
+    public List<HelpRequestResponse> getAllRequests(Long userId) {
+        List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
         return helpRequestRepository.findAllByOrderByCreatedAtDesc().stream()
+                .filter(req -> !blockedIds.contains(req.getRequester().getId()))
                 .map(HelpRequestResponse::from)
                 .collect(Collectors.toList());
     }
 
-    // 대기 중인 도움 요청만 조회 (한국인 학생용)
+    // 대기 중인 도움 요청만 조회 (한국인 학생용, 차단 유저 제외)
     @Transactional(readOnly = true)
-    public List<HelpRequestResponse> getWaitingRequests() {
+    public List<HelpRequestResponse> getWaitingRequests(Long userId) {
+        List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
         return helpRequestRepository.findByStatus(HelpRequest.RequestStatus.WAITING).stream()
+                .filter(req -> !blockedIds.contains(req.getRequester().getId()))
                 .map(HelpRequestResponse::from)
                 .collect(Collectors.toList());
     }
