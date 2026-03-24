@@ -514,6 +514,17 @@ export default function ChatRoomScreen() {
               <Text style={[styles.msgTime, styles.msgTimeOther]}>{formatTime(msg.createdAt)}</Text>
             )}
           </View>
+          {/* 번역 텍스트 */}
+          {translateEnabled && !isMine && !!msg.translatedContent && (
+            <Text style={styles.translatedText}>{msg.translatedContent}</Text>
+          )}
+          {/* 뉘앙스 말풍선 */}
+          {translateEnabled && !isMine && !!msg.culturalNote && (
+            <View style={styles.nuanceBubble}>
+              <Text style={styles.nuanceIcon}>💡</Text>
+              <Text style={styles.nuanceText}>{msg.culturalNote}</Text>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -893,6 +904,22 @@ const styles = StyleSheet.create({
 
   msgTime:      { fontSize: 12, color: '#A8C8FA', paddingBottom: 2 },
   msgTimeOther: {},
+
+  translatedText: {
+    fontSize: 12, color: '#888',
+    fontStyle: 'italic',
+    marginTop: 4, marginLeft: 2,
+  },
+  nuanceBubble: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 5,
+    backgroundColor: '#FFF9E6',
+    borderWidth: 1, borderColor: '#FFD60A',
+    borderRadius: 12,
+    padding: 8, marginTop: 4,
+    maxWidth: 230,
+  },
+  nuanceIcon: { fontSize: 13 },
+  nuanceText:  { fontSize: 11.5, color: '#7A5900', lineHeight: 17, flex: 1 },
 
   systemMsgWrap: { alignItems: 'center', marginVertical: 8 },
   systemMsgText: {
