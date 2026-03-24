@@ -9,6 +9,7 @@ export interface ChatMessageDto {
   content: string;
   originalLanguage?: string;
   translatedContent?: string;
+  culturalNote?: string;
   createdAt: string;
 }
 
