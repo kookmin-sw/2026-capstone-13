@@ -19,7 +19,7 @@ import {
   View,
 } from 'react-native';
 import { getChatMessages, sendVoiceMessage, type ChatMessageDto } from '../services/chatService';
-import { completeHelpRequest, rejectHelper, startHelpRequest } from '../services/helpService';
+import { completeHelpRequest, rejectHelper, startHelpRequest, resetToWaiting } from '../services/helpService';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 
@@ -266,6 +266,8 @@ export default function ChatRoomScreen() {
         text: '나가기',
         style: 'destructive',
         onPress: () => {
+          // DB 상태를 WAITING으로 리셋 (양쪽 모두 모집중으로 표시)
+          resetToWaiting(Number(roomId)).catch(() => {});
           const client = clientRef.current;
           if (client?.connected && user) {
             client.publish({

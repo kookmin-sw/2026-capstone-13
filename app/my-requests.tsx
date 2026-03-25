@@ -7,6 +7,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useHelpRequestStore } from '../stores/helpRequestStore';
+import { useChatStore } from '../stores/chatStore';
+import { useAuthStore } from '../stores/authStore';
 import type { HelpRequest, HelpCategory, HelpMethod } from '../types';
 
 const PRIMARY = '#4F46E5';
@@ -47,8 +49,18 @@ function formatTime(createdAt: string): string {
 export default function MyRequestsScreen() {
   const router = useRouter();
   const { myRequests, isLoading, fetchMyRequests } = useHelpRequestStore();
+  const { hasLeft } = useChatStore();
+  const { user } = useAuthStore();
 
   useEffect(() => { fetchMyRequests(); }, []);
+
+  // 나간 채팅방은 WAITING으로 표시
+  const displayRequests = myRequests.map(r => {
+    if ((r.status === 'MATCHED' || r.status === 'IN_PROGRESS') && hasLeft(r.id, user?.id ?? 0)) {
+      return { ...r, status: 'WAITING' as HelpRequest['status'] };
+    }
+    return r;
+  });
 
   const renderItem = useCallback(({ item }: { item: HelpRequest }) => {
     const method = METHOD_BADGE[item.helpMethod];
@@ -99,33 +111,33 @@ export default function MyRequestsScreen() {
       </View>
 
       {/* 요약 배지 */}
-      {myRequests.length > 0 && (
+      {displayRequests.length > 0 && (
         <View style={styles.summaryRow}>
           <View style={styles.summaryBadge}>
-            <Text style={styles.summaryText}>전체 {myRequests.length}건</Text>
+            <Text style={styles.summaryText}>전체 {displayRequests.length}건</Text>
           </View>
           <View style={styles.summaryBadge}>
             <View style={styles.summaryDot} />
             <Text style={styles.summaryText}>
-              모집중 {myRequests.filter((r) => r.status === 'WAITING' || r.status === 'MATCHED' || r.status === 'IN_PROGRESS').length}건
+              모집중 {displayRequests.filter((r) => r.status === 'WAITING' || r.status === 'MATCHED' || r.status === 'IN_PROGRESS').length}건
             </Text>
           </View>
           <View style={styles.summaryBadge}>
             <Ionicons name="checkmark-circle" size={13} color="#10B981" />
             <Text style={styles.summaryText}>
-              완료 {myRequests.filter((r) => r.status === 'COMPLETED').length}건
+              완료 {displayRequests.filter((r) => r.status === 'COMPLETED').length}건
             </Text>
           </View>
         </View>
       )}
 
-      {isLoading && myRequests.length === 0 && (
+      {isLoading && displayRequests.length === 0 && (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={PRIMARY} />
         </View>
       )}
       <FlatList
-        data={myRequests}
+        data={displayRequests}
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.list}

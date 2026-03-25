@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getHelpRequests, cancelHelpRequest, getHelpedRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { useChatStore } from '../../stores/chatStore';
 import type { HelpCategory, HelpRequest } from '../../types';
 
 // ── Design tokens ──
@@ -66,6 +67,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { hasUnreadForUser } = useNotificationStore();
+  const { hasLeft } = useChatStore();
   const [requests, setRequests]         = useState<HelpRequest[]>([]);
   const [completedCount, setCompletedCount] = useState(0);
   const [isLoading, setIsLoading]       = useState(true);
@@ -115,7 +117,11 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
   const onRefresh = () => { setRefreshing(true); fetchRequests(); };
 
   // Stats
-  const activeCount = requests.filter(r => r.status === 'WAITING').length;
+  const activeCount = requests.filter(r =>
+    r.status !== 'CANCELLED' &&
+    (r.status === 'WAITING' ||
+      ((r.status === 'MATCHED' || r.status === 'IN_PROGRESS') && !hasLeft(r.id, user?.id ?? 0)))
+  ).length;
 
   const urgentCount = requests.filter(r => r.status === 'WAITING' && isUrgent(r.createdAt)).length;
   const now = new Date();
@@ -130,6 +136,12 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
 
   const filtered = requests
     .filter(r => r.status !== 'CANCELLED')
+    .map(r => {
+      if ((r.status === 'MATCHED' || r.status === 'IN_PROGRESS') && hasLeft(r.id, user?.id ?? 0)) {
+        return { ...r, status: 'WAITING' as HelpRequest['status'] };
+      }
+      return r;
+    })
     .filter(r => catFilter === 'ALL' || r.category === catFilter)
     .filter(r => {
       if (statusFilter === 'MATCHED') return r.status === 'MATCHED';
