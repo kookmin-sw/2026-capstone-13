@@ -431,7 +431,12 @@ export default function ChatScreen() {
 }
 
 function formatTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
+  if (!iso) return '';
+  // Railway 서버는 UTC 기준 LocalDateTime → timezone 없으면 Z 붙여서 UTC로 명시
+  const utc = iso.includes('Z') || iso.includes('+') ? iso : iso + 'Z';
+  const ms = new Date(utc.replace(/\.(\d+)Z/, (_, d) => '.' + (d + '000').slice(0, 3) + 'Z')).getTime();
+  if (isNaN(ms)) return '';
+  const diff = Date.now() - ms;
   const m = Math.floor(diff / 60000);
   if (m < 1)  return '방금 전';
   if (m < 60) return `${m}분 전`;
