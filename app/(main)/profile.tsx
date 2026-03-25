@@ -44,6 +44,18 @@ export default function ProfileScreen() {
   }, []);
 
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [hasCustomPhoto, setHasCustomPhoto] = useState(false);
+
+  useEffect(() => {
+    const uri = user?.profileImage?.trim() ?? '';
+    const isAbsolute =
+      uri.startsWith('http://') ||
+      uri.startsWith('https://') ||
+      uri.startsWith('file://') ||
+      uri.startsWith('content://') ||
+      uri.startsWith('ph://');
+    setHasCustomPhoto(isAbsolute);
+  }, [user?.profileImage]);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [profileInput, setProfileInput] = useState<ProfileDetail>(EMPTY_DETAIL);
   const [hobbyInput, setHobbyInput] = useState('');
@@ -111,6 +123,21 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const handleDeleteImage = () => {
+    setImageMenuVisible(false);
+    Alert.alert('프로필 사진 삭제', '프로필 사진을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제', style: 'destructive',
+        onPress: async () => {
+          setHasCustomPhoto(false);
+          setImageLoadError(false);
+          await updateProfileImage('');
+        },
+      },
+    ]);
+  };
+
   const handlePickImage = async (source: 'camera' | 'gallery') => {
     setImageMenuVisible(false);
 
@@ -132,6 +159,7 @@ export default function ProfileScreen() {
 
     if (!result.canceled && result.assets[0]) {
       setImageLoadError(false);
+      setHasCustomPhoto(true);
       await updateProfileImage(result.assets[0].uri);
     }
   };
@@ -265,6 +293,15 @@ export default function ProfileScreen() {
               </View>
               <Text style={styles.bottomSheetItemText}>갤러리에서 선택</Text>
             </TouchableOpacity>
+
+            {hasCustomPhoto && (
+              <TouchableOpacity style={styles.bottomSheetItem} onPress={handleDeleteImage} activeOpacity={0.7}>
+                <View style={[styles.bottomSheetIconWrap, { backgroundColor: '#FEF2F2' }]}>
+                  <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                </View>
+                <Text style={[styles.bottomSheetItemText, { color: '#EF4444' }]}>프로필 사진 삭제</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity style={styles.bottomSheetCancel} onPress={() => setImageMenuVisible(false)} activeOpacity={0.7}>
               <Text style={styles.bottomSheetCancelText}>취소</Text>
