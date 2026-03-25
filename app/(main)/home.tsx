@@ -174,13 +174,19 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
               </View>
               <Text style={s.timeText}>{formatTime(item.createdAt)}</Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-              <TouchableOpacity style={s.deleteBtn} onPress={() => handleDelete(item)}>
-                <Ionicons name="trash-outline" size={13} color="#EF4444" />
-              </TouchableOpacity>
-              <TouchableOpacity style={s.helpBtn} onPress={() => goTo(item)}>
-                <Text style={s.helpBtnText}>도와주기</Text>
-              </TouchableOpacity>
+            <View style={
+              item.status === 'COMPLETED' ? s.statusBadgeGray :
+              item.status === 'IN_PROGRESS' ? s.statusBadgeOrange :
+              s.statusBadgeGreen
+            }>
+              <Text style={
+                item.status === 'COMPLETED' ? s.statusTextGray :
+                item.status === 'IN_PROGRESS' ? s.statusTextOrange :
+                s.statusTextGreen
+              }>
+                {item.status === 'COMPLETED' ? '모집완료' :
+                 item.status === 'IN_PROGRESS' ? '진행중' : '모집중'}
+              </Text>
             </View>
           </View>
           <Text style={s.cardTitle} numberOfLines={2}>{item.title}</Text>
@@ -627,16 +633,12 @@ const s = StyleSheet.create({
   badge:       { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 7 },
   badgeText:   { fontSize: 13, fontWeight: '800' },
   timeText:    { fontSize: 13, color: BLUE_MID },
-  deleteBtn: {
-    width: 32, height: 32, borderRadius: 9,
-    backgroundColor: '#FEF2F2',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  helpBtn: {
-    backgroundColor: BLUE_L,
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10,
-  },
-  helpBtnText: { fontSize: 14, fontWeight: '800', color: BLUE },
+  statusBadgeGreen:  { backgroundColor: '#D1FAE5', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
+  statusBadgeOrange: { backgroundColor: '#FFF3E8', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
+  statusBadgeGray:   { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 10 },
+  statusTextGreen:  { fontSize: 13, fontWeight: '700', color: '#065F46' },
+  statusTextOrange: { fontSize: 13, fontWeight: '700', color: '#C45A10' },
+  statusTextGray:   { fontSize: 13, fontWeight: '700', color: '#9CA3AF' },
   cardTitle:   { fontSize: 17, fontWeight: '700', color: T1, lineHeight: 24, marginBottom: 10 },
   cardFooter:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
   avatar: {
