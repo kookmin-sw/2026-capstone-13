@@ -53,7 +53,8 @@ export default function MyHelpHistoryScreen() {
     fetchHelpHistory();
   }, []);
 
-  const completedCount = helpHistory.filter((h) => h.status === 'COMPLETED').length;
+  const completedCount  = helpHistory.filter((h) => h.status === 'COMPLETED').length;
+  const inProgressCount = helpHistory.filter((h) => h.status === 'IN_PROGRESS' || h.status === 'MATCHED').length;
 
   const renderItem = useCallback(({ item }: { item: HelpHistoryItem }) => {
     const method = METHOD_BADGE[item.helpMethod];
@@ -114,6 +115,10 @@ export default function MyHelpHistoryScreen() {
             <Text style={styles.summaryText}>전체 {helpHistory.length}건</Text>
           </View>
           <View style={styles.summaryBadge}>
+            <View style={styles.summaryDot} />
+            <Text style={styles.summaryText}>진행중 {inProgressCount}건</Text>
+          </View>
+          <View style={styles.summaryBadge}>
             <Ionicons name="checkmark-circle" size={13} color="#10B981" />
             <Text style={styles.summaryText}>완료 {completedCount}건</Text>
           </View>
@@ -168,6 +173,7 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_LIGHT, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
   },
   summaryText: { fontSize: 12, color: PRIMARY, fontWeight: '600' },
+  summaryDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' },
 
   list: { padding: 14, gap: 10, paddingBottom: 40 },
 

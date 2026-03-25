@@ -107,7 +107,7 @@ export default function MyRequestsScreen() {
           <View style={styles.summaryBadge}>
             <View style={styles.summaryDot} />
             <Text style={styles.summaryText}>
-              모집중 {myRequests.filter((r) => r.status === 'WAITING').length}건
+              모집중 {myRequests.filter((r) => r.status === 'WAITING' || r.status === 'MATCHED' || r.status === 'IN_PROGRESS').length}건
             </Text>
           </View>
           <View style={styles.summaryBadge}>
