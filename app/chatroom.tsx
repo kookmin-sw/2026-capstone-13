@@ -77,33 +77,19 @@ export default function ChatRoomScreen() {
   const [isSendingVoice, setIsSendingVoice] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [translateEnabled, setTranslateEnabled] = useState(false);
-  const { clearUnread, setActiveChatroom, leaveRoom } = useChatStore();
+  const { clearUnread, setActiveChatroom, leaveRoom, rejoinRoom } = useChatStore();
   const clientRef = useRef<Client | null>(null);
   const listRef = useRef<FlatList>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
 
   // 이전 메시지 조회
   const loadHistory = useCallback(async () => {
-    // 내가 나간 방이면 메시지 로드 안 함
-    const { hasLeft } = useChatStore.getState();
-    const { user: currentUser } = useAuthStore.getState();
-    if (currentUser && hasLeft(roomId, currentUser.id)) {
-      setChatEnded(true);
-      setIsLoading(false);
-      return;
-    }
     try {
       const res = await getChatMessages(roomId);
       if (res.success && res.data.length > 0) {
-        // SYS_LEAVE 메시지 분리: 일반 메시지에는 포함 안 함
-        const leaveMsg = res.data.find((m) => m.content?.startsWith(SYS_LEAVE));
+        // SYS_LEAVE 메시지는 시스템 메시지로만 표시, 재입장 시 채팅 잠금 없음
         const normalMsgs = res.data.filter((m) => !m.content?.startsWith(SYS_LEAVE));
         setMessages(normalMsgs);
-        if (leaveMsg) {
-          const nickname = leaveMsg.content.slice(SYS_LEAVE.length);
-          setChatEnded(true);
-          setSystemMessages([{ type: 'system', content: `${nickname}님이 채팅방을 나갔습니다`, id: 'sys-leave' }]);
-        }
       }
     } catch {
       // 새 채팅방이면 이력 없음 - 무시
@@ -112,14 +98,15 @@ export default function ChatRoomScreen() {
     }
   }, [roomId]);
 
-  // 채팅방 입장 시 뱃지 초기화 + 활성 채팅방 등록
+  // 채팅방 입장 시 뱃지 초기화 + 활성 채팅방 등록 + leftRooms 초기화(재입장)
   useEffect(() => {
     setActiveChatroom(roomId);
     clearUnread();
+    if (user) rejoinRoom(roomId, Number(user.id));
     return () => {
       setActiveChatroom(null);
     };
-  }, [roomId, setActiveChatroom, clearUnread]);
+  }, [roomId, setActiveChatroom, clearUnread, rejoinRoom, user]);
 
   // WebSocket STOMP 연결
   useEffect(() => {
@@ -192,6 +179,8 @@ export default function ChatRoomScreen() {
                 return;
               }
 
+              // 상대방 재입장 후 메시지 수신 시 chatEnded 리셋 (매칭완료 버튼 복원)
+              setChatEnded(false);
               setMessages((prev) => {
                 const isDuplicate = prev.some(
                   (m) => m.senderId === msg.senderId &&

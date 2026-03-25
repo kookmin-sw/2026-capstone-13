@@ -11,6 +11,7 @@ interface ChatState {
   clearUnread: () => void;
   setActiveChatroom: (id: number | null) => void;
   leaveRoom: (roomId: number, userId: number) => void;
+  rejoinRoom: (roomId: number, userId: number) => void;
   hasLeft: (roomId: number, userId: number) => boolean;
 }
 
@@ -29,6 +30,14 @@ export const useChatStore = create<ChatState>()(
         if (existing.includes(roomId)) return;
         set((state) => ({
           leftRooms: { ...state.leftRooms, [key]: [...existing, roomId] },
+        }));
+      },
+      rejoinRoom: (roomId, userId) => {
+        const key = String(userId);
+        const existing = get().leftRooms[key] ?? [];
+        if (!existing.includes(roomId)) return;
+        set((state) => ({
+          leftRooms: { ...state.leftRooms, [key]: existing.filter((id) => id !== roomId) },
         }));
       },
       hasLeft: (roomId, userId) => {
