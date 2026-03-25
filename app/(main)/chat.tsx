@@ -19,12 +19,10 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { useAuthStore } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
 import {
-  getMyRequests,
-  getHelpedRequests,
   startHelpRequest,
   rejectHelper,
 } from '../../services/helpService';
-import type { HelpRequest } from '../../types';
+import { getChatRooms, type ChatRoomResponse } from '../../services/chatService';
 
 const BLUE     = '#3B6FE8';
 const BLUE_BG  = '#FFFFFF';
@@ -56,7 +54,7 @@ export default function ChatScreen() {
   const { user } = useAuthStore();
   const isInternational = user?.userType === 'INTERNATIONAL';
 
-  const [requests, setRequests]     = useState<HelpRequest[]>([]);
+  const [requests, setRequests]     = useState<ChatRoomResponse[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actioningId, setActioningId] = useState<number | null>(null);
@@ -71,12 +69,12 @@ export default function ChatScreen() {
     useCallback(() => {
       clearUnread();
       fetchData();
-    }, [clearUnread, fetchData])
+    }, [clearUnread, fetchData]) // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const fetchData = useCallback(async () => {
     try {
-      const res = isInternational ? await getMyRequests() : await getHelpedRequests();
+      const res = await getChatRooms();
       if (res.success) setRequests(res.data);
     } catch {
       // 조회 실패 무시
@@ -84,22 +82,22 @@ export default function ChatScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [isInternational]);
+  }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
-  const handleAccept = async (req: HelpRequest) => {
-    setActioningId(req.id);
+  const handleAccept = async (room: ChatRoomResponse) => {
+    setActioningId(room.id);
     try {
-      const res = await startHelpRequest(req.id);
+      const res = await startHelpRequest(room.id);
       if (res.success) {
         router.push({
           pathname: '/chatroom',
           params: {
-            roomId: req.id,
-            requestTitle: req.title,
-            partnerNickname: req.helper?.nickname ?? '',
+            roomId: room.id,
+            requestTitle: room.title,
+            partnerNickname: room.partnerNickname,
           },
         });
         fetchData();
@@ -113,19 +111,19 @@ export default function ChatScreen() {
     }
   };
 
-  const handleReject = (req: HelpRequest) => {
+  const handleReject = (room: ChatRoomResponse) => {
     Alert.alert(
       '도움 거절',
-      `${req.helper?.nickname ?? ''}님의 도움 신청을 거절하시겠어요?`,
+      `${room.partnerNickname}님의 도움 신청을 거절하시겠어요?`,
       [
         { text: '취소', style: 'cancel' },
         {
           text: '거절',
           style: 'destructive',
           onPress: async () => {
-            setActioningId(req.id);
+            setActioningId(room.id);
             try {
-              const res = await rejectHelper(req.id);
+              const res = await rejectHelper(room.id);
               if (res.success) fetchData();
               else Alert.alert('실패', res.message);
             } catch {
@@ -139,18 +137,16 @@ export default function ChatScreen() {
     );
   };
 
-  const goToChat = (req: HelpRequest) => {
-    const partnerNickname = isInternational
-      ? (req.helper?.nickname ?? '')
-      : req.requester.nickname;
+  const goToChat = (room: ChatRoomResponse) => {
+    const requesterId = isInternational ? myId : room.partnerId;
     router.push({
       pathname: '/chatroom',
       params: {
-        roomId: req.id,
-        requestTitle: req.title,
-        partnerNickname,
-        requestStatus: req.status,
-        requesterId: req.requester.id,
+        roomId: room.id,
+        requestTitle: room.title,
+        partnerNickname: room.partnerNickname,
+        requestStatus: room.status,
+        requesterId,
       },
     });
   };
@@ -174,19 +170,15 @@ export default function ChatScreen() {
     .sort((a, b) => {
       if (a.status === 'MATCHED' && b.status !== 'MATCHED') return -1;
       if (b.status === 'MATCHED' && a.status !== 'MATCHED') return 1;
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      return new Date(b.lastMessageTime ?? 0).getTime() - new Date(a.lastMessageTime ?? 0).getTime();
     })
     .filter((r) => {
       if (!searchQuery.trim()) return true;
-      const partner = isInternational ? r.helper?.nickname : r.requester.nickname;
-      return partner?.toLowerCase().includes(searchQuery.trim().toLowerCase()) ?? false;
+      return r.partnerNickname.toLowerCase().includes(searchQuery.trim().toLowerCase());
     });
 
-  const getPartner = (item: HelpRequest) =>
-    isInternational ? item.helper : item.requester;
-
   // 섹션 헤더 포함 리스트 데이터
-  type ListData = HelpRequest | { type: 'sectionHeader'; label: string; id: string };
+  type ListData = ChatRoomResponse | { type: 'sectionHeader'; label: string; id: string };
 
   const listDataWithSections: ListData[] = (() => {
     if (filter !== 'ALL') return visibleItems;
@@ -216,7 +208,7 @@ export default function ChatScreen() {
     }
   };
 
-  const handleDelete = (item: HelpRequest) => {
+  const handleDelete = (item: ChatRoomResponse) => {
     Alert.alert(
       '채팅방 나가기',
       '채팅방 목록에서 삭제할까요?',
@@ -240,7 +232,7 @@ export default function ChatScreen() {
     );
   };
 
-  const renderRightActions = (item: HelpRequest) => () => (
+  const renderRightActions = (item: ChatRoomResponse) => () => (
     <TouchableOpacity style={s.deleteAction} onPress={() => handleDelete(item)}>
       <Ionicons name="trash-outline" size={22} color="#fff" />
       <Text style={s.deleteActionText}>나가기</Text>
@@ -253,13 +245,12 @@ export default function ChatScreen() {
       return <Text style={s.sectionLabel}>{item.label}</Text>;
     }
 
-    const req            = item as HelpRequest;
-    const partner        = getPartner(req);
-    const name           = partner?.nickname ?? '?';
-    const isActioning    = actioningId === req.id;
-    const isOnline       = req.status === 'IN_PROGRESS' || req.status === 'MATCHED';
-    const isCompleted    = req.status === 'COMPLETED';
-    const isMatchPending = req.status === 'MATCHED';
+    const room           = item as ChatRoomResponse;
+    const name           = room.partnerNickname;
+    const isActioning    = actioningId === room.id;
+    const isOnline       = room.status === 'IN_PROGRESS' || room.status === 'MATCHED';
+    const isCompleted    = room.status === 'COMPLETED';
+    const isMatchPending = room.status === 'MATCHED';
 
     const statusLabel = isCompleted ? '완료' : '진행중';
     const statusBg    = isCompleted ? '#F0F4F8' : BLUE_L;
@@ -268,21 +259,21 @@ export default function ChatScreen() {
     return (
       <Swipeable
         ref={(ref) => {
-          if (ref) swipeableRefs.current.set(req.id, ref);
-          else swipeableRefs.current.delete(req.id);
+          if (ref) swipeableRefs.current.set(room.id, ref);
+          else swipeableRefs.current.delete(room.id);
         }}
-        renderRightActions={renderRightActions(req)}
+        renderRightActions={renderRightActions(room)}
         rightThreshold={60}
         overshootRight={false}
         onSwipeableOpen={() => {
-          if (openSwipeableId.current !== null && openSwipeableId.current !== req.id) {
+          if (openSwipeableId.current !== null && openSwipeableId.current !== room.id) {
             swipeableRefs.current.get(openSwipeableId.current)?.close();
           }
-          openSwipeableId.current = req.id;
+          openSwipeableId.current = room.id;
           setIsAnySwipeOpen(true);
         }}
         onSwipeableClose={() => {
-          if (openSwipeableId.current === req.id) {
+          if (openSwipeableId.current === room.id) {
             openSwipeableId.current = null;
             setIsAnySwipeOpen(false);
           }
@@ -290,7 +281,7 @@ export default function ChatScreen() {
       >
         <TouchableOpacity
           style={s.item}
-          onPress={() => { closeOpenSwipeable(); goToChat(req); }}
+          onPress={() => { closeOpenSwipeable(); goToChat(room); }}
           activeOpacity={0.85}
         >
           {/* 아바타 */}
@@ -310,13 +301,13 @@ export default function ChatScreen() {
                   <Text style={[s.statusText, { color: statusColor }]}>{statusLabel}</Text>
                 </View>
               </View>
-              <Text style={s.itemTime}>{formatTime(req.updatedAt)}</Text>
+              <Text style={s.itemTime}>{formatTime(room.lastMessageTime ?? '')}</Text>
             </View>
             <View style={s.itemBottom}>
               <Text style={s.itemPreview} numberOfLines={1}>
                 {isMatchPending
                   ? (isInternational ? '새 도움 신청이 도착했어요!' : '수락을 기다리고 있어요')
-                  : req.title}
+                  : (room.lastMessage ?? room.title)}
               </Text>
               {isMatchPending && !isActioning && (
                 <View style={s.unreadBadge}>
@@ -329,14 +320,14 @@ export default function ChatScreen() {
               <View style={s.actionRow}>
                 <TouchableOpacity
                   style={s.rejectBtn}
-                  onPress={() => handleReject(req)}
+                  onPress={() => handleReject(room)}
                   disabled={isActioning}
                 >
                   <Text style={s.rejectBtnText}>거절</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[s.acceptBtn, isActioning && s.btnDisabled]}
-                  onPress={() => handleAccept(req)}
+                  onPress={() => handleAccept(room)}
                   disabled={isActioning}
                 >
                   {isActioning

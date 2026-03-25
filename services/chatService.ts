@@ -13,6 +13,22 @@ export interface ChatMessageDto {
   createdAt: string;
 }
 
+export interface ChatRoomResponse {
+  id: number;
+  title: string;
+  partnerId: number;
+  partnerNickname: string;
+  status: string;
+  lastMessage: string | null;
+  lastMessageTime: string | null;
+}
+
+// 내 채팅방 목록 조회 (마지막 메시지 포함)
+export const getChatRooms = async (): Promise<ApiResponse<ChatRoomResponse[]>> => {
+  const response = await api.get<ApiResponse<ChatRoomResponse[]>>('/chat/rooms');
+  return response.data;
+};
+
 // 채팅 이력 조회 (REST)
 export const getChatMessages = async (roomId: number): Promise<ApiResponse<ChatMessageDto[]>> => {
   const response = await api.get<ApiResponse<ChatMessageDto[]>>(`/chat/rooms/${roomId}/messages`);
