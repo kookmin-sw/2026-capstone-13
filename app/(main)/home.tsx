@@ -31,11 +31,17 @@ const CAT_AVATAR_COLOR: Record<HelpCategory, string> = {
 
 type CardType = 'urgent' | 'new' | 'info';
 
+function parseUTC(iso: string): number {
+  const utc = iso.includes('Z') || iso.includes('+') ? iso : iso + 'Z';
+  return new Date(utc.replace(/\.(\d+)Z/, (_, d) => '.' + (d + '000').slice(0, 3) + 'Z')).getTime();
+}
 function isUrgent(createdAt: string) {
-  return Date.now() - new Date(createdAt).getTime() > 2 * 60 * 60 * 1000;
+  return Date.now() - parseUTC(createdAt) > 2 * 60 * 60 * 1000;
 }
 function formatTime(iso: string) {
-  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  const ms = parseUTC(iso);
+  if (isNaN(ms)) return '';
+  const m = Math.floor((Date.now() - ms) / 60000);
   if (m < 1) return '방금 전';
   if (m < 60) return `${m}분 전`;
   const h = Math.floor(m / 60);
