@@ -584,14 +584,18 @@ export default function ChatRoomScreen() {
           activeOpacity={1}
         >
           <View style={styles.menuDropdown}>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => { setMenuVisible(false); handleComplete(); }}
-            >
-              <Ionicons name="checkmark-circle-outline" size={18} color={PRIMARY} />
-              <Text style={styles.menuItemText}>매칭완료하기</Text>
-            </TouchableOpacity>
-            <View style={styles.menuDivider} />
+            {isRequester && !chatEnded && (
+              <>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => { setMenuVisible(false); handleComplete(); }}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={18} color={PRIMARY} />
+                  <Text style={styles.menuItemText}>매칭완료하기</Text>
+                </TouchableOpacity>
+                <View style={styles.menuDivider} />
+              </>
+            )}
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => { setMenuVisible(false); handleLeave(); }}
