@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getHelpRequests, cancelHelpRequest } from '../../services/helpService';
+import { getHelpRequests, cancelHelpRequest, getHelpedRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import type { HelpCategory, HelpRequest } from '../../types';
@@ -67,6 +67,7 @@ export default function HomeScreen() {
   const { user } = useAuthStore();
   const { hasUnreadForUser } = useNotificationStore();
   const [requests, setRequests]         = useState<HelpRequest[]>([]);
+  const [completedCount, setCompletedCount] = useState(0);
   const [isLoading, setIsLoading]       = useState(true);
   const [refreshing, setRefreshing]     = useState(false);
   const [catFilter]                      = useState<CategoryFilter>('ALL');
@@ -94,8 +95,14 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
 
   const fetchRequests = useCallback(async () => {
     try {
-      const res = await getHelpRequests();
-      if (res.success) setRequests(res.data);
+      const [reqRes, helpedRes] = await Promise.allSettled([
+        getHelpRequests(),
+        getHelpedRequests(),
+      ]);
+      if (reqRes.status === 'fulfilled' && reqRes.value.success) setRequests(reqRes.value.data);
+      if (helpedRes.status === 'fulfilled' && helpedRes.value.success) {
+        setCompletedCount(helpedRes.value.data.filter(r => r.status === 'COMPLETED').length);
+      }
     } catch {
       setRequests([]);
     } finally {
@@ -119,7 +126,7 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
 
   // Streak dots (based on helpCount, max 7)
   const helpCount  = user?.helpCount ?? 0;
-  const streakDays = Math.min(helpCount, 7);
+  const streakDays = Math.min(completedCount, 7);
 
   const filtered = requests
     .filter(r => r.status !== 'CANCELLED')
@@ -251,15 +258,15 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
           </View>
 
           {/* 카드 2: 완료한 도움 */}
-          {(() => { const lv = getLevel(helpCount); return (
+          {(() => { const lv = getLevel(completedCount); return (
           <View style={s.streakCard}>
             <View style={s.streakLeft}>
               <View style={[s.streakEmoji, { backgroundColor: lv.bg }]}>
                 <Ionicons name="ribbon" size={20} color={lv.color} />
               </View>
               <View>
-                <Text style={s.streakTitle}>완료한 도움 {helpCount}회</Text>
-                <Text style={s.streakSub}>이번달 {monthCount}건 포함</Text>
+                <Text style={s.streakTitle}>완료한 도움 {completedCount}회</Text>
+                <Text style={s.streakSub}>목표 완료까지 {Math.max(0, HELP_GOAL - completedCount)}회 남았어요!</Text>
               </View>
             </View>
             <View style={[s.levelBadge, { backgroundColor: lv.bg, borderColor: lv.color }]}>
@@ -312,10 +319,10 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
               <View style={s.progressSection}>
                 <View style={s.progressLabelRow}>
                   <Text style={s.progressLabel}>이번달 도움 목표</Text>
-                  <Text style={s.progressValue}>{monthCount} / {HELP_GOAL}</Text>
+                  <Text style={s.progressValue}>{completedCount} / {HELP_GOAL}</Text>
                 </View>
                 <View style={s.progressTrack}>
-                  <View style={[s.progressFill, { width: `${Math.min((monthCount / HELP_GOAL) * 100, 100)}%` }]} />
+                  <View style={[s.progressFill, { width: `${Math.min((completedCount / HELP_GOAL) * 100, 100)}%` }]} />
                 </View>
               </View>
               <View style={s.heroPills}>
@@ -346,7 +353,7 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
               </View>
               <View style={[s.summaryAccent, { backgroundColor: '#F97316' }]} />
               <Text style={s.summaryNum}>{activeCount}</Text>
-              <Text style={s.summarySub}>목표까지 {Math.max(0, HELP_GOAL - helpCount)}건 남음</Text>
+              <Text style={s.summarySub}>목표까지 {Math.max(0, HELP_GOAL - completedCount)}건 남음</Text>
             </View>
 
             {/* 평균 만족도 */}
