@@ -110,6 +110,12 @@ export default function MyRequestsScreen() {
               모집중 {myRequests.filter((r) => r.status === 'WAITING').length}건
             </Text>
           </View>
+          <View style={styles.summaryBadge}>
+            <Ionicons name="checkmark-circle" size={13} color="#10B981" />
+            <Text style={styles.summaryText}>
+              완료 {myRequests.filter((r) => r.status === 'COMPLETED').length}건
+            </Text>
+          </View>
         </View>
       )}
 

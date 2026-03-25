@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../../stores/authStore';
 import { useHelpHistoryStore } from '../../stores/helpHistoryStore';
+import { useHelpRequestStore } from '../../stores/helpRequestStore';
 
 // ── Design tokens (홈 화면과 동일) ──
 const BLUE     = '#3B6FE8';
@@ -34,6 +35,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, updateProfileImage, updateProfileDetail, loadUser } = useAuthStore();
   const { helpHistory, fetchHelpHistory } = useHelpHistoryStore();
+  const { myRequests, fetchMyRequests } = useHelpRequestStore();
   const [imageMenuVisible, setImageMenuVisible] = useState(false);
 
   const isKorean = user?.userType === 'KOREAN';
@@ -41,6 +43,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadUser();
     if (isKorean) fetchHelpHistory();
+    else fetchMyRequests();
   }, []);
 
   const [imageLoadError, setImageLoadError] = useState(false);
@@ -244,8 +247,8 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{isKorean ? helpHistory.filter((h) => h.status === 'COMPLETED').length : (user?.helpCount ?? 0)}</Text>
-            <Text style={styles.statLabel}>도움 횟수</Text>
+            <Text style={styles.statNumber}>{isKorean ? helpHistory.filter((h) => h.status === 'COMPLETED').length : myRequests.filter((r) => r.status === 'COMPLETED').length}</Text>
+            <Text style={styles.statLabel}>{isKorean ? '도움 횟수' : '받은 도움'}</Text>
           </View>
         </View>
       </View>
