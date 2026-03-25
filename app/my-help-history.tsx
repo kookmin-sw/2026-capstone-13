@@ -7,6 +7,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useHelpHistoryStore, type HelpHistoryItem } from '../stores/helpHistoryStore';
+import { useChatStore } from '../stores/chatStore';
+import { useAuthStore } from '../stores/authStore';
 import type { HelpCategory, HelpMethod, RequestStatus } from '../types';
 
 const PRIMARY = '#4F46E5';
@@ -48,13 +50,22 @@ function formatTime(dateStr: string): string {
 export default function MyHelpHistoryScreen() {
   const router = useRouter();
   const { helpHistory, isLoading, fetchHelpHistory } = useHelpHistoryStore();
+  const { hasLeft } = useChatStore();
+  const { user } = useAuthStore();
 
   useEffect(() => {
     fetchHelpHistory();
   }, []);
 
-  const completedCount  = helpHistory.filter((h) => h.status === 'COMPLETED').length;
-  const inProgressCount = helpHistory.filter((h) => h.status === 'IN_PROGRESS' || h.status === 'MATCHED').length;
+  // MATCHED는 항상 제외, IN_PROGRESS는 나간 방 제외, COMPLETED/CANCELLED는 항상 표시
+  const visibleHistory = helpHistory.filter((h) => {
+    if (h.status === 'MATCHED') return false;
+    if (h.status === 'COMPLETED' || h.status === 'CANCELLED') return true;
+    return !hasLeft(h.id, user?.id ?? 0);
+  });
+
+  const completedCount  = visibleHistory.filter((h) => h.status === 'COMPLETED').length;
+  const inProgressCount = visibleHistory.filter((h) => h.status === 'IN_PROGRESS').length;
 
   const renderItem = useCallback(({ item }: { item: HelpHistoryItem }) => {
     const method = METHOD_BADGE[item.helpMethod];
@@ -109,10 +120,10 @@ export default function MyHelpHistoryScreen() {
       </View>
 
       {/* 요약 */}
-      {helpHistory.length > 0 && (
+      {visibleHistory.length > 0 && (
         <View style={styles.summaryRow}>
           <View style={styles.summaryBadge}>
-            <Text style={styles.summaryText}>전체 {helpHistory.length}건</Text>
+            <Text style={styles.summaryText}>전체 {visibleHistory.length}건</Text>
           </View>
           <View style={styles.summaryBadge}>
             <View style={styles.summaryDot} />
@@ -132,7 +143,7 @@ export default function MyHelpHistoryScreen() {
       ) : null}
 
       <FlatList
-        data={helpHistory}
+        data={visibleHistory}
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.list}

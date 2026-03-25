@@ -181,6 +181,8 @@ export default function ChatRoomScreen() {
                 // 내가 보낸 나가기 메시지는 무시 (이미 router.back() 처리)
                 if (msg.senderId === user?.id) return;
                 const nickname = msg.content.slice(SYS_LEAVE.length);
+                // 상대방이 나갔을 때도 내 leftRooms에 기록
+                if (user) leaveRoom(Number(roomId), Number(user.id));
                 setChatEnded(true);
                 setSystemMessages((prev) => [
                   ...prev,
