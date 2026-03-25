@@ -56,6 +56,19 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("수정 완료", userService.updateProfile(userId, body)));
     }
 
+    // DELETE /api/users/profile-image - 프로필 이미지 삭제
+    @DeleteMapping("/profile-image")
+    public ResponseEntity<ApiResponse<UserResponse>> deleteProfileImage(
+            @RequestHeader("Authorization") String token) throws IOException {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        UserResponse current = userService.getUserById(userId);
+        if (current.getProfileImage() != null && current.getProfileImage().startsWith("/uploads/")) {
+            Path filePath = Paths.get(current.getProfileImage().substring(1));
+            Files.deleteIfExists(filePath);
+        }
+        return ResponseEntity.ok(ApiResponse.success("삭제 완료", userService.updateProfileImage(userId, null)));
+    }
+
     // POST /api/users/profile-image - 프로필 이미지 업로드
     @PostMapping("/profile-image")
     public ResponseEntity<ApiResponse<UserResponse>> uploadProfileImage(
