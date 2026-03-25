@@ -64,7 +64,7 @@ export const MethodLabels: Record<HelpMethod, string> = {
 // 상태 라벨
 export const StatusLabels: Record<RequestStatus, string> = {
   WAITING: '대기중',
-  MATCHED: '매칭됨',
+  MATCHED: '대기중',
   IN_PROGRESS: '진행중',
   COMPLETED: '완료',
   CANCELLED: '취소됨',

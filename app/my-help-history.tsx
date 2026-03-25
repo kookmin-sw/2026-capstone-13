@@ -29,7 +29,7 @@ const METHOD_BADGE: Record<HelpMethod, { bg: string; color: string; dot: string;
 
 const STATUS_CONFIG = {
   WAITING:     { label: '모집중',   bg: '#D1FAE5', color: '#065F46', icon: 'time-outline' },
-  MATCHED:     { label: '매칭됨',   bg: PRIMARY_LIGHT, color: '#3730A3', icon: 'checkmark-circle-outline' },
+  MATCHED:     { label: '대기중',   bg: PRIMARY_LIGHT, color: '#3730A3', icon: 'checkmark-circle-outline' },
   IN_PROGRESS: { label: '진행중',   bg: '#FEF3C7', color: '#92400E', icon: 'sync-outline' },
   COMPLETED:   { label: '도움 완료', bg: '#D1FAE5', color: '#065F46', icon: 'checkmark-circle' },
   CANCELLED:   { label: '취소됨',   bg: '#FEE2E2', color: '#991B1B', icon: 'close-circle-outline' },

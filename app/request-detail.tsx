@@ -232,7 +232,7 @@ export default function RequestDetailScreen() {
                 </View>
                 <View style={item.status === 'MATCHED' ? styles.tagMatched : styles.tagOpen}>
                   <Text style={item.status === 'MATCHED' ? styles.tagMatchedText : styles.tagOpenText}>
-                    {item.status === 'MATCHED' ? '매칭됨' : '모집중'}
+                    {item.status === 'MATCHED' ? '대기중' : '모집중'}
                   </Text>
                 </View>
               </View>

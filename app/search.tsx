@@ -123,7 +123,7 @@ export default function SearchScreen() {
             />
             <View style={[styles.statusBadge, isMatched ? styles.statusMatched : styles.statusOpen]}>
               <Text style={[styles.statusText, isMatched ? styles.statusMatchedText : styles.statusOpenText]}>
-                {isMatched ? '매칭됨' : '모집중'}
+                {isMatched ? '대기중' : '모집중'}
               </Text>
             </View>
           </View>
