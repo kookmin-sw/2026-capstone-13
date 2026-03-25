@@ -21,6 +21,8 @@
       "package": "com.helpboys.app",
       "permissions": [
         "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA"
       ],
       "adaptiveIcon": {
@@ -57,6 +59,12 @@
         "projectId": "19d27e71-abc6-4eaa-ab9b-43fceb895ae0"
       }
     },
-    "owner": "sangbeompark"
+    "owner": "sangbeompark",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/19d27e71-abc6-4eaa-ab9b-43fceb895ae0"
+    }
   }
 }
