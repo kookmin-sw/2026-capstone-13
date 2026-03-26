@@ -426,7 +426,7 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
       </ScrollView>
 
       {/* ── FAB ── */}
-      {user?.userType === 'INTERNATIONAL' && (
+      {user?.userType !== 'KOREAN' && (
         <View style={s.fabWrap}>
           <TouchableOpacity
             style={s.fab}

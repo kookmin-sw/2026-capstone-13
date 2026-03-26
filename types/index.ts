@@ -1,7 +1,7 @@
 // 앱 전체에서 사용하는 타입 정의
 
 // 사용자 유형
-export type UserType = 'INTERNATIONAL' | 'KOREAN';
+export type UserType = 'INTERNATIONAL' | 'EXCHANGE' | 'KOREAN';
 
 // 도움 카테고리
 export type HelpCategory = 'BANK' | 'HOSPITAL' | 'SCHOOL' | 'DAILY' | 'OTHER';
@@ -44,6 +44,7 @@ export interface RegisterRequest {
   nickname: string;
   userType: UserType;
   university: string;
+  major?: string;
 }
 
 // 도움 요청 게시글

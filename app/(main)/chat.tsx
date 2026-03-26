@@ -52,7 +52,7 @@ function avatarColor(name: string): string {
 export default function ChatScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const isInternational = user?.userType === 'INTERNATIONAL';
+  const isInternational = user?.userType !== 'KOREAN';
 
   const [requests, setRequests]     = useState<ChatRoomResponse[]>([]);
   const [isLoading, setIsLoading]   = useState(true);

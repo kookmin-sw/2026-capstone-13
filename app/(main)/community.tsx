@@ -118,9 +118,9 @@ export default function CommunityScreen() {
                 {CATEGORY_LABEL[item.category]}
               </Text>
             </View>
-            {item.userType === 'INTERNATIONAL' && (
+            {item.userType !== 'KOREAN' && (
               <View style={s.intlBadge}>
-                <Text style={s.intlBadgeText}>유학생</Text>
+                <Text style={s.intlBadgeText}>{item.userType === 'EXCHANGE' ? '교환학생' : '유학생'}</Text>
               </View>
             )}
             <View style={s.dotSep} />

@@ -201,7 +201,7 @@ export default function ProfileScreen() {
         </Text>
         <View style={styles.typeBadge}>
           <Text style={styles.typeBadgeText}>
-            {user?.userType === 'INTERNATIONAL' ? '🌍 유학생' : '🇰🇷 한국인 학생'}
+            {user?.userType === 'INTERNATIONAL' ? '🌍 유학생' : user?.userType === 'EXCHANGE' ? '✈️ 교환학생' : '🇰🇷 한국인 학생'}
           </Text>
         </View>
         <Text style={styles.university}>

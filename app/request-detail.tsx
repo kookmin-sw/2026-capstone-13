@@ -384,7 +384,7 @@ export default function RequestDetailScreen() {
             {isAccepting
               ? <ActivityIndicator color="#FFFFFF" />
               : <Text style={styles.helpBtnText}>
-                  {user?.userType === 'INTERNATIONAL' ? '내 요청이에요' : '🤝 도와드릴게요!'}
+                  {user?.userType !== 'KOREAN' ? '내 요청이에요' : '🤝 도와드릴게요!'}
                 </Text>
             }
           </TouchableOpacity>

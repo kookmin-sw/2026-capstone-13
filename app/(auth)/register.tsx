@@ -106,6 +106,42 @@ const NATIONALITIES = [
   { code: 'CM', flag: '🇨🇲', label: '카메룬' },
 ];
 
+const MAJORS = [
+  // 글로벌인문·지역대학
+  '국어국문전공', '글로벌한국어전공', '영미어문전공', '글로벌커뮤니케이션영어전공',
+  '중어중문학과', '한국역사학과',
+  // 사회과학대학
+  '행정학과', '정치외교학과', '사회학과', '미디어전공', '광고홍보학전공',
+  '교육학과', '러시아·유라시아학과', '중국학전공', '일본학전공',
+  // 경상대학
+  '경제학과', '국제통상학과',
+  // 경영대학
+  '경영학전공', '재무금융전공', '경영정보전공', 'AI빅데이터융합경영학과',
+  '회계세무학과', 'International Business',
+  // 창의공과대학
+  '신소재공학부', '기계공학부', '토목시스템공학부', '전자공학부',
+  // 과학기술대학
+  '산림환경시스템학과', '임산생명공학과', '나노전자물리학과', '응용화학부',
+  '식품영양학과', '정보보안암호수학과', '바이오발효융합학과',
+  // 건축대학
+  '건축설계전공', '건축시스템전공',
+  // 조형대학
+  '공간디자인학과', '자동차·운송디자인학과', '시각디자인학과',
+  '도자공예학과', '영상디자인학과', 'AI디자인학과',
+  // 체육대학
+  '스포츠교육전공', '스포츠산업레저전공', '스포츠건강재활전공',
+  // 예술대학
+  '성악전공', '피아노전공', '관현악전공', '작곡전공',
+  '회화전공', '입체미술전공', '연극전공', '영화전공', '무용전공',
+  // 소프트웨어융합대학
+  '소프트웨어학부', '인공지능학부',
+  // 자동차융합대학
+  '자동차공학과', '자동차IT융합학과', '미래모빌리티학과',
+  // 법과대학
+  '공법학전공', '사법학전공', '기업융합법학과',
+  '기타',
+];
+
 export default function RegisterScreen() {
   const router = useRouter();
   const { register, isLoading } = useAuthStore();
@@ -114,9 +150,12 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [nickname, setNickname] = useState('');
+  const [isForeigner, setIsForeigner] = useState<boolean | null>(null);
   const [userType, setUserType] = useState<UserType | null>(null);
   const [nationality, setNationality] = useState<string | null>(null);
   const [showNationalityModal, setShowNationalityModal] = useState(false);
+  const [major, setMajor] = useState<string | null>(null);
+  const [showMajorModal, setShowMajorModal] = useState(false);
 
   const selectedNationality = NATIONALITIES.find((n) => n.code === nationality);
 
@@ -130,7 +169,7 @@ export default function RegisterScreen() {
       Alert.alert('알림', '사용자 유형을 선택해주세요.');
       return;
     }
-    if (userType === 'INTERNATIONAL' && !nationality) {
+    if ((userType === 'INTERNATIONAL' || userType === 'EXCHANGE') && !nationality) {
       Alert.alert('알림', '국적을 선택해주세요.');
       return;
     }
@@ -149,6 +188,7 @@ export default function RegisterScreen() {
       nickname,
       userType,
       university: '국민대학교',
+      major: major ?? undefined,
     });
 
     if (success) {
@@ -183,18 +223,17 @@ export default function RegisterScreen() {
           <TouchableOpacity
             style={[
               styles.typeButton,
-              userType === 'INTERNATIONAL' && styles.typeButtonActive,
+              isForeigner === true && styles.typeButtonActive,
             ]}
-            onPress={() => setUserType('INTERNATIONAL')}
+            onPress={() => {
+              setIsForeigner(true);
+              setUserType(null);
+              setNationality(null);
+            }}
           >
             <Text style={styles.typeEmoji}>🌍</Text>
-            <Text
-              style={[
-                styles.typeText,
-                userType === 'INTERNATIONAL' && styles.typeTextActive,
-              ]}
-            >
-              유학생
+            <Text style={[styles.typeText, isForeigner === true && styles.typeTextActive]}>
+              외국인
             </Text>
             <Text style={styles.typeDesc}>도움을 요청합니다</Text>
           </TouchableOpacity>
@@ -202,25 +241,46 @@ export default function RegisterScreen() {
           <TouchableOpacity
             style={[
               styles.typeButton,
-              userType === 'KOREAN' && styles.typeButtonActive,
+              isForeigner === false && styles.typeButtonActive,
             ]}
-            onPress={() => setUserType('KOREAN')}
+            onPress={() => {
+              setIsForeigner(false);
+              setUserType('KOREAN');
+              setNationality(null);
+            }}
           >
             <Text style={styles.typeEmoji}>🇰🇷</Text>
-            <Text
-              style={[
-                styles.typeText,
-                userType === 'KOREAN' && styles.typeTextActive,
-              ]}
-            >
+            <Text style={[styles.typeText, isForeigner === false && styles.typeTextActive]}>
               한국인 학생
             </Text>
             <Text style={styles.typeDesc}>도움을 제공합니다</Text>
           </TouchableOpacity>
         </View>
 
-        {/* 국적 선택 (유학생 선택 시에만 표시) */}
-        {userType === 'INTERNATIONAL' && (
+        {/* 외국인 선택 시 유학생/교환학생 서브 선택 */}
+        {isForeigner === true && (
+          <View style={styles.subTypeContainer}>
+            <TouchableOpacity
+              style={[styles.subTypeButton, userType === 'INTERNATIONAL' && styles.subTypeButtonActive]}
+              onPress={() => setUserType('INTERNATIONAL')}
+            >
+              <Text style={[styles.subTypeText, userType === 'INTERNATIONAL' && styles.subTypeTextActive]}>
+                📚 유학생
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.subTypeButton, userType === 'EXCHANGE' && styles.subTypeButtonActive]}
+              onPress={() => setUserType('EXCHANGE')}
+            >
+              <Text style={[styles.subTypeText, userType === 'EXCHANGE' && styles.subTypeTextActive]}>
+                ✈️ 교환학생
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* 국적 선택 (외국인 선택 시에만 표시) */}
+        {(userType === 'INTERNATIONAL' || userType === 'EXCHANGE') && (
           <View style={styles.nationalityContainer}>
             <Text style={styles.label}>국적</Text>
             <TouchableOpacity
@@ -238,6 +298,65 @@ export default function RegisterScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* 전공 선택 (사용자 유형 선택 시에만 표시) */}
+        {userType !== null && (
+          <View style={styles.nationalityContainer}>
+            <Text style={styles.label}>전공학과</Text>
+            <TouchableOpacity
+              style={styles.nationalitySelector}
+              onPress={() => setShowMajorModal(true)}
+            >
+              {major ? (
+                <Text style={styles.nationalitySelectorValue}>{major}</Text>
+              ) : (
+                <Text style={styles.nationalitySelectorPlaceholder}>전공학과를 선택하세요</Text>
+              )}
+              <Ionicons name="chevron-down" size={18} color={Colors.textLight} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* 전공 선택 모달 */}
+        <Modal
+          visible={showMajorModal}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setShowMajorModal(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowMajorModal(false)}
+          >
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>전공학과 선택</Text>
+                <TouchableOpacity onPress={() => setShowMajorModal(false)}>
+                  <Ionicons name="close" size={24} color={Colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={MAJORS}
+                keyExtractor={(item) => item}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.modalItem, major === item && styles.modalItemActive]}
+                    onPress={() => { setMajor(item); setShowMajorModal(false); }}
+                  >
+                    <Text style={[styles.modalItemLabel, major === item && styles.modalItemLabelActive]}>
+                      {item}
+                    </Text>
+                    {major === item && (
+                      <Ionicons name="checkmark" size={20} color={Colors.primary} style={styles.modalItemCheck} />
+                    )}
+                  </TouchableOpacity>
+                )}
+                ItemSeparatorComponent={() => <View style={styles.modalDivider} />}
+              />
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         {/* 국적 선택 모달 */}
         <Modal
@@ -416,6 +535,32 @@ const styles = StyleSheet.create({
   typeDesc: {
     fontSize: 12,
     color: Colors.textSecondary,
+  },
+  subTypeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  subTypeButton: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.border,
+  },
+  subTypeButtonActive: {
+    borderColor: Colors.primary,
+    backgroundColor: '#EBF5FF',
+  },
+  subTypeText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  subTypeTextActive: {
+    color: Colors.primary,
   },
   nationalityContainer: {
     marginTop: 4,

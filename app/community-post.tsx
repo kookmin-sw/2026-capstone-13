@@ -136,9 +136,9 @@ export default function CommunityPostScreen() {
             <View style={s.catBadge}>
               <Text style={s.catBadgeText}>{CATEGORY_LABEL[post.category]}</Text>
             </View>
-            {post.userType === 'INTERNATIONAL' && (
+            {post.userType !== 'KOREAN' && (
               <View style={s.intlBadge}>
-                <Text style={s.intlBadgeText}>유학생</Text>
+                <Text style={s.intlBadgeText}>{post.userType === 'EXCHANGE' ? '교환학생' : '유학생'}</Text>
               </View>
             )}
           </View>
@@ -202,9 +202,9 @@ export default function CommunityPostScreen() {
                 <View style={s.commentBody}>
                   <View style={s.commentMeta}>
                     <Text style={s.commentAuthor}>{c.author}</Text>
-                    {c.userType === 'INTERNATIONAL' && (
+                    {c.userType !== 'KOREAN' && (
                       <View style={s.commentIntlBadge}>
-                        <Text style={s.commentIntlBadgeText}>유학생</Text>
+                        <Text style={s.commentIntlBadgeText}>{c.userType === 'EXCHANGE' ? '교환학생' : '유학생'}</Text>
                       </View>
                     )}
                     <Text style={s.commentTime}>{formatTime(c.createdAt)}</Text>
