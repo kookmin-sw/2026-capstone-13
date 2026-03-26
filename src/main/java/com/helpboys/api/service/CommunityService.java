@@ -12,6 +12,7 @@ import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.CommunityPostRepository;
 import com.helpboys.api.repository.PostCommentRepository;
 import com.helpboys.api.repository.PostLikeRepository;
+import com.helpboys.api.repository.UserBlockRepository;
 import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,13 +31,16 @@ public class CommunityService {
     private final PostCommentRepository postCommentRepository;
     private final PostLikeRepository postLikeRepository;
     private final UserRepository userRepository;
+    private final UserBlockRepository userBlockRepository;
     private final NotificationService notificationService;
 
-    // 게시글 목록 조회
+    // 게시글 목록 조회 (차단 유저 제외)
     @Transactional(readOnly = true)
     public List<CommunityPostResponse> getAllPosts(Long userId) {
+        List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
         return communityPostRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
+                .filter(post -> !blockedIds.contains(post.getAuthor().getId()))
                 .map(post -> CommunityPostResponse.fromList(post,
                         postLikeRepository.existsByPostIdAndUserId(post.getId(), userId)))
                 .collect(Collectors.toList());
@@ -132,11 +136,13 @@ public class CommunityService {
         return Map.of("liked", !alreadyLiked, "likes", post.getLikes());
     }
 
-    // 게시글 검색
+    // 게시글 검색 (차단 유저 제외)
     @Transactional(readOnly = true)
     public List<CommunityPostResponse> searchPosts(String keyword, Long userId) {
+        List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
         return communityPostRepository.searchByKeyword(keyword)
                 .stream()
+                .filter(post -> !blockedIds.contains(post.getAuthor().getId()))
                 .map(post -> CommunityPostResponse.fromList(post,
                         postLikeRepository.existsByPostIdAndUserId(post.getId(), userId)))
                 .collect(Collectors.toList());

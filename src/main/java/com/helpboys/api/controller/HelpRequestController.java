@@ -24,14 +24,18 @@ public class HelpRequestController {
 
     // GET /api/requests - 전체 목록 조회
     @GetMapping
-    public ResponseEntity<ApiResponse<List<HelpRequestResponse>>> getAllRequests() {
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getAllRequests()));
+    public ResponseEntity<ApiResponse<List<HelpRequestResponse>>> getAllRequests(
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getAllRequests(userId)));
     }
 
     // GET /api/requests/waiting - 대기 중인 요청만 조회
     @GetMapping("/waiting")
-    public ResponseEntity<ApiResponse<List<HelpRequestResponse>>> getWaitingRequests() {
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getWaitingRequests()));
+    public ResponseEntity<ApiResponse<List<HelpRequestResponse>>> getWaitingRequests(
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getWaitingRequests(userId)));
     }
 
     // GET /api/requests/my - 내가 등록한 요청
