@@ -73,8 +73,8 @@ public class HelpRequestService {
         User requester = userRepository.findById(requesterId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
-        if (requester.getUserType() != User.UserType.INTERNATIONAL) {
-            throw new BusinessException("도움 요청은 유학생만 등록할 수 있습니다.");
+        if (requester.getUserType() == User.UserType.KOREAN) {
+            throw new BusinessException("도움 요청은 외국인 학생만 등록할 수 있습니다.");
         }
 
         HelpRequest helpRequest = HelpRequest.builder()

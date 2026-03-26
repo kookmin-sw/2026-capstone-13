@@ -83,6 +83,6 @@ public class User {
     }
 
     public enum UserType {
-        INTERNATIONAL, KOREAN
+        INTERNATIONAL, EXCHANGE, KOREAN
     }
 }

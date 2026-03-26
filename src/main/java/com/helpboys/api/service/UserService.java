@@ -51,6 +51,7 @@ public class UserService implements UserDetailsService {
                 .nickname(request.getNickname())
                 .userType(request.getUserType())
                 .university(request.getUniversity())
+                .major(request.getMajor())
                 .build();
 
         return UserResponse.from(userRepository.save(user));

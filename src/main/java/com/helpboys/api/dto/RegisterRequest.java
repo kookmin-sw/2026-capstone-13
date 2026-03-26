@@ -25,4 +25,6 @@ public class RegisterRequest {
 
     @NotBlank(message = "대학교를 입력해주세요.")
     private String university;
+
+    private String major;
 }
