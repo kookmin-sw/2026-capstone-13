@@ -8,6 +8,29 @@ import { useAuthStore } from '../../stores/authStore';
 import { useHelpHistoryStore } from '../../stores/helpHistoryStore';
 import { useHelpRequestStore } from '../../stores/helpRequestStore';
 
+const MAJORS = [
+  '국어국문전공', '글로벌한국어전공', '영미어문전공', '글로벌커뮤니케이션영어전공',
+  '중어중문학과', '한국역사학과',
+  '행정학과', '정치외교학과', '사회학과', '미디어전공', '광고홍보학전공',
+  '교육학과', '러시아·유라시아학과', '중국학전공', '일본학전공',
+  '경제학과', '국제통상학과',
+  '경영학전공', '재무금융전공', '경영정보전공', 'AI빅데이터융합경영학과',
+  '회계세무학과', 'International Business',
+  '신소재공학부', '기계공학부', '토목시스템공학부', '전자공학부',
+  '산림환경시스템학과', '임산생명공학과', '나노전자물리학과', '응용화학부',
+  '식품영양학과', '정보보안암호수학과', '바이오발효융합학과',
+  '건축설계전공', '건축시스템전공',
+  '공간디자인학과', '자동차·운송디자인학과', '시각디자인학과',
+  '도자공예학과', '영상디자인학과', 'AI디자인학과',
+  '스포츠교육전공', '스포츠산업레저전공', '스포츠건강재활전공',
+  '성악전공', '피아노전공', '관현악전공', '작곡전공',
+  '회화전공', '입체미술전공', '연극전공', '영화전공', '무용전공',
+  '소프트웨어학부', '인공지능학부',
+  '자동차공학과', '자동차IT융합학과', '미래모빌리티학과',
+  '공법학전공', '사법학전공', '기업융합법학과',
+  '기타',
+];
+
 // ── Design tokens (홈 화면과 동일) ──
 const BLUE     = '#3B6FE8';
 const BLUE_BG  = '#F5F8FF';
@@ -62,6 +85,7 @@ export default function ProfileScreen() {
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [profileInput, setProfileInput] = useState<ProfileDetail>(EMPTY_DETAIL);
   const [hobbyInput, setHobbyInput] = useState('');
+  const [showMajorList, setShowMajorList] = useState(false);
 
   const userHobbies = user?.hobbies ? user.hobbies.split(',').filter(Boolean) : [];
 
@@ -120,7 +144,6 @@ export default function ProfileScreen() {
         text: '로그아웃', style: 'destructive',
         onPress: async () => {
           await logout();
-          router.replace('/(auth)/login');
         },
       },
     ]);
@@ -232,12 +255,12 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {filledCount < 6 && (
-          <TouchableOpacity style={styles.profileCompleteButton} onPress={handleOpenProfileModal} activeOpacity={0.8}>
-            <Ionicons name="person-add-outline" size={15} color={BLUE} />
-            <Text style={styles.profileCompleteText}>프로필 완성하기 ({filledCount}/6)</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.profileCompleteButton} onPress={handleOpenProfileModal} activeOpacity={0.8}>
+          <Ionicons name={filledCount >= 6 ? 'create-outline' : 'person-add-outline'} size={15} color={BLUE} />
+          <Text style={styles.profileCompleteText}>
+            {filledCount >= 6 ? '프로필 수정하기' : `프로필 완성하기 (${filledCount}/6)`}
+          </Text>
+        </TouchableOpacity>
 
         {/* 통계 */}
         <View style={styles.statsRow}>
@@ -313,6 +336,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </Modal>
 
+
       {/* 프로필 상세 편집 모달 */}
       <Modal transparent animationType="slide" visible={profileModalVisible} onRequestClose={() => setProfileModalVisible(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -369,12 +393,45 @@ export default function ProfileScreen() {
 
               <View style={styles.profileFieldWrap}>
                 <Text style={styles.profileFieldLabel}>학과</Text>
-                <TextInput
-                  style={styles.profileFieldInput}
-                  value={profileInput.major}
-                  onChangeText={(text) => setProfileInput((prev) => ({ ...prev, major: text }))}
-                  placeholderTextColor={BLUE_MID}
-                />
+                <TouchableOpacity
+                  style={[styles.profileFieldInput, isKorean && { backgroundColor: BORDER, opacity: 0.7 }]}
+                  onPress={() => {
+                    if (isKorean) {
+                      Alert.alert('학생증 인증 필요', '한국인 학생은 학생증 인증 후 전공을 변경할 수 있습니다.');
+                      return;
+                    }
+                    setShowMajorList((v) => !v);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ color: profileInput.major ? T1 : BLUE_MID, fontSize: 14 }}>
+                      {profileInput.major || '학과를 선택하세요'}
+                    </Text>
+                    {isKorean
+                      ? <Ionicons name="lock-closed-outline" size={16} color={BLUE_MID} />
+                      : <Ionicons name={showMajorList ? 'chevron-up' : 'chevron-down'} size={16} color={BLUE_MID} />
+                    }
+                  </View>
+                </TouchableOpacity>
+                {isKorean && (
+                  <Text style={{ fontSize: 11, color: BLUE_MID, marginTop: 4 }}>학생증 인증 후 변경 가능합니다.</Text>
+                )}
+                {showMajorList && !isKorean && (
+                  <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 12, marginTop: 4, overflow: 'hidden' }}>
+                    {MAJORS.map((item) => (
+                      <TouchableOpacity
+                        key={item}
+                        style={{ paddingHorizontal: 14, paddingVertical: 11, backgroundColor: profileInput.major === item ? BLUE_L : '#fff', borderBottomWidth: 1, borderBottomColor: BORDER }}
+                        onPress={() => { setProfileInput((prev) => ({ ...prev, major: item })); setShowMajorList(false); }}
+                      >
+                        <Text style={{ fontSize: 14, color: profileInput.major === item ? BLUE : T1, fontWeight: profileInput.major === item ? '700' : '400' }}>
+                          {item}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
 
               <View style={styles.profileFieldWrap}>
