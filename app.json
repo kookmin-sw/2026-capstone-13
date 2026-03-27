@@ -56,15 +56,15 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "19d27e71-abc6-4eaa-ab9b-43fceb895ae0"
+        "projectId": "a30c69f3-b2d0-48b8-8067-64da49168c78"
       }
     },
-    "owner": "sangbeompark",
+    "owner": "helpboys",
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/19d27e71-abc6-4eaa-ab9b-43fceb895ae0"
+      "url": "https://u.expo.dev/a30c69f3-b2d0-48b8-8067-64da49168c78"
     }
   }
 }
