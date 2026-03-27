@@ -4,6 +4,7 @@ import {
   RefreshControl, ActivityIndicator, Platform, Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getHelpRequests, cancelHelpRequest, getHelpedRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
@@ -120,6 +121,10 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
   }, []);
 
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
+
+  // 홈화면 진입 시마다 자동 새로고침
+  useFocusEffect(useCallback(() => { fetchRequests(); }, [fetchRequests]));
+
   const onRefresh = () => { setRefreshing(true); fetchRequests(); };
 
   // Stats
