@@ -100,6 +100,7 @@ public class UserService implements UserDetailsService {
         if (body.containsKey("major")) user.setMajor(body.get("major"));
         if (body.containsKey("mbti")) user.setMbti(body.get("mbti"));
         if (body.containsKey("hobbies")) user.setHobbies(body.get("hobbies"));
+        if (body.containsKey("profileImage")) user.setProfileImage(body.get("profileImage"));
         return UserResponse.from(userRepository.save(user));
     }
 
