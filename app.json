@@ -21,8 +21,6 @@
       "package": "com.helpboys.app",
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA"
       ],
       "adaptiveIcon": {
@@ -59,6 +57,7 @@
         "projectId": "a30c69f3-b2d0-48b8-8067-64da49168c78"
       }
     },
+<<<<<<< HEAD
     "owner": "helpboys",
     "runtimeVersion": {
       "policy": "appVersion"
@@ -66,5 +65,8 @@
     "updates": {
       "url": "https://u.expo.dev/a30c69f3-b2d0-48b8-8067-64da49168c78"
     }
+=======
+    "owner": "helpboys"
+>>>>>>> 5226d2f539ce65ef15a71c1676a835088ce1ca1d
   }
 }

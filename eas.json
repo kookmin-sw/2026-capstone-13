@@ -8,10 +8,17 @@
       "distribution": "internal"
     },
     "preview": {
+<<<<<<< HEAD
       "channel": "preview",
       "distribution": "internal",
+=======
+      "distribution": "store",
+>>>>>>> 5226d2f539ce65ef15a71c1676a835088ce1ca1d
       "ios": {
         "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
       }
     },
     "production": {
