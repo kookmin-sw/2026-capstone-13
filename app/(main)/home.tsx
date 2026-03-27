@@ -10,6 +10,7 @@ import { getHelpRequests, cancelHelpRequest, getHelpedRequests } from '../../ser
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useChatStore } from '../../stores/chatStore';
+import { CategoryLabels } from '../../constants/colors';
 import type { HelpCategory, HelpRequest } from '../../types';
 
 // ── Design tokens ──
@@ -197,9 +198,9 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
         <View style={s.cardContent}>
           <View style={s.cardHeader}>
             <View style={s.cardHeaderLeft}>
-              <View style={[s.badge, { backgroundColor: CARD_BADGE_BG[type] }]}>
-                <Text style={[s.badgeText, { color: CARD_BADGE_FG[type] }]}>
-                  {CARD_BADGE_LABEL[type]}
+              <View style={[s.badge, { backgroundColor: BLUE_L }]}>
+                <Text style={[s.badgeText, { color: BLUE }]}>
+                  {CategoryLabels[item.category].replace(/\S+\s/, '')}
                 </Text>
               </View>
               <Text style={s.timeText}>{formatTime(item.createdAt)}</Text>
