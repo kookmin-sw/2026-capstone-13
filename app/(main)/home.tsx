@@ -194,7 +194,12 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'WAITING' | 'COMPLETED'
         onPress={() => goTo(item)}
         activeOpacity={0.85}
       >
-        <View style={[s.cardBar, { backgroundColor: CARD_BAR[type] }]} />
+        <View style={[s.cardBar, {
+          backgroundColor:
+            item.status === 'COMPLETED' ? '#F3F4F6' :
+            item.status === 'IN_PROGRESS' || item.status === 'MATCHED' ? '#FFF3E8' :
+            '#D1FAE5'
+        }]} />
         <View style={s.cardContent}>
           <View style={s.cardHeader}>
             <View style={s.cardHeaderLeft}>
