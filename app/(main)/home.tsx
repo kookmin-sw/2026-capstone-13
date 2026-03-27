@@ -81,7 +81,7 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading]       = useState(true);
   const [refreshing, setRefreshing]     = useState(false);
   const [catFilter]                      = useState<CategoryFilter>('ALL');
-const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('ALL');
+const [statusFilter, setStatusFilter] = useState<'ALL' | 'WAITING' | 'COMPLETED'>('ALL');
 
   const bannerRef = useRef<ScrollView>(null);
   const bannerIndex = useRef(0);
@@ -156,8 +156,8 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
     })
     .filter(r => catFilter === 'ALL' || r.category === catFilter)
     .filter(r => {
-      if (statusFilter === 'MATCHED') return r.status === 'MATCHED';
-      if (statusFilter === 'URGENT')  return r.status === 'WAITING' && isUrgent(r.createdAt);
+      if (statusFilter === 'WAITING')   return r.status === 'WAITING' || r.status === 'IN_PROGRESS' || r.status === 'MATCHED';
+      if (statusFilter === 'COMPLETED') return r.status === 'COMPLETED';
       return true;
     })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -403,7 +403,7 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
 
           {/* 필터 칩 */}
           <View style={s.filterRow}>
-            {(['ALL', 'MATCHED', 'URGENT'] as const).map(key => (
+            {(['ALL', 'WAITING', 'COMPLETED'] as const).map(key => (
               <TouchableOpacity
                 key={key}
                 style={[s.chip, statusFilter === key && s.chipOn]}
@@ -411,7 +411,7 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
                 activeOpacity={0.8}
               >
                 <Text style={[s.chipText, statusFilter === key && s.chipTextOn]}>
-                  {key === 'ALL' ? '전체' : key === 'MATCHED' ? '매칭중' : '긴급'}
+                  {key === 'ALL' ? '전체' : key === 'WAITING' ? '모집중' : '모집완료'}
                 </Text>
               </TouchableOpacity>
             ))}
