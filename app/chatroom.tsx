@@ -37,8 +37,9 @@ type ListItem = ChatMessageDto | { type: 'date'; label: string; id: string } | {
 
 function formatTime(iso: string): string {
   try {
-    const d = new Date(iso);
-    return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    const utc = iso.includes('Z') || iso.includes('+') ? iso : iso + 'Z';
+    const d = new Date(utc);
+    return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' });
   } catch {
     return '';
   }
