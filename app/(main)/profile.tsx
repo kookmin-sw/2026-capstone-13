@@ -339,7 +339,7 @@ export default function ProfileScreen() {
 
       {/* 프로필 상세 편집 모달 */}
       <Modal transparent animationType="slide" visible={profileModalVisible} onRequestClose={() => setProfileModalVisible(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={styles.profileSheet}>
             <View style={styles.bottomSheetHandle} />
             <Text style={styles.bottomSheetTitle}>프로필 완성하기</Text>
