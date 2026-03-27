@@ -72,7 +72,7 @@ export default function MyHelpHistoryScreen() {
     const status = STATUS_CONFIG[item.status as RequestStatus];
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity style={styles.card} onPress={() => router.push({ pathname: '/request-detail', params: { id: item.id } })} activeOpacity={0.85}>
         {/* 카테고리 아이콘 */}
         <View style={[styles.cardIcon, { backgroundColor: CATEGORY_BG[item.category] }]}>
           <Text style={styles.cardIconEmoji}>{CATEGORY_EMOJI[item.category]}</Text>
@@ -104,9 +104,9 @@ export default function MyHelpHistoryScreen() {
             </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
-  }, []);
+  }, [router]);
 
   return (
     <View style={styles.container}>
