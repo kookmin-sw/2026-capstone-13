@@ -207,15 +207,18 @@ const [statusFilter, setStatusFilter] = useState<'ALL' | 'MATCHED' | 'URGENT'>('
             <View style={
               item.status === 'COMPLETED' ? s.statusBadgeGray :
               item.status === 'IN_PROGRESS' ? s.statusBadgeOrange :
+              item.status === 'MATCHED' ? s.statusBadgeOrange :
               s.statusBadgeGreen
             }>
               <Text style={
                 item.status === 'COMPLETED' ? s.statusTextGray :
                 item.status === 'IN_PROGRESS' ? s.statusTextOrange :
+                item.status === 'MATCHED' ? s.statusTextOrange :
                 s.statusTextGreen
               }>
                 {item.status === 'COMPLETED' ? '모집완료' :
-                 item.status === 'IN_PROGRESS' ? '진행중' : '모집중'}
+                 item.status === 'IN_PROGRESS' ? '진행중' :
+                 item.status === 'MATCHED' ? '대기중' : '모집중'}
               </Text>
             </View>
           </View>

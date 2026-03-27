@@ -230,9 +230,21 @@ export default function RequestDetailScreen() {
                 <View style={styles.tagCat}>
                   <Text style={styles.tagCatText}>{CategoryLabels[item.category].replace(/\S+\s/, '')}</Text>
                 </View>
-                <View style={item.status === 'MATCHED' ? styles.tagMatched : styles.tagOpen}>
-                  <Text style={item.status === 'MATCHED' ? styles.tagMatchedText : styles.tagOpenText}>
-                    {item.status === 'MATCHED' ? '대기중' : '모집중'}
+                <View style={
+                  item.status === 'MATCHED' ? styles.tagMatched :
+                  item.status === 'IN_PROGRESS' ? { backgroundColor: '#FFF3E8', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 } :
+                  item.status === 'COMPLETED' ? { backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 } :
+                  styles.tagOpen
+                }>
+                  <Text style={
+                    item.status === 'MATCHED' ? styles.tagMatchedText :
+                    item.status === 'IN_PROGRESS' ? { fontSize: 11, fontWeight: '600', color: '#C45A10' } :
+                    item.status === 'COMPLETED' ? { fontSize: 11, fontWeight: '600', color: '#6B7280' } :
+                    styles.tagOpenText
+                  }>
+                    {item.status === 'COMPLETED' ? '모집완료' :
+                     item.status === 'IN_PROGRESS' ? '진행중' :
+                     item.status === 'MATCHED' ? '대기중' : '모집중'}
                   </Text>
                 </View>
               </View>
