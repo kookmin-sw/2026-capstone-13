@@ -548,19 +548,19 @@ export default function ChatRoomScreen() {
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.actionBtn} onPress={handleVoiceCall}>
-            <Ionicons name="call-outline" size={18} color="#6B9DF0" />
+            <Ionicons name="call-outline" size={15} color="#6B9DF0" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={handleVideoCall}>
-            <Ionicons name="videocam-outline" size={18} color="#6B9DF0" />
+            <Ionicons name="videocam-outline" size={15} color="#6B9DF0" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, translateEnabled && styles.actionBtnActive]}
             onPress={() => setTranslateEnabled((prev) => !prev)}
           >
-            <Ionicons name="language-outline" size={18} color={translateEnabled ? '#fff' : '#6B9DF0'} />
+            <Ionicons name="language-outline" size={15} color={translateEnabled ? '#fff' : '#6B9DF0'} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={() => setMenuVisible(true)}>
-            <Ionicons name="ellipsis-vertical" size={18} color="#6B9DF0" />
+            <Ionicons name="ellipsis-vertical" size={15} color="#6B9DF0" />
           </TouchableOpacity>
         </View>
       </View>
@@ -770,9 +770,9 @@ const styles = StyleSheet.create({
   headerName: { fontSize: 17, fontWeight: '800', color: '#0C1C3C' },
   headerSub: { fontSize: 13, color: '#22C55E', fontWeight: '600' },
   headerSubOffline: { color: '#A8C8FA' },
-  headerActions: { flexDirection: 'row', gap: 8 },
+  headerActions: { flexDirection: 'row', gap: 4 },
   actionBtn: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 32, height: 32, borderRadius: 16,
     backgroundColor: PRIMARY_LIGHT,
     justifyContent: 'center', alignItems: 'center',
   },
