@@ -122,59 +122,43 @@ Respond ONLY with the explanation or "null". No extra text."""
     
     async def _azure_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
         """
-        실제 Azure Translator API 호출
+        실제 Azure Translator API 호출 (requests 사용)
         """
-        import aiohttp
-        
-        # API 엔드포인트
-        path = '/translate'
-        constructed_url = self.azure_endpoint + path
-        
-        # 요청 파라미터
-        params = {
-            'api-version': '3.0',
-            'to': target_lang
-        }
-        
+        import requests as req
+
+        url = self.azure_endpoint + '/translate'
+        params = {'api-version': '3.0', 'to': target_lang}
         if source_lang:
             params['from'] = source_lang
-        
-        # 요청 헤더
+
         headers = {
             'Ocp-Apim-Subscription-Key': self.azure_key,
             'Ocp-Apim-Subscription-Region': self.azure_region,
-            'Content-type': 'application/json'
+            'Content-Type': 'application/json',
         }
-        
-        # 요청 본문
         body = [{'text': text}]
-        
+
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(constructed_url, params=params, headers=headers, json=body) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        
-                        # Azure 응답 파싱
-                        translation = result[0]['translations'][0]
-                        detected_lang = result[0].get('detectedLanguage', {}).get('language', source_lang or 'unknown')
-                        
-                        return {
-                            "original": text,
-                            "translated": translation['text'],
-                            "source_language": detected_lang,
-                            "target_language": target_lang,
-                            "mode": "azure"
-                        }
-                    else:
-                        error_text = await response.text()
-                        print(f"❌ Azure API 에러: {response.status} - {error_text}")
-                        # 에러 시 더미 모드로 폴백
-                        return self._dummy_translate(text, target_lang, source_lang)
-        
+            response = await asyncio.to_thread(
+                lambda: req.post(url, params=params, headers=headers, json=body, timeout=10)
+            )
+            if response.status_code == 200:
+                result = response.json()
+                translation = result[0]['translations'][0]
+                detected_lang = result[0].get('detectedLanguage', {}).get('language', source_lang or 'unknown')
+                return {
+                    "original": text,
+                    "translated": translation['text'],
+                    "source_language": detected_lang,
+                    "target_language": target_lang,
+                    "mode": "azure"
+                }
+            else:
+                print(f"❌ Azure API 에러: {response.status_code} - {response.text}")
+                return self._dummy_translate(text, target_lang, source_lang)
+
         except Exception as e:
             print(f"❌ Azure API 호출 실패: {str(e)}")
-            # 에러 시 더미 모드로 폴백
             return self._dummy_translate(text, target_lang, source_lang)
 
 # 싱글톤 인스턴스 생성
