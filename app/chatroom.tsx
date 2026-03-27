@@ -176,7 +176,7 @@ export default function ChatRoomScreen() {
                   ...prev,
                   { type: 'system', content: `${nickname}님이 채팅방을 나갔습니다`, id: `sys-leave-${Date.now()}` },
                 ]);
-                setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+                setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 100);
                 return;
               }
 
@@ -191,7 +191,7 @@ export default function ChatRoomScreen() {
                 if (isDuplicate) return prev;
                 return [...prev, msg];
               });
-              setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+              setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 100);
             } catch {
               // 파싱 오류 무시
             }
@@ -289,7 +289,7 @@ export default function ChatRoomScreen() {
           ...prev,
           { type: 'system', content: '✅ 도움이 수락되었습니다! 채팅을 시작해보세요 🎉', id: `sys-${Date.now()}` },
         ]);
-        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
+        setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 150);
       } else {
         Alert.alert('실패', res.message);
       }
@@ -436,7 +436,7 @@ export default function ChatRoomScreen() {
                   ...prev,
                   { type: 'system', content: '🎉 매칭이 완료되었습니다!', id: `sys-complete-${Date.now()}` },
                 ]);
-                setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
+                setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 150);
               } else {
                 Alert.alert('실패', res.message);
               }
@@ -623,7 +623,8 @@ export default function ChatRoomScreen() {
       ) : (
         <FlatList
           ref={listRef}
-          data={listData}
+          data={[...listData].reverse()}
+          inverted
           renderItem={renderItem}
           keyExtractor={(item) =>
             'type' in item ? item.id : `${item.senderId}-${item.createdAt}-${item.content.slice(0, 8)}`
@@ -632,13 +633,6 @@ export default function ChatRoomScreen() {
             styles.messageList,
             listData.length <= 1 && styles.messageListEmpty,
           ]}
-          onContentSizeChange={() => {
-            if (helpStatus === 'MATCHED') {
-              listRef.current?.scrollToOffset({ offset: 0, animated: false });
-            } else {
-              listRef.current?.scrollToEnd({ animated: false });
-            }
-          }}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={helpStatus === 'MATCHED' ? (
             <View style={styles.noticeBanner}>
