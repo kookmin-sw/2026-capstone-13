@@ -19,7 +19,7 @@ public class AgoraService {
     private static final int TOKEN_EXPIRE_SECONDS = 3600; // 1시간
 
     public AgoraTokenResponse generateToken(String channelName, Long userId) {
-        int uid = userId.intValue();
+        int uid = 0; // uid=0이면 어떤 UID로든 채널 입장 가능
         try {
             String token = AgoraTokenUtil.buildRtcToken(appId, appCertificate, channelName, uid, TOKEN_EXPIRE_SECONDS);
             return new AgoraTokenResponse(token, channelName, uid);
