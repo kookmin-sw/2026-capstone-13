@@ -3,8 +3,11 @@ package com.helpboys.api.controller;
 import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.HelpRequestRequest;
 import com.helpboys.api.dto.HelpRequestResponse;
+import com.helpboys.api.dto.ReviewRequest;
+import com.helpboys.api.dto.ReviewResponse;
 import com.helpboys.api.entity.HelpRequest;
 import com.helpboys.api.service.HelpRequestService;
+import com.helpboys.api.service.ReviewService;
 import com.helpboys.api.util.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +23,7 @@ import java.util.List;
 public class HelpRequestController {
 
     private final HelpRequestService helpRequestService;
+    private final ReviewService reviewService;
     private final JwtUtil jwtUtil;
 
     // GET /api/requests - 전체 목록 조회
@@ -117,6 +121,17 @@ public class HelpRequestController {
             @RequestHeader("Authorization") String token) {
         Long userId = extractUserId(token);
         return ResponseEntity.ok(ApiResponse.success("상태가 변경되었습니다.", helpRequestService.updateStatus(id, status, userId)));
+    }
+
+    // POST /api/requests/{id}/review - 리뷰 작성 (요청자만, 완료된 요청에 한해)
+    @PostMapping("/{id}/review")
+    public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
+            @PathVariable Long id,
+            @Valid @RequestBody ReviewRequest request,
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("리뷰가 등록되었습니다.", reviewService.createReview(id, request, userId)));
     }
 
     private Long extractUserId(String bearerToken) {
