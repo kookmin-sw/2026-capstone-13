@@ -12,8 +12,10 @@ import java.util.Base64;
 import java.util.TreeMap;
 import java.util.zip.Deflater;
 
-// Agora AccessToken2 (version 007) 토큰 생성 유틸리티
-// 공식 스펙: https://github.com/AgoraIO/Tools/tree/master/DynamicKey/AgoraDynamicKey/java
+/**
+ * Agora AccessToken2 (version 007) 토큰 생성 유틸리티
+ * 공식 스펙 기반: github.com/AgoraIO/Tools/DynamicKey/AgoraDynamicKey/java
+ */
 public class AgoraTokenUtil {
 
     private static final String VERSION = "007";
@@ -29,32 +31,34 @@ public class AgoraTokenUtil {
         int expire = issueTs + expireSeconds;
         int salt = new SecureRandom().nextInt(99999999) + 1;
 
-        // body 패킹
+        // 1. content buffer: appId + issueTs + expire + salt + serviceCount + services
         byte[] serviceBytes = packRtcService(channelName, String.valueOf(uid), expire);
-        ByteArrayOutputStream body = new ByteArrayOutputStream();
-        body.write(packUInt32(issueTs));
-        body.write(packUInt32(expire));
-        body.write(packUInt32(salt));
-        body.write(packUInt16(1)); // service count
-        body.write(serviceBytes);
-        byte[] bodyBytes = body.toByteArray();
-
-        // 서명: HMAC-SHA256(HMAC-SHA256(appCertificate, appId+issueTs+salt), body)
-        byte[] signingKey = hmacSha256(
-                appCertificate.getBytes(StandardCharsets.UTF_8),
-                (appId + issueTs + salt).getBytes(StandardCharsets.UTF_8)
-        );
-        byte[] signature = hmacSha256(signingKey, bodyBytes);
-
-        // content = packString(signature) + body (길이 prefix 없음)
         ByteArrayOutputStream content = new ByteArrayOutputStream();
-        content.write(packUInt16(signature.length));
-        content.write(signature);
-        content.write(bodyBytes);
+        content.write(packString(appId));
+        content.write(packUInt32(issueTs));
+        content.write(packUInt32(expire));
+        content.write(packUInt32(salt));
+        content.write(packUInt16(1)); // service count = 1
+        content.write(serviceBytes);
+        byte[] contentBytes = content.toByteArray();
 
-        // zlib 압축 후 base64 인코딩
-        byte[] compressed = zlibCompress(content.toByteArray());
-        return VERSION + appId + Base64.getEncoder().encodeToString(compressed);
+        // 2. 서명 키 생성 (공식 스펙)
+        // Stage 1: HMAC-SHA256(key=LE4(issueTs), msg=appCertificate)
+        byte[] stage1 = hmacSha256(packUInt32(issueTs), appCertificate.getBytes(StandardCharsets.UTF_8));
+        // Stage 2: HMAC-SHA256(key=LE4(salt), msg=stage1)
+        byte[] signingKey = hmacSha256(packUInt32(salt), stage1);
+
+        // 3. 서명: HMAC-SHA256(signingKey, contentBytes)
+        byte[] signature = hmacSha256(signingKey, contentBytes);
+
+        // 4. 최종 버퍼: signature(32bytes) + contentBytes
+        ByteArrayOutputStream finalBuf = new ByteArrayOutputStream();
+        finalBuf.write(signature);
+        finalBuf.write(contentBytes);
+
+        // 5. zlib 압축 → base64
+        byte[] compressed = zlibCompress(finalBuf.toByteArray());
+        return VERSION + Base64.getEncoder().encodeToString(compressed);
     }
 
     private static byte[] packRtcService(String channelName, String uid, int expire) throws IOException {
@@ -89,8 +93,7 @@ public class AgoraTokenUtil {
         ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length);
         byte[] buf = new byte[1024];
         while (!deflater.finished()) {
-            int count = deflater.deflate(buf);
-            bos.write(buf, 0, count);
+            bos.write(buf, 0, deflater.deflate(buf));
         }
         deflater.end();
         return bos.toByteArray();
