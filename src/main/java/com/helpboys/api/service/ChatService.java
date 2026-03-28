@@ -131,7 +131,7 @@ public class ChatService {
                             .orElse(null);
                     return ChatRoomResponse.from(
                             req, userId,
-                            last != null ? last.getContent() : null,
+                            last != null ? resolveLastMessagePreview(last.getContent()) : null,
                             last != null ? last.getCreatedAt().toString() : null
                     );
                 })
@@ -161,7 +161,7 @@ public class ChatService {
                             .orElse(null);
                     return ChatRoomResponse.from(
                             req, userId,
-                            last != null ? last.getContent() : null,
+                            last != null ? resolveLastMessagePreview(last.getContent()) : null,
                             last != null ? last.getCreatedAt().toString() : null
                     );
                 })
@@ -185,7 +185,7 @@ public class ChatService {
                 .orElse(null);
         return ChatRoomResponse.from(
                 req, userId,
-                last != null ? last.getContent() : null,
+                last != null ? resolveLastMessagePreview(last.getContent()) : null,
                 last != null ? last.getCreatedAt().toString() : null
         );
     }
@@ -280,6 +280,15 @@ public class ChatService {
         messagingTemplate.convertAndSend("/topic/chat/" + roomId, dto);
 
         return dto;
+    }
+
+    // 시스템 메시지를 읽을 수 있는 텍스트로 변환 (채팅방 목록 미리보기용)
+    private String resolveLastMessagePreview(String content) {
+        if (content == null) return null;
+        if (content.startsWith("SYS_CALL_VOICE:")) return "[음성 통화]";
+        if (content.startsWith("SYS_CALL_VIDEO:")) return "[영상 통화]";
+        if (content.startsWith("SYS_LEAVE:")) return "[채팅방을 나갔습니다]";
+        return content;
     }
 
     // 채팅방 메시지 이력 조회

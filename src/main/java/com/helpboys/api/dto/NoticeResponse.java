@@ -22,7 +22,7 @@ public class NoticeResponse {
 
     public static NoticeResponse from(Notice notice, String langCode) {
         Map<String, String> translations = notice.getTranslations().stream()
-                .collect(Collectors.toMap(t -> t.getLangCode(), t -> t.getTitle()));
+                .collect(Collectors.toMap(t -> t.getLangCode(), t -> t.getTitle(), (a, b) -> a));
 
         String translatedTitle = translations.getOrDefault(langCode,
                 translations.getOrDefault("en", notice.getTitleKo()));
