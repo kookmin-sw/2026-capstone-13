@@ -105,6 +105,9 @@ public class ChatService {
 
         ChatMessage saved = chatMessageRepository.save(message);
 
+        // 수신자에게 실시간 unreadCount 갱신 이벤트 전송
+        notifyUnreadCount(dto.getRoomId(), dto.getSenderId());
+
         return ChatMessageDto.builder()
                 .roomId(saved.getRoomId())
                 .senderId(sender.getId())
@@ -118,14 +121,47 @@ public class ChatService {
                 .build();
     }
 
-    // 채팅방 메시지 읽음 처리 → WebSocket으로 상대방에게 읽음 이벤트 전파
+    // 수신자의 개인 채널(/topic/user/{receiverId})로 unreadCount 이벤트 전송
+    private void notifyUnreadCount(Long roomId, Long senderId) {
+        try {
+            HelpRequest room = helpRequestRepository.findById(roomId).orElse(null);
+            if (room == null) return;
+
+            User receiver = room.getRequester().getId().equals(senderId)
+                    ? room.getHelper()
+                    : room.getRequester();
+            if (receiver == null) return;
+
+            long unreadCount = chatMessageRepository
+                    .countByRoomIdAndSender_IdNotAndIsReadFalse(roomId, receiver.getId());
+
+            messagingTemplate.convertAndSend("/topic/user/" + receiver.getId(),
+                    java.util.Map.of(
+                            "type", "UNREAD_UPDATE",
+                            "roomId", roomId,
+                            "unreadCount", unreadCount
+                    ));
+        } catch (Exception e) {
+            log.warn("[채팅] unreadCount 알림 전송 실패: {}", e.getMessage());
+        }
+    }
+
+    // 채팅방 메시지 읽음 처리 → WebSocket으로 이벤트 전파
     @Transactional
     public void markAsRead(Long roomId, Long userId) {
         int updated = chatMessageRepository.markAsRead(roomId, userId);
         if (updated > 0) {
-            // 상대방 화면에서 "1" 제거하도록 읽음 이벤트 브로드캐스트
+            // 1) 채팅방 채널: 상대방 화면에서 메시지 옆 "1" 제거
             messagingTemplate.convertAndSend("/topic/chat/" + roomId,
                     java.util.Map.of("type", "READ", "readerId", userId, "roomId", roomId));
+
+            // 2) 내 개인 채널: 채팅방 목록 뱃지를 즉시 0으로 갱신
+            messagingTemplate.convertAndSend("/topic/user/" + userId,
+                    java.util.Map.of(
+                            "type", "UNREAD_UPDATE",
+                            "roomId", roomId,
+                            "unreadCount", 0
+                    ));
         }
     }
 
