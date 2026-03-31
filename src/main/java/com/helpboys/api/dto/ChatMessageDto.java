@@ -21,4 +21,5 @@ public class ChatMessageDto {
     private String translatedContent;
     private String culturalNote;
     private String createdAt;
+    private boolean isRead;   // 읽음 여부 (false = 안읽음 → 클라이언트에서 "1" 표시)
 }

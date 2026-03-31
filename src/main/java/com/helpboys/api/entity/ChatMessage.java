@@ -41,6 +41,11 @@ public class ChatMessage {
     @Column(name = "cultural_note", columnDefinition = "TEXT")
     private String culturalNote;
 
+    // 읽음 여부 (false = 안읽음, true = 읽음)
+    @Column(name = "is_read", nullable = false)
+    @Builder.Default
+    private boolean isRead = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
