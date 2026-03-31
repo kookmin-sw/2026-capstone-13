@@ -18,8 +18,9 @@ public class ChatRoomResponse {
     private String status;         // MATCHED, IN_PROGRESS, COMPLETED
     private String lastMessage;    // 마지막 메시지 내용 (없으면 null)
     private String lastMessageTime;
+    private long unreadCount;      // 내가 안 읽은 메시지 수 (뱃지)
 
-    public static ChatRoomResponse from(HelpRequest req, Long myUserId, String lastMessage, String lastMessageTime) {
+    public static ChatRoomResponse from(HelpRequest req, Long myUserId, String lastMessage, String lastMessageTime, long unreadCount) {
         User partner = req.getRequester().getId().equals(myUserId)
                 ? req.getHelper()
                 : req.getRequester();
@@ -32,6 +33,7 @@ public class ChatRoomResponse {
                 .status(req.getStatus().name())
                 .lastMessage(lastMessage)
                 .lastMessageTime(lastMessageTime)
+                .unreadCount(unreadCount)
                 .build();
     }
 }

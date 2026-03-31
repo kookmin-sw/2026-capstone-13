@@ -100,6 +100,7 @@ public class ChatService {
                 .originalLanguage(originalLanguage)
                 .translatedContent(translatedContent)
                 .culturalNote(culturalNote)
+                .isRead(false)
                 .build();
 
         ChatMessage saved = chatMessageRepository.save(message);
@@ -113,7 +114,19 @@ public class ChatService {
                 .translatedContent(saved.getTranslatedContent())
                 .culturalNote(saved.getCulturalNote())
                 .createdAt(saved.getCreatedAt().toString())
+                .isRead(false)
                 .build();
+    }
+
+    // 채팅방 메시지 읽음 처리 → WebSocket으로 상대방에게 읽음 이벤트 전파
+    @Transactional
+    public void markAsRead(Long roomId, Long userId) {
+        int updated = chatMessageRepository.markAsRead(roomId, userId);
+        if (updated > 0) {
+            // 상대방 화면에서 "1" 제거하도록 읽음 이벤트 브로드캐스트
+            messagingTemplate.convertAndSend("/topic/chat/" + roomId,
+                    java.util.Map.of("type", "READ", "readerId", userId, "roomId", roomId));
+        }
     }
 
     // 내가 참여한 채팅방 목록 조회 (마지막 메시지 기준 최신순)
@@ -129,10 +142,13 @@ public class ChatService {
                     ChatMessage last = chatMessageRepository
                             .findTopByRoomIdOrderByCreatedAtDesc(req.getId())
                             .orElse(null);
+                    long unreadCount = chatMessageRepository
+                            .countByRoomIdAndSender_IdNotAndIsReadFalse(req.getId(), userId);
                     return ChatRoomResponse.from(
                             req, userId,
                             last != null ? resolveLastMessagePreview(last.getContent()) : null,
-                            last != null ? last.getCreatedAt().toString() : null
+                            last != null ? last.getCreatedAt().toString() : null,
+                            unreadCount
                     );
                 })
                 .sorted((a, b) -> {
@@ -159,10 +175,13 @@ public class ChatService {
                     ChatMessage last = chatMessageRepository
                             .findTopByRoomIdOrderByCreatedAtDesc(req.getId())
                             .orElse(null);
+                    long unreadCount = chatMessageRepository
+                            .countByRoomIdAndSender_IdNotAndIsReadFalse(req.getId(), userId);
                     return ChatRoomResponse.from(
                             req, userId,
                             last != null ? resolveLastMessagePreview(last.getContent()) : null,
-                            last != null ? last.getCreatedAt().toString() : null
+                            last != null ? last.getCreatedAt().toString() : null,
+                            unreadCount
                     );
                 })
                 .collect(Collectors.toList());
@@ -183,10 +202,13 @@ public class ChatService {
         ChatMessage last = chatMessageRepository
                 .findTopByRoomIdOrderByCreatedAtDesc(roomId)
                 .orElse(null);
+        long unreadCount = chatMessageRepository
+                .countByRoomIdAndSender_IdNotAndIsReadFalse(roomId, userId);
         return ChatRoomResponse.from(
                 req, userId,
                 last != null ? resolveLastMessagePreview(last.getContent()) : null,
-                last != null ? last.getCreatedAt().toString() : null
+                last != null ? last.getCreatedAt().toString() : null,
+                unreadCount
         );
     }
 
@@ -291,9 +313,12 @@ public class ChatService {
         return content;
     }
 
-    // 채팅방 메시지 이력 조회
-    @Transactional(readOnly = true)
-    public List<ChatMessageDto> getMessages(Long roomId) {
+    // 채팅방 메시지 이력 조회 + 자동 읽음 처리
+    @Transactional
+    public List<ChatMessageDto> getMessages(Long roomId, Long userId) {
+        // 입장 시 상대방이 보낸 메시지 모두 읽음 처리
+        markAsRead(roomId, userId);
+
         return chatMessageRepository.findByRoomIdOrderByCreatedAtAsc(roomId).stream()
                 .map(msg -> ChatMessageDto.builder()
                         .roomId(msg.getRoomId())
@@ -304,6 +329,7 @@ public class ChatService {
                         .translatedContent(msg.getTranslatedContent())
                         .culturalNote(msg.getCulturalNote())
                         .createdAt(msg.getCreatedAt().toString())
+                        .isRead(msg.isRead())
                         .build())
                 .collect(Collectors.toList());
     }

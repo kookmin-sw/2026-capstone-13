@@ -12,6 +12,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -67,11 +68,25 @@ public class ChatController {
         return ResponseEntity.ok(ApiResponse.success("조회 성공", chatService.getChatRoom(roomId, userId)));
     }
 
-    // GET /api/chat/rooms/{roomId}/messages - 채팅 이력 조회
+    // GET /api/chat/rooms/{roomId}/messages - 채팅 이력 조회 (자동 읽음 처리)
     @GetMapping("/rooms/{roomId}/messages")
     @ResponseBody
-    public ResponseEntity<ApiResponse<List<ChatMessageDto>>> getMessages(@PathVariable Long roomId) {
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", chatService.getMessages(roomId)));
+    public ResponseEntity<ApiResponse<List<ChatMessageDto>>> getMessages(
+            @PathVariable Long roomId,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", chatService.getMessages(roomId, userId)));
+    }
+
+    // PATCH /api/chat/rooms/{roomId}/read - 명시적 읽음 처리 (채팅방 열어둔 상태에서 새 메시지 수신 시)
+    @PatchMapping("/rooms/{roomId}/read")
+    @ResponseBody
+    public ResponseEntity<ApiResponse<Void>> markAsRead(
+            @PathVariable Long roomId,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        chatService.markAsRead(roomId, userId);
+        return ResponseEntity.ok(ApiResponse.success("읽음 처리 완료", null));
     }
 
     // POST /api/chat/rooms/{roomId}/voice-message - 음성 메시지 전송
