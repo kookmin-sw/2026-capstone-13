@@ -2,14 +2,12 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, Image, Keyboard,
+  TextInput, KeyboardAvoidingView, Platform, Image, Keyboard, ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useCommunityStore } from '../stores/communityStore';
+import { getCommunityPost, addCommunityComment, toggleCommunityLike, type CommunityPostDetailDto, type PostCommentDto } from '../services/communityService';
 import { useAuthStore } from '../stores/authStore';
-import { useNotificationStore } from '../stores/notificationStore';
-import type { Comment } from '../types';
 
 const BLUE    = '#3B6FE8';
 const BLUE_BG = '#F5F8FF';
@@ -45,14 +43,10 @@ export default function CommunityPostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuthStore();
-  const { posts, postComments, likedPostIds, toggleLike, addComment } = useCommunityStore();
-  const { addNotification } = useNotificationStore();
 
-  const userId = user?.id ?? 0;
-  const post = posts.find((p) => p.id === Number(id));
-  const comments: Comment[] = postComments[Number(id)] ?? [];
-  const isLiked = (likedPostIds[userId] ?? []).includes(Number(id));
-
+  const [post, setPost] = useState<CommunityPostDetailDto | null>(null);
+  const [isLiked, setIsLiked] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
   const [kavEnabled, setKavEnabled] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -69,6 +63,31 @@ export default function CommunityPostScreen() {
     return () => { show.remove(); hide.remove(); };
   }, []);
 
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        const res = await getCommunityPost(Number(id));
+        if (res.success && res.data) {
+          setPost(res.data);
+          setIsLiked(res.data.liked);
+        }
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPost();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <View style={s.centered}>
+        <ActivityIndicator size="large" color={BLUE} />
+      </View>
+    );
+  }
+
   if (!post) {
     return (
       <View style={s.notFound}>
@@ -80,29 +99,34 @@ export default function CommunityPostScreen() {
     );
   }
 
-  const isOwnPost = post.authorId != null
-    ? post.authorId === userId
-    : post.author === user?.nickname;
+  const comments: PostCommentDto[] = post.commentList ?? [];
 
-  const handleLike = () => {
-    toggleLike(post.id, userId);
-    if (!isLiked && !isOwnPost) {
-      addNotification('LIKE', `${user?.nickname ?? '누군가'}님이 회원님의 게시글에 좋아요를 눌렀어요.`, post.authorId ?? 0);
+  const handleLike = async () => {
+    try {
+      const res = await toggleCommunityLike(post.id);
+      if (res.success && res.data) {
+        setIsLiked(res.data.liked);
+        setPost((prev) => prev ? { ...prev, likes: res.data.likes, liked: res.data.liked } : prev);
+      }
+    } catch {
+      // ignore
     }
   };
 
-  const handleSubmitComment = () => {
+  const handleSubmitComment = async () => {
     const text = commentText.trim();
     if (!text) return;
-    addComment(
-      post.id,
-      text,
-      user?.nickname ?? '익명',
-      user?.university ?? '국민대학교',
-      user?.userType ?? 'KOREAN',
-    );
-    if (!isOwnPost) {
-      addNotification('COMMENT', `${user?.nickname ?? '누군가'}님이 회원님의 게시글에 댓글을 달았어요.`, post.authorId ?? 0);
+    try {
+      const res = await addCommunityComment(post.id, text);
+      if (res.success && res.data) {
+        setPost((prev) => prev ? {
+          ...prev,
+          comments: prev.comments + 1,
+          commentList: [...(prev.commentList ?? []), res.data],
+        } : prev);
+      }
+    } catch {
+      // ignore
     }
     setCommentText('');
     Keyboard.dismiss();
@@ -245,6 +269,7 @@ export default function CommunityPostScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: BLUE_BG },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BLUE_BG },
 
   // 헤더
   header: {
