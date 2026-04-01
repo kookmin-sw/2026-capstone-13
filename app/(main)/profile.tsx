@@ -95,6 +95,7 @@ export default function ProfileScreen() {
       uri.startsWith('content://') ||
       uri.startsWith('ph://');
     setHasCustomPhoto(isAbsolute);
+    setImageLoadError(false);
   }, [user?.profileImage]);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [profileInput, setProfileInput] = useState<ProfileDetail>(EMPTY_DETAIL);

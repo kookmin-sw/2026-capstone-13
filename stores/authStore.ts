@@ -3,6 +3,14 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import type { User } from '../types';
 import { login as loginApi, register as registerApi, getMyProfile, uploadProfileImage, updateBio as updateBioApi, updateProfileDetail as updateProfileDetailApi } from '../services/authService';
+
+// 서버 상대경로(/uploads/...)를 절대경로로 변환
+const SERVER_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api').replace('/api', '');
+const toAbsoluteUrl = (url: string | undefined): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file://') || url.startsWith('content://')) return url;
+  return SERVER_BASE_URL + url;
+};
 import type { UpdateProfileRequest } from '../services/authService';
 import type { LoginRequest, RegisterRequest } from '../types';
 
@@ -89,7 +97,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const response = await getMyProfile();
       if (response.success) {
-        set({ user: response.data, isLoading: false });
+        set({ user: { ...response.data, profileImage: toAbsoluteUrl(response.data.profileImage) }, isLoading: false });
       } else {
         throw new Error(response.message);
       }
@@ -133,7 +141,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     // 선택한 이미지를 즉시 로컬에 반영
     set((state) => ({ user: state.user ? { ...state.user, profileImage: imageUri } : null }));
     try {
-      await uploadProfileImage(imageUri);
+      const response = await uploadProfileImage(imageUri);
+      if (response.success && response.data.profileImage) {
+        set((state) => ({ user: state.user ? { ...state.user, profileImage: toAbsoluteUrl(response.data.profileImage) } : null }));
+      }
     } catch {
       // 서버 업로드 실패해도 로컬 표시는 유지
     }
