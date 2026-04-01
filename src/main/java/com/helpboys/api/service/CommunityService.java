@@ -136,6 +136,42 @@ public class CommunityService {
         return Map.of("liked", !alreadyLiked, "likes", post.getLikes());
     }
 
+    // 게시글 수정
+    @Transactional
+    public CommunityPostResponse updatePost(Long postId, CommunityPostRequest request, Long userId) {
+        CommunityPost post = findPostById(postId);
+        if (!post.getAuthor().getId().equals(userId)) {
+            throw new BusinessException("수정 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+        post.setCategory(request.getCategory());
+        post.setTitle(request.getTitle());
+        post.setContent(request.getContent());
+        post.setImages(request.getImages() == null ? "" : String.join(",", request.getImages()));
+        CommunityPost saved = communityPostRepository.save(post);
+        return CommunityPostResponse.fromList(saved, postLikeRepository.existsByPostIdAndUserId(postId, userId));
+    }
+
+    // 게시글 삭제
+    @Transactional
+    public void deletePost(Long postId, Long userId) {
+        CommunityPost post = findPostById(postId);
+        if (!post.getAuthor().getId().equals(userId)) {
+            throw new BusinessException("삭제 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+        communityPostRepository.delete(post);
+    }
+
+    // 댓글 삭제
+    @Transactional
+    public void deleteComment(Long commentId, Long userId) {
+        PostComment comment = postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new BusinessException("댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        if (!comment.getAuthor().getId().equals(userId)) {
+            throw new BusinessException("삭제 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+        postCommentRepository.delete(comment);
+    }
+
     // 게시글 검색 (차단 유저 제외)
     @Transactional(readOnly = true)
     public List<CommunityPostResponse> searchPosts(String keyword, Long userId) {

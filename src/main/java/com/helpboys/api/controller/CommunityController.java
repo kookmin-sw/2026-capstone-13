@@ -71,6 +71,36 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.success("처리 완료", communityService.toggleLike(id, userId)));
     }
 
+    // PUT /api/community/{id} - 게시글 수정
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<CommunityPostResponse>> updatePost(
+            @PathVariable Long id,
+            @Valid @RequestBody CommunityPostRequest request,
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        return ResponseEntity.ok(ApiResponse.success("게시글이 수정되었습니다.", communityService.updatePost(id, request, userId)));
+    }
+
+    // DELETE /api/community/{id} - 게시글 삭제
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deletePost(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        communityService.deletePost(id, userId);
+        return ResponseEntity.ok(ApiResponse.success("게시글이 삭제되었습니다.", null));
+    }
+
+    // DELETE /api/community/comments/{commentId} - 댓글 삭제
+    @DeleteMapping("/comments/{commentId}")
+    public ResponseEntity<ApiResponse<Void>> deleteComment(
+            @PathVariable Long commentId,
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        communityService.deleteComment(commentId, userId);
+        return ResponseEntity.ok(ApiResponse.success("댓글이 삭제되었습니다.", null));
+    }
+
     // GET /api/community/search?keyword=... - 게시글 검색
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<CommunityPostResponse>>> searchPosts(
