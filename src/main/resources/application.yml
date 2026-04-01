@@ -37,6 +37,17 @@ agora:
   app-id: ${AGORA_APP_ID:5be9cb6d40124217977bca952784cff2}
   app-certificate: ${AGORA_APP_CERTIFICATE:e080d7b8dd2e4dadb7aef5ab616c2ca3}
 
+# 로깅 설정 (Railway 500 logs/sec 제한 대응)
+logging:
+  level:
+    root: WARN
+    com.helpboys: INFO
+    org.springframework.web.socket: WARN
+    org.springframework.messaging: WARN
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate: WARN
+
 # Actuator - 헬스체크 엔드포인트 활성화
 management:
   endpoints:
