@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
@@ -5,12 +6,35 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+=======
+>>>>>>> Stashed changes
 import { Ionicons } from '@expo/vector-icons';
-import { getHelpRequests, cancelHelpRequest, getHelpedRequests } from '../../services/helpService';
-import { useAuthStore } from '../../stores/authStore';
-import { useNotificationStore } from '../../stores/notificationStore';
-import { useChatStore } from '../../stores/chatStore';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Dimensions,
+  PanResponder,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+const SCREEN_W   = Dimensions.get('window').width;
+const CAROUSEL_W = SCREEN_W - 32;
+const STACK_OFFSET = 8; // 뒤 카드 오른쪽·아래 오프셋(px)
 import { CategoryLabels } from '../../constants/colors';
+import { cancelHelpRequest, getHelpedRequests, getHelpRequests } from '../../services/helpService';
+import { useAuthStore } from '../../stores/authStore';
+import { useChatStore } from '../../stores/chatStore';
+import { useNotificationStore } from '../../stores/notificationStore';
 import type { HelpCategory, HelpRequest } from '../../types';
 
 const SERVER_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api').replace('/api', '');
@@ -26,7 +50,7 @@ const BLUE_L = '#EEF4FF';
 const ORANGE = '#F97316';
 const T1     = '#0C1C3C';
 const T2     = '#AABBCC';
-const BG     = '#EDEEF2';
+const BG     = '#F3F4F7';
 const DIV    = '#F4F5F8';
 
 const CAT_AVATAR_COLOR: Record<HelpCategory, string> = {
@@ -76,6 +100,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing]         = useState(false);
   const [catFilter]                          = useState<CatFilter>('ALL');
   const [statusFilter, setStatusFilter]     = useState<StatusFilter>('ALL');
+  const carouselRef = useRef<FlatList<HelpRequest>>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setShowCount(prev => !prev), 6000);
@@ -256,7 +281,7 @@ export default function HomeScreen() {
                 <Text style={s.heroTitle}>
                   지금 <Text style={s.heroHL}>{activeCount}명</Text>이{'\n'}기다려요!
                 </Text>
-                <Text style={s.heroSub}>평균 매칭 2분</Text>
+                <Text style={s.heroSub}>평균 매칭 5분</Text>
               </View>
             </View>
             <View style={s.heroBottom}>
@@ -271,26 +296,90 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── 모든 도움 보기 ── */}
-        <View style={s.sectionCard}>
-          <View style={s.sectionHeader}>
-            <View style={s.sectionHeaderLeft}>
-              <View style={s.sectionIcon}>
-                <Ionicons name="document-text-outline" size={18} color={BLUE} />
+        {/* ── 도움 요청 캐러셀 ── */}
+        <View style={s.carouselSection}>
+          <View style={s.carouselSectionHeader}>
+            <View style={s.carouselSectionHeaderLeft}>
+              <Text style={s.carouselSectionTitle}>도움 요청</Text>
+              <View style={s.carouselCountBadge}>
+                <Text style={s.carouselCountBadgeText}>{filtered.length}건</Text>
               </View>
-              <Text style={s.sectionTitle}>모든 도움 보기</Text>
             </View>
-            <Ionicons name="chevron-forward" size={14} color="#CCC" />
+            <Text style={s.carouselSectionSub}>스와이프해서 둘러보기</Text>
           </View>
-          <View style={s.sectionFooter}>
-            <View>
-              <Text style={s.sectionCount}>{filtered.length}건</Text>
-              <Text style={s.sectionCountSub}>지금 올라온 도움 요청</Text>
+          {filtered.length === 0 ? (
+            <View style={s.carouselEmpty}>
+              <Text style={s.emptyEmoji}>📋</Text>
+              <Text style={s.carouselEmptyText}>올라온 요청이 없어요</Text>
             </View>
-            <TouchableOpacity style={s.historyBtn} activeOpacity={0.8}>
-              <Text style={s.historyBtnText}>내역</Text>
-            </TouchableOpacity>
-          </View>
+          ) : (
+            <>
+              <FlatList
+                ref={carouselRef}
+                data={filtered.slice(0, 15)}
+                keyExtractor={item => String(item.id)}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                decelerationRate="fast"
+                snapToInterval={SNAP_INTERVAL}
+                snapToAlignment="start"
+                contentContainerStyle={{ paddingLeft: 16, paddingRight: 16 }}
+                renderItem={({ item }) => {
+                  const initial  = item.requester.nickname.charAt(0);
+                  const avatarBg = CAT_AVATAR_COLOR[item.category];
+                  const barColor =
+                    item.status === 'COMPLETED' ? '#E5E7EB' :
+                    item.status === 'IN_PROGRESS' || item.status === 'MATCHED' ? '#FED7AA' : '#BBF7D0';
+                  const statusLabel =
+                    item.status === 'COMPLETED' ? '모집완료' :
+                    item.status === 'IN_PROGRESS' ? '진행중' :
+                    item.status === 'MATCHED' ? '대기중' : '모집중';
+                  const statusBg =
+                    item.status === 'COMPLETED' ? '#F3F4F6' :
+                    item.status === 'IN_PROGRESS' || item.status === 'MATCHED' ? '#FFF3E8' : '#D1FAE5';
+                  const statusColor =
+                    item.status === 'COMPLETED' ? '#9CA3AF' :
+                    item.status === 'IN_PROGRESS' || item.status === 'MATCHED' ? '#C45A10' : '#065F46';
+                  return (
+                    <TouchableOpacity
+                      style={s.carouselCard}
+                      onPress={() => goTo(item)}
+                      activeOpacity={0.88}
+                    >
+                      <View style={[s.carouselBar, { backgroundColor: barColor }]} />
+                      <View style={s.carouselCardInner}>
+                        <View style={s.carouselCardTop}>
+                          <View style={s.catBadge}>
+                            <Text style={s.catBadgeText}>
+                              {CategoryLabels[item.category].replace(/\S+\s/, '')}
+                            </Text>
+                          </View>
+                          <View style={[s.statusBadge, { backgroundColor: statusBg }]}>
+                            <Text style={[s.statusText, { color: statusColor }]}>{statusLabel}</Text>
+                          </View>
+                        </View>
+                        <Text style={s.carouselCardTitle} numberOfLines={2}>{item.title}</Text>
+                        <View style={s.carouselCardFooter}>
+                          <View style={[s.carouselAvatar, { backgroundColor: avatarBg }]}>
+                            <Text style={s.carouselAvatarText}>{initial}</Text>
+                          </View>
+                          <View style={s.carouselFooterInfo}>
+                            <Text style={s.carouselNickname}>{item.requester.nickname}</Text>
+                            <Text style={s.carouselMeta}>국민대 · {formatTime(item.createdAt)}</Text>
+                          </View>
+                          {item.status === 'WAITING' && user?.userType === 'KOREAN' && (
+                            <TouchableOpacity style={s.helpBtn} onPress={() => goTo(item)} activeOpacity={0.8}>
+                              <Text style={s.helpBtnText}>도와주기</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </>
+          )}
         </View>
 
         {/* ── 내 활동 확인하기 ── */}
@@ -596,4 +685,62 @@ const s = StyleSheet.create({
   emptyEmoji: { fontSize: 40, marginBottom: 4 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: T1 },
   emptySub:   { fontSize: 14, color: T2 },
+
+  // ── Carousel ──
+  carouselSection: {
+    marginHorizontal: 16, marginBottom: 10,
+    backgroundColor: '#fff', borderRadius: 20,
+    paddingTop: 16, paddingBottom: 14,
+  },
+  carouselSectionHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 16, marginBottom: 12,
+  },
+  carouselSectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  carouselSectionTitle: { fontSize: 15, fontWeight: '800', color: T1 },
+  carouselCountBadge: {
+    backgroundColor: BLUE_L, borderRadius: 20,
+    paddingHorizontal: 9, paddingVertical: 3,
+  },
+  carouselCountBadgeText: { fontSize: 12, fontWeight: '800', color: BLUE },
+  carouselSectionSub: { fontSize: 12, color: T2, fontWeight: '500' },
+  carouselEmpty: { alignItems: 'center', paddingVertical: 30, gap: 8 },
+  carouselEmptyText: { fontSize: 14, color: T2, fontWeight: '600' },
+
+  carouselCard: {
+    width: PEEK_CARD_W,
+    marginRight: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1, borderColor: '#EEF0F6',
+    flexDirection: 'row',
+    overflow: 'hidden',
+    minHeight: 130,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  carouselBar:       { width: 6, flexShrink: 0 },
+  carouselCardInner: { flex: 1, paddingHorizontal: 20, paddingVertical: 18, justifyContent: 'space-between' },
+  carouselCardTop:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  carouselCardTitle: { fontSize: 18, fontWeight: '800', color: T1, lineHeight: 26, letterSpacing: -0.4, marginBottom: 18 },
+  carouselCardFooter: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  carouselAvatar: {
+    width: 38, height: 38, borderRadius: 19,
+    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
+  },
+  carouselAvatarText: { fontSize: 16, color: '#fff', fontWeight: '800' },
+  carouselFooterInfo: { flex: 1, gap: 3 },
+  carouselNickname:   { fontSize: 14, fontWeight: '700', color: T1 },
+  carouselMeta:       { fontSize: 12, color: T2, fontWeight: '500' },
+
+  carouselDots: {
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    gap: 5, marginTop: 12,
+  },
+  dot:           { width: 6, height: 6, borderRadius: 3, backgroundColor: '#DDE0E8' },
+  carouselIdxText: { fontSize: 11, fontWeight: '600', color: T2, marginLeft: 6 },
+  dotActive: { width: 18, backgroundColor: BLUE },
 });
