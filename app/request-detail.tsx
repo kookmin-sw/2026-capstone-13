@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,13 @@ import type { HelpCategory, HelpMethod, HelpRequest } from '../types';
 
 const PRIMARY = '#4F46E5';
 const PRIMARY_LIGHT = '#EEF2FF';
+const SERVER_BASE_URL = 'https://backend-production-0a6f.up.railway.app';
+
+function toAbsoluteUrl(path?: string): string | null {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return SERVER_BASE_URL + path;
+}
 
 const CATEGORY_EMOJI: Record<HelpCategory, string> = {
   BANK: '🏦', HOSPITAL: '🏥', SCHOOL: '🏫', DAILY: '🏠', OTHER: '📌',
@@ -257,9 +265,12 @@ export default function RequestDetailScreen() {
 
           {/* 작성자 */}
           <View style={styles.authorRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{item.requester.nickname.charAt(0)}</Text>
-            </View>
+            {toAbsoluteUrl(item.requester.profileImage)
+              ? <Image source={{ uri: toAbsoluteUrl(item.requester.profileImage)! }} style={styles.avatar} />
+              : <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{item.requester.nickname.charAt(0)}</Text>
+                </View>
+            }
             <View style={styles.authorInfo}>
               <Text style={styles.authorName}>{item.requester.nickname}</Text>
               <Text style={styles.authorSub}>{item.requester.university}</Text>
@@ -342,9 +353,12 @@ export default function RequestDetailScreen() {
             <View style={styles.infoCard}>
               <Text style={styles.infoCardTitle}>도움을 주는 학생</Text>
               <View style={styles.helperItem}>
-                <View style={[styles.helperAvatar, styles.helperAvatarGreen]}>
-                  <Text style={styles.helperAvatarText}>{item.helper.nickname.charAt(0)}</Text>
-                </View>
+                {toAbsoluteUrl(item.helper.profileImage)
+                  ? <Image source={{ uri: toAbsoluteUrl(item.helper.profileImage)! }} style={styles.helperAvatar} />
+                  : <View style={[styles.helperAvatar, styles.helperAvatarGreen]}>
+                      <Text style={styles.helperAvatarText}>{item.helper.nickname.charAt(0)}</Text>
+                    </View>
+                }
                 <View style={styles.helperInfo}>
                   <Text style={styles.helperName}>{item.helper.nickname}</Text>
                   <Text style={styles.helperDetail}>{item.helper.university} · 도움 {item.helper.helpCount}회</Text>
