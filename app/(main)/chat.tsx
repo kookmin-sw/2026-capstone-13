@@ -309,9 +309,9 @@ export default function ChatScreen() {
                   ? (isInternational ? '새 도움 신청이 도착했어요!' : '수락을 기다리고 있어요')
                   : (room.lastMessage ?? room.title)}
               </Text>
-              {isMatchPending && !isActioning && (
+              {room.unreadCount > 0 && !isActioning && (
                 <View style={s.unreadBadge}>
-                  <Text style={s.unreadText}>N</Text>
+                  <Text style={s.unreadText}>{room.unreadCount > 99 ? '99+' : room.unreadCount}</Text>
                 </View>
               )}
             </View>
