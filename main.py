@@ -11,7 +11,7 @@ load_dotenv()
 from translator.service import translation_service
 from speech.service import speech_service
 from crawler.kookmin import crawl_all
-from crawler.meal import crawl_today_menu
+from crawler.meal import crawl_weekly_menu
 
 app = FastAPI(title="HelpBoys AI API")
 
@@ -95,11 +95,34 @@ async def crawl_notices():
 
 
 # ── 식단 크롤링 ───────────────────────────────────────────
-@app.get("/api/meals")
-async def get_meals():
+@app.get("/api/meals/crawl")
+async def crawl_meals():
     try:
-        meals = crawl_today_menu()
-        return {"success": True, "message": f"{len(meals)}개 식단 수집 완료", "data": meals}
+        raw_meals = crawl_weekly_menu()
+        result = []
+        for meal in raw_meals:
+            translations = {}
+            for lang in SUPPORTED_LANGUAGES:
+                try:
+                    translated_cafeteria = await translation_service.translate_text(meal["cafeteria"], lang, "ko")
+                    translated_corner    = await translation_service.translate_text(meal["corner"], lang, "ko")
+                    translations[lang] = {
+                        "cafeteria": translated_cafeteria.get("translated", meal["cafeteria"]),
+                        "corner":    translated_corner.get("translated", meal["corner"]),
+                    }
+                except Exception:
+                    translations[lang] = {
+                        "cafeteria": meal["cafeteria"],
+                        "corner":    meal["corner"],
+                    }
+            result.append({
+                "cafeteria_ko": meal["cafeteria"],
+                "corner_ko":    meal["corner"],
+                "menu":         meal["menu"],
+                "date":         meal["date"],
+                "translations": translations,
+            })
+        return {"success": True, "message": f"{len(result)}개 식단 수집 및 번역 완료", "data": result}
     except Exception as e:
         return JSONResponse(status_code=500, content={"success": False, "message": f"식단 수집 실패: {str(e)}", "data": None})
 

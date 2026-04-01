@@ -1,10 +1,9 @@
 """
-국민대학교 오늘의 식단 크롤러
+국민대학교 주간 식단 크롤러
 - https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do 에서 수집
 """
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
 
 MEAL_URL = "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do"
 
@@ -13,13 +12,11 @@ HEADERS = {
 }
 
 
-def crawl_today_menu() -> list[dict]:
+def crawl_weekly_menu() -> list[dict]:
     """
-    오늘의 식단 수집
-    Returns: [{"cafeteria": ..., "corner": ..., "menu": ..., "date": ...}]
+    주간 식단 전체 수집 (페이지에 표시된 7일치)
+    Returns: [{"cafeteria": ..., "corner": ..., "menu": ..., "date": "YYYY.MM.DD"}]
     """
-    today = datetime.now().strftime("%Y.%m.%d")
-
     try:
         resp = requests.get(MEAL_URL, headers=HEADERS, timeout=10)
         resp.raise_for_status()
@@ -30,52 +27,55 @@ def crawl_today_menu() -> list[dict]:
     soup = BeautifulSoup(resp.text, "html.parser")
     results = []
 
-    # 각 식당 섹션 순회
     for section in soup.select("p.cont_subtit"):
         cafeteria_name = section.get_text(strip=True)
         table = section.find_next("table")
         if not table:
             continue
 
-        # 헤더에서 오늘 날짜 열 인덱스 찾기 (0번은 "구분" 열)
+        # 헤더에서 날짜 목록 추출 (0번 "구분" 제외)
         headers = table.select("thead th")
-        today_col_idx = None
-        for idx, th in enumerate(headers):
-            if today in th.get_text():
-                today_col_idx = idx
-                break
+        dates = []
+        for th in headers[1:]:
+            text = th.get_text(strip=True)
+            # "2026.04.07(월)" → "2026.04.07"
+            date_part = text[:10] if len(text) >= 10 else text
+            dates.append(date_part)
 
-        if today_col_idx is None:
-            continue
-
-        # 각 행(코너)에서 오늘 열 데이터 추출
+        # 각 행(코너) 순회
         for row in table.select("tbody tr"):
             cells = row.select("td")
-            if len(cells) <= today_col_idx:
+            if len(cells) < 2:
                 continue
 
             corner = cells[0].get_text(separator=" ", strip=True)
-            menu_cell = cells[today_col_idx]
 
-            # hidden input 제거 후 텍스트 추출
-            for hidden in menu_cell.select("input[type=hidden]"):
-                hidden.decompose()
+            # 날짜별 열 순회 (1번 인덱스부터)
+            for col_idx, date_str in enumerate(dates, start=1):
+                if col_idx >= len(cells):
+                    break
 
-            menu_text = "\n".join(
-                line.strip()
-                for line in menu_cell.get_text(separator="\n", strip=True).splitlines()
-                if line.strip()
-            )
+                menu_cell = cells[col_idx]
 
-            if not menu_text:
-                continue
+                # hidden input 제거 후 텍스트 추출
+                for hidden in menu_cell.select("input[type=hidden]"):
+                    hidden.decompose()
 
-            results.append({
-                "cafeteria": cafeteria_name,
-                "corner": corner,
-                "menu": menu_text,
-                "date": today,
-            })
+                menu_text = "\n".join(
+                    line.strip()
+                    for line in menu_cell.get_text(separator="\n", strip=True).splitlines()
+                    if line.strip()
+                )
 
-    print(f"[식단 크롤러] {len(results)}개 항목 수집 ({today})")
+                if not menu_text:
+                    continue
+
+                results.append({
+                    "cafeteria": cafeteria_name,
+                    "corner": corner,
+                    "menu": menu_text,
+                    "date": date_str,
+                })
+
+    print(f"[식단 크롤러] {len(results)}개 항목 수집")
     return results
