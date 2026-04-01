@@ -58,26 +58,39 @@ Respond ONLY with the explanation or "null". No extra text."""
             print(f"[Gemini] 뉘앙스 감지 실패: {e}")
             return None
 
+    async def _gemini_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
+        """Gemini API를 사용한 번역 (Azure 없을 때 폴백)"""
+        lang_names = {
+            "en": "English", "ko": "Korean", "zh-Hans": "Simplified Chinese",
+            "zh-Hant": "Traditional Chinese", "ja": "Japanese", "vi": "Vietnamese",
+            "mn": "Mongolian", "fr": "French", "de": "German", "es": "Spanish",
+            "ru": "Russian"
+        }
+        lang_name = lang_names.get(target_lang, target_lang)
+        prompt = f"Translate the following text to {lang_name}. Return ONLY the translated text, nothing else.\n\nText: {text}"
+        try:
+            response = await asyncio.to_thread(self.gemini_model.generate_content, prompt)
+            return {
+                "original": text,
+                "translated": response.text.strip(),
+                "source_language": source_lang or self._detect_language_dummy(text),
+                "target_language": target_lang,
+                "mode": "gemini"
+            }
+        except Exception as e:
+            print(f"[Gemini] 번역 실패: {e}")
+            return self._dummy_translate(text, target_lang, source_lang)
+
     async def translate_text(self, text: str, target_lang: str = "en", source_lang: Optional[str] = None):
         """
         텍스트를 번역하는 함수
-        
-        Args:
-            text: 번역할 텍스트
-            target_lang: 목표 언어 (en, ko, zh-Hans, ja 등)
-            source_lang: 원본 언어 (None이면 자동 감지)
-        
-        Returns:
-            dict: {
-                "original": 원본 텍스트,
-                "translated": 번역된 텍스트,
-                "source_language": 원본 언어,
-                "target_language": 목표 언어
-            }
+        우선순위: Azure → Gemini → Dummy
         """
-        
         if self.dummy_mode:
-            result = self._dummy_translate(text, target_lang, source_lang)
+            if self.gemini_model:
+                result = await self._gemini_translate(text, target_lang, source_lang)
+            else:
+                result = self._dummy_translate(text, target_lang, source_lang)
         else:
             result = await self._azure_translate(text, target_lang, source_lang)
 

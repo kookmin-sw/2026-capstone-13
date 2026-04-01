@@ -22,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SUPPORTED_LANGUAGES = ["en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es"]
+SUPPORTED_LANGUAGES = ["en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru"]
 
 
 # ── 헬스체크 ──────────────────────────────────────────────
