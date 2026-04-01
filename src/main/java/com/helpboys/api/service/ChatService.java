@@ -65,7 +65,15 @@ public class ChatService {
                 if (room != null) {
                     User partner = room.getRequester().getId().equals(dto.getSenderId())
                             ? room.getHelper() : room.getRequester();
-                    String targetLang = (partner != null) ? partner.getPreferredLanguage() : "en";
+                    String targetLang;
+                    if (partner == null) {
+                        targetLang = "en";
+                    } else if (partner.getUserType() == User.UserType.KOREAN) {
+                        targetLang = "ko";
+                    } else {
+                        String preferredLang = partner.getPreferredLanguage();
+                        targetLang = (preferredLang != null && !preferredLang.isBlank()) ? preferredLang : "en";
+                    }
 
                     String translateBody = objectMapper.writeValueAsString(
                             java.util.Map.of("text", content, "target_lang", targetLang)
@@ -261,7 +269,8 @@ public class ChatService {
         User partner = room.getRequester().getId().equals(senderId)
                 ? room.getHelper()
                 : room.getRequester();
-        String targetLang = (partner != null) ? partner.getPreferredLanguage() : "en";
+        String preferredLang2 = (partner != null) ? partner.getPreferredLanguage() : null;
+        String targetLang = (preferredLang2 != null && !preferredLang2.isBlank()) ? preferredLang2 : "en";
 
         // 1단계: AI 서버에 음성→텍스트 요청
         String recognizedText = "";
