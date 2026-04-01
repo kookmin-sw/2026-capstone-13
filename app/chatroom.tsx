@@ -505,19 +505,14 @@ export default function ChatRoomScreen() {
             : <View style={styles.msgAvatarSpacer} />
         )}
         <View style={[styles.msgGroup, isMine && styles.msgGroupMine]}>
-          {showAvatar && <Text style={styles.senderName}>{msg.senderNickname}</Text>}
+          {showAvatar && <Text style={[styles.senderName, { marginTop: -2 }]}>{msg.senderNickname}</Text>}
           <View style={[styles.bubbleRow, isMine && styles.bubbleRowMine]}>
-            {isMine && (
-              <Text style={styles.msgTime}>{formatTime(msg.createdAt)}</Text>
-            )}
             <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}>
               <Text style={[styles.bubbleText, isMine && styles.bubbleTextMine]}>
                 {msg.content}
               </Text>
             </View>
-            {!isMine && (
-              <Text style={[styles.msgTime, styles.msgTimeOther]}>{formatTime(msg.createdAt)}</Text>
-            )}
+            <Text style={[styles.msgTime, !isMine && styles.msgTimeOther]}>{formatTime(msg.createdAt)}</Text>
           </View>
           {/* 번역 텍스트 */}
           {translateEnabled && !isMine && !!msg.translatedContent && (
@@ -867,12 +862,12 @@ const styles = StyleSheet.create({
   msgRowOther: { justifyContent: 'flex-start' },
   msgRowMine:  { justifyContent: 'flex-end' },
   msgAvatar: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: PRIMARY,
     justifyContent: 'center', alignItems: 'center',
-    flexShrink: 0, alignSelf: 'flex-end', marginBottom: 16,
+    flexShrink: 0, alignSelf: 'flex-start', marginTop: 0,
   },
-  msgAvatarSpacer: { width: 32, flexShrink: 0 },
+  msgAvatarSpacer: { width: 40, flexShrink: 0 },
   msgAvatarText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
 
   msgGroup:     { maxWidth: '72%', gap: 3 },
