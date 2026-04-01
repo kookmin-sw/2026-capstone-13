@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -57,14 +58,17 @@ export default function ChatRoomScreen() {
     roomId: string;
     requestTitle: string;
     partnerNickname: string;
+    partnerProfileImage?: string;
     requestStatus?: string;
     requesterId?: string;
   }>();
 
   const roomId = Number(params.roomId);
   const partnerNickname = params.partnerNickname ?? '상대방';
+  const partnerProfileImage = params.partnerProfileImage || null;
   const requestTitle = params.requestTitle ?? '도움 요청';
   const isRequester = user?.id === Number(params.requesterId);
+  const [partnerImgError, setPartnerImgError] = useState(false);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [input, setInput] = useState('');
@@ -488,9 +492,16 @@ export default function ChatRoomScreen() {
       <View style={[styles.msgRow, isMine ? styles.msgRowMine : styles.msgRowOther]}>
         {!isMine && (
           showAvatar
-            ? <View style={styles.msgAvatar}>
-                <Text style={styles.msgAvatarText}>{msg.senderNickname.charAt(0)}</Text>
-              </View>
+            ? (partnerProfileImage && !partnerImgError
+                ? <Image
+                    source={{ uri: partnerProfileImage }}
+                    style={styles.msgAvatar}
+                    onError={() => setPartnerImgError(true)}
+                  />
+                : <View style={styles.msgAvatar}>
+                    <Text style={styles.msgAvatarText}>{msg.senderNickname.charAt(0)}</Text>
+                  </View>
+              )
             : <View style={styles.msgAvatarSpacer} />
         )}
         <View style={[styles.msgGroup, isMine && styles.msgGroupMine]}>

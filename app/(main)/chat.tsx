@@ -130,6 +130,7 @@ export default function ChatScreen() {
             roomId: room.id,
             requestTitle: room.title,
             partnerNickname: room.partnerNickname,
+            partnerProfileImage: toAbsoluteUrl(room.partnerProfileImage) ?? '',
           },
         });
         fetchData();
@@ -177,6 +178,7 @@ export default function ChatScreen() {
         roomId: room.id,
         requestTitle: room.title,
         partnerNickname: room.partnerNickname,
+        partnerProfileImage: toAbsoluteUrl(room.partnerProfileImage) ?? '',
         requestStatus: room.status,
         requesterId,
       },
