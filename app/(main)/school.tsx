@@ -13,6 +13,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
+import { useAuthStore } from '../../stores/authStore';
+
+const LANG_NAMES: Record<string, string> = {
+  en: '영어', 'zh-Hans': '중국어(간체)', 'zh-Hant': '중국어(번체)',
+  ja: '일본어', vi: '베트남어', mn: '몽골어',
+  fr: '프랑스어', de: '독일어', es: '스페인어', ru: '러시아어',
+};
 
 // ── Design tokens (홈 화면과 동일) ──
 const BLUE     = '#3B6FE8';
@@ -85,6 +92,10 @@ const CATEGORY_COLOR: Record<string, string> = {
 };
 
 export default function SchoolScreen() {
+  const user = useAuthStore((s) => s.user);
+  const langCode = user?.preferredLanguage ?? 'en';
+  const langName = LANG_NAMES[langCode] ?? langCode;
+
   const [activeTab, setActiveTab] = useState<TabKey>('CAFETERIA');
   const [refreshing, setRefreshing] = useState(false);
   const [expandedNotice, setExpandedNotice] = useState<number | null>(null);
@@ -183,7 +194,7 @@ export default function SchoolScreen() {
           <View style={styles.section}>
             <View style={styles.translateBadge}>
               <Ionicons name="language-outline" size={13} color={BLUE} />
-              <Text style={styles.translateBadgeText}>공지사항 제목을 영어로 번역했어요</Text>
+              <Text style={styles.translateBadgeText}>공지사항 제목을 {langName}로 번역했어요</Text>
             </View>
             {noticesLoading ? (
               <ActivityIndicator color={BLUE} style={{ marginTop: 40 }} />
