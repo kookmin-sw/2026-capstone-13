@@ -2,6 +2,7 @@ package com.helpboys.api.controller;
 
 import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.NoticeResponse;
+import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.service.NoticeService;
 import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class NoticeController {
 
     private final NoticeService noticeService;
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     /**
      * GET /api/notices?lang=en&category=academic
@@ -47,7 +49,11 @@ public class NoticeController {
         if (queryLang != null && !queryLang.isBlank()) return queryLang;
         if (token != null) {
             try {
-                // JWT에서 언어 추출 (추후 확장)
+                String bearerToken = token.startsWith("Bearer ") ? token.substring(7) : token;
+                Long userId = jwtUtil.extractUserId(bearerToken);
+                return userRepository.findById(userId)
+                        .map(u -> u.getPreferredLanguage() != null ? u.getPreferredLanguage() : "en")
+                        .orElse("en");
             } catch (Exception ignored) {}
         }
         return "en";

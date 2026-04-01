@@ -25,6 +25,7 @@ public class UserResponse {
     private Double rating;
     private Integer helpCount;
     private String createdAt;
+    private String preferredLanguage;
 
     public static UserResponse from(User user) {
         return UserResponse.builder()
@@ -43,6 +44,7 @@ public class UserResponse {
                 .rating(user.getRating())
                 .helpCount(user.getHelpCount())
                 .createdAt(user.getCreatedAt().toString())
+                .preferredLanguage(user.getPreferredLanguage())
                 .build();
     }
 }
