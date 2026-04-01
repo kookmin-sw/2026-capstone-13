@@ -49,7 +49,13 @@ async def translate(request: Request):
     source_lang = data.get("source_lang")
 
     result = await translation_service.translate_text(text, target_lang, source_lang)
-    mode_message = "Azure 번역 완료" if result.get("mode") == "azure" else "더미 모드 번역 (Azure 키 필요)"
+    mode = result.get("mode")
+    if mode == "azure":
+        mode_message = "Azure 번역 완료"
+    elif mode == "gemini":
+        mode_message = "Gemini 번역 완료"
+    else:
+        mode_message = "더미 모드 번역"
 
     return {"success": True, "message": mode_message, "data": result}
 
