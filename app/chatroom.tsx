@@ -77,7 +77,7 @@ export default function ChatRoomScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [isSendingVoice, setIsSendingVoice] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [translateEnabled, setTranslateEnabled] = useState(false);
+  const [translateEnabled, setTranslateEnabled] = useState(true);
   const { clearUnread, setActiveChatroom, leaveRoom, rejoinRoom } = useChatStore();
   const clientRef = useRef<Client | null>(null);
   const listRef = useRef<FlatList>(null);
