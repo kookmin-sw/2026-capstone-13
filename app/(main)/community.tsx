@@ -49,7 +49,8 @@ function avatarColor(name: string): string {
 }
 
 function formatTime(createdAt: string): string {
-  const diff = Date.now() - new Date(createdAt).getTime();
+  const utc = createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z';
+  const diff = Date.now() - new Date(utc).getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1)  return '방금 전';
   if (m < 60) return `${m}분 전`;
