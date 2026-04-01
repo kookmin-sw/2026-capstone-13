@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { getHelpRequests, cancelHelpRequest, getHelpedRequests } from '../../services/helpService';
+import SwipeCardStack from '../../components/SwipeCardStack';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useChatStore } from '../../stores/chatStore';
@@ -272,26 +273,7 @@ export default function HomeScreen() {
         </View>
 
         {/* ── 모든 도움 보기 ── */}
-        <View style={s.sectionCard}>
-          <View style={s.sectionHeader}>
-            <View style={s.sectionHeaderLeft}>
-              <View style={s.sectionIcon}>
-                <Ionicons name="document-text-outline" size={18} color={BLUE} />
-              </View>
-              <Text style={s.sectionTitle}>모든 도움 보기</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={14} color="#CCC" />
-          </View>
-          <View style={s.sectionFooter}>
-            <View>
-              <Text style={s.sectionCount}>{filtered.length}건</Text>
-              <Text style={s.sectionCountSub}>지금 올라온 도움 요청</Text>
-            </View>
-            <TouchableOpacity style={s.historyBtn} activeOpacity={0.8}>
-              <Text style={s.historyBtnText}>내역</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <SwipeCardStack />
 
         {/* ── 내 활동 확인하기 ── */}
         <View style={s.sectionCard}>
@@ -406,7 +388,11 @@ const s = StyleSheet.create({
 
   // ── Hero ──
   heroWrap: { marginHorizontal: 16, marginBottom: 10 },
-  heroCard: { backgroundColor: '#fff', borderRadius: 24, overflow: 'hidden' },
+  heroCard: {
+    backgroundColor: '#fff', borderRadius: 24, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+  },
   heroBg: {
     backgroundColor: '#EEF4FF',
     padding: 26,
@@ -447,6 +433,8 @@ const s = StyleSheet.create({
   sectionCard: {
     marginHorizontal: 16, marginBottom: 10,
     backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
   },
   sectionHeader: {
     padding: 18, paddingBottom: 14,
@@ -549,6 +537,8 @@ const s = StyleSheet.create({
     borderRadius: 16, overflow: 'hidden',
     borderWidth: 1, borderColor: '#F0F2F6',
     flexDirection: 'row', marginBottom: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
   cardBar:        { width: 5, flexShrink: 0 },
   cardContent:    { flex: 1, paddingHorizontal: 14, paddingVertical: 12 },
