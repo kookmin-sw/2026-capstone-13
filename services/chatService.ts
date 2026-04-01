@@ -18,6 +18,7 @@ export interface ChatRoomResponse {
   title: string;
   partnerId: number;
   partnerNickname: string;
+  partnerProfileImage?: string;
   status: string;
   lastMessage: string | null;
   lastMessageTime: string | null;

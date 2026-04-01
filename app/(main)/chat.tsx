@@ -11,6 +11,7 @@ import {
   RefreshControl,
   Platform,
   TextInput,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -42,12 +43,43 @@ const FILTER_TABS: { key: FilterTab; label: string }[] = [
 ];
 
 const AVATAR_COLORS = ['#3B6FE8', '#6B9DF0', '#A8C8FA', '#5B8DEF', '#4A7CE0'];
+const SERVER_BASE_URL = 'https://backend-production-0a6f.up.railway.app';
 
 function avatarColor(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i)) % AVATAR_COLORS.length;
   return AVATAR_COLORS[h];
 }
+
+function toAbsoluteUrl(path?: string): string | null {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return SERVER_BASE_URL + path;
+}
+
+function PartnerAvatar({ profileUrl, name }: { profileUrl?: string; name: string }) {
+  const [imgError, setImgError] = useState(false);
+  if (profileUrl && !imgError) {
+    return (
+      <Image
+        source={{ uri: profileUrl }}
+        style={pa.img}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+  return (
+    <View style={[pa.fallback, { backgroundColor: avatarColor(name) }]}>
+      <Text style={pa.text}>{name.charAt(0)}</Text>
+    </View>
+  );
+}
+
+const pa = StyleSheet.create({
+  img:      { width: 52, height: 52, borderRadius: 26 },
+  fallback: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center' },
+  text:     { fontSize: 18, fontWeight: '800', color: '#fff' },
+});
 
 export default function ChatScreen() {
   const router = useRouter();
@@ -286,9 +318,7 @@ export default function ChatScreen() {
         >
           {/* 아바타 */}
           <View style={s.avatarWrap}>
-            <View style={[s.avatar, { backgroundColor: avatarColor(name) }]}>
-              <Text style={s.avatarText}>{name.charAt(0)}</Text>
-            </View>
+            <PartnerAvatar profileUrl={toAbsoluteUrl(room.partnerProfileImage) ?? undefined} name={name} />
             {isOnline && <View style={s.onlineDot} />}
           </View>
 
