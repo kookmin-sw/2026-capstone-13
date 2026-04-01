@@ -43,6 +43,19 @@ const T3       = '#6B9DF0';
 const COLOR_MALE   = '#0EA5E9';
 const COLOR_FEMALE = '#DB2777';
 
+const LANGUAGES = [
+  { code: 'en',      label: '🇺🇸 English' },
+  { code: 'zh-Hans', label: '🇨🇳 中文(简体)' },
+  { code: 'zh-Hant', label: '🇹🇼 中文(繁體)' },
+  { code: 'ja',      label: '🇯🇵 日本語' },
+  { code: 'vi',      label: '🇻🇳 Tiếng Việt' },
+  { code: 'mn',      label: '🇲🇳 Монгол' },
+  { code: 'fr',      label: '🇫🇷 Français' },
+  { code: 'de',      label: '🇩🇪 Deutsch' },
+  { code: 'es',      label: '🇪🇸 Español' },
+  { code: 'ru',      label: '🇷🇺 Русский' },
+];
+
 interface ProfileDetail {
   bio: string;
   gender: string;
@@ -50,9 +63,10 @@ interface ProfileDetail {
   major: string;
   mbti: string;
   hobbies: string[];
+  preferredLanguage: string;
 }
 
-const EMPTY_DETAIL: ProfileDetail = { bio: '', gender: '', age: '', major: '', mbti: '', hobbies: [] };
+const EMPTY_DETAIL: ProfileDetail = { bio: '', gender: '', age: '', major: '', mbti: '', hobbies: [], preferredLanguage: 'en' };
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -105,6 +119,7 @@ export default function ProfileScreen() {
       major: user?.major ?? '',
       mbti: user?.mbti ?? '',
       hobbies: userHobbies,
+      preferredLanguage: user?.preferredLanguage ?? 'en',
     });
     setHobbyInput('');
     setProfileModalVisible(true);
@@ -133,6 +148,7 @@ export default function ProfileScreen() {
       major: profileInput.major,
       mbti: profileInput.mbti,
       hobbies: profileInput.hobbies.join(','),
+      preferredLanguage: profileInput.preferredLanguage,
     });
     setProfileModalVisible(false);
   };
@@ -447,6 +463,24 @@ export default function ProfileScreen() {
               </View>
 
               <View style={styles.profileFieldWrap}>
+                <Text style={styles.profileFieldLabel}>번역 언어</Text>
+                <View style={styles.langGrid}>
+                  {LANGUAGES.map((lang) => (
+                    <TouchableOpacity
+                      key={lang.code}
+                      style={[styles.langChip, profileInput.preferredLanguage === lang.code && styles.langChipActive]}
+                      onPress={() => setProfileInput((prev) => ({ ...prev, preferredLanguage: lang.code }))}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.langChipText, profileInput.preferredLanguage === lang.code && styles.langChipTextActive]}>
+                        {lang.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.profileFieldWrap}>
                 <View style={styles.hobbyLabelRow}>
                   <Text style={styles.profileFieldLabel}>취미</Text>
                   <Text style={styles.hobbyCount}>({profileInput.hobbies.length}/5)</Text>
@@ -688,6 +722,15 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
   },
   hobbyTagEditText: { fontSize: 12, color: BLUE, fontWeight: '700' },
+  langGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  langChip: {
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20,
+    backgroundColor: BLUE_BG, borderWidth: 1.5, borderColor: BORDER,
+  },
+  langChipActive: { backgroundColor: BLUE_L, borderColor: BLUE },
+  langChipText: { fontSize: 13, color: BLUE_MID, fontWeight: '600' },
+  langChipTextActive: { color: BLUE },
+
   hobbyInputRow: { flexDirection: 'row', gap: 8 },
   hobbyInputField: {
     flex: 1, backgroundColor: BLUE_BG, borderRadius: 12,

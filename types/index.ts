@@ -29,6 +29,7 @@ export interface User {
   rating: number;
   helpCount: number;
   createdAt: string;
+  preferredLanguage?: string;
 }
 
 // 로그인 요청

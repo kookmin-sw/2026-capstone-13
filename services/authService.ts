@@ -34,6 +34,7 @@ export interface UpdateProfileRequest {
   major?: string;
   mbti?: string;
   hobbies?: string;
+  preferredLanguage?: string;
 }
 
 export const updateProfileDetail = async (data: UpdateProfileRequest): Promise<ApiResponse<User>> => {
