@@ -21,6 +21,7 @@ public class CommunityPostResponse {
     private String content;
     private List<String> images;
     private String author;
+    private String authorProfileImage;
     private String university;
     private String userType;
     private Integer likes;
@@ -38,6 +39,7 @@ public class CommunityPostResponse {
                 .content(post.getContent())
                 .images(parseImages(post.getImages()))
                 .author(post.getAuthor().getNickname())
+                .authorProfileImage(post.getAuthor().getProfileImage())
                 .university(post.getAuthor().getUniversity())
                 .userType(post.getAuthor().getUserType().name())
                 .likes(post.getLikes())
@@ -57,6 +59,7 @@ public class CommunityPostResponse {
                 .content(post.getContent())
                 .images(parseImages(post.getImages()))
                 .author(post.getAuthor().getNickname())
+                .authorProfileImage(post.getAuthor().getProfileImage())
                 .university(post.getAuthor().getUniversity())
                 .userType(post.getAuthor().getUserType().name())
                 .likes(post.getLikes())
