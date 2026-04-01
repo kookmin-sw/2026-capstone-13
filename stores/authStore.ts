@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import type { User } from '../types';
-import { login as loginApi, register as registerApi, getMyProfile, uploadProfileImage, updateBio as updateBioApi, updateProfileDetail as updateProfileDetailApi } from '../services/authService';
+import { login as loginApi, register as registerApi, getMyProfile, uploadProfileImage, deleteProfileImage, updateBio as updateBioApi, updateProfileDetail as updateProfileDetailApi } from '../services/authService';
 
 // 서버 상대경로(/uploads/...)를 절대경로로 변환
 const SERVER_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api').replace('/api', '');
@@ -139,14 +139,22 @@ export const useAuthStore = create<AuthState>((set) => ({
   // 프로필 이미지 변경 (로컬 즉시 반영 후 서버 동기화)
   updateProfileImage: async (imageUri: string) => {
     // 선택한 이미지를 즉시 로컬에 반영
-    set((state) => ({ user: state.user ? { ...state.user, profileImage: imageUri } : null }));
-    try {
-      const response = await uploadProfileImage(imageUri);
-      if (response.success && response.data.profileImage) {
-        set((state) => ({ user: state.user ? { ...state.user, profileImage: toAbsoluteUrl(response.data.profileImage) } : null }));
+    set((state) => ({ user: state.user ? { ...state.user, profileImage: imageUri || undefined } : null }));
+    if (imageUri === '') {
+      try {
+        await deleteProfileImage();
+      } catch {
+        // 서버 삭제 실패해도 로컬 표시는 유지
       }
-    } catch {
-      // 서버 업로드 실패해도 로컬 표시는 유지
+    } else {
+      try {
+        const response = await uploadProfileImage(imageUri);
+        if (response.success && response.data.profileImage) {
+          set((state) => ({ user: state.user ? { ...state.user, profileImage: toAbsoluteUrl(response.data.profileImage) } : null }));
+        }
+      } catch {
+        // 서버 업로드 실패해도 로컬 표시는 유지
+      }
     }
     return true;
   },

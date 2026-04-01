@@ -42,6 +42,12 @@ export const updateProfileDetail = async (data: UpdateProfileRequest): Promise<A
   return response.data;
 };
 
+// 프로필 이미지 삭제
+export const deleteProfileImage = async (): Promise<ApiResponse<User>> => {
+  const response = await api.patch<ApiResponse<User>>('/users/profile', { profileImage: '' });
+  return response.data;
+};
+
 // 프로필 이미지 업로드
 export const uploadProfileImage = async (imageUri: string): Promise<ApiResponse<User>> => {
   const formData = new FormData();
