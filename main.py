@@ -11,6 +11,7 @@ load_dotenv()
 from translator.service import translation_service
 from speech.service import speech_service
 from crawler.kookmin import crawl_all
+from crawler.meal import crawl_today_menu
 
 app = FastAPI(title="HelpBoys AI API")
 
@@ -91,6 +92,16 @@ async def crawl_notices():
         return {"success": True, "message": f"{len(result)}건 수집 및 번역 완료", "data": result}
     except Exception as e:
         return JSONResponse(status_code=500, content={"success": False, "message": f"크롤링 실패: {str(e)}", "data": None})
+
+
+# ── 식단 크롤링 ───────────────────────────────────────────
+@app.get("/api/meals")
+async def get_meals():
+    try:
+        meals = crawl_today_menu()
+        return {"success": True, "message": f"{len(meals)}개 식단 수집 완료", "data": meals}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "message": f"식단 수집 실패: {str(e)}", "data": None})
 
 
 # ── 실시간 자막 WebSocket ─────────────────────────────────
