@@ -141,7 +141,7 @@ public class ChatService {
             if (receiver == null) return;
 
             long unreadCount = chatMessageRepository
-                    .countByRoomIdAndSender_IdNotAndIsReadFalse(roomId, receiver.getId());
+                    .countUnreadMessages(roomId, receiver.getId());
 
             messagingTemplate.convertAndSend("/topic/user/" + receiver.getId(),
                     java.util.Map.of(
@@ -187,7 +187,7 @@ public class ChatService {
                             .findTopByRoomIdOrderByCreatedAtDesc(req.getId())
                             .orElse(null);
                     long unreadCount = chatMessageRepository
-                            .countByRoomIdAndSender_IdNotAndIsReadFalse(req.getId(), userId);
+                            .countUnreadMessages(req.getId(), userId);
                     return ChatRoomResponse.from(
                             req, userId,
                             last != null ? resolveLastMessagePreview(last.getContent()) : null,
@@ -220,7 +220,7 @@ public class ChatService {
                             .findTopByRoomIdOrderByCreatedAtDesc(req.getId())
                             .orElse(null);
                     long unreadCount = chatMessageRepository
-                            .countByRoomIdAndSender_IdNotAndIsReadFalse(req.getId(), userId);
+                            .countUnreadMessages(req.getId(), userId);
                     return ChatRoomResponse.from(
                             req, userId,
                             last != null ? resolveLastMessagePreview(last.getContent()) : null,
@@ -247,7 +247,7 @@ public class ChatService {
                 .findTopByRoomIdOrderByCreatedAtDesc(roomId)
                 .orElse(null);
         long unreadCount = chatMessageRepository
-                .countByRoomIdAndSender_IdNotAndIsReadFalse(roomId, userId);
+                .countUnreadMessages(roomId, userId);
         return ChatRoomResponse.from(
                 req, userId,
                 last != null ? resolveLastMessagePreview(last.getContent()) : null,

@@ -14,7 +14,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     Optional<ChatMessage> findTopByRoomIdOrderByCreatedAtDesc(Long roomId);
 
     // 내가 받은 메시지(상대방이 보낸) 중 안 읽은 개수
-    long countByRoomIdAndSender_IdNotAndIsReadFalse(Long roomId, Long myUserId);
+    @Query("SELECT COUNT(m) FROM ChatMessage m WHERE m.roomId = :roomId AND m.sender.id != :myUserId AND m.isRead = false")
+    long countUnreadMessages(@Param("roomId") Long roomId, @Param("myUserId") Long myUserId);
 
     // 내가 받은 메시지(상대방이 보낸) 중 안 읽은 것 일괄 읽음 처리
     @Modifying
