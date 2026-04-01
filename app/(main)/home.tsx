@@ -215,6 +215,15 @@ export default function HomeScreen() {
 
   return (
     <View style={s.container}>
+      {user?.userType !== 'KOREAN' && (
+        <TouchableOpacity
+          style={s.fab}
+          onPress={() => router.push('/(main)/write')}
+          activeOpacity={0.85}
+        >
+          <Text style={s.fabText}>도움 요청하기</Text>
+        </TouchableOpacity>
+      )}
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
@@ -569,6 +578,18 @@ const s = StyleSheet.create({
     backgroundColor: '#FEE2E2',
     justifyContent: 'center', alignItems: 'center',
   },
+
+  // ── FAB ──
+  fab: {
+    position: 'absolute', bottom: 16, right: 20,
+    borderRadius: 28, paddingHorizontal: 20, paddingVertical: 14,
+    backgroundColor: BLUE,
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: BLUE, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35, shadowRadius: 10, elevation: 8,
+    zIndex: 10,
+  },
+  fabText: { fontSize: 15, fontWeight: '800', color: '#fff' },
 
   // ── Empty ──
   empty:      { alignItems: 'center', paddingVertical: 40, gap: 8 },
