@@ -2,12 +2,13 @@
 import { useCallback, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ScrollView, RefreshControl, Image, Platform, TextInput,
+  ScrollView, RefreshControl, Image, Platform, TextInput, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useCommunityStore } from '../../stores/communityStore';
-import type { CommunityPost, PostCategory } from '../../types';
+import { getCommunityPosts, type CommunityPostDto } from '../../services/communityService';
+import type { PostCategory } from '../../types';
 
 // ── Design tokens (홈 화면과 동일) ──
 const BLUE     = '#3B6FE8';
@@ -61,7 +62,8 @@ type SearchMode = 'title' | 'title+content';
 
 export default function CommunityScreen() {
   const router = useRouter();
-  const { posts } = useCommunityStore();
+  const [posts, setPosts] = useState<CommunityPostDto[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('ALL');
   const [refreshing, setRefreshing] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
@@ -69,10 +71,21 @@ export default function CommunityScreen() {
   const [searchMode, setSearchMode] = useState<SearchMode>('title');
   const searchInputRef = useRef<TextInput>(null);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
-  };
+  const fetchPosts = useCallback(async () => {
+    try {
+      const res = await getCommunityPosts();
+      if (res.success) setPosts(res.data);
+    } catch {
+      // 조회 실패 무시
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => { fetchPosts(); }, [fetchPosts]));
+
+  const onRefresh = () => { setRefreshing(true); fetchPosts(); };
 
   const openSearch = () => {
     setSearchVisible(true);
@@ -86,7 +99,7 @@ export default function CommunityScreen() {
 
   const categoryFiltered = selectedCategory === 'ALL'
     ? posts
-    : posts.filter((p) => p.category === selectedCategory);
+    : posts.filter((p) => p.category === (selectedCategory as PostCategory));
 
   const filteredPosts = searchQuery.trim()
     ? categoryFiltered.filter((p) => {
@@ -96,9 +109,9 @@ export default function CommunityScreen() {
       })
     : categoryFiltered;
 
-  const isHot = (item: CommunityPost) => item.likes >= 30;
+  const isHot = (item: CommunityPostDto) => item.likes >= 30;
 
-  const renderPost = useCallback(({ item }: { item: CommunityPost }) => {
+  const renderPost = useCallback(({ item }: { item: CommunityPostDto }) => {
     const catColor = CATEGORY_COLOR[item.category];
     const catBg    = CATEGORY_BG[item.category];
     const hot = isHot(item);
@@ -243,6 +256,9 @@ export default function CommunityScreen() {
       </View>
 
       {/* 게시글 목록 */}
+      {isLoading ? (
+        <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 60 }} />
+      ) : null}
       <FlatList
         data={filteredPosts}
         renderItem={renderPost}

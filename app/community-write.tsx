@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../constants/colors';
-import { useCommunityStore } from '../stores/communityStore';
+import { createCommunityPost } from '../services/communityService';
 import { useAuthStore } from '../stores/authStore';
 import type { PostCategory } from '../types';
 
@@ -26,7 +26,6 @@ const CATEGORIES: { key: PostCategory; label: string; emoji: string; color: stri
 
 export default function CommunityWriteScreen() {
   const router = useRouter();
-  const { addPost } = useCommunityStore();
   const { user } = useAuthStore();
 
   const [selectedCategory, setSelectedCategory] = useState<PostCategory | null>(null);
@@ -83,21 +82,20 @@ export default function CommunityWriteScreen() {
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!isSubmitEnabled || !selectedCategory) return;
 
-    addPost({
-      category: selectedCategory,
-      title: title.trim(),
-      content: content.trim(),
-      images,
-      author: user?.nickname ?? '익명',
-      authorId: user?.id,
-      university: user?.university ?? '국민대학교',
-      userType: user?.userType ?? 'KOREAN',
-    });
-
-    router.back();
+    try {
+      await createCommunityPost({
+        category: selectedCategory,
+        title: title.trim(),
+        content: content.trim(),
+        images,
+      });
+      router.back();
+    } catch {
+      Alert.alert('오류', '게시글 등록에 실패했습니다.');
+    }
   };
 
   return (
