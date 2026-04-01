@@ -547,15 +547,9 @@ export default function ChatRoomScreen() {
           <Ionicons name="chevron-back" size={20} color="#6B9DF0" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.headerCenter} activeOpacity={0.7}>
-          <View style={styles.headerAvatar}>
-            <Text style={styles.headerAvatarText}>{partnerNickname.charAt(0)}</Text>
-            {isConnected && <View style={styles.headerOnline} />}
-          </View>
-          <View>
-            <Text style={styles.headerName}>{partnerNickname}</Text>
-          </View>
-        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerName}>{partnerNickname}</Text>
+        </View>
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.actionBtn} onPress={handleVoiceCall}>
