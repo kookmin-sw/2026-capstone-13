@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
-  RefreshControl, ActivityIndicator, Platform,
+  RefreshControl, ActivityIndicator, Platform, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -12,6 +12,13 @@ import { useNotificationStore } from '../../stores/notificationStore';
 import { useChatStore } from '../../stores/chatStore';
 import { CategoryLabels } from '../../constants/colors';
 import type { HelpCategory, HelpRequest } from '../../types';
+
+const SERVER_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api').replace('/api', '');
+const toAbsoluteUrl = (url: string | undefined): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file://') || url.startsWith('content://')) return url;
+  return SERVER_BASE_URL + url;
+};
 
 // ── Design tokens ──
 const BLUE   = '#3B6FE8';
@@ -145,6 +152,7 @@ export default function HomeScreen() {
   const renderCard = (item: HelpRequest) => {
     const initial  = item.requester.nickname.charAt(0);
     const avatarBg = CAT_AVATAR_COLOR[item.category];
+    const profileImageUrl = toAbsoluteUrl(item.requester.profileImage);
     return (
       <TouchableOpacity key={item.id} style={s.card} onPress={() => goTo(item)} activeOpacity={0.85}>
         <View style={[s.cardBar, {
@@ -181,9 +189,13 @@ export default function HomeScreen() {
           </View>
           <Text style={s.cardTitle} numberOfLines={2}>{item.title}</Text>
           <View style={s.cardFooter}>
-            <View style={[s.avatar, { backgroundColor: avatarBg }]}>
-              <Text style={s.avatarText}>{initial}</Text>
-            </View>
+            {profileImageUrl ? (
+              <Image source={{ uri: profileImageUrl }} style={s.avatarImg} />
+            ) : (
+              <View style={[s.avatar, { backgroundColor: avatarBg }]}>
+                <Text style={s.avatarText}>{initial}</Text>
+              </View>
+            )}
             <Text style={s.schoolText}>{item.requester.nickname} · 국민대</Text>
             {item.status === 'WAITING' && user?.userType === 'KOREAN' && (
               <TouchableOpacity style={s.helpBtn} onPress={() => goTo(item)} activeOpacity={0.8}>
@@ -544,6 +556,7 @@ const s = StyleSheet.create({
     width: 22, height: 22, borderRadius: 11,
     justifyContent: 'center', alignItems: 'center', flexShrink: 0,
   },
+  avatarImg:   { width: 22, height: 22, borderRadius: 11, flexShrink: 0 },
   avatarText:  { fontSize: 10, color: '#fff', fontWeight: '700' },
   schoolText:  { fontSize: 13, color: T2, fontWeight: '500', flex: 1 },
   helpBtn: {
