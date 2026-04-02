@@ -8,6 +8,7 @@ export interface CommunityPostDto {
   content: string;
   images: string[];
   author: string;
+  authorProfileImage?: string;
   university: string;
   userType: string;
   likes: number;
@@ -20,6 +21,7 @@ export interface PostCommentDto {
   id: number;
   postId: number;
   author: string;
+  authorProfileImage?: string;
   university: string;
   userType: string;
   content: string;
@@ -62,5 +64,28 @@ export const addCommunityComment = async (postId: number, content: string): Prom
 // 좋아요 토글
 export const toggleCommunityLike = async (postId: number): Promise<ApiResponse<{ liked: boolean; likes: number }>> => {
   const response = await api.post<ApiResponse<{ liked: boolean; likes: number }>>(`/community/${postId}/like`);
+  return response.data;
+};
+
+// 게시글 수정
+export const updateCommunityPost = async (postId: number, data: {
+  category: PostCategory;
+  title: string;
+  content: string;
+  images: string[];
+}): Promise<ApiResponse<CommunityPostDto>> => {
+  const response = await api.put<ApiResponse<CommunityPostDto>>(`/community/${postId}`, data);
+  return response.data;
+};
+
+// 게시글 삭제
+export const deleteCommunityPost = async (postId: number): Promise<ApiResponse<null>> => {
+  const response = await api.delete<ApiResponse<null>>(`/community/${postId}`);
+  return response.data;
+};
+
+// 댓글 삭제
+export const deleteCommunityComment = async (commentId: number): Promise<ApiResponse<null>> => {
+  const response = await api.delete<ApiResponse<null>>(`/community/comments/${commentId}`);
   return response.data;
 };

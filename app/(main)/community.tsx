@@ -42,10 +42,18 @@ const CATEGORY_BG: Record<PostCategory, string> = {
 };
 
 const AVATAR_COLORS = ['#F0A040', '#F06060', BLUE, '#90C4F0', '#A0A8B0'];
+const SERVER_BASE_URL = 'https://backend-production-0a6f.up.railway.app';
+
 function avatarColor(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i)) % AVATAR_COLORS.length;
   return AVATAR_COLORS[h];
+}
+
+function toAbsoluteUrl(path?: string): string | null {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return SERVER_BASE_URL + path;
 }
 
 function formatTime(createdAt: string): string {
@@ -165,9 +173,12 @@ export default function CommunityScreen() {
           {/* 푸터 */}
           <View style={s.footer}>
             <View style={s.authorRow}>
-              <View style={[s.avatar, { backgroundColor: avatarColor(item.author) }]}>
-                <Text style={s.avatarText}>{item.author.charAt(0)}</Text>
-              </View>
+              {toAbsoluteUrl(item.authorProfileImage)
+                ? <Image source={{ uri: toAbsoluteUrl(item.authorProfileImage)! }} style={s.avatar} />
+                : <View style={[s.avatar, { backgroundColor: avatarColor(item.author) }]}>
+                    <Text style={s.avatarText}>{item.author.charAt(0)}</Text>
+                  </View>
+              }
               <Text style={s.authorName}>{item.author}</Text>
             </View>
             <View style={s.reactions}>

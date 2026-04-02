@@ -5,11 +5,11 @@ import {
   ScrollView, Alert, KeyboardAvoidingView, Platform,
   Image, FlatList,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../constants/colors';
-import { createCommunityPost } from '../services/communityService';
+import { createCommunityPost, updateCommunityPost } from '../services/communityService';
 import { useAuthStore } from '../stores/authStore';
 import type { PostCategory } from '../types';
 
@@ -27,10 +27,16 @@ const CATEGORIES: { key: PostCategory; label: string; emoji: string; color: stri
 export default function CommunityWriteScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const params = useLocalSearchParams<{ id?: string; category?: string; title?: string; content?: string }>();
 
-  const [selectedCategory, setSelectedCategory] = useState<PostCategory | null>(null);
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const editId = params.id ? Number(params.id) : null;
+  const isEditMode = editId !== null;
+
+  const [selectedCategory, setSelectedCategory] = useState<PostCategory | null>(
+    (params.category as PostCategory) ?? null
+  );
+  const [title, setTitle] = useState(params.title ?? '');
+  const [content, setContent] = useState(params.content ?? '');
   const [images, setImages] = useState<string[]>([]);
 
   const isSubmitEnabled = selectedCategory !== null && title.trim().length > 0 && content.trim().length > 0;
@@ -86,15 +92,14 @@ export default function CommunityWriteScreen() {
     if (!isSubmitEnabled || !selectedCategory) return;
 
     try {
-      await createCommunityPost({
-        category: selectedCategory,
-        title: title.trim(),
-        content: content.trim(),
-        images,
-      });
+      if (isEditMode && editId !== null) {
+        await updateCommunityPost(editId, { category: selectedCategory, title: title.trim(), content: content.trim(), images });
+      } else {
+        await createCommunityPost({ category: selectedCategory, title: title.trim(), content: content.trim(), images });
+      }
       router.back();
     } catch {
-      Alert.alert('오류', '게시글 등록에 실패했습니다.');
+      Alert.alert('오류', isEditMode ? '수정에 실패했습니다.' : '게시글 등록에 실패했습니다.');
     }
   };
 
@@ -105,13 +110,13 @@ export default function CommunityWriteScreen() {
         <TouchableOpacity style={styles.headerBtn} onPress={() => router.back()}>
           <Ionicons name="close" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>커뮤니티 글쓰기</Text>
+        <Text style={styles.headerTitle}>{isEditMode ? '게시글 수정' : '커뮤니티 글쓰기'}</Text>
         <TouchableOpacity
           style={[styles.submitBtn, !isSubmitEnabled && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={!isSubmitEnabled}
         >
-          <Text style={[styles.submitBtnText, !isSubmitEnabled && styles.submitBtnTextDisabled]}>등록</Text>
+          <Text style={[styles.submitBtnText, !isSubmitEnabled && styles.submitBtnTextDisabled]}>{isEditMode ? '수정' : '등록'}</Text>
         </TouchableOpacity>
       </View>
 
