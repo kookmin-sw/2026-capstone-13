@@ -1,17 +1,25 @@
-import { useState, useCallback, useEffect } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
-  RefreshControl, ActivityIndicator, Platform, Image,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getHelpRequests, cancelHelpRequest, getHelpedRequests } from '../../services/helpService';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import SwipeCardStack from '../../components/SwipeCardStack';
-import { useAuthStore } from '../../stores/authStore';
-import { useNotificationStore } from '../../stores/notificationStore';
-import { useChatStore } from '../../stores/chatStore';
 import { CategoryLabels } from '../../constants/colors';
+import { cancelHelpRequest, getHelpedRequests, getHelpRequests } from '../../services/helpService';
+import { useAuthStore } from '../../stores/authStore';
+import { useChatStore } from '../../stores/chatStore';
+import { useNotificationStore } from '../../stores/notificationStore';
 import type { HelpCategory, HelpRequest } from '../../types';
 
 const SERVER_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api').replace('/api', '');
@@ -77,6 +85,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing]         = useState(false);
   const [catFilter]                          = useState<CatFilter>('ALL');
   const [statusFilter, setStatusFilter]     = useState<StatusFilter>('ALL');
+  const [scrollEnabled, setScrollEnabled]   = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => setShowCount(prev => !prev), 6000);
@@ -227,6 +236,7 @@ export default function HomeScreen() {
       )}
       <ScrollView
         showsVerticalScrollIndicator={false}
+        scrollEnabled={scrollEnabled}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
@@ -273,7 +283,7 @@ export default function HomeScreen() {
         </View>
 
         {/* ── 모든 도움 보기 ── */}
-        <SwipeCardStack />
+        <SwipeCardStack onSwipeActive={(active) => setScrollEnabled(!active)} />
 
         {/* ── 내 활동 확인하기 ── */}
         <View style={s.sectionCard}>

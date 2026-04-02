@@ -119,21 +119,30 @@ interface CardData {
 interface SwipeCardProps {
   onSwipeLeft?: (card: CardData) => void;
   onSwipeRight?: (card: CardData) => void;
+  onSwipeActive?: (active: boolean) => void;
 }
 
-export default function SwipeCardStack({ onSwipeLeft, onSwipeRight }: SwipeCardProps) {
+export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActive }: SwipeCardProps) {
   const [index, setIndex] = useState(0);
 
   const positionX = useRef(new Animated.Value(0)).current;
+  const isSwiping = useRef(false);
 
   const panResponder = useRef(
     PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 2,
+      onPanResponderGrant: () => {
+        isSwiping.current = true;
+        onSwipeActive?.(true);
+      },
       onPanResponderMove: (_, gesture) => {
         positionX.setValue(gesture.dx);
       },
       onPanResponderRelease: (_, gesture) => {
+        isSwiping.current = false;
+        onSwipeActive?.(false);
         if (gesture.dx < -SWIPE_THRESHOLD) {
           swipeOut('left');
         } else if (gesture.dx > SWIPE_THRESHOLD) {
@@ -141,6 +150,11 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight }: SwipeCardP
         } else {
           resetPosition();
         }
+      },
+      onPanResponderTerminate: () => {
+        isSwiping.current = false;
+        onSwipeActive?.(false);
+        resetPosition();
       },
     })
   ).current;
@@ -176,7 +190,38 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight }: SwipeCardP
   return (
     <View style={styles.stackContainer}>
       {/* 뒤 카드 */}
-      <View style={[styles.card, styles.cardBehind1, { backgroundColor: nextCard.color + '55' }]} />
+      <View style={[styles.card, styles.cardBehind1]}>
+        <View style={[styles.cardTop, { backgroundColor: nextCard.color }]}>
+          <View style={styles.colorOverlay} />
+          <View style={styles.badgeRow}>
+            <View style={[styles.badge, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
+              <Text style={[styles.badgeText, { color: nextCard.badgeColor }]}>{nextCard.badge}</Text>
+            </View>
+            <View style={styles.timeBadge}>
+              <Text style={styles.timeText}>⏱ {nextCard.time}</Text>
+            </View>
+          </View>
+          <View style={styles.profileRow}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarLabel}>{nextCard.avatarLabel}</Text>
+            </View>
+            <View style={styles.nameBlock}>
+              <Text style={styles.cardName}>{nextCard.name}</Text>
+              <Text style={styles.cardSchool}>{nextCard.school}</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.cardBottom}>
+          <Text style={styles.cardTitle}>{nextCard.title}</Text>
+          <View style={styles.tagsRow}>
+            {nextCard.tags.map((tag, i) => (
+              <View key={i} style={[styles.tag, { backgroundColor: tag.bg }]}>
+                <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
 
       {/* 메인 카드 */}
       <Animated.View
