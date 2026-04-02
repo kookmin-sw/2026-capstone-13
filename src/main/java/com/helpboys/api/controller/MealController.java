@@ -2,6 +2,7 @@ package com.helpboys.api.controller;
 
 import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.MealResponse;
+import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.service.MealService;
 import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class MealController {
 
     private final MealService mealService;
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     /**
      * GET /api/meals?lang=en
@@ -45,7 +47,11 @@ public class MealController {
         if (queryLang != null && !queryLang.isBlank()) return queryLang;
         if (token != null) {
             try {
-                // JWT에서 언어 추출 (추후 확장)
+                String bearerToken = token.startsWith("Bearer ") ? token.substring(7) : token;
+                Long userId = jwtUtil.extractUserId(bearerToken);
+                return userRepository.findById(userId)
+                        .map(u -> u.getPreferredLanguage() != null ? u.getPreferredLanguage() : "en")
+                        .orElse("en");
             } catch (Exception ignored) {}
         }
         return "en";
