@@ -284,7 +284,10 @@ export default function HomeScreen() {
 
         {/* ── 모든 도움 보기 ── */}
         <View style={{ marginLeft: 16, marginBottom: 20 }}>
-          <SwipeCardStack onSwipeActive={(active) => setScrollEnabled(!active)} />
+          <SwipeCardStack
+            requests={requests.filter(r => r.status === 'WAITING')}
+            onSwipeActive={(active) => setScrollEnabled(!active)}
+          />
         </View>
 
         {/* ── 내 활동 확인하기 ── */}
