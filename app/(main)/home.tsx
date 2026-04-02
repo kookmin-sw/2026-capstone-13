@@ -35,7 +35,7 @@ const BLUE_L = '#EEF4FF';
 const ORANGE = '#F97316';
 const T1     = '#0C1C3C';
 const T2     = '#AABBCC';
-const BG     = '#EDEEF2';
+const BG     = '#FFFFFF';
 const DIV    = '#F4F5F8';
 
 const CAT_AVATAR_COLOR: Record<HelpCategory, string> = {
@@ -283,7 +283,9 @@ export default function HomeScreen() {
         </View>
 
         {/* ── 모든 도움 보기 ── */}
-        <SwipeCardStack onSwipeActive={(active) => setScrollEnabled(!active)} />
+        <View style={{ marginLeft: 16, marginBottom: 8 }}>
+          <SwipeCardStack onSwipeActive={(active) => setScrollEnabled(!active)} />
+        </View>
 
         {/* ── 내 활동 확인하기 ── */}
         <View style={s.sectionCard}>
@@ -397,16 +399,17 @@ const s = StyleSheet.create({
   },
 
   // ── Hero ──
-  heroWrap: { marginHorizontal: 16, marginBottom: 10 },
+  heroWrap: { marginHorizontal: 16, marginBottom: 12, marginTop: 8 },
   heroCard: {
-    backgroundColor: '#fff', borderRadius: 24, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+    backgroundColor: '#fff', borderRadius: 24,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12, shadowRadius: 12, elevation: 6,
   },
   heroBg: {
     backgroundColor: '#EEF4FF',
-    padding: 26,
-    position: 'relative', minHeight: 160,
+    padding: 20,
+    position: 'relative', minHeight: 140,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
   },
   heroIconCard: {
     position: 'absolute', top: 14, right: 18,
@@ -427,7 +430,7 @@ const s = StyleSheet.create({
   heroHL:     { color: BLUE },
   heroSub:    { fontSize: 12, color: T2, fontWeight: '500' },
   heroUrgent: { fontSize: 12, color: ORANGE, fontWeight: '700', marginTop: 4 },
-  heroBottom: { padding: 16, paddingTop: 14 },
+  heroBottom: { padding: 12, paddingTop: 10 },
   heroBtn: {
     backgroundColor: BLUE, borderRadius: 14, padding: 15,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -441,10 +444,10 @@ const s = StyleSheet.create({
 
   // ── Section Card ──
   sectionCard: {
-    marginHorizontal: 16, marginBottom: 10,
-    backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+    marginHorizontal: 16, marginBottom: 8,
+    backgroundColor: '#fff', borderRadius: 20,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12, shadowRadius: 12, elevation: 6,
   },
   sectionHeader: {
     padding: 18, paddingBottom: 14,
@@ -544,7 +547,7 @@ const s = StyleSheet.create({
   // ── Card ──
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16, overflow: 'hidden',
+    borderRadius: 16,
     borderWidth: 1, borderColor: '#F0F2F6',
     flexDirection: 'row', marginBottom: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },

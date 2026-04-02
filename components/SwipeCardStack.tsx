@@ -9,112 +9,106 @@ import {
 } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CARD_WIDTH = SCREEN_WIDTH - 64; // 좌 16 + 우 16 + 여유 32
+const CARD_HEIGHT = 390;
 const SWIPE_THRESHOLD = 90;
-const CARD_WIDTH = SCREEN_WIDTH - 32;
 
 // ── 데이터 ────────────────────────────────────────────────
 const CARDS = [
   {
     id: 1,
-    color: '#FF6B6B',
+    bgTop: '#4A90D9',
+    flag: '🇨🇳',
     avatarLabel: '리',
     name: '리웨이',
-    school: '베이징 출신 · 3학년',
-    badge: '🚨 긴급',
-    badgeColor: '#C45A10',
-    badgeBg: '#FFF0E6',
+    sub: '베이징 출신 · 국민대 3학년',
+    urgency: '긴급',
+    urgencyColor: '#FFAAAA',
     time: '15분 전',
-    title: '외국인등록증 갱신 서류 도움',
-    tags: [
-      { label: '🏫 행정', bg: '#FFF0E6', color: '#C45A10' },
-      { label: '📄 서류', bg: '#EEF4FF', color: '#3B6FE8' },
-      { label: '🤝 대화', bg: '#EEF4FF', color: '#3B6FE8' },
-    ],
+    title: '외국인등록증 갱신 서류, 어떻게 준비해야 할지 모르겠어요 😢',
+    tags: ['🏛 행정', '📋 서류', '🤝 동행'],
   },
   {
     id: 2,
-    color: '#3B6FE8',
+    bgTop: '#5B8EE6',
+    flag: '🇪🇬',
     avatarLabel: '아',
     name: '아흐메드',
-    school: '이집트 출신 · 2학년',
-    badge: '✨ 신규',
-    badgeColor: '#3B6FE8',
-    badgeBg: '#EEF4FF',
+    sub: '이집트 출신 · 국민대 2학년',
+    urgency: '신규',
+    urgencyColor: '#C8E0FF',
     time: '1시간 전',
-    title: '건강보험 가입 방법 알려주실 분',
-    tags: [
-      { label: '🏥 건강', bg: '#EDFAF4', color: '#0F9B72' },
-      { label: '🌐 온라인', bg: '#EEF4FF', color: '#3B6FE8' },
-      { label: '💬 채팅', bg: '#EEF4FF', color: '#3B6FE8' },
-    ],
+    title: '건강보험 가입이 너무 복잡해요. 아는 분 있으면 도움 부탁드려요!',
+    tags: ['🏥 건강', '💬 채팅', '📱 온라인'],
   },
   {
     id: 3,
-    color: '#F97316',
+    bgTop: '#4888D4',
+    flag: '🇧🇷',
     avatarLabel: '마',
     name: '마리아',
-    school: '브라질 출신 · 1학년',
-    badge: 'ℹ 정보',
-    badgeColor: '#6B9DF0',
-    badgeBg: '#EEF4FF',
+    sub: '브라질 출신 · 국민대 1학년',
+    urgency: '정보',
+    urgencyColor: '#C8E0FF',
     time: '2시간 전',
-    title: '취업비자 서류 작성 도움',
-    tags: [
-      { label: '💼 취업', bg: '#EEF4FF', color: '#3B6FE8' },
-      { label: '📄 서류', bg: '#FFF0E6', color: '#C45A10' },
-      { label: '⚡ 빠른답변', bg: '#FFFBE6', color: '#B45309' },
-    ],
+    title: '편의점 알바 지원 서류 작성 도와주실 분 찾아요 🙏',
+    tags: ['💼 취업', '📝 서류', '⚡ 급해요'],
   },
   {
     id: 4,
-    color: '#8B5CF6',
-    avatarLabel: '유',
-    name: '유수포바',
-    school: '카자흐 출신 · 4학년',
-    badge: '🚨 긴급',
-    badgeColor: '#C45A10',
-    badgeBg: '#FFF0E6',
+    bgTop: '#5592E0',
+    flag: '🇨🇳',
+    avatarLabel: '왕',
+    name: '왕샤오밍',
+    sub: '상하이 출신 · 국민대 4학년',
+    urgency: '긴급',
+    urgencyColor: '#FFAAAA',
     time: '30분 전',
-    title: '병원 동행 및 통역 도움 신청',
-    tags: [
-      { label: '🏥 건강', bg: '#EDFAF4', color: '#0F9B72' },
-      { label: '🗣 통역', bg: '#F3F0FF', color: '#7C3AED' },
-      { label: '🤝 대화', bg: '#EEF4FF', color: '#3B6FE8' },
-    ],
+    title: '병원 예약이랑 진료 통역 같이 가주실 분 정말 필요해요!',
+    tags: ['🏥 병원', '🗣 통역', '🤝 동행'],
   },
   {
     id: 5,
-    color: '#10B981',
-    avatarLabel: '이',
-    name: '이반',
-    school: '우크라이나 출신 · 3학년',
-    badge: '✨ 신규',
-    badgeColor: '#3B6FE8',
-    badgeBg: '#EEF4FF',
+    bgTop: '#4F8ADB',
+    flag: '🇺🇦',
+    avatarLabel: '안',
+    name: '안나',
+    sub: '우크라이나 출신 · 국민대 3학년',
+    urgency: '신규',
+    urgencyColor: '#C8E0FF',
     time: '3시간 전',
-    title: '은행 계좌 개설 동행 신청',
-    tags: [
-      { label: '🏦 금융', bg: '#EEF4FF', color: '#3B6FE8' },
-      { label: '🤝 대화', bg: '#EEF4FF', color: '#3B6FE8' },
-      { label: '📄 서류', bg: '#FFF0E6', color: '#C45A10' },
-    ],
+    title: '은행 계좌 개설하러 같이 가주실 착한 분 구해요 😊',
+    tags: ['🏦 금융', '🤝 동행', '📋 서류'],
+  },
+  {
+    id: 6,
+    bgTop: '#5A8CE4',
+    flag: '🇲🇦',
+    avatarLabel: '타',
+    name: '타마라',
+    sub: '모로코 출신 · 국민대 2학년',
+    urgency: '정보',
+    urgencyColor: '#C8E0FF',
+    time: '4시간 전',
+    title: '대학원 지원서 한국어 교정 도와주실 분 계세요?',
+    tags: ['🎓 학업', '✏️ 교정', '💬 채팅'],
+  },
+  {
+    id: 7,
+    bgTop: '#4D8CD8',
+    flag: '🇲🇽',
+    avatarLabel: '카',
+    name: '카를로스',
+    sub: '멕시코 출신 · 국민대 1학년',
+    urgency: '긴급',
+    urgencyColor: '#FFAAAA',
+    time: '5분 전',
+    title: '기숙사 계약서 번역 급하게 필요해요!! 도와주세요',
+    tags: ['🏠 주거', '📋 번역', '⚡ 급해요'],
   },
 ];
 
-// ── 카드 컴포넌트 ───────────────────────────────────────────
-interface CardData {
-  id: number;
-  color: string;
-  avatarLabel: string;
-  name: string;
-  school: string;
-  badge: string;
-  badgeColor: string;
-  badgeBg: string;
-  time: string;
-  title: string;
-  tags: { label: string; bg: string; color: string }[];
-}
+type CardData = (typeof CARDS)[0];
 
 interface SwipeCardProps {
   onSwipeLeft?: (card: CardData) => void;
@@ -122,11 +116,13 @@ interface SwipeCardProps {
   onSwipeActive?: (active: boolean) => void;
 }
 
+// ── 메인 컴포넌트 ─────────────────────────────────────────
 export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActive }: SwipeCardProps) {
   const [index, setIndex] = useState(0);
-
-  const positionX = useRef(new Animated.Value(0)).current;
+  const positionRef = useRef(new Animated.ValueXY());
+  const position = positionRef.current;
   const isSwiping = useRef(false);
+
 
   const panResponder = useRef(
     PanResponder.create({
@@ -137,19 +133,15 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActiv
         isSwiping.current = true;
         onSwipeActive?.(true);
       },
-      onPanResponderMove: (_, gesture) => {
-        positionX.setValue(gesture.dx);
+      onPanResponderMove: (_, g) => {
+        position.setValue({ x: g.dx, y: 0 });
       },
-      onPanResponderRelease: (_, gesture) => {
+      onPanResponderRelease: (_, g) => {
         isSwiping.current = false;
         onSwipeActive?.(false);
-        if (gesture.dx < -SWIPE_THRESHOLD) {
-          swipeOut('left');
-        } else if (gesture.dx > SWIPE_THRESHOLD) {
-          swipeOut('right');
-        } else {
-          resetPosition();
-        }
+        if (g.dx > SWIPE_THRESHOLD) swipeOut('right');
+        else if (g.dx < -SWIPE_THRESHOLD) swipeOut('left');
+        else resetPosition();
       },
       onPanResponderTerminate: () => {
         isSwiping.current = false;
@@ -160,63 +152,74 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActiv
   ).current;
 
   const swipeOut = (dir: 'left' | 'right') => {
-    const toValue = dir === 'left' ? -SCREEN_WIDTH - 100 : SCREEN_WIDTH + 100;
-    positionX.stopAnimation();
-    Animated.timing(positionX, {
-      toValue,
-      duration: 250,
-      useNativeDriver: true,
+    const x = dir === 'right' ? SCREEN_WIDTH + 100 : -(SCREEN_WIDTH + 100);
+    position.stopAnimation();
+    Animated.timing(position, {
+      toValue: { x, y: 0 },
+      duration: 300,
+      useNativeDriver: false,
     }).start(() => {
       const card = CARDS[index % CARDS.length];
-      if (dir === 'left') onSwipeLeft?.(card);
-      else onSwipeRight?.(card);
-      positionX.setValue(0);
+      dir === 'right' ? onSwipeRight?.(card) : onSwipeLeft?.(card);
+      position.setValue({ x: 0, y: 0 });
       setIndex(prev => prev + 1);
     });
   };
 
   const resetPosition = () => {
-    positionX.stopAnimation();
-    Animated.timing(positionX, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
+    position.stopAnimation();
+    Animated.spring(position, {
+      toValue: { x: 0, y: 0 },
+      friction: 6,
+      useNativeDriver: false,
     }).start();
   };
 
+  // 현재 + 뒤 한 장
   const card = CARDS[index % CARDS.length];
-  const nextCard = CARDS[(index + 1) % CARDS.length];
+  const next = CARDS[(index + 1) % CARDS.length];
 
   return (
-    <View style={styles.stackContainer}>
+    <View style={styles.stack}>
+
       {/* 뒤 카드 */}
-      <View style={[styles.card, styles.cardBehind1]}>
-        <View style={[styles.cardTop, { backgroundColor: nextCard.color }]}>
-          <View style={styles.colorOverlay} />
-          <View style={styles.badgeRow}>
-            <View style={[styles.badge, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-              <Text style={[styles.badgeText, { color: nextCard.badgeColor }]}>{nextCard.badge}</Text>
-            </View>
-            <View style={styles.timeBadge}>
-              <Text style={styles.timeText}>⏱ {nextCard.time}</Text>
-            </View>
-          </View>
-          <View style={styles.profileRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarLabel}>{nextCard.avatarLabel}</Text>
-            </View>
-            <View style={styles.nameBlock}>
-              <Text style={styles.cardName}>{nextCard.name}</Text>
-              <Text style={styles.cardSchool}>{nextCard.school}</Text>
-            </View>
+      <View style={[styles.card, styles.cardBack1]}>
+        <View style={[styles.cardBg, { backgroundColor: next.bgTop }]}>
+          <View style={[styles.bgCircle, { width: 280, height: 280, top: -60, right: -60 }]} />
+          <View style={[styles.bgCircle, { width: 180, height: 180, bottom: -40, left: -40 }]} />
+          <View style={styles.avatarWrap}>
+            <Text style={styles.avatarText}>{next.avatarLabel}</Text>
           </View>
         </View>
-        <View style={styles.cardBottom}>
-          <Text style={styles.cardTitle}>{nextCard.title}</Text>
+        <View style={styles.gradientOverlay} />
+        <View style={styles.urgencyBadge}>
+          <View style={[styles.urgencyDot, { backgroundColor: next.urgencyColor }]} />
+          <Text style={[styles.urgencyText, { color: next.urgencyColor }]}>{next.urgency}</Text>
+        </View>
+        <View style={styles.timePill}>
+          <Text style={styles.timeText}>{next.time}</Text>
+        </View>
+        <View style={styles.infoLayer}>
+          <View style={styles.infoTop}>
+            <View style={styles.infoTopLeft}>
+              <View style={styles.nameRow}>
+                <Text style={styles.cardName}>{next.name}</Text>
+                <Text style={styles.flag}>{next.flag}</Text>
+              </View>
+              <Text style={styles.cardSub}>{next.sub}</Text>
+            </View>
+            <View style={styles.schoolBadge}>
+              <Text style={styles.schoolBadgeText}>국민대</Text>
+            </View>
+          </View>
+          <View style={styles.requestBox}>
+            <Text style={styles.requestLabel}>도움 요청</Text>
+            <Text style={styles.requestText}>{next.title}</Text>
+          </View>
           <View style={styles.tagsRow}>
-            {nextCard.tags.map((tag, i) => (
-              <View key={i} style={[styles.tag, { backgroundColor: tag.bg }]}>
-                <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
+            {next.tags.map((tag, i) => (
+              <View key={i} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
               </View>
             ))}
           </View>
@@ -227,43 +230,59 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActiv
       <Animated.View
         style={[
           styles.card,
-          { transform: [{ translateX: positionX }] },
+          { left: 0, top: 0, transform: [{ translateX: position.x }] },
         ]}
-        {...panResponder.panHandlers}
-      >
-        {/* 상단 컬러 프로필 영역 */}
-        <View style={[styles.cardTop, { backgroundColor: card.color }]}>
-          <View style={styles.colorOverlay} />
+        {...panResponder.panHandlers}>
 
-          {/* 배지 + 시간 */}
-          <View style={styles.badgeRow}>
-            <View style={[styles.badge, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-              <Text style={[styles.badgeText, { color: card.badgeColor }]}>{card.badge}</Text>
-            </View>
-            <View style={styles.timeBadge}>
-              <Text style={styles.timeText}>⏱ {card.time}</Text>
-            </View>
-          </View>
-
-          {/* 프로필 */}
-          <View style={styles.profileRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarLabel}>{card.avatarLabel}</Text>
-            </View>
-            <View style={styles.nameBlock}>
-              <Text style={styles.cardName}>{card.name}</Text>
-              <Text style={styles.cardSchool}>{card.school}</Text>
-            </View>
+        {/* 배경 */}
+        <View style={[styles.cardBg, { backgroundColor: card.bgTop }]}>
+          <View style={[styles.bgCircle, { width: 280, height: 280, top: -60, right: -60 }]} />
+          <View style={[styles.bgCircle, { width: 180, height: 180, bottom: -40, left: -40 }]} />
+          <View style={styles.avatarWrap}>
+            <Text style={styles.avatarText}>{card.avatarLabel}</Text>
           </View>
         </View>
 
-        {/* 하단 흰 영역 */}
-        <View style={styles.cardBottom}>
-          <Text style={styles.cardTitle}>{card.title}</Text>
+        {/* 그라데이션 오버레이 */}
+        <View style={styles.gradientOverlay} />
+
+        {/* 긴급 뱃지 */}
+        <View style={styles.urgencyBadge}>
+          <View style={[styles.urgencyDot, { backgroundColor: card.urgencyColor }]} />
+          <Text style={[styles.urgencyText, { color: card.urgencyColor }]}>
+            {card.urgency}
+          </Text>
+        </View>
+
+        {/* 시간 필 */}
+        <View style={styles.timePill}>
+          <Text style={styles.timeText}>{card.time}</Text>
+        </View>
+
+        {/* 정보 레이어 */}
+        <View style={styles.infoLayer}>
+          <View style={styles.infoTop}>
+            <View style={styles.infoTopLeft}>
+              <View style={styles.nameRow}>
+                <Text style={styles.cardName}>{card.name}</Text>
+                <Text style={styles.flag}>{card.flag}</Text>
+              </View>
+              <Text style={styles.cardSub}>{card.sub}</Text>
+            </View>
+            <View style={styles.schoolBadge}>
+              <Text style={styles.schoolBadgeText}>국민대</Text>
+            </View>
+          </View>
+
+          <View style={styles.requestBox}>
+            <Text style={styles.requestLabel}>도움 요청</Text>
+            <Text style={styles.requestText}>{card.title}</Text>
+          </View>
+
           <View style={styles.tagsRow}>
             {card.tags.map((tag, i) => (
-              <View key={i} style={[styles.tag, { backgroundColor: tag.bg }]}>
-                <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
+              <View key={i} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
               </View>
             ))}
           </View>
@@ -275,133 +294,196 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActiv
 }
 
 // ── 스타일 ────────────────────────────────────────────────
-const CARD_HEIGHT = 300;
-
 const styles = StyleSheet.create({
-  stackContainer: {
-    height: CARD_HEIGHT + 24,
-    marginHorizontal: 16,
-    marginBottom: 8,
+  stack: {
+    width: CARD_WIDTH + 32,
+    height: CARD_HEIGHT + 8,
     position: 'relative',
+    shadowColor: '#3B6FE8',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 10,
   },
+
+  // 카드 기본
   card: {
     position: 'absolute',
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    borderRadius: 24,
-    backgroundColor: '#fff',
+    borderRadius: 28,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 8,
   },
-  cardBehind1: {
-    transform: [{ translateX: 10 }, { translateY: 10 }],
+  cardBack1: {
+    right: 0,
+    bottom: 0,
+    opacity: 0.75,
   },
-  cardTop: {
-    height: 160,
-    padding: 16,
-    position: 'relative',
-    justifyContent: 'flex-end',
-  },
-  colorOverlay: {
+
+  // 배경
+  cardBg: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-  },
-  badgeRow: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    gap: 6,
-    alignItems: 'flex-end',
-  },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    marginBottom: 6,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  timeBadge: {
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
-  timeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#555',
-  },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 12,
-  },
-  avatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.25)',
   },
-  avatarLabel: {
-    fontSize: 28,
+  bgCircle: {
+    position: 'absolute',
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 280,
+    backgroundColor: 'rgba(20,50,110,0.82)',
+  },
+
+  // 아바타
+  avatarWrap: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.35)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    top: CARD_HEIGHT * 0.5 - 200 * 0.62 - 100,
+    left: CARD_WIDTH / 2 - 100,
+  },
+  avatarText: {
+    fontSize: 80,
     fontWeight: '900',
-    color: '#fff',
+    color: 'rgba(255,255,255,0.95)',
   },
-  nameBlock: {
-    paddingBottom: 4,
+
+  // 긴급 뱃지
+  urgencyBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    borderRadius: 20,
+    paddingHorizontal: 13,
+    paddingVertical: 5,
+    gap: 5,
+  },
+  urgencyDot: { width: 7, height: 7, borderRadius: 4 },
+  urgencyText: { fontSize: 11, fontWeight: '800' },
+
+  // 시간
+  timePill: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  timeText: { fontSize: 11, fontWeight: '600', color: '#fff' },
+
+  // 정보 레이어
+  infoLayer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 22,
+    paddingBottom: 22,
+    paddingTop: 20,
+  },
+  infoTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 6,
+  },
+  infoTopLeft: {
+    flex: 1,
+    marginRight: 10,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 3,
   },
   cardName: {
-    fontSize: 17,
+    fontSize: 24,
     fontWeight: '900',
     color: '#fff',
-    textShadowColor: 'rgba(0,0,0,0.25)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-    marginBottom: 2,
+    letterSpacing: -0.5,
   },
-  cardSchool: {
+  flag: { fontSize: 18 },
+  cardSub: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.85)',
-    fontWeight: '600',
+    color: 'rgba(255,255,255,0.65)',
+    fontWeight: '500',
+    marginBottom: 12,
   },
-  cardBottom: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 16,
-    justifyContent: 'space-between',
+  schoolBadge: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0C1C3C',
-    letterSpacing: -0.3,
-    marginBottom: 10,
+  schoolBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+
+  // 요청 박스
+  requestBox: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
   },
+  requestLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 0.8,
+    marginBottom: 5,
+  },
+  requestText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+    lineHeight: 20,
+  },
+
+  // 태그
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 7,
   },
   tag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginRight: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    marginRight: 7,
     marginBottom: 4,
   },
   tagText: {
     fontSize: 11,
     fontWeight: '700',
+    color: 'rgba(255,255,255,0.9)',
   },
+
 });
