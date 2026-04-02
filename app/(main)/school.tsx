@@ -31,12 +31,14 @@ const T3       = '#6B9DF0';
 
 type TabKey = 'CAFETERIA' | 'NOTICE';
 
-interface CafeteriaMenu {
+interface MealData {
   id: number;
-  date: string;
-  mealTime: '아침' | '점심' | '저녁';
-  items: { korean: string; english: string; price?: number }[];
-  restaurant: string;
+  mealDate: string;
+  cafeteria: string;
+  corner: string;
+  cafeteriaKo: string;
+  cornerKo: string;
+  menu: string;
 }
 
 interface SchoolNotice {
@@ -49,43 +51,6 @@ interface SchoolNotice {
   pubDate: string | null;
 }
 
-const MOCK_MENUS: CafeteriaMenu[] = [
-  {
-    id: 1, date: '2026-03-15', mealTime: '점심', restaurant: '제1학생식당',
-    items: [
-      { korean: '김치찌개', english: 'Kimchi Stew', price: 4500 },
-      { korean: '제육볶음', english: 'Spicy Stir-fried Pork', price: 5000 },
-      { korean: '된장국', english: 'Soybean Paste Soup' },
-      { korean: '공기밥', english: 'Steamed Rice' },
-      { korean: '깍두기', english: 'Cubed Radish Kimchi' },
-    ],
-  },
-  {
-    id: 2, date: '2026-03-15', mealTime: '점심', restaurant: '교직원식당',
-    items: [
-      { korean: '순두부찌개', english: 'Soft Tofu Stew', price: 5500 },
-      { korean: '불고기덮밥', english: 'Bulgogi Rice Bowl', price: 6000 },
-      { korean: '미역국', english: 'Seaweed Soup' },
-      { korean: '잡채', english: 'Glass Noodles with Vegetables' },
-    ],
-  },
-  {
-    id: 3, date: '2026-03-15', mealTime: '저녁', restaurant: '제1학생식당',
-    items: [
-      { korean: '부대찌개', english: 'Army Base Stew', price: 5000 },
-      { korean: '돈까스', english: 'Pork Cutlet', price: 5500 },
-      { korean: '콩나물국', english: 'Bean Sprout Soup' },
-      { korean: '시금치나물', english: 'Seasoned Spinach' },
-    ],
-  },
-];
-
-
-const MEAL_TIME_COLOR = {
-  아침: { bg: '#FEF3C7', text: '#D97706' },
-  점심: { bg: BLUE_L,   text: BLUE       },
-  저녁: { bg: '#F5F3FF', text: '#7C3AED' },
-};
 
 const CATEGORY_COLOR: Record<string, string> = {
   장학: '#10B981', 학사: BLUE, 행사: '#8B5CF6', 취업: '#F59E0B', 시설: BLUE_MID,
@@ -101,6 +66,8 @@ export default function SchoolScreen() {
   const [expandedNotice, setExpandedNotice] = useState<number | null>(null);
   const [notices, setNotices] = useState<SchoolNotice[]>([]);
   const [noticesLoading, setNoticesLoading] = useState(false);
+  const [meals, setMeals] = useState<MealData[]>([]);
+  const [mealsLoading, setMealsLoading] = useState(false);
 
   const fetchNotices = async () => {
     setNoticesLoading(true);
@@ -114,13 +81,26 @@ export default function SchoolScreen() {
     }
   };
 
+  const fetchMeals = async () => {
+    setMealsLoading(true);
+    try {
+      const res = await api.get('/meals');
+      setMeals(res.data.data ?? []);
+    } catch (e) {
+      // 실패 시 빈 목록 유지
+    } finally {
+      setMealsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchNotices();
+    fetchMeals();
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchNotices().finally(() => setRefreshing(false));
+    Promise.all([fetchNotices(), fetchMeals()]).finally(() => setRefreshing(false));
   };
 
   return (
@@ -154,38 +134,36 @@ export default function SchoolScreen() {
         {/* 학식 탭 */}
         {activeTab === 'CAFETERIA' && (
           <View style={styles.section}>
-            <View style={styles.dateRow}>
-              <Ionicons name="calendar-outline" size={15} color={T3} />
-              <Text style={styles.dateText}>2026년 3월 15일 (일) 메뉴</Text>
-            </View>
-            <View style={styles.translateBadge}>
-              <Ionicons name="language-outline" size={13} color={BLUE} />
-              <Text style={styles.translateBadgeText}>한국어 메뉴를 영어로 번역했어요</Text>
-            </View>
-            {MOCK_MENUS.map((menu) => (
-              <View key={menu.id} style={styles.card}>
-                <View style={[styles.cardBar, { backgroundColor: MEAL_TIME_COLOR[menu.mealTime].text }]} />
-                <View style={styles.cardInner}>
-                  <View style={styles.menuHeader}>
-                    <Text style={styles.restaurantName}>{menu.restaurant}</Text>
-                    <View style={[styles.mealTimeBadge, { backgroundColor: MEAL_TIME_COLOR[menu.mealTime].bg }]}>
-                      <Text style={[styles.mealTimeBadgeText, { color: MEAL_TIME_COLOR[menu.mealTime].text }]}>
-                        {menu.mealTime}
-                      </Text>
-                    </View>
-                  </View>
-                  {menu.items.map((item, idx) => (
-                    <View key={idx} style={styles.menuItem}>
-                      <View style={styles.menuItemLeft}>
-                        <Text style={styles.menuKorean}>{item.korean}</Text>
-                        <Text style={styles.menuEnglish}>{item.english}</Text>
-                      </View>
-                      {item.price ? <Text style={styles.menuPrice}>{item.price.toLocaleString()}원</Text> : null}
-                    </View>
-                  ))}
-                </View>
+            {meals.length > 0 && (
+              <View style={styles.dateRow}>
+                <Ionicons name="calendar-outline" size={15} color={T3} />
+                <Text style={styles.dateText}>{meals[0].mealDate} 오늘의 메뉴</Text>
               </View>
-            ))}
+            )}
+            {mealsLoading ? (
+              <ActivityIndicator color={BLUE} style={{ marginTop: 40 }} />
+            ) : meals.length === 0 ? (
+              <Text style={styles.emptyText}>오늘의 식단 정보가 없습니다.</Text>
+            ) : (
+              meals.map((meal) => (
+                <View key={meal.id} style={styles.card}>
+                  <View style={[styles.cardBar, { backgroundColor: BLUE }]} />
+                  <View style={styles.cardInner}>
+                    <View style={styles.menuHeader}>
+                      <Text style={styles.restaurantName}>{meal.cafeteria}</Text>
+                      <View style={[styles.mealTimeBadge, { backgroundColor: BLUE_L }]}>
+                        <Text style={[styles.mealTimeBadgeText, { color: BLUE }]}>{meal.corner}</Text>
+                      </View>
+                    </View>
+                    {meal.menu.split('\n').filter(Boolean).map((item, idx) => (
+                      <View key={idx} style={styles.menuItem}>
+                        <Text style={styles.menuKorean}>{item}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              ))
+            )}
           </View>
         )}
 
