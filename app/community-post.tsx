@@ -335,8 +335,8 @@ export default function CommunityPostScreen() {
       {/* 댓글 입력 바 */}
       <View style={s.inputBar}>
         {toAbsoluteUrl(user?.profileImage)
-          ? <Image source={{ uri: toAbsoluteUrl(user?.profileImage)! }} style={s.commentAvatar} />
-          : <View style={[s.commentAvatar, { backgroundColor: avatarColor(user?.nickname ?? '?') }]}>
+          ? <Image source={{ uri: toAbsoluteUrl(user?.profileImage)! }} style={[s.commentAvatar, { marginBottom: 3 }]} />
+          : <View style={[s.commentAvatar, { backgroundColor: avatarColor(user?.nickname ?? '?'), marginBottom: 3 }]}>
               <Text style={s.commentAvatarText}>{(user?.nickname ?? '?').charAt(0)}</Text>
             </View>
         }
