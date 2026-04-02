@@ -334,9 +334,12 @@ export default function CommunityPostScreen() {
 
       {/* 댓글 입력 바 */}
       <View style={s.inputBar}>
-        <View style={[s.commentAvatar, { backgroundColor: avatarColor(user?.nickname ?? '?') }]}>
-          <Text style={s.commentAvatarText}>{(user?.nickname ?? '?').charAt(0)}</Text>
-        </View>
+        {toAbsoluteUrl(user?.profileImage)
+          ? <Image source={{ uri: toAbsoluteUrl(user?.profileImage)! }} style={s.commentAvatar} />
+          : <View style={[s.commentAvatar, { backgroundColor: avatarColor(user?.nickname ?? '?') }]}>
+              <Text style={s.commentAvatarText}>{(user?.nickname ?? '?').charAt(0)}</Text>
+            </View>
+        }
         <TextInput
           style={s.commentInput}
           placeholder="댓글을 입력해주세요..."
