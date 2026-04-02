@@ -283,7 +283,7 @@ export default function HomeScreen() {
         </View>
 
         {/* ── 모든 도움 보기 ── */}
-        <View style={{ marginLeft: 16, marginBottom: 8 }}>
+        <View style={{ marginLeft: 16, marginBottom: 20 }}>
           <SwipeCardStack onSwipeActive={(active) => setScrollEnabled(!active)} />
         </View>
 

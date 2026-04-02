@@ -123,6 +123,22 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActiv
   const position = positionRef.current;
   const isSwiping = useRef(false);
 
+  // 뒤 카드 진행도 (0 = 뒤, 1 = 앞으로 올라옴)
+  const backProgress = useRef(new Animated.Value(0)).current;
+
+  // 뒤 카드: 드래그할수록 우하단 offset이 줄어들며 앞으로 나옴
+  const backTranslateX = backProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [16, 0],
+  });
+  const backTranslateY = backProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [8, 0],
+  });
+  const backOpacity = backProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.75, 1],
+  });
 
   const panResponder = useRef(
     PanResponder.create({
@@ -135,6 +151,8 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActiv
       },
       onPanResponderMove: (_, g) => {
         position.setValue({ x: g.dx, y: 0 });
+        const progress = Math.min(Math.abs(g.dx) / SWIPE_THRESHOLD, 1);
+        backProgress.setValue(progress);
       },
       onPanResponderRelease: (_, g) => {
         isSwiping.current = false;
@@ -154,25 +172,40 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActiv
   const swipeOut = (dir: 'left' | 'right') => {
     const x = dir === 'right' ? SCREEN_WIDTH + 100 : -(SCREEN_WIDTH + 100);
     position.stopAnimation();
-    Animated.timing(position, {
-      toValue: { x, y: 0 },
-      duration: 300,
-      useNativeDriver: false,
-    }).start(() => {
+    Animated.parallel([
+      Animated.timing(position, {
+        toValue: { x, y: 0 },
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(backProgress, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+    ]).start(() => {
       const card = CARDS[index % CARDS.length];
       dir === 'right' ? onSwipeRight?.(card) : onSwipeLeft?.(card);
       position.setValue({ x: 0, y: 0 });
+      backProgress.setValue(0);
       setIndex(prev => prev + 1);
     });
   };
 
   const resetPosition = () => {
     position.stopAnimation();
-    Animated.spring(position, {
-      toValue: { x: 0, y: 0 },
-      friction: 6,
-      useNativeDriver: false,
-    }).start();
+    Animated.parallel([
+      Animated.spring(position, {
+        toValue: { x: 0, y: 0 },
+        friction: 6,
+        useNativeDriver: false,
+      }),
+      Animated.spring(backProgress, {
+        toValue: 0,
+        friction: 6,
+        useNativeDriver: false,
+      }),
+    ]).start();
   };
 
   // 현재 + 뒤 한 장
@@ -183,7 +216,11 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActiv
     <View style={styles.stack}>
 
       {/* 뒤 카드 */}
-      <View style={[styles.card, styles.cardBack1]}>
+      <Animated.View style={[styles.cardShadow, styles.cardBack1, {
+        transform: [{ translateX: backTranslateX }, { translateY: backTranslateY }],
+        opacity: backOpacity,
+      }]}>
+        <View style={styles.card}>
         <View style={[styles.cardBg, { backgroundColor: next.bgTop }]}>
           <View style={[styles.bgCircle, { width: 280, height: 280, top: -60, right: -60 }]} />
           <View style={[styles.bgCircle, { width: 180, height: 180, bottom: -40, left: -40 }]} />
@@ -224,15 +261,14 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActiv
             ))}
           </View>
         </View>
-      </View>
+        </View>
+      </Animated.View>
 
       {/* 메인 카드 */}
       <Animated.View
-        style={[
-          styles.card,
-          { left: 0, top: 0, transform: [{ translateX: position.x }] },
-        ]}
+        style={[styles.cardShadow, { left: 0, top: 0, transform: [{ translateX: position.x }] }]}
         {...panResponder.panHandlers}>
+        <View style={styles.card}>
 
         {/* 배경 */}
         <View style={[styles.cardBg, { backgroundColor: card.bgTop }]}>
@@ -287,7 +323,7 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActiv
             ))}
           </View>
         </View>
-
+        </View>
       </Animated.View>
     </View>
   );
@@ -296,7 +332,7 @@ export default function SwipeCardStack({ onSwipeLeft, onSwipeRight, onSwipeActiv
 // ── 스타일 ────────────────────────────────────────────────
 const styles = StyleSheet.create({
   stack: {
-    width: CARD_WIDTH + 32,
+    width: CARD_WIDTH + 16,
     height: CARD_HEIGHT + 8,
     position: 'relative',
     shadowColor: '#3B6FE8',
@@ -306,18 +342,28 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
 
-  // 카드 기본
-  card: {
+  // 카드 그림자 래퍼
+  cardShadow: {
     position: 'absolute',
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 14,
+  },
+  // 카드 내부 (overflow clip)
+  card: {
+    width: '100%',
+    height: '100%',
     borderRadius: 28,
     overflow: 'hidden',
   },
   cardBack1: {
     right: 0,
     bottom: 0,
-    opacity: 0.75,
   },
 
   // 배경
