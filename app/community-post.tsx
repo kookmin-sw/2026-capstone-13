@@ -23,10 +23,18 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 const AVATAR_COLORS = ['#3B6FE8', '#6B9DF0', '#A8C8FA', '#5B8DEF', '#4A7CE0'];
+const SERVER_BASE_URL = 'https://backend-production-0a6f.up.railway.app';
+
 function avatarColor(name: string): string {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h + name.charCodeAt(i)) % AVATAR_COLORS.length;
   return AVATAR_COLORS[h];
+}
+
+function toAbsoluteUrl(path?: string): string | null {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return SERVER_BASE_URL + path;
 }
 
 function formatTime(createdAt: string): string {
@@ -173,9 +181,12 @@ export default function CommunityPostScreen() {
 
           {/* 작성자 정보 */}
           <View style={s.authorRow}>
-            <View style={[s.avatar, { backgroundColor: avatarColor(post.author) }]}>
-              <Text style={s.avatarText}>{post.author.charAt(0)}</Text>
-            </View>
+            {toAbsoluteUrl(post.authorProfileImage)
+              ? <Image source={{ uri: toAbsoluteUrl(post.authorProfileImage)! }} style={s.avatar} />
+              : <View style={[s.avatar, { backgroundColor: avatarColor(post.author) }]}>
+                  <Text style={s.avatarText}>{post.author.charAt(0)}</Text>
+                </View>
+            }
             <View>
               <Text style={s.authorName}>{post.author}</Text>
               <Text style={s.authorSub}>{post.university} · {formatTime(post.createdAt)}</Text>
@@ -221,9 +232,12 @@ export default function CommunityPostScreen() {
           ) : (
             comments.map((c) => (
               <View key={c.id} style={s.commentItem}>
-                <View style={[s.commentAvatar, { backgroundColor: avatarColor(c.author) }]}>
-                  <Text style={s.commentAvatarText}>{c.author.charAt(0)}</Text>
-                </View>
+                {toAbsoluteUrl(c.authorProfileImage)
+                  ? <Image source={{ uri: toAbsoluteUrl(c.authorProfileImage)! }} style={s.commentAvatar} />
+                  : <View style={[s.commentAvatar, { backgroundColor: avatarColor(c.author) }]}>
+                      <Text style={s.commentAvatarText}>{c.author.charAt(0)}</Text>
+                    </View>
+                }
                 <View style={s.commentBody}>
                   <View style={s.commentMeta}>
                     <Text style={s.commentAuthor}>{c.author}</Text>

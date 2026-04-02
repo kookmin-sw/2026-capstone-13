@@ -8,6 +8,7 @@ export interface CommunityPostDto {
   content: string;
   images: string[];
   author: string;
+  authorProfileImage?: string;
   university: string;
   userType: string;
   likes: number;
@@ -20,6 +21,7 @@ export interface PostCommentDto {
   id: number;
   postId: number;
   author: string;
+  authorProfileImage?: string;
   university: string;
   userType: string;
   content: string;
