@@ -116,8 +116,8 @@ async def crawl_notices():
             translations = {}
             for lang in SUPPORTED_LANGUAGES:
                 try:
-                    translated = await translation_service.translate_text(title_ko, lang, "ko")
-                    translations[lang] = translated.get("translated", title_ko)
+                    translated = await translation_service.azure_translate_text(title_ko, lang, "ko")
+                    translations[lang] = translated
                 except Exception:
                     translations[lang] = title_ko
             result.append({
@@ -143,11 +143,11 @@ async def crawl_meals():
             translations = {}
             for lang in SUPPORTED_LANGUAGES:
                 try:
-                    translated_cafeteria = await translation_service.translate_text(meal["cafeteria"], lang, "ko")
-                    translated_corner    = await translation_service.translate_text(meal["corner"], lang, "ko")
+                    translated_cafeteria = await translation_service.azure_translate_text(meal["cafeteria"], lang, "ko")
+                    translated_corner    = await translation_service.azure_translate_text(meal["corner"], lang, "ko")
                     translations[lang] = {
-                        "cafeteria": translated_cafeteria.get("translated", meal["cafeteria"]),
-                        "corner":    translated_corner.get("translated", meal["corner"]),
+                        "cafeteria": translated_cafeteria,
+                        "corner":    translated_corner,
                     }
                 except Exception:
                     translations[lang] = {
