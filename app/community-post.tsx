@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getCommunityPost, addCommunityComment, toggleCommunityLike, updateCommunityPost, deleteCommunityPost, deleteCommunityComment, type CommunityPostDetailDto, type PostCommentDto } from '../services/communityService';
+import { getCommunityPost, addCommunityComment, toggleCommunityLike, updateCommunityPost, deleteCommunityPost, deleteCommunityComment, translateCommunityPost, type CommunityPostDetailDto, type PostCommentDto } from '../services/communityService';
 import { useAuthStore } from '../stores/authStore';
 
 const BLUE    = '#3B6FE8';
@@ -59,6 +59,8 @@ export default function CommunityPostScreen() {
   const [commentText, setCommentText] = useState('');
   const [kavEnabled, setKavEnabled] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [translation, setTranslation] = useState<{ title: string; content: string } | null>(null);
+  const [translating, setTranslating] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -158,6 +160,19 @@ export default function CommunityPostScreen() {
     ]);
   };
 
+  const handleTranslate = async () => {
+    if (translation) { setTranslation(null); return; }
+    setTranslating(true);
+    try {
+      const res = await translateCommunityPost(post!.id);
+      if (res.success && res.data) setTranslation(res.data);
+    } catch {
+      // ignore
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   const handleLike = async () => {
     try {
       const res = await toggleCommunityLike(post.id);
@@ -248,7 +263,7 @@ export default function CommunityPostScreen() {
           </View>
 
           {/* 제목 */}
-          <Text style={s.postTitle}>{post.title}</Text>
+          <Text style={s.postTitle}>{translation ? translation.title : post.title}</Text>
 
           {/* 작성자 정보 */}
           <View style={s.authorRow}>
@@ -265,7 +280,7 @@ export default function CommunityPostScreen() {
           </View>
 
           {/* 본문 */}
-          <Text style={s.postContent}>{post.content}</Text>
+          <Text style={s.postContent}>{translation ? translation.content : post.content}</Text>
 
           {/* 이미지 */}
           {post.images.length > 0 && (
@@ -276,7 +291,7 @@ export default function CommunityPostScreen() {
             </ScrollView>
           )}
 
-          {/* 좋아요 / 댓글 수 */}
+          {/* 좋아요 / 댓글 수 / 번역 버튼 */}
           <View style={s.reactionBar}>
             <TouchableOpacity style={s.reactionBtn} onPress={handleLike} activeOpacity={0.8}>
               <Ionicons
@@ -290,6 +305,17 @@ export default function CommunityPostScreen() {
               <Ionicons name="chatbubble-outline" size={17} color={T2} />
               <Text style={s.reactionCount}>{comments.length}</Text>
             </View>
+            <TouchableOpacity
+              style={[s.reactionBtn, translation && s.translateBtnActive]}
+              onPress={handleTranslate}
+              activeOpacity={0.8}
+              disabled={translating}
+            >
+              {translating
+                ? <ActivityIndicator size="small" color={BLUE} />
+                : <Ionicons name="language-outline" size={18} color={translation ? '#fff' : T2} />
+              }
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -428,6 +454,7 @@ const s = StyleSheet.create({
   reactionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   reactionCount: { fontSize: 14, color: T2, fontWeight: '600' },
   reactionCountLiked: { color: '#EF4444' },
+  translateBtnActive: { backgroundColor: BLUE, borderRadius: 14, paddingHorizontal: 6 },
 
   // 댓글 섹션
   commentSection: { backgroundColor: '#fff', padding: 16 },

@@ -19,7 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getChatMessages, sendVoiceMessage, type ChatMessageDto } from '../services/chatService';
+import { getChatMessages, sendVoiceMessage, translateChatMessage, type ChatMessageDto } from '../services/chatService';
 import { completeHelpRequest, rejectHelper, startHelpRequest, resetToWaiting } from '../services/helpService';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
@@ -455,6 +455,22 @@ export default function ChatRoomScreen() {
     );
   };
 
+  const handleTranslateMessage = async (messageId: number) => {
+    try {
+      const res = await translateChatMessage(messageId);
+      if (res.success && res.data) {
+        setMessages((prev) =>
+          prev.map((m) => m.id === messageId
+            ? { ...m, translatedContent: res.data.translatedContent, culturalNote: res.data.culturalNote }
+            : m
+          )
+        );
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   const listData: ListItem[] = [
     { type: 'date', label: todayLabel(), id: 'date-today' },
     ...messages,
@@ -517,6 +533,17 @@ export default function ChatRoomScreen() {
           {/* 번역 텍스트 */}
           {translateEnabled && !isMine && !!msg.translatedContent && (
             <Text style={styles.translatedText}>{msg.translatedContent}</Text>
+          )}
+          {/* 번역 없는 메시지: 번역하기 버튼 */}
+          {translateEnabled && !isMine && !msg.translatedContent && !!msg.id && (
+            <TouchableOpacity
+              onPress={() => handleTranslateMessage(msg.id!)}
+              style={styles.translateBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="language-outline" size={12} color="#6B9DF0" />
+              <Text style={styles.translateBtnText}>번역하기</Text>
+            </TouchableOpacity>
           )}
           {/* 뉘앙스 말풍선 */}
           {translateEnabled && !isMine && !!msg.culturalNote && (
@@ -912,6 +939,13 @@ const styles = StyleSheet.create({
   },
   nuanceIcon: { fontSize: 13 },
   nuanceText:  { fontSize: 11.5, color: '#7A5900', lineHeight: 17, flex: 1 },
+  translateBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    marginTop: 4, paddingVertical: 3, paddingHorizontal: 8,
+    borderWidth: 1, borderColor: '#D0E0F8', borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  translateBtnText: { fontSize: 11, color: '#6B9DF0', fontWeight: '600' },
 
   systemMsgWrap: { alignItems: 'center', marginVertical: 8 },
   systemMsgText: {

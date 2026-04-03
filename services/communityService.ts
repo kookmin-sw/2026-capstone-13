@@ -89,3 +89,15 @@ export const deleteCommunityComment = async (commentId: number): Promise<ApiResp
   const response = await api.delete<ApiResponse<null>>(`/community/comments/${commentId}`);
   return response.data;
 };
+
+// 게시글 번역 (DB 캐시 → Gemini)
+export const translateCommunityPost = async (
+  postId: number,
+  lang?: string,
+): Promise<ApiResponse<{ title: string; content: string; langCode: string }>> => {
+  const params = lang ? `?lang=${lang}` : '';
+  const response = await api.get<ApiResponse<{ title: string; content: string; langCode: string }>>(
+    `/community/${postId}/translate${params}`,
+  );
+  return response.data;
+};

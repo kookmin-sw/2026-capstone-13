@@ -3,6 +3,7 @@ import api from './api';
 import type { ApiResponse } from '../types';
 
 export interface ChatMessageDto {
+  id?: number;
   roomId: number;
   senderId: number;
   senderNickname: string;
@@ -51,5 +52,11 @@ export const sendVoiceMessage = async (roomId: number, audioUri: string): Promis
     formData,
     { headers: { 'Content-Type': 'multipart/form-data' } }
   );
+  return response.data;
+};
+
+// 채팅 메시지 온디맨드 번역 (translatedContent 없는 경우)
+export const translateChatMessage = async (messageId: number): Promise<ApiResponse<ChatMessageDto>> => {
+  const response = await api.post<ApiResponse<ChatMessageDto>>(`/chat/messages/${messageId}/translate`);
   return response.data;
 };
