@@ -75,13 +75,19 @@ Respond ONLY with the explanation or "null". No extra text."""
             return None
 
     async def translate_text(self, text: str, target_lang: str = "en", source_lang: Optional[str] = None):
-        """Gemini로 번역"""
+        """Gemini로 번역 + 한국어 뉘앙스 감지"""
         if not self.client:
             result = self._dummy_translate(text, target_lang, source_lang)
         else:
             result = await self._gemini_translate(text, target_lang, source_lang)
 
-        result["cultural_note"] = None
+        # 한국어 메시지일 때만 뉘앙스 감지
+        detected_source = result.get("source_language", source_lang or "")
+        if detected_source == "ko":
+            result["cultural_note"] = await self.detect_nuance(text)
+        else:
+            result["cultural_note"] = None
+
         return result
 
     async def _gemini_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
