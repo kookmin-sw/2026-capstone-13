@@ -1,5 +1,6 @@
 package com.helpboys.api.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -21,5 +22,6 @@ public class ChatMessageDto {
     private String translatedContent;
     private String culturalNote;
     private String createdAt;
+    @JsonProperty("isRead")
     private boolean isRead;   // 읽음 여부 (false = 안읽음 → 클라이언트에서 "1" 표시)
 }
