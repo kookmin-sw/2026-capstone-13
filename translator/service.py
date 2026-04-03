@@ -1,6 +1,8 @@
 # ai/translator/service.py
 import os
 import asyncio
+import requests
+import uuid
 from typing import Optional
 
 LANG_NAMES = {
@@ -10,14 +12,27 @@ LANG_NAMES = {
     "ru": "Russian"
 }
 
+AZURE_TRANSLATE_URL = "https://api.cognitive.microsofttranslator.com/translate"
+
+
 class TranslationService:
     """
-    Gemini API(google-genai)를 사용한 번역 + 한국어 문화적 뉘앙스 감지 서비스
-    Gemini 키가 없으면 더미 모드로 동작
+    Azure Translator (기본) + Gemini (폴백) 번역 서비스
+    Azure 키가 없으면 Gemini로, Gemini 키도 없으면 더미 모드
     """
 
     def __init__(self):
-        self.client = None
+        # Azure Translator
+        self.azure_key = os.getenv("AZURE_TRANSLATOR_KEY")
+        self.azure_region = os.getenv("AZURE_TRANSLATOR_REGION", "koreacentral")
+        if self.azure_key and self.azure_key != "your-key":
+            print("✅ Azure Translator 연동 완료")
+        else:
+            self.azure_key = None
+            print("⚠️  AZURE_TRANSLATOR_KEY 없음. Gemini 폴백 시도.")
+
+        # Gemini (폴백 / 문화 뉘앙스용)
+        self.gemini_client = None
         self.model_name = 'gemini-2.5-flash-lite'
         self.system_instruction = """
 You are an expert translator for a matching app between Korean students and international students.
@@ -28,21 +43,20 @@ Your goal is to provide natural, casual, and context-aware translations.
 - Handle profanity naturally: Translate Korean swear words (ㅅㅂ, 존나) into appropriate equivalents (damn, freaking, etc.).
 - Context: These are university students chatting. Make it sound like a real Gen Z conversation.
 """
-
         gemini_key = os.getenv("GEMINI_API_KEY")
         if gemini_key:
             try:
                 from google import genai
-                self.client = genai.Client(api_key=gemini_key)
-                print("✅ Gemini API 연동 완료 (google-genai)")
+                self.gemini_client = genai.Client(api_key=gemini_key)
+                print("✅ Gemini API 연동 완료 (폴백용)")
             except Exception as e:
                 print(f"⚠️  Gemini API 초기화 실패: {e}")
         else:
-            print("⚠️  GEMINI_API_KEY 없음. 더미 모드로 실행됩니다.")
+            print("⚠️  GEMINI_API_KEY 없음.")
 
     @property
     def dummy_mode(self):
-        return self.client is None
+        return self.azure_key is None and self.gemini_client is None
 
     def _detect_language(self, text: str) -> str:
         if any('\uac00' <= c <= '\ud7a3' for c in text):
@@ -53,12 +67,11 @@ Your goal is to provide natural, casual, and context-aware translations.
             return "en"
 
     async def detect_nuance(self, text: str) -> Optional[str]:
-        """한국어 문화적 뉘앙스 감지"""
-        if not self.client:
+        """한국어 문화적 뉘앙스 감지 (Gemini 전용)"""
+        if not self.gemini_client:
             return None
         try:
             from google import genai
-            from google.genai import types
             prompt = f"""You are a Korean cultural expert helping foreigners understand Korean social expressions.
 
 Analyze this Korean text: "{text}"
@@ -68,7 +81,7 @@ If the text is straightforward, respond with exactly: null
 
 Respond ONLY with the explanation or "null". No extra text."""
             response = await asyncio.to_thread(
-                self.client.models.generate_content,
+                self.gemini_client.models.generate_content,
                 model=self.model_name,
                 contents=prompt,
             )
@@ -79,11 +92,13 @@ Respond ONLY with the explanation or "null". No extra text."""
             return None
 
     async def translate_text(self, text: str, target_lang: str = "en", source_lang: Optional[str] = None):
-        """Gemini로 번역 + 한국어 뉘앙스 감지"""
-        if not self.client:
-            result = self._dummy_translate(text, target_lang, source_lang)
-        else:
+        """번역: Azure → Gemini → dummy 순서로 시도"""
+        if self.azure_key:
+            result = await self._azure_translate(text, target_lang, source_lang)
+        elif self.gemini_client:
             result = await self._gemini_translate(text, target_lang, source_lang)
+        else:
+            result = self._dummy_translate(text, target_lang, source_lang)
 
         # 한국어 메시지일 때만 뉘앙스 감지
         detected_source = result.get("source_language", source_lang or "")
@@ -93,6 +108,46 @@ Respond ONLY with the explanation or "null". No extra text."""
             result["cultural_note"] = None
 
         return result
+
+    async def _azure_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
+        """Azure Translator REST API 호출"""
+        headers = {
+            "Ocp-Apim-Subscription-Key": self.azure_key,
+            "Ocp-Apim-Subscription-Region": self.azure_region,
+            "Content-Type": "application/json",
+            "X-ClientTraceId": str(uuid.uuid4()),
+        }
+        params = {"api-version": "3.0", "to": target_lang}
+        if source_lang:
+            params["from"] = source_lang
+
+        def _call():
+            resp = requests.post(
+                AZURE_TRANSLATE_URL,
+                headers=headers,
+                params=params,
+                json=[{"text": text}],
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+        try:
+            data = await asyncio.to_thread(_call)
+            translated = data[0]["translations"][0]["text"]
+            detected = data[0].get("detectedLanguage", {}).get("language", source_lang or self._detect_language(text))
+            return {
+                "original": text,
+                "translated": translated,
+                "source_language": detected,
+                "target_language": target_lang,
+                "mode": "azure",
+            }
+        except Exception as e:
+            print(f"[Azure] 번역 실패: {e} — Gemini 폴백 시도")
+            if self.gemini_client:
+                return await self._gemini_translate(text, target_lang, source_lang)
+            return self._dummy_translate(text, target_lang, source_lang)
 
     async def _gemini_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
         """Gemini API로 자연스러운 번역"""
@@ -106,7 +161,7 @@ Text: {text}"""
             from google import genai
             from google.genai import types
             response = await asyncio.to_thread(
-                self.client.models.generate_content,
+                self.gemini_client.models.generate_content,
                 model=self.model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
@@ -131,7 +186,7 @@ Text: {text}"""
             return self._dummy_translate(text, target_lang, source_lang)
 
     def _dummy_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
-        """더미 번역 (Gemini 키 없을 때)"""
+        """더미 번역 (Azure·Gemini 키 없을 때)"""
         return {
             "original": text,
             "translated": f"{text} [Translated to {target_lang}]",
@@ -139,6 +194,7 @@ Text: {text}"""
             "target_language": target_lang,
             "mode": "dummy",
         }
+
 
 # 싱글톤 인스턴스 생성
 translation_service = TranslationService()
