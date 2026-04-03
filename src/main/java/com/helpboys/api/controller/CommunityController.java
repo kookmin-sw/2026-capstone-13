@@ -4,6 +4,7 @@ import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.CommunityPostRequest;
 import com.helpboys.api.dto.CommunityPostResponse;
 import com.helpboys.api.dto.PostCommentResponse;
+import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.service.CommunityService;
 import com.helpboys.api.util.JwtUtil;
 import jakarta.validation.Valid;
@@ -22,6 +23,7 @@ public class CommunityController {
 
     private final CommunityService communityService;
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     // GET /api/community - 게시글 목록
     @GetMapping
@@ -101,6 +103,16 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.success("댓글이 삭제되었습니다.", null));
     }
 
+    // GET /api/community/{id}/translate?lang=en - 게시글 번역 (캐시)
+    @GetMapping("/{id}/translate")
+    public ResponseEntity<ApiResponse<Map<String, String>>> translatePost(
+            @PathVariable Long id,
+            @RequestParam(required = false) String lang,
+            @RequestHeader("Authorization") String token) {
+        String langCode = resolveLang(lang, token);
+        return ResponseEntity.ok(ApiResponse.success("번역 완료", communityService.translatePost(id, langCode)));
+    }
+
     // GET /api/community/search?keyword=... - 게시글 검색
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<CommunityPostResponse>>> searchPosts(
@@ -112,5 +124,16 @@ public class CommunityController {
 
     private Long extractUserId(String bearerToken) {
         return jwtUtil.extractUserId(bearerToken.replace("Bearer ", ""));
+    }
+
+    private String resolveLang(String queryLang, String token) {
+        if (queryLang != null && !queryLang.isBlank()) return queryLang;
+        try {
+            Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+            return userRepository.findById(userId)
+                    .map(u -> u.getPreferredLanguage() != null ? u.getPreferredLanguage() : "en")
+                    .orElse("en");
+        } catch (Exception ignored) {}
+        return "en";
     }
 }

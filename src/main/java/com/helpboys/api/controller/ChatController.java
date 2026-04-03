@@ -89,6 +89,16 @@ public class ChatController {
         return ResponseEntity.ok(ApiResponse.success("읽음 처리 완료", null));
     }
 
+    // POST /api/chat/messages/{messageId}/translate - 메시지 온디맨드 번역
+    @PostMapping("/messages/{messageId}/translate")
+    @ResponseBody
+    public ResponseEntity<ApiResponse<ChatMessageDto>> translateMessage(
+            @PathVariable Long messageId,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        return ResponseEntity.ok(ApiResponse.success("번역 완료", chatService.translateMessage(messageId, userId)));
+    }
+
     // POST /api/chat/rooms/{roomId}/voice-message - 음성 메시지 전송
     @PostMapping("/rooms/{roomId}/voice-message")
     @ResponseBody

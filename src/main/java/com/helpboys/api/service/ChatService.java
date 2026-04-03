@@ -120,6 +120,7 @@ public class ChatService {
         notifyUnreadCount(dto.getRoomId(), dto.getSenderId());
 
         return ChatMessageDto.builder()
+                .id(saved.getId())
                 .roomId(saved.getRoomId())
                 .senderId(sender.getId())
                 .senderNickname(sender.getNickname())
@@ -352,6 +353,61 @@ public class ChatService {
         return dto;
     }
 
+    // 채팅 메시지 온디맨드 번역 (translatedContent 없는 경우 Gemini 번역 후 저장)
+    @Transactional
+    public ChatMessageDto translateMessage(Long messageId, Long userId) {
+        ChatMessage message = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new BusinessException("메시지를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+        if (message.getTranslatedContent() != null) {
+            return buildMessageDto(message);
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        String targetLang = (user.getPreferredLanguage() != null && !user.getPreferredLanguage().isBlank())
+                ? user.getPreferredLanguage() : "en";
+
+        try {
+            String body = objectMapper.writeValueAsString(
+                    java.util.Map.of("text", message.getContent(), "target_lang", targetLang));
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(aiServerUrl + "/api/translate"))
+                    .header("Content-Type", "application/json")
+                    .timeout(java.time.Duration.ofSeconds(15))
+                    .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            JsonNode result = objectMapper.readTree(resp.body());
+            if (result.path("success").asBoolean()) {
+                message.setTranslatedContent(
+                        result.path("data").path("translated").asText(message.getContent()));
+                if (!result.path("data").path("cultural_note").isNull()) {
+                    message.setCulturalNote(result.path("data").path("cultural_note").asText(null));
+                }
+                chatMessageRepository.save(message);
+            }
+        } catch (Exception e) {
+            log.warn("[채팅 번역] 실패: {}", e.getMessage());
+        }
+
+        return buildMessageDto(message);
+    }
+
+    private ChatMessageDto buildMessageDto(ChatMessage msg) {
+        return ChatMessageDto.builder()
+                .id(msg.getId())
+                .roomId(msg.getRoomId())
+                .senderId(msg.getSender().getId())
+                .senderNickname(msg.getSender().getNickname())
+                .content(msg.getContent())
+                .originalLanguage(msg.getOriginalLanguage())
+                .translatedContent(msg.getTranslatedContent())
+                .culturalNote(msg.getCulturalNote())
+                .createdAt(msg.getCreatedAt().toString())
+                .isRead(msg.isRead())
+                .build();
+    }
+
     // 시스템 메시지를 읽을 수 있는 텍스트로 변환 (채팅방 목록 미리보기용)
     private String resolveLastMessagePreview(String content) {
         if (content == null) return null;
@@ -369,6 +425,7 @@ public class ChatService {
 
         return chatMessageRepository.findByRoomIdOrderByCreatedAtAsc(roomId).stream()
                 .map(msg -> ChatMessageDto.builder()
+                        .id(msg.getId())
                         .roomId(msg.getRoomId())
                         .senderId(msg.getSender().getId())
                         .senderNickname(msg.getSender().getNickname())

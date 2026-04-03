@@ -1,5 +1,7 @@
 package com.helpboys.api.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.helpboys.api.dto.CommunityPostRequest;
 import com.helpboys.api.dto.CommunityPostResponse;
 import com.helpboys.api.dto.PostCommentResponse;
@@ -7,22 +9,31 @@ import com.helpboys.api.entity.CommunityPost;
 import com.helpboys.api.entity.Notification;
 import com.helpboys.api.entity.PostComment;
 import com.helpboys.api.entity.PostLike;
+import com.helpboys.api.entity.PostTranslation;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.CommunityPostRepository;
 import com.helpboys.api.repository.PostCommentRepository;
 import com.helpboys.api.repository.PostLikeRepository;
+import com.helpboys.api.repository.PostTranslationRepository;
 import com.helpboys.api.repository.UserBlockRepository;
 import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CommunityService {
@@ -30,9 +41,18 @@ public class CommunityService {
     private final CommunityPostRepository communityPostRepository;
     private final PostCommentRepository postCommentRepository;
     private final PostLikeRepository postLikeRepository;
+    private final PostTranslationRepository postTranslationRepository;
     private final UserRepository userRepository;
     private final UserBlockRepository userBlockRepository;
     private final NotificationService notificationService;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(5))
+            .build();
+
+    @Value("${ai.server.url:http://localhost:8000}")
+    private String aiServerUrl;
 
     // 게시글 목록 조회 (차단 유저 제외)
     @Transactional(readOnly = true)
@@ -182,6 +202,50 @@ public class CommunityService {
                 .map(post -> CommunityPostResponse.fromList(post,
                         postLikeRepository.existsByPostIdAndUserId(post.getId(), userId)))
                 .collect(Collectors.toList());
+    }
+
+    // 게시글 번역 (DB 캐시 → 없으면 Gemini 번역 후 저장)
+    @Transactional
+    public Map<String, String> translatePost(Long postId, String langCode) {
+        // DB 캐시 확인
+        java.util.Optional<PostTranslation> cached =
+                postTranslationRepository.findByPostIdAndLangCode(postId, langCode);
+        if (cached.isPresent()) {
+            return Map.of("title", cached.get().getTitle(),
+                          "content", cached.get().getContent(),
+                          "langCode", langCode);
+        }
+
+        CommunityPost post = findPostById(postId);
+        String translatedTitle = callTranslate(post.getTitle(), langCode);
+        String translatedContent = callTranslate(post.getContent(), langCode);
+
+        postTranslationRepository.save(PostTranslation.builder()
+                .post(post)
+                .langCode(langCode)
+                .title(translatedTitle)
+                .content(translatedContent)
+                .build());
+
+        return Map.of("title", translatedTitle, "content", translatedContent, "langCode", langCode);
+    }
+
+    private String callTranslate(String text, String langCode) {
+        try {
+            String body = objectMapper.writeValueAsString(
+                    Map.of("text", text, "target_lang", langCode));
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(aiServerUrl + "/api/translate"))
+                    .header("Content-Type", "application/json")
+                    .timeout(java.time.Duration.ofSeconds(30))
+                    .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            JsonNode result = objectMapper.readTree(resp.body());
+            return result.path("data").path("translated").asText(text);
+        } catch (Exception e) {
+            log.warn("[번역] 실패: {}", e.getMessage());
+            return text;
+        }
     }
 
     private CommunityPost findPostById(Long postId) {
