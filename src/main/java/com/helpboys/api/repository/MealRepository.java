@@ -7,10 +7,13 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface MealRepository extends JpaRepository<Meal, Long> {
 
     boolean existsByCafeteriaAndCornerAndMealDate(String cafeteria, String corner, LocalDate mealDate);
+
+    Optional<Meal> findByCafeteriaAndCornerAndMealDate(String cafeteria, String corner, LocalDate mealDate);
 
     @Query("SELECT DISTINCT m FROM Meal m LEFT JOIN FETCH m.translations WHERE m.mealDate = :date ORDER BY m.cafeteria, m.id")
     List<Meal> findByMealDateWithTranslations(@Param("date") LocalDate date);

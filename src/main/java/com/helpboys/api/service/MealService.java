@@ -43,6 +43,7 @@ public class MealService {
     public int crawlAndSave() {
         log.info("[식단 크롤러] 크롤링 시작...");
         int savedCount = 0;
+        int updatedCount = 0;
 
         try {
             HttpRequest request = HttpRequest.newBuilder()
@@ -70,46 +71,58 @@ public class MealService {
             for (JsonNode item : data) {
                 String cafeteriaKo = item.path("cafeteria_ko").asText();
                 String cornerKo    = item.path("corner_ko").asText();
+                String newMenu     = item.path("menu").asText();
                 String dateStr     = item.path("date").asText();
                 LocalDate mealDate = LocalDate.parse(dateStr, formatter);
-
-                // 중복 방지
-                if (mealRepository.existsByCafeteriaAndCornerAndMealDate(cafeteriaKo, cornerKo, mealDate)) continue;
-
-                Meal meal = Meal.builder()
-                        .mealDate(mealDate)
-                        .cafeteria(cafeteriaKo)
-                        .corner(cornerKo)
-                        .menu(item.path("menu").asText())
-                        .build();
-
-                // 번역 저장 (식당명 + 코너명)
                 JsonNode translations = item.get("translations");
-                if (translations != null) {
-                    List<MealTranslation> translationList = new ArrayList<>();
-                    translations.fields().forEachRemaining(entry -> {
-                        JsonNode t = entry.getValue();
-                        translationList.add(MealTranslation.builder()
-                                .meal(meal)
-                                .langCode(entry.getKey())
-                                .cafeteria(t.path("cafeteria").asText(cafeteriaKo))
-                                .corner(t.path("corner").asText(cornerKo))
-                                .build());
-                    });
-                    meal.getTranslations().addAll(translationList);
-                }
 
-                mealRepository.save(meal);
-                savedCount++;
+                java.util.Optional<Meal> existing =
+                        mealRepository.findByCafeteriaAndCornerAndMealDate(cafeteriaKo, cornerKo, mealDate);
+
+                if (existing.isPresent()) {
+                    Meal meal = existing.get();
+                    // 메뉴가 바뀐 경우에만 업데이트
+                    if (meal.getMenu().equals(newMenu)) continue;
+                    meal.setMenu(newMenu);
+                    meal.getTranslations().clear();
+                    addTranslations(meal, translations, cafeteriaKo, cornerKo);
+                    mealRepository.save(meal);
+                    updatedCount++;
+                } else {
+                    Meal meal = Meal.builder()
+                            .mealDate(mealDate)
+                            .cafeteria(cafeteriaKo)
+                            .corner(cornerKo)
+                            .menu(newMenu)
+                            .build();
+                    addTranslations(meal, translations, cafeteriaKo, cornerKo);
+                    mealRepository.save(meal);
+                    savedCount++;
+                }
             }
 
-            log.info("[식단 크롤러] 신규 {}건 저장 완료", savedCount);
+            log.info("[식단 크롤러] 신규 {}건 저장, {}건 업데이트 완료", savedCount, updatedCount);
 
         } catch (Exception e) {
             log.error("[식단 크롤러] 오류: {}", e.getMessage(), e);
         }
 
-        return savedCount;
+        return savedCount + updatedCount;
+    }
+
+    private void addTranslations(Meal meal, JsonNode translations, String cafeteriaKo, String cornerKo) {
+        if (translations == null) return;
+        List<MealTranslation> translationList = new ArrayList<>();
+        translations.fields().forEachRemaining(entry -> {
+            JsonNode t = entry.getValue();
+            translationList.add(MealTranslation.builder()
+                    .meal(meal)
+                    .langCode(entry.getKey())
+                    .cafeteria(t.path("cafeteria").asText(cafeteriaKo))
+                    .corner(t.path("corner").asText(cornerKo))
+                    .build());
+        });
+        meal.getTranslations().addAll(translationList);
     }
 
     private static final List<String> SUPPORTED_LANGUAGES =
