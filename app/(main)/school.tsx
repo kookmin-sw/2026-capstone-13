@@ -73,7 +73,8 @@ export default function SchoolScreen() {
     setNoticesLoading(true);
     try {
       const res = await api.get('/notices');
-      setNotices(res.data.data ?? []);
+      const noticeData = res.data.data?.content ?? res.data.data ?? [];
+      setNotices(Array.isArray(noticeData) ? noticeData : []);
     } catch (e) {
       // 실패 시 빈 목록 유지
     } finally {
@@ -87,8 +88,8 @@ export default function SchoolScreen() {
       const res = await api.get('/meals');
       const data: MealData[] = res.data.data ?? [];
       setMeals(data);
-      if (data.length > 0) {
-        const ORDER = ['한울식당', '학생식당', '교직원식당'];
+      if (data.length > 0 && !selectedCafeteria) {
+        const ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)'];
         const first = ORDER.find((name) => data.some((m) => m.cafeteriaKo === name));
         setSelectedCafeteria(first ?? data[0].cafeteriaKo);
       }
@@ -109,11 +110,11 @@ export default function SchoolScreen() {
     Promise.all([fetchNotices(), fetchMeals()]).finally(() => setRefreshing(false));
   };
 
-  // 식당 목록 (cafeteriaKo 기준으로 정렬, 표시는 번역된 cafeteria 사용)
-  const CAFETERIA_ORDER = ['한울식당', '학생식당', '교직원식당'];
+  // 식당 목록 (cafeteriaKo 기준, 표시는 번역된 cafeteria 사용)
+  const CAFETERIA_ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)', 'K-Bob+', '청향 한식당(법학관 5층)', '청향 양식당(법학관 5층)', '생활관식당 일반식(생활관 A동 1층)'];
   const cafeteriaList = CAFETERIA_ORDER.filter((name) => meals.some((m) => m.cafeteriaKo === name));
 
-  // 선택된 식당의 코너 목록 (cafeteriaKo 기준)
+  // 선택된 식당의 코너 목록
   const selectedMeals = meals.filter((m) => m.cafeteriaKo === selectedCafeteria);
 
   const mealDate = meals.length > 0 ? meals[0].mealDate : '';
