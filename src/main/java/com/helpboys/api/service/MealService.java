@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -109,6 +110,58 @@ public class MealService {
         }
 
         return savedCount;
+    }
+
+    private static final List<String> SUPPORTED_LANGUAGES =
+            List.of("en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru");
+
+    /**
+     * 기존 식단 전체 재번역 (DB의 cafeteria/corner 한국어로 Gemini 번역)
+     */
+    @Transactional
+    public int retranslateAll() {
+        List<Meal> meals = mealRepository.findAll();
+        int count = 0;
+        for (Meal meal : meals) {
+            meal.getTranslations().clear();
+            mealRepository.saveAndFlush(meal);
+            for (String lang : SUPPORTED_LANGUAGES) {
+                try {
+                    String cafBody = objectMapper.writeValueAsString(
+                            Map.of("text", meal.getCafeteria(), "target_lang", lang, "source_lang", "ko"));
+                    HttpRequest cafReq = HttpRequest.newBuilder()
+                            .uri(URI.create(aiServerUrl + "/api/translate"))
+                            .header("Content-Type", "application/json")
+                            .timeout(java.time.Duration.ofSeconds(15))
+                            .POST(HttpRequest.BodyPublishers.ofString(cafBody)).build();
+                    HttpResponse<String> cafResp = httpClient.send(cafReq, HttpResponse.BodyHandlers.ofString());
+                    String translatedCaf = objectMapper.readTree(cafResp.body())
+                            .path("data").path("translated").asText(meal.getCafeteria());
+
+                    String corBody = objectMapper.writeValueAsString(
+                            Map.of("text", meal.getCorner(), "target_lang", lang, "source_lang", "ko"));
+                    HttpRequest corReq = HttpRequest.newBuilder()
+                            .uri(URI.create(aiServerUrl + "/api/translate"))
+                            .header("Content-Type", "application/json")
+                            .timeout(java.time.Duration.ofSeconds(15))
+                            .POST(HttpRequest.BodyPublishers.ofString(corBody)).build();
+                    HttpResponse<String> corResp = httpClient.send(corReq, HttpResponse.BodyHandlers.ofString());
+                    String translatedCor = objectMapper.readTree(corResp.body())
+                            .path("data").path("translated").asText(meal.getCorner());
+
+                    meal.getTranslations().add(MealTranslation.builder()
+                            .meal(meal).langCode(lang)
+                            .cafeteria(translatedCaf).corner(translatedCor)
+                            .build());
+                } catch (Exception e) {
+                    log.warn("[식단 재번역] {} 언어 실패: {}", lang, e.getMessage());
+                }
+            }
+            mealRepository.save(meal);
+            count++;
+        }
+        log.info("[식단 재번역] {}건 완료", count);
+        return count;
     }
 
     /**

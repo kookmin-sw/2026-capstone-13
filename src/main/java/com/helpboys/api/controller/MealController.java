@@ -43,6 +43,15 @@ public class MealController {
         return ResponseEntity.ok(ApiResponse.success("크롤링 완료", count + "건 저장됨"));
     }
 
+    /**
+     * POST /api/meals/retranslate - 기존 식단 재번역 (관리자용)
+     */
+    @PostMapping("/retranslate")
+    public ResponseEntity<ApiResponse<String>> retranslate() {
+        int count = mealService.retranslateAll();
+        return ResponseEntity.ok(ApiResponse.success("재번역 완료", count + "건 처리됨"));
+    }
+
     private String resolveLang(String queryLang, String token) {
         if (queryLang != null && !queryLang.isBlank()) return queryLang;
         if (token != null) {

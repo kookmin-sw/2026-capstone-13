@@ -19,6 +19,7 @@ import java.net.http.HttpResponse;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -102,6 +103,46 @@ public class NoticeService {
         }
 
         return savedCount;
+    }
+
+    private static final List<String> SUPPORTED_LANGUAGES =
+            List.of("en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru");
+
+    /**
+     * 기존 공지 전체 재번역 (DB의 titleKo로 Gemini 번역)
+     */
+    @Transactional
+    public int retranslateAll() {
+        List<Notice> notices = noticeRepository.findAll();
+        int count = 0;
+        for (Notice notice : notices) {
+            notice.getTranslations().clear();
+            noticeRepository.saveAndFlush(notice);
+            for (String lang : SUPPORTED_LANGUAGES) {
+                try {
+                    String body = objectMapper.writeValueAsString(
+                            Map.of("text", notice.getTitleKo(), "target_lang", lang, "source_lang", "ko"));
+                    HttpRequest req = HttpRequest.newBuilder()
+                            .uri(URI.create(aiServerUrl + "/api/translate"))
+                            .header("Content-Type", "application/json")
+                            .timeout(java.time.Duration.ofSeconds(15))
+                            .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+                    HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                    JsonNode result = objectMapper.readTree(resp.body());
+                    if (result.path("success").asBoolean()) {
+                        String translated = result.path("data").path("translated").asText(notice.getTitleKo());
+                        notice.getTranslations().add(
+                                NoticeTranslation.builder().notice(notice).langCode(lang).title(translated).build());
+                    }
+                } catch (Exception e) {
+                    log.warn("[공지 재번역] {} 언어 실패: {}", lang, e.getMessage());
+                }
+            }
+            noticeRepository.save(notice);
+            count++;
+        }
+        log.info("[공지 재번역] {}건 완료", count);
+        return count;
     }
 
     /**

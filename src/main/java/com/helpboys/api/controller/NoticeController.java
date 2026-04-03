@@ -45,6 +45,15 @@ public class NoticeController {
         return ResponseEntity.ok(ApiResponse.success("크롤링 완료", count + "건 저장됨"));
     }
 
+    /**
+     * POST /api/notices/retranslate - 기존 공지 재번역 (관리자용)
+     */
+    @PostMapping("/retranslate")
+    public ResponseEntity<ApiResponse<String>> retranslate() {
+        int count = noticeService.retranslateAll();
+        return ResponseEntity.ok(ApiResponse.success("재번역 완료", count + "건 처리됨"));
+    }
+
     private String resolveLang(String queryLang, String token) {
         if (queryLang != null && !queryLang.isBlank()) return queryLang;
         if (token != null) {
