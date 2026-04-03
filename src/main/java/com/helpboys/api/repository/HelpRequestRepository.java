@@ -1,6 +1,8 @@
 package com.helpboys.api.repository;
 
 import com.helpboys.api.entity.HelpRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,6 +16,16 @@ public interface HelpRequestRepository extends JpaRepository<HelpRequest, Long> 
 
     List<HelpRequest> findByHelperId(Long helperId);
     List<HelpRequest> findByStatus(HelpRequest.RequestStatus status);
+
+    @Query("SELECT h FROM HelpRequest h WHERE h.requester.id NOT IN :blockedIds ORDER BY h.createdAt DESC")
+    Page<HelpRequest> findAllExcludingBlocked(@Param("blockedIds") List<Long> blockedIds, Pageable pageable);
+
+    @Query("SELECT h FROM HelpRequest h WHERE h.status = :status AND h.requester.id NOT IN :blockedIds ORDER BY h.createdAt DESC")
+    Page<HelpRequest> findByStatusExcludingBlocked(@Param("status") HelpRequest.RequestStatus status, @Param("blockedIds") List<Long> blockedIds, Pageable pageable);
+
+    Page<HelpRequest> findByRequesterIdOrderByCreatedAtDesc(Long requesterId, Pageable pageable);
+
+    Page<HelpRequest> findByHelperIdOrderByCreatedAtDesc(Long helperId, Pageable pageable);
 
     // 내가 참여한 채팅방 목록 (요청자 or 도우미이고 매칭 이후 상태인 것)
     @Query("SELECT h FROM HelpRequest h WHERE (h.requester.id = :userId OR h.helper.id = :userId) AND h.status IN :statuses ORDER BY h.updatedAt DESC")

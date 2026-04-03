@@ -11,11 +11,10 @@ import com.helpboys.api.service.ReviewService;
 import com.helpboys.api.util.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/requests")
@@ -28,34 +27,42 @@ public class HelpRequestController {
 
     // GET /api/requests - 전체 목록 조회
     @GetMapping
-    public ResponseEntity<ApiResponse<List<HelpRequestResponse>>> getAllRequests(
+    public ResponseEntity<ApiResponse<Page<HelpRequestResponse>>> getAllRequests(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestHeader("Authorization") String token) {
         Long userId = extractUserId(token);
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getAllRequests(userId)));
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getAllRequests(userId, page, size)));
     }
 
     // GET /api/requests/waiting - 대기 중인 요청만 조회
     @GetMapping("/waiting")
-    public ResponseEntity<ApiResponse<List<HelpRequestResponse>>> getWaitingRequests(
+    public ResponseEntity<ApiResponse<Page<HelpRequestResponse>>> getWaitingRequests(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestHeader("Authorization") String token) {
         Long userId = extractUserId(token);
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getWaitingRequests(userId)));
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getWaitingRequests(userId, page, size)));
     }
 
     // GET /api/requests/my - 내가 등록한 요청
     @GetMapping("/my")
-    public ResponseEntity<ApiResponse<List<HelpRequestResponse>>> getMyRequests(
+    public ResponseEntity<ApiResponse<Page<HelpRequestResponse>>> getMyRequests(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestHeader("Authorization") String token) {
         Long userId = extractUserId(token);
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getMyRequests(userId)));
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getMyRequests(userId, page, size)));
     }
 
     // GET /api/requests/helped - 내가 도움을 준 요청
     @GetMapping("/helped")
-    public ResponseEntity<ApiResponse<List<HelpRequestResponse>>> getHelpedRequests(
+    public ResponseEntity<ApiResponse<Page<HelpRequestResponse>>> getHelpedRequests(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestHeader("Authorization") String token) {
         Long userId = extractUserId(token);
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getHelpedRequests(userId)));
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getHelpedRequests(userId, page, size)));
     }
 
     // GET /api/requests/{id} - 단건 조회

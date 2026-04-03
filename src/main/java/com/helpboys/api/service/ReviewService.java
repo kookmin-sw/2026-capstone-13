@@ -10,6 +10,8 @@ import com.helpboys.api.repository.HelpRequestRepository;
 import com.helpboys.api.repository.ReviewRepository;
 import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,12 +75,11 @@ public class ReviewService {
         return ReviewResponse.from(review);
     }
 
-    // 특정 유저가 받은 리뷰 목록 조회
+    // 특정 유저가 받은 리뷰 목록 조회 (페이지네이션)
     @Transactional(readOnly = true)
-    public List<ReviewResponse> getReviewsByUser(Long userId) {
-        return reviewRepository.findByRevieweeIdOrderByCreatedAtDesc(userId).stream()
-                .map(ReviewResponse::from)
-                .collect(Collectors.toList());
+    public Page<ReviewResponse> getReviewsByUser(Long userId, int page, int size) {
+        return reviewRepository.findByRevieweeIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size))
+                .map(ReviewResponse::from);
     }
 
     // reviewee의 평균 평점 갱신

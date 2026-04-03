@@ -9,11 +9,11 @@ import com.helpboys.api.service.CommunityService;
 import com.helpboys.api.util.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -27,10 +27,12 @@ public class CommunityController {
 
     // GET /api/community - 게시글 목록
     @GetMapping
-    public ResponseEntity<ApiResponse<List<CommunityPostResponse>>> getAllPosts(
+    public ResponseEntity<ApiResponse<Page<CommunityPostResponse>>> getAllPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestHeader("Authorization") String token) {
         Long userId = extractUserId(token);
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", communityService.getAllPosts(userId)));
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", communityService.getAllPosts(userId, page, size)));
     }
 
     // GET /api/community/{id} - 게시글 상세 (댓글 포함)
@@ -115,11 +117,13 @@ public class CommunityController {
 
     // GET /api/community/search?keyword=... - 게시글 검색
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<List<CommunityPostResponse>>> searchPosts(
+    public ResponseEntity<ApiResponse<Page<CommunityPostResponse>>> searchPosts(
             @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestHeader("Authorization") String token) {
         Long userId = extractUserId(token);
-        return ResponseEntity.ok(ApiResponse.success("검색 성공", communityService.searchPosts(keyword, userId)));
+        return ResponseEntity.ok(ApiResponse.success("검색 성공", communityService.searchPosts(keyword, userId, page, size)));
     }
 
     private Long extractUserId(String bearerToken) {

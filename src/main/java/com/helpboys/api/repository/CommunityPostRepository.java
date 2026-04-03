@@ -1,6 +1,8 @@
 package com.helpboys.api.repository;
 
 import com.helpboys.api.entity.CommunityPost;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,4 +19,10 @@ public interface CommunityPostRepository extends JpaRepository<CommunityPost, Lo
 
     @Query("SELECT p FROM CommunityPost p WHERE p.title LIKE %:keyword% OR p.content LIKE %:keyword% ORDER BY p.createdAt DESC")
     List<CommunityPost> searchByKeyword(@Param("keyword") String keyword);
+
+    @Query("SELECT p FROM CommunityPost p WHERE p.author.id NOT IN :blockedIds ORDER BY p.createdAt DESC")
+    Page<CommunityPost> findAllExcludingBlocked(@Param("blockedIds") List<Long> blockedIds, Pageable pageable);
+
+    @Query("SELECT p FROM CommunityPost p WHERE (p.title LIKE %:keyword% OR p.content LIKE %:keyword%) AND p.author.id NOT IN :blockedIds ORDER BY p.createdAt DESC")
+    Page<CommunityPost> searchByKeywordExcludingBlocked(@Param("keyword") String keyword, @Param("blockedIds") List<Long> blockedIds, Pageable pageable);
 }
