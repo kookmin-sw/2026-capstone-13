@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,22 +6,29 @@ import {
   PanResponder,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import { CategoryLabels, MethodLabels } from '../constants/colors';
-import type { HelpRequest, HelpCategory } from '../types';
+import type { HelpRequest } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 64;
 const CARD_HEIGHT = 390;
 const SWIPE_THRESHOLD = 90;
 
-// ── 카테고리별 카드 색상 ──────────────────────────────────
-const CAT_BG: Record<HelpCategory, string> = {
-  BANK:     '#5592E0',
-  HOSPITAL: '#E05555',
-  SCHOOL:   '#4A90D9',
-  DAILY:    '#4888D4',
-  OTHER:    '#7B8ECC',
+const CARD_BG = '#5592E0';
+
+const LANG_FLAG: Record<string, string> = {
+  'en':      '🇺🇸',
+  'zh-Hans': '🇨🇳',
+  'zh-Hant': '🇹🇼',
+  'ja':      '🇯🇵',
+  'vi':      '🇻🇳',
+  'mn':      '🇲🇳',
+  'fr':      '🇫🇷',
+  'de':      '🇩🇪',
+  'es':      '🇪🇸',
+  'ru':      '🇷🇺',
 };
 
 function getUrgency(createdAt: string): { label: string; color: string } {
@@ -47,10 +54,17 @@ interface CardHandle {
 }
 
 const CardSlot = forwardRef<CardHandle, { initialCard: HelpRequest }>(({ initialCard }, ref) => {
-  const [card, setCard] = useState(initialCard);
+  const [card, setCardState] = useState(initialCard);
+  const [imgError, setImgError] = useState(false);
+
+  const profileUri = card.requester.profileImage?.trim();
+
+  const setCard = useCallback((next: HelpRequest) => {
+    setImgError(false);
+    setCardState(next);
+  }, []);
   useImperativeHandle(ref, () => ({ setCard }));
 
-  const bgColor = CAT_BG[card.category] ?? '#4A90D9';
   const urgency = getUrgency(card.createdAt);
   const initial = card.requester.nickname.charAt(0);
   const tags = [
@@ -58,16 +72,23 @@ const CardSlot = forwardRef<CardHandle, { initialCard: HelpRequest }>(({ initial
     MethodLabels[card.helpMethod],
   ];
 
+  const showImage = !!profileUri && !imgError;
+
   return (
     <View style={styles.card}>
-      <View style={[styles.cardBg, { backgroundColor: bgColor }]}>
-        <View style={[styles.bgCircle, { width: 280, height: 280, top: -60, right: -60 }]} />
-        <View style={[styles.bgCircle, { width: 180, height: 180, bottom: -40, left: -40 }]} />
+      <View style={styles.cardBg}>
         <View style={styles.avatarWrap}>
-          <Text style={styles.avatarText}>{initial}</Text>
+          {showImage ? (
+            <Image
+              source={{ uri: profileUri }}
+              style={styles.avatarImage}
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <Text style={styles.avatarText}>{initial}</Text>
+          )}
         </View>
       </View>
-      <View style={styles.gradientOverlay} />
       <View style={styles.urgencyBadge}>
         <View style={[styles.urgencyDot, { backgroundColor: urgency.color }]} />
         <Text style={[styles.urgencyText, { color: urgency.color }]}>{urgency.label}</Text>
@@ -76,27 +97,15 @@ const CardSlot = forwardRef<CardHandle, { initialCard: HelpRequest }>(({ initial
         <Text style={styles.timeText}>{formatTime(card.createdAt)}</Text>
       </View>
       <View style={styles.infoLayer}>
-        <View style={styles.infoTop}>
-          <View style={styles.infoTopLeft}>
-            <View style={styles.nameRow}>
-              <Text style={styles.cardName}>{card.requester.nickname}</Text>
-            </View>
-            <Text style={styles.cardSub}>{card.requester.university}</Text>
-          </View>
-          <View style={styles.schoolBadge}>
-            <Text style={styles.schoolBadgeText}>{card.requester.university}</Text>
-          </View>
+        <View style={styles.nameRow}>
+          <Text style={styles.cardName}>{card.requester.nickname}</Text>
+          {card.requester.preferredLanguage && LANG_FLAG[card.requester.preferredLanguage] && (
+            <Text style={styles.flagText}>{LANG_FLAG[card.requester.preferredLanguage]}</Text>
+          )}
         </View>
         <View style={styles.requestBox}>
           <Text style={styles.requestLabel}>도움 요청</Text>
-          <Text style={styles.requestText} numberOfLines={3}>{card.title}</Text>
-        </View>
-        <View style={styles.tagsRow}>
-          {tags.map((tag, i) => (
-            <View key={i} style={styles.tag}>
-              <Text style={styles.tagText}>{tag}</Text>
-            </View>
-          ))}
+          <Text style={styles.requestText} numberOfLines={4}>{card.title}</Text>
         </View>
       </View>
     </View>
@@ -178,12 +187,11 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight, on
 
     Animated.parallel([
       Animated.timing(frontAnim.x, { toValue: exitX, duration: 260, useNativeDriver: true }),
-      Animated.timing(midAnim.x,   { toValue: 0,     duration: 260, useNativeDriver: true }),
-      Animated.timing(midAnim.opacity, { toValue: 1, duration: 260, useNativeDriver: true }),
+      Animated.timing(midProgress, { toValue: 1, duration: 260, useNativeDriver: false }),
     ]).start(() => {
       topIndex.current += 1;
 
-      // 날아간 슬롯 → 뒤뒤 위치로 리셋 후 다음 카드 내용 주입
+      // 날아간 슬롯 → 화면 밖에 있는 동안 뒤 위치로 조용히 리셋 후 카드 내용 주입
       frontAnim.x.setValue(16);
       frontAnim.opacity.setValue(0.75);
       getHandle(front).current?.setCard(getCard(2));
@@ -191,8 +199,11 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight, on
       // 역할 rotate
       slotRoles.current = { front: mid, mid: back, back: front };
 
-      setZIndexes({ [front]: 0, [mid]: 2, [back]: 1 } as Record<'a'|'b'|'c', number>);
-      midProgress.setValue(0);
+      // zIndex 변경 전 한 프레임 대기해서 setValue 반영 후 적용 (튀는 현상 방지)
+      requestAnimationFrame(() => {
+        setZIndexes({ [front]: 0, [mid]: 2, [back]: 1 } as Record<'a'|'b'|'c', number>);
+        midProgress.setValue(0);
+      });
     });
   };
 
@@ -284,19 +295,9 @@ const styles = StyleSheet.create({
   },
   cardBg: {
     ...StyleSheet.absoluteFillObject,
+    backgroundColor: CARD_BG,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  bgCircle: {
-    position: 'absolute',
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  gradientOverlay: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    height: 280,
-    backgroundColor: 'rgba(20,50,110,0.82)',
   },
   avatarWrap: {
     width: 200,
@@ -308,10 +309,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'absolute',
-    top: CARD_HEIGHT * 0.5 - 200 * 0.62 - 100,
+    top: CARD_HEIGHT * 0.5 - 200 * 0.62 - 60,
     left: CARD_WIDTH / 2 - 100,
   },
   avatarText: { fontSize: 80, fontWeight: '900', color: 'rgba(255,255,255,0.95)' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 100 },
   urgencyBadge: {
     position: 'absolute',
     top: 16, left: 16,
@@ -342,48 +344,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
     paddingHorizontal: 22,
-    paddingBottom: 22,
-    paddingTop: 20,
+    paddingBottom: 24,
+    paddingTop: 16,
   },
-  infoTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 6,
-  },
-  infoTopLeft: { flex: 1, marginRight: 10 },
-  nameRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 },
+  nameRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   cardName: { fontSize: 24, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
-  cardSub:  { fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: '500', marginBottom: 12 },
-  schoolBadge: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  schoolBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  flagText: { fontSize: 24 },
   requestBox: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.25)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.4)',
     borderRadius: 14,
-    padding: 12,
-    marginBottom: 12,
+    padding: 16,
+    minHeight: 110,
   },
-  requestLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.6)', letterSpacing: 0.8, marginBottom: 5 },
-  requestText:  { fontSize: 14, fontWeight: '700', color: '#fff', lineHeight: 20 },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  tag: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginRight: 7,
-    marginBottom: 4,
-  },
-  tagText: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.9)' },
+  requestLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 0.8, marginBottom: 6 },
+  requestText:  { fontSize: 15, fontWeight: '700', color: '#fff', lineHeight: 22 },
 });

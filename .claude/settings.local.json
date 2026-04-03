@@ -21,7 +21,8 @@
       "Bash(grep -r \"notice\\\\|공지\\\\|announcement\\\\|crawl\\\\|크롤\" c:/Users/sang0/OneDrive/Desktop/frontend-main --include=*.ts --include=*.tsx)",
       "Bash(grep -E \"\\\\.tsx?$\")",
       "Read(//c/Users/sang0/Downloads/**)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(xargs grep:*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\sang0\\.claude"

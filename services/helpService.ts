@@ -2,6 +2,22 @@
 import api from './api';
 import type { ApiResponse, HelpRequest, HelpCategory, HelpMethod } from '../types';
 
+const SERVER_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api').replace('/api', '');
+
+function toAbsoluteUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file://') || url.startsWith('content://')) return url;
+  return SERVER_BASE_URL + url;
+}
+
+function normalizeHelpRequest(req: HelpRequest): HelpRequest {
+  return {
+    ...req,
+    requester: { ...req.requester, profileImage: toAbsoluteUrl(req.requester.profileImage) },
+    helper: req.helper ? { ...req.helper, profileImage: toAbsoluteUrl(req.helper.profileImage) } : req.helper,
+  };
+}
+
 // 도움 요청 등록
 export interface CreateHelpRequest {
   title: string;
@@ -18,13 +34,13 @@ export const createHelpRequest = async (data: CreateHelpRequest): Promise<ApiRes
 // 도움 요청 목록 조회
 export const getHelpRequests = async (): Promise<ApiResponse<HelpRequest[]>> => {
   const response = await api.get<ApiResponse<HelpRequest[]>>('/requests');
-  return response.data;
+  return { ...response.data, data: response.data.data.map(normalizeHelpRequest) };
 };
 
 // 도움 요청 상세 조회
 export const getHelpRequestById = async (id: number): Promise<ApiResponse<HelpRequest>> => {
   const response = await api.get<ApiResponse<HelpRequest>>(`/requests/${id}`);
-  return response.data;
+  return { ...response.data, data: normalizeHelpRequest(response.data.data) };
 };
 
 // 도움 요청에 참여 (한국인 학생이 도움을 주겠다고 신청)
