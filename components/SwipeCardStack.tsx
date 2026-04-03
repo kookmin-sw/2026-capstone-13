@@ -1,4 +1,4 @@
-import React, { useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   View,
   Text,
@@ -113,6 +113,8 @@ interface SwipeCardProps {
 
 export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight, onSwipeActive }: SwipeCardProps) {
   const topIndex = useRef(0);
+  const requestsRef = useRef(requests);
+  useEffect(() => { requestsRef.current = requests; }, [requests]);
 
   const slotA = useRef<CardHandle>(null);
   const slotB = useRef<CardHandle>(null);
@@ -134,9 +136,10 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight, on
 
   const getAnim   = (k: 'a'|'b'|'c') => ({ a: animA, b: animB, c: animC }[k]);
   const getHandle = (k: 'a'|'b'|'c') => ({ a: slotA, b: slotB, c: slotC }[k]);
-  const getCard   = (offset: number) => {
-    if (requests.length === 0) return requests[0];
-    return requests[(topIndex.current + offset) % requests.length];
+  const getCard   = (offset: number): HelpRequest | undefined => {
+    const reqs = requestsRef.current;
+    if (reqs.length === 0) return undefined;
+    return reqs[(topIndex.current + offset) % reqs.length];
   };
 
   const panResponder = useRef(
@@ -163,7 +166,7 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight, on
   ).current;
 
   const triggerSwipe = (dir: 'left' | 'right') => {
-    if (requests.length === 0) return;
+    if (requestsRef.current.length === 0) return;
     const exitX = dir === 'right' ? SCREEN_WIDTH + 100 : -(SCREEN_WIDTH + 100);
     const { front, mid, back } = slotRoles.current;
     const frontAnim = getAnim(front);
@@ -203,7 +206,8 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight, on
 
   if (requests.length === 0) return null;
 
-  const renderSlot = (key: 'a'|'b'|'c', initialCard: HelpRequest, ref: React.RefObject<CardHandle>) => {
+  const renderSlot = (key: 'a'|'b'|'c', initialCard: HelpRequest | undefined, ref: React.RefObject<CardHandle>) => {
+    if (!initialCard) return null;
     const anim   = getAnim(key);
     const zIndex = zIndexes[key];
     const { front, mid } = slotRoles.current;
