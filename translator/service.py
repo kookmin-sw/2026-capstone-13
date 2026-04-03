@@ -33,7 +33,7 @@ class TranslationService:
                 - Context: These are university students chatting. Make it sound like a real Gen Z conversation.
                 """
                 self.gemini_model = genai.GenerativeModel(
-                    model_name='gemini-2.0-flash',
+                    model_name='gemini-2.5-flash-lite',
                     system_instruction=instruction
                 )
                 print("✅ Gemini API 연동 완료 (멀티턴/뉘앙스 최적화)")
