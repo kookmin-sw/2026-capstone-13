@@ -19,7 +19,7 @@ public class MealScheduler {
      */
     @Scheduled(cron = "0 0 8 * * *", zone = "Asia/Seoul")
     public void scheduledCrawl() {
-        log.info("[스케줄러] 주간 식단 크롤링 시작");
+        log.info("[스케줄러] 일간 식단 크롤링 시작");
         mealService.crawlAndSave();
     }
 }
