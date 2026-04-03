@@ -22,7 +22,8 @@
       "Bash(grep -E \"\\\\.tsx?$\")",
       "Read(//c/Users/sang0/Downloads/**)",
       "Read(//tmp/**)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(node -e ':*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\sang0\\.claude"

@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
+  FlatList,
   Image,
+  Linking,
   Platform,
   RefreshControl,
   ScrollView,
@@ -14,6 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import api from '../../services/api';
 import SwipeCardStack from '../../components/SwipeCardStack';
 import { CategoryLabels } from '../../constants/colors';
 import { cancelHelpRequest, getHelpedRequests, getHelpRequests } from '../../services/helpService';
@@ -72,6 +76,31 @@ function getLevel(count: number): { label: string; color: string; bg: string } {
 type StatusFilter = 'ALL' | 'WAITING' | 'COMPLETED' | 'URGENT';
 type CatFilter = 'ALL' | HelpCategory;
 
+interface MealData {
+  id: number;
+  mealDate: string;
+  cafeteria: string;
+  corner: string;
+  menu: string;
+}
+
+interface SchoolNotice {
+  id: number;
+  categoryName: string;
+  titleKo: string;
+  title: string;
+  link: string;
+  pubDate: string | null;
+}
+
+type InfoCard =
+  | { type: 'hero'; data: null }
+  | { type: 'notice'; data: SchoolNotice }
+  | { type: 'meal'; data: MealData };
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const PREVIEW_CARD_WIDTH = SCREEN_WIDTH - 32;
+
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -85,12 +114,54 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing]         = useState(false);
   const [catFilter]                          = useState<CatFilter>('ALL');
   const [statusFilter, setStatusFilter]     = useState<StatusFilter>('ALL');
-  const [scrollEnabled, setScrollEnabled]   = useState(true);
+  const [notices, setNotices]               = useState<SchoolNotice[]>([]);
+  const [meals, setMeals]                   = useState<MealData[]>([]);
+  const infoCardIndex                        = useRef(0);
+  const infoFlatRef                          = useRef<FlatList<InfoCard>>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setShowCount(prev => !prev), 6000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    api.get('/notices').then(res => setNotices(res.data.data ?? [])).catch(() => {});
+    api.get('/meals').then(res => setMeals(res.data.data ?? [])).catch(() => {});
+  }, []);
+
+  const baseInfoCards: InfoCard[] = [
+    { type: 'hero', data: null },
+    ...notices.slice(0, 3).map(n => ({ type: 'notice' as const, data: n })),
+    ...meals.slice(0, 3).map(m => ({ type: 'meal' as const, data: m })),
+  ];
+  // 3배 복제 → 중간 세트에서 시작, 양쪽 끝에서 중간으로 점프
+  const loopedInfoCards: InfoCard[] = [
+    ...baseInfoCards, ...baseInfoCards, ...baseInfoCards,
+  ];
+  const BASE_COUNT = baseInfoCards.length;
+
+  useEffect(() => {
+    if (BASE_COUNT <= 1) return;
+    infoCardIndex.current = BASE_COUNT;
+    infoFlatRef.current?.scrollToOffset({ offset: BASE_COUNT * PREVIEW_CARD_WIDTH, animated: false });
+  }, [BASE_COUNT]);
+
+  useEffect(() => {
+    if (BASE_COUNT <= 1) return;
+    const timer = setInterval(() => {
+      const next = infoCardIndex.current + 1;
+      infoFlatRef.current?.scrollToOffset({ offset: next * PREVIEW_CARD_WIDTH, animated: true });
+      infoCardIndex.current = next;
+      if (next >= BASE_COUNT * 2) {
+        setTimeout(() => {
+          const jump = next - BASE_COUNT;
+          infoFlatRef.current?.scrollToOffset({ offset: jump * PREVIEW_CARD_WIDTH, animated: false });
+          infoCardIndex.current = jump;
+        }, 400);
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [BASE_COUNT]);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -225,68 +296,111 @@ export default function HomeScreen() {
 
   return (
     <View style={s.container}>
-      {user?.userType !== 'KOREAN' && (
-        <TouchableOpacity
-          style={s.fab}
-          onPress={() => router.push('/(main)/write')}
-          activeOpacity={0.85}
-        >
-          <Text style={s.fabText}>도움 요청하기</Text>
-        </TouchableOpacity>
-      )}
+      {/* ── NAV (고정) ── */}
+      <View style={s.nav}>
+        <View style={s.navLeft}>
+          <Text style={s.navGreeting}>
+            안녕하세요, <Text style={s.navGreetingName}>{user?.nickname ?? ''}님</Text>!
+          </Text>
+        </View>
+        <View style={s.navRight}>
+          <TouchableOpacity style={s.notifBtn} onPress={() => router.push('/notifications')} activeOpacity={0.8}>
+            <Ionicons name="notifications-outline" size={20} color="#444" />
+            {hasUnreadForUser(user?.id ?? 0) && <View style={s.notifDot} />}
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
-        scrollEnabled={scrollEnabled}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
-        contentContainerStyle={{ paddingBottom: 100 }}
-      >
-        {/* ── NAV ── */}
-        <View style={s.nav}>
-          <View style={s.navLeft}>
-            <Text style={s.navGreeting}>
-              안녕하세요, <Text style={s.navGreetingName}>{user?.nickname ?? ''}님</Text>!
-            </Text>
-          </View>
-          <View style={s.navRight}>
-            <TouchableOpacity style={s.notifBtn} onPress={() => router.push('/notifications')} activeOpacity={0.8}>
-              <Ionicons name="notifications-outline" size={20} color="#444" />
-              {hasUnreadForUser(user?.id ?? 0) && <View style={s.notifDot} />}
-            </TouchableOpacity>
-          </View>
-        </View>
 
-        {/* ── Hero 카드 ── */}
-        <View style={s.heroWrap}>
-          <View style={s.heroCard}>
-            <View style={s.heroBg}>
-<View style={s.heroTextWrap}>
-                <View style={s.heroLocationRow}>
-                  <View style={s.heroDot} />
-                  <Text style={s.heroLocation}>국민대학교 · 지금 활동중</Text>
-                </View>
-                <Text style={s.heroTitle}>
-                  지금 <Text style={s.heroHL}>{activeCount}명</Text>이{'\n'}기다려요!
-                </Text>
-                <Text style={s.heroSub}>평균 매칭 2분</Text>
-              </View>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
+        contentContainerStyle={{ paddingTop: Platform.OS === 'ios' ? 100 : 72, paddingBottom: 100 }}
+      >
+
+        {/* ── 공지사항 / 학식 슬라이드 ── */}
+        {loopedInfoCards.length > 0 && (
+            <View style={s.infoSection}>
+              <FlatList
+                ref={infoFlatRef}
+                data={loopedInfoCards}
+                keyExtractor={(_, i) => String(i)}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                decelerationRate="fast"
+                getItemLayout={(_, index) => ({ length: PREVIEW_CARD_WIDTH, offset: PREVIEW_CARD_WIDTH * index, index })}
+                contentContainerStyle={{ paddingVertical: 8 }}
+                onMomentumScrollEnd={e => {
+                  infoCardIndex.current = Math.round(e.nativeEvent.contentOffset.x / PREVIEW_CARD_WIDTH);
+                }}
+                renderItem={({ item }) => {
+                  if (item.type === 'hero') {
+                    return (
+                      <View style={s.infoCard}>
+                        <View style={s.heroLocationRow}>
+                          <View style={s.heroDot} />
+                          <Text style={s.heroLocation}>국민대학교 · 지금 활동중</Text>
+                        </View>
+                        <Text style={s.heroTitle}>
+                          지금 <Text style={s.heroHL}>{activeCount}명</Text>이 기다려요!
+                        </Text>
+                        <View style={s.heroProgressLabelRow}>
+                          <Text style={s.heroProgressLabel}>이번달 도움 목표</Text>
+                          <Text style={s.heroProgressValue}>{completedCount} / {HELP_GOAL}</Text>
+                        </View>
+                        <View style={s.heroProgressTrack}>
+                          <View style={[s.heroProgressFill, { width: `${Math.min((completedCount / HELP_GOAL) * 100, 100)}%` }]} />
+                        </View>
+                      </View>
+                    );
+                  }
+                  if (item.type === 'notice') {
+                    const n = item.data;
+                    return (
+                      <TouchableOpacity
+                        style={s.infoCard}
+                        onPress={() => n.link ? Linking.openURL(n.link) : undefined}
+                        activeOpacity={0.85}
+                      >
+                        <View style={s.infoCardTopRow}>
+                          <View style={s.infoTypeBadge}>
+                            <Ionicons name="megaphone-outline" size={11} color={BLUE} />
+                            <Text style={s.infoTypeBadgeText}>공지사항</Text>
+                          </View>
+                          {n.pubDate ? <Text style={s.infoDate}>{n.pubDate}</Text> : null}
+                        </View>
+                        <Text style={s.infoTitle} numberOfLines={2}>{n.titleKo}</Text>
+                        <Text style={s.infoSub} numberOfLines={1}>{n.title}</Text>
+                      </TouchableOpacity>
+                    );
+                  }
+                  const m = item.data;
+                  return (
+                    <View style={s.infoCard}>
+                      <View style={s.infoCardTopRow}>
+                        <View style={s.infoTypeBadge}>
+                          <Ionicons name="restaurant-outline" size={11} color={BLUE} />
+                          <Text style={s.infoTypeBadgeText}>오늘의 학식</Text>
+                        </View>
+                        <Text style={s.infoDate}>{m.cafeteria}</Text>
+                      </View>
+                      <Text style={s.infoTitle} numberOfLines={1}>{m.corner}</Text>
+                      <Text style={s.infoSub} numberOfLines={2}>
+                        {m.menu.split('\n').filter(Boolean).slice(0, 3).join(' · ')}
+                      </Text>
+                    </View>
+                  );
+                }}
+              />
             </View>
-            <View style={s.heroBottom}>
-              <View style={s.heroProgressLabelRow}>
-                <Text style={s.heroProgressLabel}>이번달 도움 목표</Text>
-                <Text style={s.heroProgressValue}>{completedCount} / {HELP_GOAL}</Text>
-              </View>
-              <View style={s.heroProgressTrack}>
-                <View style={[s.heroProgressFill, { width: `${Math.min((completedCount / HELP_GOAL) * 100, 100)}%` }]} />
-              </View>
-            </View>
-          </View>
-        </View>
+        )}
 
         {/* ── 모든 도움 보기 ── */}
-        <View style={{ marginLeft: 16, marginBottom: 20 }}>
+        <View style={{ marginLeft: 20, marginBottom: 20 }}>
           <SwipeCardStack
             requests={requests.filter(r => r.status === 'WAITING')}
-            onSwipeActive={(active) => setScrollEnabled(!active)}
+            onSwipeRight={(card) => goTo(card)}
           />
         </View>
 
@@ -370,8 +484,11 @@ const s = StyleSheet.create({
 
   // ── NAV ──
   nav: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 36,
-    paddingBottom: 12,
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    zIndex: 10,
+    paddingTop: Platform.OS === 'ios' ? 56 : 32,
+    paddingBottom: 10,
     paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -401,35 +518,11 @@ const s = StyleSheet.create({
     backgroundColor: ORANGE, borderWidth: 1.5, borderColor: BG,
   },
 
-  // ── Hero ──
-  heroWrap: { marginHorizontal: 16, marginBottom: 12, marginTop: 8 },
-  heroCard: {
-    backgroundColor: '#fff', borderRadius: 24,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12, shadowRadius: 12, elevation: 6,
-  },
-  heroBg: {
-    backgroundColor: '#EEF4FF',
-    padding: 20,
-    position: 'relative', minHeight: 140,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-  },
-  heroIconCard: {
-    position: 'absolute', top: 14, right: 18,
-    width: 82, height: 82,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 22,
-    justifyContent: 'center', alignItems: 'center', gap: 4,
-    shadowColor: BLUE, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 8, elevation: 2,
-  },
-  heroIconEmoji: { fontSize: 34, lineHeight: 40 },
-  heroIconLabel: { fontSize: 9, fontWeight: '700', color: BLUE },
-  heroTextWrap:  { maxWidth: 210 },
+  // ── Hero (슬라이드 카드 내 히어로 컨텐츠용) ──
   heroLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 10 },
   heroDot:    { width: 6, height: 6, borderRadius: 3, backgroundColor: '#22C55E' },
   heroLocation: { fontSize: 12, color: '#6B9DF0', fontWeight: '600' },
-  heroTitle:  { fontSize: 28, fontWeight: '900', color: T1, lineHeight: 34, letterSpacing: -1, marginBottom: 8 },
+  heroTitle:  { fontSize: 22, fontWeight: '900', color: T1, letterSpacing: -0.5, marginBottom: 10 },
   heroHL:     { color: BLUE },
   heroSub:    { fontSize: 12, color: T2, fontWeight: '500' },
   heroUrgent: { fontSize: 12, color: ORANGE, fontWeight: '700', marginTop: 4 },
@@ -439,11 +532,30 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
   },
   heroBtnText:          { fontSize: 15, fontWeight: '800', color: '#fff', letterSpacing: -0.2 },
-  heroProgressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  heroProgressLabel:    { fontSize: 12, color: '#6B9DF0', fontWeight: '500' },
-  heroProgressValue:    { fontSize: 12, color: BLUE, fontWeight: '700' },
-  heroProgressTrack:    { backgroundColor: '#D4E4FA', borderRadius: 10, height: 7, overflow: 'hidden' },
+  heroProgressLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5, marginTop: 10 },
+  heroProgressLabel:    { fontSize: 11, color: '#6B9DF0', fontWeight: '500' },
+  heroProgressValue:    { fontSize: 11, color: BLUE, fontWeight: '700' },
+  heroProgressTrack:    { backgroundColor: '#D4E4FA', borderRadius: 10, height: 6, overflow: 'hidden' },
   heroProgressFill:     { backgroundColor: BLUE, borderRadius: 10, height: '100%' },
+
+  // ── 학교 소식 슬라이드 ──
+  infoSection:    { marginTop: 0, marginBottom: 8, marginHorizontal: 16 },
+  infoCard: {
+    width: PREVIEW_CARD_WIDTH,
+    backgroundColor: '#EEF4FF',
+    borderRadius: 24, padding: 20,
+    shadowColor: 'transparent', shadowOpacity: 0, elevation: 0,
+    justifyContent: 'space-between',
+  },
+  infoCardTopRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  infoTypeBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.7)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
+  },
+  infoTypeBadgeText: { fontSize: 11, fontWeight: '700', color: BLUE },
+  infoDate:          { fontSize: 11, color: '#6B9DF0' },
+  infoTitle:         { fontSize: 16, fontWeight: '900', color: T1, lineHeight: 22, marginBottom: 6, letterSpacing: -0.3 },
+  infoSub:           { fontSize: 12, color: '#6B9DF0', fontWeight: '500', lineHeight: 17 },
 
   // ── Section Card ──
   sectionCard: {
