@@ -36,7 +36,9 @@ public class ChatService {
     private final HelpRequestRepository helpRequestRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(5))
+            .build();
 
     @Value("${ai.server.url:http://localhost:8000}")
     private String aiServerUrl;
@@ -81,6 +83,7 @@ public class ChatService {
                     HttpRequest translateRequest = HttpRequest.newBuilder()
                             .uri(URI.create(aiServerUrl + "/api/translate"))
                             .header("Content-Type", "application/json")
+                            .timeout(java.time.Duration.ofSeconds(10))
                             .POST(HttpRequest.BodyPublishers.ofString(translateBody))
                             .build();
 

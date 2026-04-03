@@ -27,7 +27,9 @@ public class NoticeService {
 
     private final NoticeRepository noticeRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(5))
+            .build();
 
     @Value("${ai.server.url:http://localhost:8000}")
     private String aiServerUrl;
