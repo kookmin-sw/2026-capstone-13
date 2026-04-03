@@ -40,6 +40,10 @@ Your goal is to provide natural, casual, and context-aware translations.
         else:
             print("⚠️  GEMINI_API_KEY 없음. 더미 모드로 실행됩니다.")
 
+    @property
+    def dummy_mode(self):
+        return self.client is None
+
     def _detect_language(self, text: str) -> str:
         if any('\uac00' <= c <= '\ud7a3' for c in text):
             return "ko"

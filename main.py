@@ -40,6 +40,37 @@ def health():
     }
 
 
+# ── Gemini 디버그 ──────────────────────────────────────────
+@app.get("/api/gemini/test")
+async def gemini_test():
+    """Gemini 연결 상태 및 번역 테스트"""
+    import os
+    key = os.getenv("GEMINI_API_KEY")
+    if not key:
+        return {"ok": False, "reason": "GEMINI_API_KEY 환경변수 없음"}
+    try:
+        from google import genai
+        client = genai.Client(api_key=key)
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model=translation_service.model_name,
+            contents="Say 'hello' in English only.",
+        )
+        return {
+            "ok": True,
+            "model": translation_service.model_name,
+            "response": response.text.strip(),
+            "gemini_client_ready": not translation_service.dummy_mode,
+        }
+    except Exception as e:
+        return {
+            "ok": False,
+            "model": translation_service.model_name,
+            "error": str(e),
+            "error_type": type(e).__name__,
+        }
+
+
 # ── 번역 ──────────────────────────────────────────────────
 @app.post("/api/translate")
 async def translate(request: Request):
