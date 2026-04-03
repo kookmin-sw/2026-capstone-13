@@ -9,6 +9,8 @@ import com.helpboys.api.repository.HelpRequestRepository;
 import com.helpboys.api.repository.UserBlockRepository;
 import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,40 +26,36 @@ public class HelpRequestService {
     private final UserRepository userRepository;
     private final UserBlockRepository userBlockRepository;
 
-    // 도움 요청 전체 목록 조회 (최신순, 차단 유저 제외)
+    // 도움 요청 전체 목록 조회 (최신순, 차단 유저 제외, 페이지네이션)
     @Transactional(readOnly = true)
-    public List<HelpRequestResponse> getAllRequests(Long userId) {
+    public Page<HelpRequestResponse> getAllRequests(Long userId, int page, int size) {
         List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
-        return helpRequestRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(req -> !blockedIds.contains(req.getRequester().getId()))
-                .map(HelpRequestResponse::from)
-                .collect(Collectors.toList());
+        List<Long> excludeIds = blockedIds.isEmpty() ? List.of(-1L) : blockedIds;
+        return helpRequestRepository.findAllExcludingBlocked(excludeIds, PageRequest.of(page, size))
+                .map(HelpRequestResponse::from);
     }
 
-    // 대기 중인 도움 요청만 조회 (한국인 학생용, 차단 유저 제외)
+    // 대기 중인 도움 요청만 조회 (한국인 학생용, 차단 유저 제외, 페이지네이션)
     @Transactional(readOnly = true)
-    public List<HelpRequestResponse> getWaitingRequests(Long userId) {
+    public Page<HelpRequestResponse> getWaitingRequests(Long userId, int page, int size) {
         List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
-        return helpRequestRepository.findByStatus(HelpRequest.RequestStatus.WAITING).stream()
-                .filter(req -> !blockedIds.contains(req.getRequester().getId()))
-                .map(HelpRequestResponse::from)
-                .collect(Collectors.toList());
+        List<Long> excludeIds = blockedIds.isEmpty() ? List.of(-1L) : blockedIds;
+        return helpRequestRepository.findByStatusExcludingBlocked(HelpRequest.RequestStatus.WAITING, excludeIds, PageRequest.of(page, size))
+                .map(HelpRequestResponse::from);
     }
 
-    // 내가 등록한 도움 요청 목록
+    // 내가 등록한 도움 요청 목록 (페이지네이션)
     @Transactional(readOnly = true)
-    public List<HelpRequestResponse> getMyRequests(Long requesterId) {
-        return helpRequestRepository.findByRequesterId(requesterId).stream()
-                .map(HelpRequestResponse::from)
-                .collect(Collectors.toList());
+    public Page<HelpRequestResponse> getMyRequests(Long requesterId, int page, int size) {
+        return helpRequestRepository.findByRequesterIdOrderByCreatedAtDesc(requesterId, PageRequest.of(page, size))
+                .map(HelpRequestResponse::from);
     }
 
-    // 내가 도움을 준 요청 목록
+    // 내가 도움을 준 요청 목록 (페이지네이션)
     @Transactional(readOnly = true)
-    public List<HelpRequestResponse> getHelpedRequests(Long helperId) {
-        return helpRequestRepository.findByHelperId(helperId).stream()
-                .map(HelpRequestResponse::from)
-                .collect(Collectors.toList());
+    public Page<HelpRequestResponse> getHelpedRequests(Long helperId, int page, int size) {
+        return helpRequestRepository.findByHelperIdOrderByCreatedAtDesc(helperId, PageRequest.of(page, size))
+                .map(HelpRequestResponse::from);
     }
 
     // 도움 요청 단건 조회

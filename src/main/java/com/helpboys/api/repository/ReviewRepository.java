@@ -1,6 +1,8 @@
 package com.helpboys.api.repository;
 
 import com.helpboys.api.entity.Review;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +17,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     // 특정 유저가 받은 리뷰 목록 (최신순)
     List<Review> findByRevieweeIdOrderByCreatedAtDesc(Long revieweeId);
+
+    Page<Review> findByRevieweeIdOrderByCreatedAtDesc(Long revieweeId, Pageable pageable);
 
     // 특정 유저가 받은 평점 평균 계산
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.reviewee.id = :revieweeId")

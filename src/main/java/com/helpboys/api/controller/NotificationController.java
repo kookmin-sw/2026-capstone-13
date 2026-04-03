@@ -5,10 +5,10 @@ import com.helpboys.api.dto.NotificationResponse;
 import com.helpboys.api.service.NotificationService;
 import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,11 +21,13 @@ public class NotificationController {
 
     // GET /api/notifications - 내 알림 목록
     @GetMapping
-    public ResponseEntity<ApiResponse<List<NotificationResponse>>> getMyNotifications(
+    public ResponseEntity<ApiResponse<Page<NotificationResponse>>> getMyNotifications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestHeader("Authorization") String token) {
         Long userId = extractUserId(token);
         return ResponseEntity.ok(ApiResponse.success("조회 성공",
-                notificationService.getMyNotifications(userId)));
+                notificationService.getMyNotifications(userId, page, size)));
     }
 
     // GET /api/notifications/unread - 읽지 않은 알림 여부

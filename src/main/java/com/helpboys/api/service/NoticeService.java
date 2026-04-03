@@ -9,6 +9,8 @@ import com.helpboys.api.repository.NoticeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -146,17 +148,15 @@ public class NoticeService {
     }
 
     /**
-     * 전체 공지 조회 (사용자 언어 기준)
+     * 전체 공지 조회 (사용자 언어 기준, 페이지네이션)
      */
     @Transactional(readOnly = true)
-    public List<NoticeResponse> getNotices(String langCode, String categoryId) {
-        List<Notice> notices = categoryId != null
-                ? noticeRepository.findByCategoryIdOrderByPubDateDescCreatedAtDesc(categoryId)
-                : noticeRepository.findAllByOrderByPubDateDescCreatedAtDesc();
+    public Page<NoticeResponse> getNotices(String langCode, String categoryId, int page, int size) {
+        Page<Notice> notices = categoryId != null
+                ? noticeRepository.findByCategoryIdPaged(categoryId, PageRequest.of(page, size))
+                : noticeRepository.findAllPaged(PageRequest.of(page, size));
 
-        return notices.stream()
-                .map(n -> NoticeResponse.from(n, langCode))
-                .toList();
+        return notices.map(n -> NoticeResponse.from(n, langCode));
     }
 
     private LocalDate parseDate(String dateStr) {

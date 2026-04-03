@@ -6,10 +6,9 @@ import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.service.NoticeService;
 import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/notices")
@@ -26,13 +25,15 @@ public class NoticeController {
      * - category: academic | scholarship | job_internal | job_external (선택)
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<NoticeResponse>>> getNotices(
+    public ResponseEntity<ApiResponse<Page<NoticeResponse>>> getNotices(
             @RequestParam(required = false) String lang,
             @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @RequestHeader(value = "Authorization", required = false) String token) {
 
         String langCode = resolveLang(lang, token);
-        List<NoticeResponse> notices = noticeService.getNotices(langCode, category);
+        Page<NoticeResponse> notices = noticeService.getNotices(langCode, category, page, size);
         return ResponseEntity.ok(ApiResponse.success("공지사항 조회 성공", notices));
     }
 

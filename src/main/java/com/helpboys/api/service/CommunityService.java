@@ -21,6 +21,8 @@ import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,16 +56,14 @@ public class CommunityService {
     @Value("${ai.server.url:http://localhost:8000}")
     private String aiServerUrl;
 
-    // 게시글 목록 조회 (차단 유저 제외)
+    // 게시글 목록 조회 (차단 유저 제외, 페이지네이션)
     @Transactional(readOnly = true)
-    public List<CommunityPostResponse> getAllPosts(Long userId) {
+    public Page<CommunityPostResponse> getAllPosts(Long userId, int page, int size) {
         List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
-        return communityPostRepository.findAllByOrderByCreatedAtDesc()
-                .stream()
-                .filter(post -> !blockedIds.contains(post.getAuthor().getId()))
+        List<Long> excludeIds = blockedIds.isEmpty() ? List.of(-1L) : blockedIds;
+        return communityPostRepository.findAllExcludingBlocked(excludeIds, PageRequest.of(page, size))
                 .map(post -> CommunityPostResponse.fromList(post,
-                        postLikeRepository.existsByPostIdAndUserId(post.getId(), userId)))
-                .collect(Collectors.toList());
+                        postLikeRepository.existsByPostIdAndUserId(post.getId(), userId)));
     }
 
     // 게시글 상세 조회 (댓글 포함)
@@ -192,16 +192,14 @@ public class CommunityService {
         postCommentRepository.delete(comment);
     }
 
-    // 게시글 검색 (차단 유저 제외)
+    // 게시글 검색 (차단 유저 제외, 페이지네이션)
     @Transactional(readOnly = true)
-    public List<CommunityPostResponse> searchPosts(String keyword, Long userId) {
+    public Page<CommunityPostResponse> searchPosts(String keyword, Long userId, int page, int size) {
         List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
-        return communityPostRepository.searchByKeyword(keyword)
-                .stream()
-                .filter(post -> !blockedIds.contains(post.getAuthor().getId()))
+        List<Long> excludeIds = blockedIds.isEmpty() ? List.of(-1L) : blockedIds;
+        return communityPostRepository.searchByKeywordExcludingBlocked(keyword, excludeIds, PageRequest.of(page, size))
                 .map(post -> CommunityPostResponse.fromList(post,
-                        postLikeRepository.existsByPostIdAndUserId(post.getId(), userId)))
-                .collect(Collectors.toList());
+                        postLikeRepository.existsByPostIdAndUserId(post.getId(), userId)));
     }
 
     // 게시글 번역 (DB 캐시 → 없으면 Gemini 번역 후 저장)

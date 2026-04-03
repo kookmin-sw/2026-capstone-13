@@ -7,6 +7,8 @@ import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.NotificationRepository;
 import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,13 +23,11 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
-    // 내 알림 목록 조회
+    // 내 알림 목록 조회 (페이지네이션)
     @Transactional(readOnly = true)
-    public List<NotificationResponse> getMyNotifications(Long userId) {
-        return notificationRepository.findByRecipientIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .map(NotificationResponse::from)
-                .collect(Collectors.toList());
+    public Page<NotificationResponse> getMyNotifications(Long userId, int page, int size) {
+        return notificationRepository.findByRecipientIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size))
+                .map(NotificationResponse::from);
     }
 
     // 읽지 않은 알림 존재 여부

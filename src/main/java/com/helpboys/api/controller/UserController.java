@@ -7,6 +7,7 @@ import com.helpboys.api.service.ReviewService;
 import com.helpboys.api.service.UserService;
 import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -61,8 +62,11 @@ public class UserController {
 
     // GET /api/users/{id}/reviews - 특정 유저가 받은 리뷰 목록 조회
     @GetMapping("/{id}/reviews")
-    public ResponseEntity<ApiResponse<java.util.List<ReviewResponse>>> getUserReviews(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", reviewService.getReviewsByUser(id)));
+    public ResponseEntity<ApiResponse<Page<ReviewResponse>>> getUserReviews(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", reviewService.getReviewsByUser(id, page, size)));
     }
 
     // POST /api/users/profile-image - 프로필 이미지 업로드
