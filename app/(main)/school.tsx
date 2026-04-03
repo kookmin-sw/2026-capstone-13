@@ -87,10 +87,10 @@ export default function SchoolScreen() {
       const res = await api.get('/meals');
       const data: MealData[] = res.data.data ?? [];
       setMeals(data);
-      if (data.length > 0 && !selectedCafeteria) {
+      if (data.length > 0) {
         const ORDER = ['한울식당', '학생식당', '교직원식당'];
-        const first = ORDER.find((name) => data.some((m) => m.cafeteria === name));
-        setSelectedCafeteria(first ?? data[0].cafeteria);
+        const first = ORDER.find((name) => data.some((m) => m.cafeteriaKo === name));
+        setSelectedCafeteria(first ?? data[0].cafeteriaKo);
       }
     } catch (e) {
       // 실패 시 빈 목록 유지
@@ -102,19 +102,19 @@ export default function SchoolScreen() {
   useEffect(() => {
     fetchNotices();
     fetchMeals();
-  }, []);
+  }, [langCode]);
 
   const onRefresh = () => {
     setRefreshing(true);
     Promise.all([fetchNotices(), fetchMeals()]).finally(() => setRefreshing(false));
   };
 
-  // 식당 목록 (3개 고정)
+  // 식당 목록 (cafeteriaKo 기준으로 정렬, 표시는 번역된 cafeteria 사용)
   const CAFETERIA_ORDER = ['한울식당', '학생식당', '교직원식당'];
-  const cafeteriaList = CAFETERIA_ORDER.filter((name) => meals.some((m) => m.cafeteria === name));
+  const cafeteriaList = CAFETERIA_ORDER.filter((name) => meals.some((m) => m.cafeteriaKo === name));
 
-  // 선택된 식당의 코너 목록
-  const selectedMeals = meals.filter((m) => m.cafeteria === selectedCafeteria);
+  // 선택된 식당의 코너 목록 (cafeteriaKo 기준)
+  const selectedMeals = meals.filter((m) => m.cafeteriaKo === selectedCafeteria);
 
   const mealDate = meals.length > 0 ? meals[0].mealDate : '';
 
@@ -182,19 +182,22 @@ export default function SchoolScreen() {
 
                 {/* 2. 식당 선택 탭 (| 구분선 스타일) */}
                 <View style={s.cafeteriaTabWrap}>
-                  {cafeteriaList.map((name, idx) => (
-                    <View key={name} style={s.cafeteriaTabItem}>
-                      {idx > 0 && <Text style={s.cafeteriaTabDivider}>|</Text>}
-                      <TouchableOpacity
-                        onPress={() => setSelectedCafeteria(name)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[s.cafeteriaTabText, selectedCafeteria === name && s.cafeteriaTabTextActive]}>
-                          {name}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
+                  {cafeteriaList.map((name, idx) => {
+                    const translatedName = meals.find((m) => m.cafeteriaKo === name)?.cafeteria ?? name;
+                    return (
+                      <View key={name} style={s.cafeteriaTabItem}>
+                        {idx > 0 && <Text style={s.cafeteriaTabDivider}>|</Text>}
+                        <TouchableOpacity
+                          onPress={() => setSelectedCafeteria(name)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[s.cafeteriaTabText, selectedCafeteria === name && s.cafeteriaTabTextActive]}>
+                            {translatedName}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
                 </View>
 
                 {/* 3. 위치 정보 */}
