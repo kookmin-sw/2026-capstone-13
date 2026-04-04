@@ -22,7 +22,7 @@ export const useHelpRequestStore = create<HelpRequestState>((set) => ({
     set({ isLoading: true });
     try {
       const res = await getMyRequests();
-      if (res.success) set({ myRequests: res.data });
+      if (res.success) set({ myRequests: Array.isArray(res.data) ? res.data : [] });
     } catch {
       // 네트워크 오류 시 기존 목록 유지
     } finally {

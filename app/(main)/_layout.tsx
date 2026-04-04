@@ -32,7 +32,7 @@ export default function MainLayout() {
 
       const activeRoomIds = new Set<number>();
       results.forEach((result) => {
-        if (result.status === 'fulfilled' && result.value.success) {
+        if (result.status === 'fulfilled' && result.value.success && Array.isArray(result.value.data)) {
           result.value.data
             .filter((r) => r.status === 'IN_PROGRESS' || r.status === 'MATCHED')
             .forEach((r) => activeRoomIds.add(r.id));

@@ -125,7 +125,7 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    api.get('/notices').then(res => setNotices(res.data.data ?? [])).catch(() => {});
+    api.get('/notices').then(res => setNotices(Array.isArray(res.data.data) ? res.data.data : [])).catch(() => {});
     api.get('/meals').then(res => setMeals(res.data.data ?? [])).catch(() => {});
   }, []);
 
