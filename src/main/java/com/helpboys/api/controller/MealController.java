@@ -48,8 +48,8 @@ public class MealController {
      */
     @PostMapping("/retranslate")
     public ResponseEntity<ApiResponse<String>> retranslate() {
-        int count = mealService.retranslateAll();
-        return ResponseEntity.ok(ApiResponse.success("재번역 완료", count + "건 처리됨"));
+        new Thread(() -> mealService.retranslateAll()).start();
+        return ResponseEntity.ok(ApiResponse.success("재번역 시작됨", "백그라운드에서 처리 중"));
     }
 
     private String resolveLang(String queryLang, String token) {

@@ -111,40 +111,50 @@ public class NoticeService {
             List.of("en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru");
 
     /**
-     * 기존 공지 전체 재번역 (DB의 titleKo로 Gemini 번역)
+     * 기존 공지 전체 재번역 — 공지별 별도 트랜잭션으로 처리
      */
-    @Transactional
     public int retranslateAll() {
-        List<Notice> notices = noticeRepository.findAll();
+        List<Long> ids = noticeRepository.findAll().stream()
+                .map(Notice::getId).toList();
         int count = 0;
-        for (Notice notice : notices) {
-            notice.getTranslations().clear();
-            noticeRepository.saveAndFlush(notice);
-            for (String lang : SUPPORTED_LANGUAGES) {
-                try {
-                    String body = objectMapper.writeValueAsString(
-                            Map.of("text", notice.getTitleKo(), "target_lang", lang, "source_lang", "ko"));
-                    HttpRequest req = HttpRequest.newBuilder()
-                            .uri(URI.create(aiServerUrl + "/api/translate"))
-                            .header("Content-Type", "application/json")
-                            .timeout(java.time.Duration.ofSeconds(15))
-                            .POST(HttpRequest.BodyPublishers.ofString(body)).build();
-                    HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-                    JsonNode result = objectMapper.readTree(resp.body());
-                    if (result.path("success").asBoolean()) {
-                        String translated = result.path("data").path("translated").asText(notice.getTitleKo());
-                        notice.getTranslations().add(
-                                NoticeTranslation.builder().notice(notice).langCode(lang).title(translated).build());
-                    }
-                } catch (Exception e) {
-                    log.warn("[공지 재번역] {} 언어 실패: {}", lang, e.getMessage());
-                }
+        for (Long id : ids) {
+            try {
+                retranslateOne(id);
+                count++;
+            } catch (Exception e) {
+                log.warn("[공지 재번역] id={} 실패: {}", id, e.getMessage());
             }
-            noticeRepository.save(notice);
-            count++;
         }
         log.info("[공지 재번역] {}건 완료", count);
         return count;
+    }
+
+    @Transactional
+    public void retranslateOne(Long noticeId) {
+        Notice notice = noticeRepository.findById(noticeId).orElseThrow();
+        notice.getTranslations().clear();
+        noticeRepository.saveAndFlush(notice);
+        for (String lang : SUPPORTED_LANGUAGES) {
+            try {
+                String body = objectMapper.writeValueAsString(
+                        Map.of("text", notice.getTitleKo(), "target_lang", lang, "source_lang", "ko"));
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(aiServerUrl + "/api/translate"))
+                        .header("Content-Type", "application/json")
+                        .timeout(java.time.Duration.ofSeconds(15))
+                        .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+                HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+                JsonNode result = objectMapper.readTree(resp.body());
+                if (result.path("success").asBoolean()) {
+                    String translated = result.path("data").path("translated").asText(notice.getTitleKo());
+                    notice.getTranslations().add(
+                            NoticeTranslation.builder().notice(notice).langCode(lang).title(translated).build());
+                }
+            } catch (Exception e) {
+                log.warn("[공지 재번역] id={} {} 언어 실패: {}", noticeId, lang, e.getMessage());
+            }
+        }
+        noticeRepository.save(notice);
     }
 
     /**

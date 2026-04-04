@@ -129,52 +129,62 @@ public class MealService {
             List.of("en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru");
 
     /**
-     * 기존 식단 전체 재번역 (DB의 cafeteria/corner 한국어로 Gemini 번역)
+     * 기존 식단 전체 재번역 — 식단별 별도 트랜잭션으로 처리
      */
-    @Transactional
     public int retranslateAll() {
-        List<Meal> meals = mealRepository.findAll();
+        List<Long> ids = mealRepository.findAll().stream()
+                .map(Meal::getId).toList();
         int count = 0;
-        for (Meal meal : meals) {
-            meal.getTranslations().clear();
-            mealRepository.saveAndFlush(meal);
-            for (String lang : SUPPORTED_LANGUAGES) {
-                try {
-                    String cafBody = objectMapper.writeValueAsString(
-                            Map.of("text", meal.getCafeteria(), "target_lang", lang, "source_lang", "ko"));
-                    HttpRequest cafReq = HttpRequest.newBuilder()
-                            .uri(URI.create(aiServerUrl + "/api/azure/translate"))
-                            .header("Content-Type", "application/json")
-                            .timeout(java.time.Duration.ofSeconds(15))
-                            .POST(HttpRequest.BodyPublishers.ofString(cafBody)).build();
-                    HttpResponse<String> cafResp = httpClient.send(cafReq, HttpResponse.BodyHandlers.ofString());
-                    String translatedCaf = objectMapper.readTree(cafResp.body())
-                            .path("data").path("translated").asText(meal.getCafeteria());
-
-                    String corBody = objectMapper.writeValueAsString(
-                            Map.of("text", meal.getCorner(), "target_lang", lang, "source_lang", "ko"));
-                    HttpRequest corReq = HttpRequest.newBuilder()
-                            .uri(URI.create(aiServerUrl + "/api/azure/translate"))
-                            .header("Content-Type", "application/json")
-                            .timeout(java.time.Duration.ofSeconds(15))
-                            .POST(HttpRequest.BodyPublishers.ofString(corBody)).build();
-                    HttpResponse<String> corResp = httpClient.send(corReq, HttpResponse.BodyHandlers.ofString());
-                    String translatedCor = objectMapper.readTree(corResp.body())
-                            .path("data").path("translated").asText(meal.getCorner());
-
-                    meal.getTranslations().add(MealTranslation.builder()
-                            .meal(meal).langCode(lang)
-                            .cafeteria(translatedCaf).corner(translatedCor)
-                            .build());
-                } catch (Exception e) {
-                    log.warn("[식단 재번역] {} 언어 실패: {}", lang, e.getMessage());
-                }
+        for (Long id : ids) {
+            try {
+                retranslateOne(id);
+                count++;
+            } catch (Exception e) {
+                log.warn("[식단 재번역] id={} 실패: {}", id, e.getMessage());
             }
-            mealRepository.save(meal);
-            count++;
         }
         log.info("[식단 재번역] {}건 완료", count);
         return count;
+    }
+
+    @Transactional
+    public void retranslateOne(Long mealId) {
+        Meal meal = mealRepository.findById(mealId).orElseThrow();
+        meal.getTranslations().clear();
+        mealRepository.saveAndFlush(meal);
+        for (String lang : SUPPORTED_LANGUAGES) {
+            try {
+                String cafBody = objectMapper.writeValueAsString(
+                        Map.of("text", meal.getCafeteria(), "target_lang", lang, "source_lang", "ko"));
+                HttpRequest cafReq = HttpRequest.newBuilder()
+                        .uri(URI.create(aiServerUrl + "/api/azure/translate"))
+                        .header("Content-Type", "application/json")
+                        .timeout(java.time.Duration.ofSeconds(15))
+                        .POST(HttpRequest.BodyPublishers.ofString(cafBody)).build();
+                HttpResponse<String> cafResp = httpClient.send(cafReq, HttpResponse.BodyHandlers.ofString());
+                String translatedCaf = objectMapper.readTree(cafResp.body())
+                        .path("data").path("translated").asText(meal.getCafeteria());
+
+                String corBody = objectMapper.writeValueAsString(
+                        Map.of("text", meal.getCorner(), "target_lang", lang, "source_lang", "ko"));
+                HttpRequest corReq = HttpRequest.newBuilder()
+                        .uri(URI.create(aiServerUrl + "/api/azure/translate"))
+                        .header("Content-Type", "application/json")
+                        .timeout(java.time.Duration.ofSeconds(15))
+                        .POST(HttpRequest.BodyPublishers.ofString(corBody)).build();
+                HttpResponse<String> corResp = httpClient.send(corReq, HttpResponse.BodyHandlers.ofString());
+                String translatedCor = objectMapper.readTree(corResp.body())
+                        .path("data").path("translated").asText(meal.getCorner());
+
+                meal.getTranslations().add(MealTranslation.builder()
+                        .meal(meal).langCode(lang)
+                        .cafeteria(translatedCaf).corner(translatedCor)
+                        .build());
+            } catch (Exception e) {
+                log.warn("[식단 재번역] id={} {} 언어 실패: {}", mealId, lang, e.getMessage());
+            }
+        }
+        mealRepository.save(meal);
     }
 
     /**
