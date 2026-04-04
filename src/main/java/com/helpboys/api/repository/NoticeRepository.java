@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface NoticeRepository extends JpaRepository<Notice, Long> {
@@ -25,4 +26,6 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     @Query(value = "SELECT n FROM Notice n WHERE n.categoryId = :categoryId ORDER BY n.pubDate DESC NULLS LAST, n.createdAt DESC",
            countQuery = "SELECT COUNT(n) FROM Notice n WHERE n.categoryId = :categoryId")
     Page<Notice> findByCategoryIdPaged(@Param("categoryId") String categoryId, Pageable pageable);
+
+    List<Notice> findByPubDateBefore(LocalDate date);
 }

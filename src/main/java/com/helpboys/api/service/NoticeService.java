@@ -158,6 +158,17 @@ public class NoticeService {
     }
 
     /**
+     * N일 이상 된 공지 삭제
+     */
+    @Transactional
+    public int deleteOldNotices(int days) {
+        LocalDate cutoff = LocalDate.now().minusDays(days);
+        List<Notice> old = noticeRepository.findByPubDateBefore(cutoff);
+        noticeRepository.deleteAll(old);
+        return old.size();
+    }
+
+    /**
      * 전체 공지 조회 (사용자 언어 기준, 페이지네이션)
      */
     @Transactional(readOnly = true)

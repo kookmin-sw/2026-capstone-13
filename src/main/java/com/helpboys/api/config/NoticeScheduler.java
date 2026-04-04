@@ -15,11 +15,19 @@ public class NoticeScheduler {
 
     /**
      * 매일 오전 8시 국민대 공지 크롤링
-     * cron: 초 분 시 일 월 요일
      */
     @Scheduled(cron = "0 0 8 * * *", zone = "Asia/Seoul")
     public void scheduledCrawl() {
         log.info("[스케줄러] 국민대 공지 크롤링 시작");
         noticeService.crawlAndSave();
+    }
+
+    /**
+     * 매일 자정 30일 지난 공지 자동 삭제
+     */
+    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    public void scheduledCleanup() {
+        int deleted = noticeService.deleteOldNotices(30);
+        log.info("[스케줄러] 오래된 공지 {}건 삭제", deleted);
     }
 }
