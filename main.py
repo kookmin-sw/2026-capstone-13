@@ -73,6 +73,18 @@ async def gemini_test():
         }
 
 
+# ── Azure 전용 번역 (식단/공지 대량 번역용) ───────────────
+@app.post("/api/azure/translate")
+async def azure_translate(request: Request):
+    data = await request.json()
+    text = data.get("text", "")
+    target_lang = data.get("target_lang", "en")
+    source_lang = data.get("source_lang")
+
+    translated = await translation_service.azure_translate_text(text, target_lang, source_lang)
+    return {"success": True, "data": {"translated": translated}}
+
+
 # ── 번역 ──────────────────────────────────────────────────
 @app.post("/api/translate")
 async def translate(request: Request):
