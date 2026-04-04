@@ -61,6 +61,10 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String hobbies;
 
+    // FCM 푸시 알림 토큰 (앱 로그인 시 저장)
+    @Column(name = "fcm_token", columnDefinition = "TEXT")
+    private String fcmToken;
+
     @Column(nullable = false)
     @Builder.Default
     private Double rating = 0.0;

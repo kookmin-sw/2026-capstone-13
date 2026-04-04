@@ -113,4 +113,13 @@ public class UserService implements UserDetailsService {
         user.setProfileImage(imageUrl);
         return UserResponse.from(userRepository.save(user));
     }
+
+    // FCM 토큰 저장 (앱 로그인/포그라운드 진입 시 호출)
+    @org.springframework.transaction.annotation.Transactional
+    public void updateFcmToken(Long userId, String fcmToken) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        user.setFcmToken(fcmToken);
+        userRepository.save(user);
+    }
 }

@@ -69,6 +69,16 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("조회 성공", reviewService.getReviewsByUser(id, page, size)));
     }
 
+    // PATCH /api/users/fcm-token - FCM 토큰 등록/갱신
+    @PatchMapping("/fcm-token")
+    public ResponseEntity<ApiResponse<Void>> updateFcmToken(
+            @RequestBody Map<String, String> body,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        userService.updateFcmToken(userId, body.get("fcmToken"));
+        return ResponseEntity.ok(ApiResponse.success("FCM 토큰 저장 완료", null));
+    }
+
     // POST /api/users/profile-image - 프로필 이미지 업로드
     @PostMapping("/profile-image")
     public ResponseEntity<ApiResponse<UserResponse>> uploadProfileImage(

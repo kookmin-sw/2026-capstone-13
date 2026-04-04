@@ -35,6 +35,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final HelpRequestRepository helpRequestRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final FcmService fcmService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(java.time.Duration.ofSeconds(5))
@@ -119,6 +120,9 @@ public class ChatService {
         // 수신자에게 실시간 unreadCount 갱신 이벤트 전송
         notifyUnreadCount(dto.getRoomId(), dto.getSenderId());
 
+        // 수신자에게 FCM 푸시 알림 전송
+        sendChatPushToReceiver(dto.getRoomId(), dto.getSenderId(), sender.getNickname(), content);
+
         return ChatMessageDto.builder()
                 .id(saved.getId())
                 .roomId(saved.getRoomId())
@@ -155,6 +159,26 @@ public class ChatService {
                     ));
         } catch (Exception e) {
             log.warn("[채팅] unreadCount 알림 전송 실패: {}", e.getMessage());
+        }
+    }
+
+    // 수신자에게 FCM 푸시 알림 전송
+    private void sendChatPushToReceiver(Long roomId, Long senderId, String senderNickname, String content) {
+        try {
+            HelpRequest room = helpRequestRepository.findById(roomId).orElse(null);
+            if (room == null) return;
+
+            User receiver = room.getRequester().getId().equals(senderId)
+                    ? room.getHelper()
+                    : room.getRequester();
+            if (receiver == null || receiver.getFcmToken() == null) return;
+
+            String preview = content != null && content.length() > 50
+                    ? content.substring(0, 50) + "…"
+                    : content;
+            fcmService.sendPush(receiver.getFcmToken(), senderNickname, preview);
+        } catch (Exception e) {
+            log.warn("[FCM] 채팅 푸시 전송 실패: {}", e.getMessage());
         }
     }
 
