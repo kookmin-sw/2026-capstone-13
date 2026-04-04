@@ -22,6 +22,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final FcmService fcmService;
 
     // 내 알림 목록 조회 (페이지네이션)
     @Transactional(readOnly = true)
@@ -63,5 +64,15 @@ public class NotificationService {
                 .build();
 
         notificationRepository.save(notification);
+
+        // FCM 푸시 알림 전송
+        if (recipient.getFcmToken() != null) {
+            String title = switch (type) {
+                case COMMENT -> "새 댓글";
+                case LIKE -> "좋아요";
+                case HELP_OFFER -> "도움 제안";
+            };
+            fcmService.sendPush(recipient.getFcmToken(), title, message);
+        }
     }
 }

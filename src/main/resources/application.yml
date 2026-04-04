@@ -48,6 +48,10 @@ logging:
     org.springframework.security: WARN
     org.hibernate: WARN
 
+# Firebase FCM 설정 (서비스 계정 JSON 전체를 환경변수로)
+firebase:
+  credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+
 # Actuator - 헬스체크 엔드포인트 활성화
 management:
   endpoints:
