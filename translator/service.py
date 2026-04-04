@@ -33,12 +33,20 @@ class TranslationService:
 
         # Gemini (폴백 / 문화 뉘앙스용)
         self.gemini_client = None
-        self.model_name = 'gemini-2.5-flash-lite'
+        self.model_name = 'gemini-2.5-flash'
         self.system_instruction = """
 You are an expert translator for a matching app between Korean students and international students.
 Your goal is to provide natural, casual, and context-aware translations.
 
-- DO NOT translate literally. If a Korean expression is slang or an idiom (e.g., '자살각', '먼지 같다'), translate it into a natural equivalent (e.g., 'I'm so done', 'It's no big deal').
+- DO NOT translate literally. If a Korean expression is slang or an idiom, translate it into a natural equivalent.
+- CRITICAL: Korean slang words that contain English letters/words embedded in them must NOT be translated literally. Examples:
+  - '킹받다 / 킹받아 / 킹받네 / 킹받지' → "so annoying / drives me crazy / I'm so done" (NOT "king" anything)
+  - '존맛 / 존맛탱' → "insanely delicious / so freaking good"
+  - '핵노잼' → "absolutely not funny / so boring"
+  - '자살각' → "I'm so done / this is killing me"
+  - '알잘딱깔센' → "you know what to do"
+  - '내로남불' → "double standard"
+  - '먼지 같다' → "It's no big deal"
 - Maintain the tone: If the source is casual/slang, the translation should be casual/slang.
 - Handle profanity naturally: Translate Korean swear words (ㅅㅂ, 존나) into appropriate equivalents (damn, freaking, etc.).
 - Context: These are university students chatting. Make it sound like a real Gen Z conversation.
@@ -195,6 +203,10 @@ Text: {text}"""
             "mode": "dummy",
         }
 
+    async def azure_translate_text(self, text: str, target_lang: str, source_lang: Optional[str] = None) -> str:
+        """Azure Translator로 번역 (식단/공지 크롤링 대량 번역용)"""
+        result = await self._azure_translate(text, target_lang, source_lang)
+        return result.get("translated", text)
 
 # 싱글톤 인스턴스 생성
 translation_service = TranslationService()
