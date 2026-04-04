@@ -143,7 +143,7 @@ public class MealService {
                     String cafBody = objectMapper.writeValueAsString(
                             Map.of("text", meal.getCafeteria(), "target_lang", lang, "source_lang", "ko"));
                     HttpRequest cafReq = HttpRequest.newBuilder()
-                            .uri(URI.create(aiServerUrl + "/api/translate"))
+                            .uri(URI.create(aiServerUrl + "/api/azure/translate"))
                             .header("Content-Type", "application/json")
                             .timeout(java.time.Duration.ofSeconds(15))
                             .POST(HttpRequest.BodyPublishers.ofString(cafBody)).build();
@@ -154,7 +154,7 @@ public class MealService {
                     String corBody = objectMapper.writeValueAsString(
                             Map.of("text", meal.getCorner(), "target_lang", lang, "source_lang", "ko"));
                     HttpRequest corReq = HttpRequest.newBuilder()
-                            .uri(URI.create(aiServerUrl + "/api/translate"))
+                            .uri(URI.create(aiServerUrl + "/api/azure/translate"))
                             .header("Content-Type", "application/json")
                             .timeout(java.time.Duration.ofSeconds(15))
                             .POST(HttpRequest.BodyPublishers.ofString(corBody)).build();
