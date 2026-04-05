@@ -34,6 +34,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("서버 오류가 발생했습니다."));
+                .body(ApiResponse.error("서버 오류: " + e.getClass().getSimpleName() + " - " + e.getMessage()));
     }
 }
