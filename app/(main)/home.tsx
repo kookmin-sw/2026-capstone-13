@@ -188,7 +188,7 @@ export default function HomeScreen() {
           <View style={s.helpHeaderLeft}>
             <Text style={s.helpHeaderTitle}>지금 도움이 필요해요</Text>
             <View style={s.helpCountBadge}>
-              <Text style={s.helpCountText}>{requests.filter(r => r.status === 'WAITING').length}</Text>
+              <Text style={s.helpCountText}>{requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS').length}</Text>
             </View>
           </View>
           <TouchableOpacity
@@ -202,7 +202,7 @@ export default function HomeScreen() {
         {/* ── 스와이프 카드 ── */}
         <View style={{ marginLeft: 20, marginBottom: 20 }}>
           <SwipeCardStack
-            requests={requests.filter(r => r.status === 'WAITING')}
+            requests={requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS')}
             onSwipeRight={(card) => goTo(card)}
           />
         </View>
