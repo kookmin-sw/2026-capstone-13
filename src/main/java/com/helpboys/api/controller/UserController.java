@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,6 +28,12 @@ public class UserController {
     private final UserService userService;
     private final ReviewService reviewService;
     private final JwtUtil jwtUtil;
+
+    // GET /api/users/list/koreans - 한국인 유저 목록 조회 (외국인/교환학생이 도움 요청할 한국인 탐색)
+    @GetMapping("/list/koreans")
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getKoreanUsers() {
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", userService.getKoreanUsers()));
+    }
 
     // GET /api/users/me - 내 프로필 조회
     @GetMapping("/me")
@@ -41,6 +48,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success("조회 성공", userService.getUserById(id)));
     }
+
 
     // PATCH /api/users/bio - 자기소개 수정
     @PatchMapping("/bio")

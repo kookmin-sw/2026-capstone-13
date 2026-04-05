@@ -4,7 +4,9 @@ import com.helpboys.api.dto.LoginRequest;
 import com.helpboys.api.dto.LoginResponse;
 import com.helpboys.api.dto.RegisterRequest;
 import com.helpboys.api.dto.UserResponse;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.UserRepository;
@@ -112,6 +114,14 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
         user.setProfileImage(imageUrl);
         return UserResponse.from(userRepository.save(user));
+    }
+
+    // 한국인 유저 목록 조회
+    public List<UserResponse> getKoreanUsers() {
+        return userRepository.findByUserType(User.UserType.KOREAN)
+                .stream()
+                .map(UserResponse::from)
+                .collect(Collectors.toList());
     }
 
     // FCM 토큰 저장 (앱 로그인/포그라운드 진입 시 호출)
