@@ -69,13 +69,68 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing]         = useState(false);
   const [notices, setNotices]               = useState<SchoolNotice[]>([]);
   const [meals, setMeals]                   = useState<MealData[]>([]);
-  const [hotPosts, setHotPosts]             = useState<CommunityPostDto[]>([]);
+  const [hotPosts, setHotPosts]             = useState<CommunityPostDto[]>([
+    {
+      id: 0,
+      category: 'INFO',
+      title: '한국 편의점 200% 활용법',
+      content: '편의점 도시락은 전자레인지에 데워 먹을 수 있어요! 1+1 행사 상품도 자주 있으니 꼭 확인하세요 :)',
+      images: [],
+      author: '도와줘코리안',
+      university: '한국외국어대학교',
+      userType: 'KOREAN',
+      likes: 32,
+      comments: 8,
+      liked: false,
+      createdAt: new Date().toISOString(),
+    },
+  ]);
   const scrollViewRef                        = useRef<ScrollView>(null);
+  const [noticeWidth, setNoticeWidth]        = useState(0);
+  const noticeRef                            = useRef<ScrollView>(null);
+  const noticeIndexRef                       = useRef(0);
+  const [mealWidth, setMealWidth]            = useState(0);
+  const mealRef                              = useRef<ScrollView>(null);
+  const mealIndexRef                         = useRef(0);
 
   useEffect(() => {
     const timer = setInterval(() => setShowCount(prev => !prev), 6000);
     return () => clearInterval(timer);
   }, []);
+
+  // 공지 무한 자동 슬라이드 (4초마다, 끝에서 애니메이션 없이 처음으로 점프)
+  useEffect(() => {
+    if (!noticeWidth || notices.length === 0) return;
+    const timer = setInterval(() => {
+      const current = noticeIndexRef.current;
+      const next = current + 1;
+      if (next >= notices.length) {
+        // 마지막에서 처음으로 순간이동 후 다시 두 번째로
+        noticeRef.current?.scrollTo({ x: 0, animated: false });
+        noticeIndexRef.current = 0;
+      } else {
+        noticeRef.current?.scrollTo({ x: next * noticeWidth, animated: true });
+        noticeIndexRef.current = next;
+      }
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [noticeWidth, notices.length]);
+
+  // 학식 무한 자동 슬라이드 (4초마다)
+  useEffect(() => {
+    if (!mealWidth || meals.length === 0) return;
+    const timer = setInterval(() => {
+      const next = mealIndexRef.current + 1;
+      if (next >= meals.length) {
+        mealRef.current?.scrollTo({ x: 0, animated: false });
+        mealIndexRef.current = 0;
+      } else {
+        mealRef.current?.scrollTo({ x: next * mealWidth, animated: true });
+        mealIndexRef.current = next;
+      }
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [mealWidth, meals.length]);
 
   useEffect(() => {
     api.get('/notices').then(res => {
@@ -133,39 +188,39 @@ export default function HomeScreen() {
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
-        contentContainerStyle={{ paddingTop: Platform.OS === 'ios' ? 100 : 72, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingTop: Platform.OS === 'ios' ? 100 : 72, paddingBottom: 16 }}
       >
 
-        {/* ── 상단 요약 카드 2개 (학식 / 공지) ── */}
-        <View style={s.summaryRow}>
-          {/* 오늘 학식 */}
-          {(() => {
-            const meal = meals[0];
-            return (
-              <TouchableOpacity
-                style={s.summaryCardMeal}
-                onPress={() => router.push({ pathname: '/(main)/school', params: { tab: 'CAFETERIA' } })}
-                activeOpacity={0.85}
-              >
+        {/* ── 공지사항 슬라이드 ── */}
+        <View style={s.summaryWrapper}>
+          <View style={s.summaryInner}>
+          <ScrollView
+            ref={noticeRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onLayout={e => setNoticeWidth(e.nativeEvent.layout.width)}
+            onMomentumScrollEnd={e => {
+              const idx = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
+              noticeIndexRef.current = idx;
+            }}
+            style={s.summaryScroll}
+          >
+            {notices.length === 0 ? (
+              <View style={[s.summarySlide, noticeWidth ? { width: noticeWidth } : {}]}>
                 <View style={s.summaryIconWrap}>
-                  <Ionicons name="restaurant-outline" size={14} color={BLUE} />
+                  <Ionicons name="megaphone-outline" size={14} color={BLUE} />
                 </View>
                 <View style={s.summaryTextWrap}>
-                  <Text style={s.summaryLabel}>오늘 학식</Text>
-                  <Text style={s.summaryValue} numberOfLines={1}>
-                    {meal ? `${meal.corner} · ${meal.menu.split('\n').filter(Boolean)[0] ?? ''}` : '정보 없음'}
-                  </Text>
+                  <Text style={s.summaryLabel}>학교 공지</Text>
+                  <Text style={s.summaryValue}>불러오는 중...</Text>
                 </View>
-              </TouchableOpacity>
-            );
-          })()}
-
-          {/* 새 공지 */}
-          {(() => {
-            const notice = notices[0];
-            return (
+              </View>
+            ) : notices.map((notice) => (
               <TouchableOpacity
-                style={s.summaryCardNotice}
+                key={notice.id}
+                style={[s.summarySlide, noticeWidth ? { width: noticeWidth } : {}]}
                 onPress={() => router.push({ pathname: '/(main)/school', params: { tab: 'NOTICE' } })}
                 activeOpacity={0.85}
               >
@@ -173,14 +228,14 @@ export default function HomeScreen() {
                   <Ionicons name="megaphone-outline" size={14} color={BLUE} />
                 </View>
                 <View style={s.summaryTextWrap}>
-                  <Text style={s.summaryLabel}>새 공지</Text>
-                  <Text style={s.summaryValue} numberOfLines={1}>
-                    {notice ? notice.titleKo : '정보 없음'}
-                  </Text>
+                  <Text style={s.summaryLabel}>{notice.categoryName || '학교 공지'}</Text>
+                  <Text style={s.summaryValue} numberOfLines={1}>{notice.titleKo}</Text>
                 </View>
+                <Ionicons name="chevron-forward" size={14} color={T2} />
               </TouchableOpacity>
-            );
-          })()}
+            ))}
+          </ScrollView>
+          </View>
         </View>
 
         {/* ── 지금 도움이 필요해요 헤더 ── */}
@@ -200,7 +255,7 @@ export default function HomeScreen() {
         </View>
 
         {/* ── 스와이프 카드 ── */}
-        <View style={{ marginLeft: 20, marginBottom: 20 }}>
+        <View style={{ marginLeft: 20, marginBottom: 10 }}>
           <SwipeCardStack
             requests={requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS')}
             onSwipeRight={(card) => goTo(card)}
@@ -208,50 +263,88 @@ export default function HomeScreen() {
         </View>
 
         {/* ── 내 활동 확인하기 ── */}
-        <View style={s.sectionCard}>
-          <View style={s.activityHeader}>
-            <View>
+        {user?.userType === 'KOREAN' ? (
+          /* 한국인: 별점 + 레벨 + 도움 횟수 */
+          <View style={s.sectionCard}>
+            <View style={s.activityHeader}>
               <Text style={s.sectionTitle}>내 활동 확인하기</Text>
+              {(() => { const lv = getLevel(completedCount); return (
+                <View style={[s.levelBadge, { backgroundColor: lv.bg, borderColor: lv.color }]}>
+                  <Text style={[s.levelBadgeText, { color: lv.color }]}>
+                    {showCount ? `${completedCount}회` : lv.label}
+                  </Text>
+                </View>
+              ); })()}
             </View>
-            {(() => { const lv = getLevel(completedCount); return (
-              <View style={[s.levelBadge, { backgroundColor: lv.bg, borderColor: lv.color }]}>
-                <Text style={[s.levelBadgeText, { color: lv.color }]}>
-                  {showCount ? `${completedCount}회` : lv.label}
-                </Text>
-              </View>
-            ); })()}
-          </View>
-          <View style={s.ratingRow}>
-            <Text style={s.ratingNum}>{rating.toFixed(1)}</Text>
-            <View>
-              <View style={s.starsRow}>
-                {[1, 2, 3, 4, 5].map(i => (
-                  <Ionicons key={i} name="star" size={20} color={i <= Math.round(rating) ? '#FBBF24' : '#E5E7EB'} />
-                ))}
+            <View style={s.ratingRow}>
+              <Text style={s.ratingNum}>{rating.toFixed(1)}</Text>
+              <View>
+                <View style={s.starsRow}>
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <Ionicons key={i} name="star" size={20} color={i <= Math.round(rating) ? '#FBBF24' : '#E5E7EB'} />
+                  ))}
+                </View>
               </View>
             </View>
+            <View style={s.activityShortcuts}>
+              <TouchableOpacity style={s.shortcut} onPress={() => router.push('/(main)/mypage' as never)} activeOpacity={0.8}>
+                <Text style={s.shortcutLabel}>프로필</Text>
+              </TouchableOpacity>
+              <View style={s.shortcutDivider} />
+              <TouchableOpacity style={s.shortcut} activeOpacity={0.8}>
+                <Text style={s.shortcutLabel}>받은 후기</Text>
+              </TouchableOpacity>
+              <View style={s.shortcutDivider} />
+              <TouchableOpacity style={s.shortcut} activeOpacity={0.8}>
+                <Text style={s.shortcutLabel}>도움 내역</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={s.activityShortcuts}>
-            <TouchableOpacity style={s.shortcut} onPress={() => router.push('/(main)/mypage' as never)} activeOpacity={0.8}>
-              <Text style={s.shortcutLabel}>프로필</Text>
-            </TouchableOpacity>
-            <View style={s.shortcutDivider} />
-            <TouchableOpacity style={s.shortcut} activeOpacity={0.8}>
-              <Text style={s.shortcutLabel}>후기 보기</Text>
-            </TouchableOpacity>
-            <View style={s.shortcutDivider} />
-            <TouchableOpacity style={s.shortcut} activeOpacity={0.8}>
-              <Text style={s.shortcutLabel}>활동 내역</Text>
-            </TouchableOpacity>
+        ) : (
+          /* 유학생: 요청 현황 카드 */
+          <View style={s.sectionCard}>
+            <View style={s.activityHeader}>
+              <Text style={s.sectionTitle}>내 요청 현황</Text>
+              <TouchableOpacity onPress={() => router.push('/help-list')} activeOpacity={0.8}>
+                <Text style={s.helpHeaderLink}>전체보기 →</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={s.requestStatRow}>
+              {[
+                { label: '대기중', status: 'WAITING',     color: ORANGE,    bg: '#FFF3E8' },
+                { label: '진행중', status: 'IN_PROGRESS', color: BLUE,      bg: BLUE_L   },
+                { label: '완료',   status: 'COMPLETED',   color: '#22C55E', bg: '#F0FDF4' },
+              ].map(({ label, status, color, bg }) => (
+                <View key={status} style={[s.requestStatItem, { backgroundColor: bg }]}>
+                  <Text style={[s.requestStatNum, { color }]}>
+                    {requests.filter(r => r.status === status).length}
+                  </Text>
+                  <Text style={[s.requestStatLabel, { color }]}>{label}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={s.activityShortcuts}>
+              <TouchableOpacity style={s.shortcut} onPress={() => router.push('/(main)/profile' as never)} activeOpacity={0.8}>
+                <Text style={s.shortcutLabelLg}>프로필</Text>
+              </TouchableOpacity>
+              <View style={s.shortcutDivider} />
+              <TouchableOpacity style={s.shortcut} onPress={() => router.push('/help-list')} activeOpacity={0.8}>
+                <Text style={s.shortcutLabelLg}>내 요청 목록</Text>
+              </TouchableOpacity>
+              <View style={s.shortcutDivider} />
+              <TouchableOpacity style={s.shortcut} onPress={() => router.push('/(main)/write')} activeOpacity={0.8}>
+                <Text style={s.shortcutLabelLg}>도움 요청하기</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* ── 지금 핫한 게시글 ── */}
-        <View style={s.hotSection}>
-          <View style={s.hotHeader}>
-            <Text style={s.hotHeaderEmoji}>🔥</Text>
-            <Text style={s.hotHeaderTitle}>지금 핫한 게시글</Text>
-            <TouchableOpacity onPress={() => router.push('/(main)/community')} activeOpacity={0.7} style={s.hotMoreBtn}>
+        {/* ── 인기 게시글 ── */}
+        <View style={[s.sectionBox, { marginTop: 24 }]}>
+          <View style={s.sectionBoxInner}>
+          <View style={s.sectionBoxHeader}>
+            <Text style={s.hotHeaderTitle}>인기 게시글</Text>
+            <TouchableOpacity onPress={() => router.push('/(main)/community')} activeOpacity={0.7}>
               <Text style={s.hotMoreText}>더보기 →</Text>
             </TouchableOpacity>
           </View>
@@ -302,20 +395,56 @@ export default function HomeScreen() {
               );
             })}
           </ScrollView>
+          </View>
+        </View>
+
+        {/* ── 오늘 학식 ── */}
+        <View style={s.sectionBox}>
+          <View style={s.sectionBoxInner}>
+          <View style={s.sectionBoxHeader}>
+            <Text style={s.hotHeaderTitle}>오늘 학식</Text>
+            <TouchableOpacity onPress={() => router.push({ pathname: '/(main)/school', params: { tab: 'CAFETERIA' } })} activeOpacity={0.7}>
+              <Text style={s.hotMoreText}>더보기 →</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView
+            ref={mealRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.mealScroll}
+            onLayout={e => setMealWidth(e.nativeEvent.layout.width)}
+            onMomentumScrollEnd={e => {
+              mealIndexRef.current = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
+            }}
+          >
+            {meals.length === 0 ? (
+              <View style={s.mealEmpty}>
+                <Text style={s.hotEmptyText}>오늘 학식 정보가 없어요</Text>
+              </View>
+            ) : meals.map((meal) => (
+              <TouchableOpacity
+                key={meal.id}
+                style={[s.mealCard, mealWidth ? { width: mealWidth } : {}]}
+                activeOpacity={0.85}
+                onPress={() => router.push({ pathname: '/(main)/school', params: { tab: 'CAFETERIA' } })}
+              >
+                <View style={s.mealCardTop}>
+                  <View style={s.mealIconWrap}>
+                    <Ionicons name="restaurant-outline" size={14} color={BLUE} />
+                  </View>
+                  <Text style={s.mealCafeteria} numberOfLines={1}>{meal.cafeteria}</Text>
+                </View>
+                <Text style={s.mealCorner} numberOfLines={1}>{meal.corner}</Text>
+                <Text style={s.mealMenu} numberOfLines={4}>{meal.menu.split('\n').filter(Boolean).join('\n')}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          </View>
         </View>
 
       </ScrollView>
 
-      {/* ── 도움 요청하기 FAB (외국인만) ── */}
-      {(user?.userType === 'INTERNATIONAL' || user?.userType === 'EXCHANGE') && (
-        <TouchableOpacity
-          style={s.fab}
-          onPress={() => router.push('/(main)/write')}
-          activeOpacity={0.85}
-        >
-          <Text style={s.fabText}>+ 도움 요청하기</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -469,7 +598,26 @@ const s = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   shortcutLabel:   { fontSize: 11, fontWeight: '600', color: '#333' },
+  shortcutLabelLg: { fontSize: 14, fontWeight: '700', color: '#333' },
   shortcutDivider: { width: 1, backgroundColor: DIV, alignSelf: 'stretch', marginTop: -16, marginBottom: -18 },
+
+  // ── 유학생 요청 현황 ──
+  requestStatRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 14,
+  },
+  requestStatItem: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    gap: 4,
+  },
+  requestStatNum:   { fontSize: 28, fontWeight: '900', letterSpacing: -1 },
+  requestStatLabel: { fontSize: 12, fontWeight: '700' },
 
   // ── 필터 & 카드 ──
   filterRow: { flexDirection: 'row', gap: 6, padding: 16, paddingBottom: 12 },
@@ -539,7 +687,7 @@ const s = StyleSheet.create({
   emptyTitle: { fontSize: 16, fontWeight: '700', color: T1 },
   emptySub:   { fontSize: 14, color: T2 },
 
-  // ── 상단 요약 카드 ──
+  // ── 상단 요약 카드 (슬라이드) ──
   summaryRow: {
     flexDirection: 'row',
     gap: 10,
@@ -547,42 +695,46 @@ const s = StyleSheet.create({
     marginBottom: 16,
     marginTop: 12,
   },
-  summaryCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+  summaryWrapper: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    marginTop: 12,
     borderRadius: 16,
-    padding: 12,
-    gap: 10,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  summaryCardMeal: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+  summaryInner: {
     borderRadius: 16,
-    padding: 12,
-    gap: 10,
-    shadowColor: '#F97316',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
+    overflow: 'hidden',
   },
-  summaryCardNotice: {
-    flex: 1,
+  summaryScroll: {},
+  summarySlide: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 12,
+    padding: 14,
     gap: 10,
-    shadowColor: '#3B6FE8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
+    width: '100%',
+  },
+  summaryDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
+    paddingBottom: 8,
+  },
+  summaryDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#D0D8E8',
+  },
+  summaryDotActive: {
+    width: 14,
+    backgroundColor: BLUE,
   },
   summaryIconWrap: {
     width: 32,
@@ -649,4 +801,46 @@ const s = StyleSheet.create({
   hotAuthor:     { fontSize: 11, color: T2, fontWeight: '600', flex: 1 },
   hotStats:      { flexDirection: 'row', alignItems: 'center', gap: 2 },
   hotStatText:   { fontSize: 11, color: T2, fontWeight: '600' },
+
+  // ── 오늘 학식 ──
+  mealSection:  { marginTop: 8, marginBottom: 24 },
+  sectionBox: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.09,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  sectionBoxInner: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  sectionBoxHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  mealScroll:   {},
+  mealEmpty:    { paddingVertical: 20, paddingHorizontal: 16 },
+  mealCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    gap: 6,
+  },
+  mealCardTop:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  mealIconWrap: {
+    width: 24, height: 24, borderRadius: 8,
+    backgroundColor: BLUE_L,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  mealCafeteria: { fontSize: 12, fontWeight: '800', color: BLUE, flex: 1 },
+  mealCorner:    { fontSize: 11, fontWeight: '600', color: T2 },
+  mealMenu:      { fontSize: 12, color: T1, fontWeight: '500', lineHeight: 18 },
 });
