@@ -93,7 +93,10 @@ export default function ChatRoomScreen() {
     try {
       const res = await getChatMessages(roomId);
       if (res.success && res.data.length > 0) {
-        // SYS_LEAVE 메시지는 시스템 메시지로만 표시, 재입장 시 채팅 잠금 없음
+        const sysLeaveFromPartner = res.data.find(
+          (m) => m.content?.startsWith(SYS_LEAVE) && m.senderId !== user?.id
+        );
+        if (sysLeaveFromPartner) setChatEnded(true);
         const normalMsgs = res.data.filter((m) => !m.content?.startsWith(SYS_LEAVE));
         setMessages(normalMsgs);
       }
@@ -175,8 +178,6 @@ export default function ChatRoomScreen() {
                 // 내가 보낸 나가기 메시지는 무시 (이미 router.back() 처리)
                 if (msg.senderId === user?.id) return;
                 const nickname = msg.content.slice(SYS_LEAVE.length);
-                // 상대방이 나갔을 때도 내 leftRooms에 기록
-                if (user) leaveRoom(Number(roomId), Number(user.id));
                 setChatEnded(true);
                 setSystemMessages((prev) => [
                   ...prev,
@@ -262,8 +263,8 @@ export default function ChatRoomScreen() {
         text: '나가기',
         style: 'destructive',
         onPress: () => {
-          // DB 상태를 WAITING으로 리셋 (양쪽 모두 모집중으로 표시)
-          resetToWaiting(Number(roomId)).catch(() => {});
+          // DB 상태를 COMPLETED로 변경 (채팅 목록에서 완료로 표시)
+          completeHelpRequest(Number(roomId)).catch(() => {});
           const client = clientRef.current;
           if (client?.connected && user) {
             client.publish({

@@ -348,7 +348,9 @@ export default function ChatScreen() {
               <Text style={s.itemPreview} numberOfLines={1}>
                 {isMatchPending
                   ? (isInternational ? '새 도움 신청이 도착했어요!' : '수락을 기다리고 있어요')
-                  : (room.lastMessage ?? room.title)}
+                  : room.lastMessage?.startsWith('SYS_LEAVE:')
+                    ? '상대방이 채팅방을 나갔습니다'
+                    : (room.lastMessage ?? room.title)}
               </Text>
               {room.unreadCount > 0 && !isActioning && (
                 <View style={s.unreadBadge}>
