@@ -18,12 +18,16 @@ export default function MainLayout() {
   const { user } = useAuthStore();
   const globalClientRef = useRef<Client | null>(null);
 
-  // 앱 시작 시 전체 unread 합산
+  // 앱 시작 시 전체 unread 합산 (나간 방 제외)
   useEffect(() => {
     if (!user) return;
+    const { hasLeft } = useChatStore.getState();
+    const myId = Number(user.id);
     getChatRooms().then((res) => {
       if (res.success && Array.isArray(res.data)) {
-        const total = res.data.reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
+        const total = res.data
+          .filter((r) => !hasLeft(r.id, myId))
+          .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
         setUnreadCount(total);
       }
     }).catch(() => {});

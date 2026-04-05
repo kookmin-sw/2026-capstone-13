@@ -108,7 +108,9 @@ export default function ChatScreen() {
       const res = await getChatRooms();
       if (res.success) {
         setRequests(res.data);
-        const total = res.data.reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
+        const total = res.data
+          .filter((r) => !hasLeft(r.id, myId))
+          .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
         setUnreadCount(total);
       }
     } catch {
@@ -117,7 +119,7 @@ export default function ChatScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [setUnreadCount]);
+  }, [setUnreadCount, hasLeft, myId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   const onRefresh = () => { setRefreshing(true); fetchData(); };
@@ -264,6 +266,8 @@ export default function ChatScreen() {
             if (user) {
               useChatStore.getState().leaveRoom(item.id, Number(user.id));
               setRequests((prev) => prev.filter((r) => r.id !== item.id));
+              const roomUnread = item.unreadCount ?? 0;
+              if (roomUnread > 0) setUnreadCount(Math.max(0, useChatStore.getState().unreadCount - roomUnread));
             }
           },
         },
