@@ -14,11 +14,13 @@ import {
 } from 'react-native';
 import api from '../../services/api';
 import SwipeCardStack from '../../components/SwipeCardStack';
+import KoreanUserCardStack from '../../components/KoreanUserCardStack';
 import { getHelpedRequests, getHelpRequests } from '../../services/helpService';
 import { getCommunityPosts, type CommunityPostDto } from '../../services/communityService';
+import { getKoreanUsers } from '../../services/authService';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
-import type { HelpRequest } from '../../types';
+import type { HelpRequest, User } from '../../types';
 
 // ── Design tokens ──
 const BLUE   = '#3B6FE8';
@@ -63,7 +65,9 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { hasUnreadForUser } = useNotificationStore();
+  const isInternational = user?.userType === 'INTERNATIONAL' || user?.userType === 'EXCHANGE';
   const [requests, setRequests]             = useState<HelpRequest[]>([]);
+  const [koreanUsers, setKoreanUsers]       = useState<User[]>([]);
   const [completedCount, setCompletedCount] = useState(0);
   const [showCount, setShowCount]           = useState(false);
   const [refreshing, setRefreshing]         = useState(false);
@@ -139,7 +143,10 @@ export default function HomeScreen() {
     }).catch(() => {});
     api.get('/meals').then(res => setMeals(res.data.data ?? [])).catch(() => {});
     getCommunityPosts().then(res => { if (res.success) setHotPosts(res.data.content.filter(p => p.likes >= 10).slice(0, 6)); }).catch(() => {});
-  }, []);
+    if (user?.userType === 'INTERNATIONAL' || user?.userType === 'EXCHANGE') {
+      getKoreanUsers().then(res => { if (res.success) setKoreanUsers(res.data); }).catch(() => {});
+    }
+  }, [user]);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -238,29 +245,48 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── 지금 도움이 필요해요 헤더 ── */}
-        <View style={s.helpHeader}>
-          <View style={s.helpHeaderLeft}>
-            <Text style={s.helpHeaderTitle}>지금 도움이 필요해요</Text>
-            <View style={s.helpCountBadge}>
-              <Text style={s.helpCountText}>{requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS').length}</Text>
+        {/* ── 헤더 & 스와이프 카드 ── */}
+        {isInternational ? (
+          <>
+            <View style={s.helpHeader}>
+              <View style={s.helpHeaderLeft}>
+                <Text style={s.helpHeaderTitle}>도움을 요청해보세요</Text>
+                <View style={s.helpCountBadge}>
+                  <Text style={s.helpCountText}>{koreanUsers.length}</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/(main)/write')} activeOpacity={0.7}>
+                <Text style={s.helpHeaderLink}>요청하기 →</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push('/help-list')}
-            activeOpacity={0.7}
-          >
-            <Text style={s.helpHeaderLink}>전체보기 →</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ── 스와이프 카드 ── */}
-        <View style={{ marginLeft: 20, marginBottom: 10 }}>
-          <SwipeCardStack
-            requests={requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS')}
-            onSwipeRight={(card) => goTo(card)}
-          />
-        </View>
+            <View style={{ marginLeft: 20, marginBottom: 10 }}>
+              <KoreanUserCardStack
+                users={koreanUsers}
+                onPress={() => router.push('/(main)/write')}
+              />
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={s.helpHeader}>
+              <View style={s.helpHeaderLeft}>
+                <Text style={s.helpHeaderTitle}>지금 도움이 필요해요</Text>
+                <View style={s.helpCountBadge}>
+                  <Text style={s.helpCountText}>{requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS').length}</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/help-list')} activeOpacity={0.7}>
+                <Text style={s.helpHeaderLink}>전체보기 →</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ marginLeft: 20, marginBottom: 10 }}>
+              <SwipeCardStack
+                requests={requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS')}
+                onSwipeRight={(card) => goTo(card)}
+              />
+            </View>
+          </>
+        )}
 
         {/* ── 내 활동 확인하기 ── */}
         {user?.userType === 'KOREAN' ? (

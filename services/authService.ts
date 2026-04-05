@@ -48,6 +48,12 @@ export const deleteProfileImage = async (): Promise<ApiResponse<User>> => {
   return response.data;
 };
 
+// 한국인 유저 목록 조회 (외국인/교환학생 홈에서 사용)
+export const getKoreanUsers = async (): Promise<ApiResponse<User[]>> => {
+  const response = await api.get<ApiResponse<User[]>>('/users/list/koreans');
+  return response.data;
+};
+
 // 프로필 이미지 업로드
 export const uploadProfileImage = async (imageUri: string): Promise<ApiResponse<User>> => {
   const formData = new FormData();
