@@ -167,7 +167,7 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: 
           <CardContent card={card0} />
           <View style={styles.btnRow}>
             <TouchableOpacity style={[styles.btn, styles.skipBtn]} onPress={() => triggerSwipe('left')} activeOpacity={0.8}>
-              <Ionicons name="arrow-back" size={24} color="#fff" />
+              <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity style={[styles.btn, styles.acceptBtn]} onPress={() => triggerSwipe('right')} activeOpacity={0.8}>
               <Ionicons name="checkmark" size={24} color="#fff" />

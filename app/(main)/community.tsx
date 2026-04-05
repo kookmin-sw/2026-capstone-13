@@ -83,9 +83,9 @@ export default function CommunityScreen() {
   const fetchPosts = useCallback(async () => {
     try {
       const res = await getCommunityPosts();
-      if (res.success) setPosts(res.data);
-    } catch {
-      // 조회 실패 무시
+      if (res.success) setPosts(res.data.content);
+    } catch (e) {
+      console.log('[Community] fetchPosts error:', e);
     } finally {
       setIsLoading(false);
       setRefreshing(false);

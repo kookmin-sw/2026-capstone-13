@@ -111,7 +111,7 @@ export default function SchoolScreen() {
   };
 
   // 식당 목록 (cafeteriaKo 기준, 표시는 번역된 cafeteria 사용)
-  const CAFETERIA_ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)', 'K-Bob+', '청향 한식당(법학관 5층)', '청향 양식당(법학관 5층)', '생활관식당 일반식(생활관 A동 1층)'];
+  const CAFETERIA_ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)', '청향 한식당(법학관 5층)', '청향 양식당(법학관 5층)', 'K-Bob+'];
   const cafeteriaList = CAFETERIA_ORDER.filter((name) => meals.some((m) => m.cafeteriaKo === name));
 
   // 선택된 식당의 코너 목록
@@ -121,18 +121,6 @@ export default function SchoolScreen() {
 
   return (
     <View style={s.container}>
-      {/* ── NAV (고정) ── */}
-      <View style={s.nav}>
-        <View>
-          <Text style={s.navTitle}>학교생활</Text>
-          <Text style={s.navSub}>국민대학교</Text>
-        </View>
-        <View style={s.navRight}>
-          <View style={s.onlineDot} />
-          <Text style={s.onlineText}>실시간</Text>
-        </View>
-      </View>
-
       {/* ── 메인 탭 바 (오늘의 학식 / 공지사항) ── */}
       <View style={s.tabBar}>
         {(['CAFETERIA', 'NOTICE'] as TabKey[]).map((key) => (
@@ -173,15 +161,7 @@ export default function SchoolScreen() {
               </View>
             ) : (
               <View style={s.sectionCard}>
-                {/* 1. 날짜 헤더 */}
-                <View style={s.mealCardHeader}>
-                  <Text style={s.mealCardTitle}>오늘의 식단</Text>
-                  {mealDate ? (
-                    <Text style={s.mealCardDate}>{mealDate}</Text>
-                  ) : null}
-                </View>
-
-                {/* 2. 식당 선택 탭 (| 구분선 스타일) */}
+                {/* 식당 선택 탭 (| 구분선 스타일) */}
                 <View style={s.cafeteriaTabWrap}>
                   {cafeteriaList.map((name, idx) => {
                     const translatedName = meals.find((m) => m.cafeteriaKo === name)?.cafeteria ?? name;
@@ -314,32 +294,13 @@ export default function SchoolScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
 
-  // ── NAV ──
-  nav: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0,
-    zIndex: 10,
-    paddingTop: Platform.OS === 'ios' ? 56 : 32,
-    paddingBottom: 10,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: BG,
-  },
-  navTitle:   { fontSize: 20, fontWeight: '900', color: T1, letterSpacing: -0.5 },
-  navSub:     { fontSize: 12, color: T2, fontWeight: '500', marginTop: 1 },
-  navRight:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  onlineDot:  { width: 7, height: 7, borderRadius: 4, backgroundColor: '#22C55E' },
-  onlineText: { fontSize: 12, color: '#22C55E', fontWeight: '600' },
-
   // ── 메인 탭 바 ──
   tabBar: {
     flexDirection: 'row',
     backgroundColor: BG,
     borderBottomWidth: 1,
     borderBottomColor: DIV,
-    paddingTop: Platform.OS === 'ios' ? 100 : 72,
+    paddingTop: Platform.OS === 'ios' ? 56 : 32,
   },
   tab: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',

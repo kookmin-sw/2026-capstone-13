@@ -3,11 +3,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  FlatList,
-  Image,
   Linking,
   Platform,
   RefreshControl,
@@ -19,19 +14,11 @@ import {
 } from 'react-native';
 import api from '../../services/api';
 import SwipeCardStack from '../../components/SwipeCardStack';
-import { CategoryLabels } from '../../constants/colors';
-import { cancelHelpRequest, getHelpedRequests, getHelpRequests } from '../../services/helpService';
+import { getHelpedRequests, getHelpRequests } from '../../services/helpService';
+import { getCommunityPosts, type CommunityPostDto } from '../../services/communityService';
 import { useAuthStore } from '../../stores/authStore';
-import { useChatStore } from '../../stores/chatStore';
 import { useNotificationStore } from '../../stores/notificationStore';
-import type { HelpCategory, HelpRequest } from '../../types';
-
-const SERVER_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api').replace('/api', '');
-const toAbsoluteUrl = (url: string | undefined): string | undefined => {
-  if (!url) return undefined;
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file://') || url.startsWith('content://')) return url;
-  return SERVER_BASE_URL + url;
-};
+import type { HelpRequest } from '../../types';
 
 // ── Design tokens ──
 const BLUE   = '#3B6FE8';
@@ -42,29 +29,6 @@ const T2     = '#AABBCC';
 const BG     = '#FFFFFF';
 const DIV    = '#F4F5F8';
 
-const CAT_AVATAR_COLOR: Record<HelpCategory, string> = {
-  BANK: '#F0A040', HOSPITAL: '#F06060', SCHOOL: BLUE, DAILY: '#90C4F0', OTHER: '#A0A8B0',
-};
-
-function parseUTC(iso: string): number {
-  const utc = iso.includes('Z') || iso.includes('+') ? iso : iso + 'Z';
-  return new Date(utc.replace(/\.(\d+)Z/, (_, d) => '.' + (d + '000').slice(0, 3) + 'Z')).getTime();
-}
-function isUrgent(createdAt: string) {
-  return Date.now() - parseUTC(createdAt) > 2 * 60 * 60 * 1000;
-}
-function formatTime(iso: string) {
-  const ms = parseUTC(iso);
-  if (isNaN(ms)) return '';
-  const m = Math.floor((Date.now() - ms) / 60000);
-  if (m < 1) return '방금 전';
-  if (m < 60) return `${m}분 전`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
-}
-
-const HELP_GOAL = 20;
 
 function getLevel(count: number): { label: string; color: string; bg: string } {
   if (count >= 31) return { label: '마스터', color: '#F97316', bg: '#FFF7ED' };
@@ -93,31 +57,20 @@ interface SchoolNotice {
   pubDate: string | null;
 }
 
-type InfoCard =
-  | { type: 'hero'; data: null }
-  | { type: 'notice'; data: SchoolNotice }
-  | { type: 'meal'; data: MealData };
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const PREVIEW_CARD_WIDTH = SCREEN_WIDTH - 32;
 
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { hasUnreadForUser } = useNotificationStore();
-  const { hasLeft } = useChatStore();
   const [requests, setRequests]             = useState<HelpRequest[]>([]);
   const [completedCount, setCompletedCount] = useState(0);
-  const [showCount, setShowCount] = useState(false);
-  const [isLoading, setIsLoading]           = useState(true);
+  const [showCount, setShowCount]           = useState(false);
   const [refreshing, setRefreshing]         = useState(false);
-  const [catFilter]                          = useState<CatFilter>('ALL');
-  const [statusFilter, setStatusFilter]     = useState<StatusFilter>('ALL');
   const [notices, setNotices]               = useState<SchoolNotice[]>([]);
   const [meals, setMeals]                   = useState<MealData[]>([]);
-  const infoCardIndex                        = useRef(0);
-  const infoFlatRef                          = useRef<FlatList<InfoCard>>(null);
+  const [hotPosts, setHotPosts]             = useState<CommunityPostDto[]>([]);
+  const scrollViewRef                        = useRef<ScrollView>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setShowCount(prev => !prev), 6000);
@@ -127,41 +80,8 @@ export default function HomeScreen() {
   useEffect(() => {
     api.get('/notices').then(res => setNotices(Array.isArray(res.data.data) ? res.data.data : [])).catch(() => {});
     api.get('/meals').then(res => setMeals(res.data.data ?? [])).catch(() => {});
+    getCommunityPosts().then(res => { if (res.success) setHotPosts(res.data.content.filter(p => p.likes >= 10).slice(0, 6)); }).catch(() => {});
   }, []);
-
-  const baseInfoCards: InfoCard[] = [
-    { type: 'hero', data: null },
-    ...notices.slice(0, 3).map(n => ({ type: 'notice' as const, data: n })),
-    ...meals.slice(0, 3).map(m => ({ type: 'meal' as const, data: m })),
-  ];
-  // 3배 복제 → 중간 세트에서 시작, 양쪽 끝에서 중간으로 점프
-  const loopedInfoCards: InfoCard[] = [
-    ...baseInfoCards, ...baseInfoCards, ...baseInfoCards,
-  ];
-  const BASE_COUNT = baseInfoCards.length;
-
-  useEffect(() => {
-    if (BASE_COUNT <= 1) return;
-    infoCardIndex.current = BASE_COUNT;
-    infoFlatRef.current?.scrollToOffset({ offset: BASE_COUNT * PREVIEW_CARD_WIDTH, animated: false });
-  }, [BASE_COUNT]);
-
-  useEffect(() => {
-    if (BASE_COUNT <= 1) return;
-    const timer = setInterval(() => {
-      const next = infoCardIndex.current + 1;
-      infoFlatRef.current?.scrollToOffset({ offset: next * PREVIEW_CARD_WIDTH, animated: true });
-      infoCardIndex.current = next;
-      if (next >= BASE_COUNT * 2) {
-        setTimeout(() => {
-          const jump = next - BASE_COUNT;
-          infoFlatRef.current?.scrollToOffset({ offset: jump * PREVIEW_CARD_WIDTH, animated: false });
-          infoCardIndex.current = jump;
-        }, 400);
-      }
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [BASE_COUNT]);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -176,7 +96,6 @@ export default function HomeScreen() {
     } catch {
       setRequests([]);
     } finally {
-      setIsLoading(false);
       setRefreshing(false);
     }
   }, []);
@@ -185,114 +104,10 @@ export default function HomeScreen() {
 
   const onRefresh = () => { setRefreshing(true); fetchRequests(); };
 
-  const activeCount = requests.filter(r =>
-    r.status !== 'CANCELLED' &&
-    (r.status === 'WAITING' ||
-      ((r.status === 'MATCHED' || r.status === 'IN_PROGRESS') && !hasLeft(r.id, user?.id ?? 0)))
-  ).length;
-
   const rating = (user as { rating?: number })?.rating ?? 0;
-
-  const filtered = requests
-    .filter(r => r.status !== 'CANCELLED')
-    .map(r => {
-      if ((r.status === 'MATCHED' || r.status === 'IN_PROGRESS') && hasLeft(r.id, user?.id ?? 0)) {
-        return { ...r, status: 'WAITING' as HelpRequest['status'] };
-      }
-      return r;
-    })
-    .filter(r => catFilter === 'ALL' || r.category === catFilter)
-    .filter(r => {
-      if (statusFilter === 'WAITING')   return r.status === 'WAITING' || r.status === 'IN_PROGRESS' || r.status === 'MATCHED';
-      if (statusFilter === 'COMPLETED') return r.status === 'COMPLETED';
-      if (statusFilter === 'URGENT')    return r.status === 'WAITING' && isUrgent(r.createdAt);
-      return true;
-    })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const goTo = (item: HelpRequest) =>
     router.push({ pathname: '/request-detail', params: { id: item.id } });
-
-  const handleDelete = (item: HelpRequest) => {
-    Alert.alert('도움 요청 삭제', '이 도움 요청을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제', style: 'destructive',
-        onPress: async () => {
-          try {
-            await cancelHelpRequest(item.id);
-            setRequests(prev => prev.filter(r => r.id !== item.id));
-          } catch {
-            Alert.alert('오류', '삭제에 실패했습니다.');
-          }
-        },
-      },
-    ]);
-  };
-
-  const renderCard = (item: HelpRequest) => {
-    const initial  = item.requester.nickname.charAt(0);
-    const avatarBg = CAT_AVATAR_COLOR[item.category];
-    const profileImageUrl = toAbsoluteUrl(item.requester.profileImage);
-    return (
-      <TouchableOpacity key={item.id} style={s.card} onPress={() => goTo(item)} activeOpacity={0.85}>
-        <View style={[s.cardBar, {
-          backgroundColor:
-            item.status === 'COMPLETED' ? '#E5E7EB' :
-            item.status === 'IN_PROGRESS' || item.status === 'MATCHED' ? '#FED7AA' :
-            '#BBF7D0',
-        }]} />
-        <View style={s.cardContent}>
-          <View style={s.cardHeader}>
-            <View style={s.cardHeaderLeft}>
-              <View style={s.catBadge}>
-                <Text style={s.catBadgeText}>
-                  {CategoryLabels[item.category].replace(/\S+\s/, '')}
-                </Text>
-              </View>
-              <Text style={s.timeText}>{formatTime(item.createdAt)}</Text>
-            </View>
-            <View style={[s.statusBadge, {
-              backgroundColor:
-                item.status === 'COMPLETED' ? '#F3F4F6' :
-                item.status === 'IN_PROGRESS' || item.status === 'MATCHED' ? '#FFF3E8' : '#D1FAE5',
-            }]}>
-              <Text style={[s.statusText, {
-                color:
-                  item.status === 'COMPLETED' ? '#9CA3AF' :
-                  item.status === 'IN_PROGRESS' || item.status === 'MATCHED' ? '#C45A10' : '#065F46',
-              }]}>
-                {item.status === 'COMPLETED' ? '모집완료' :
-                 item.status === 'IN_PROGRESS' ? '진행중' :
-                 item.status === 'MATCHED' ? '대기중' : '모집중'}
-              </Text>
-            </View>
-          </View>
-          <Text style={s.cardTitle} numberOfLines={2}>{item.title}</Text>
-          <View style={s.cardFooter}>
-            {profileImageUrl ? (
-              <Image source={{ uri: profileImageUrl }} style={s.avatarImg} />
-            ) : (
-              <View style={[s.avatar, { backgroundColor: avatarBg }]}>
-                <Text style={s.avatarText}>{initial}</Text>
-              </View>
-            )}
-            <Text style={s.schoolText}>{item.requester.nickname} · 국민대</Text>
-            {item.status === 'WAITING' && user?.userType === 'KOREAN' && (
-              <TouchableOpacity style={s.helpBtn} onPress={() => goTo(item)} activeOpacity={0.8}>
-                <Text style={s.helpBtnText}>도와주기</Text>
-              </TouchableOpacity>
-            )}
-            {item.requester.id === user?.id && item.status === 'WAITING' && (
-              <TouchableOpacity style={s.deleteBtn} onPress={() => handleDelete(item)} activeOpacity={0.8}>
-                <Ionicons name="trash-outline" size={14} color="#EF4444" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
 
   return (
     <View style={s.container}>
@@ -312,91 +127,72 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
-
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
         contentContainerStyle={{ paddingTop: Platform.OS === 'ios' ? 100 : 72, paddingBottom: 100 }}
       >
 
-        {/* ── 공지사항 / 학식 슬라이드 ── */}
-        {loopedInfoCards.length > 0 && (
-            <View style={s.infoSection}>
-              <FlatList
-                ref={infoFlatRef}
-                data={loopedInfoCards}
-                keyExtractor={(_, i) => String(i)}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                decelerationRate="fast"
-                getItemLayout={(_, index) => ({ length: PREVIEW_CARD_WIDTH, offset: PREVIEW_CARD_WIDTH * index, index })}
-                contentContainerStyle={{ paddingVertical: 8 }}
-                onMomentumScrollEnd={e => {
-                  infoCardIndex.current = Math.round(e.nativeEvent.contentOffset.x / PREVIEW_CARD_WIDTH);
-                }}
-                renderItem={({ item }) => {
-                  if (item.type === 'hero') {
-                    return (
-                      <View style={s.infoCard}>
-                        <View style={s.heroLocationRow}>
-                          <View style={s.heroDot} />
-                          <Text style={s.heroLocation}>국민대학교 · 지금 활동중</Text>
-                        </View>
-                        <Text style={s.heroTitle}>
-                          지금 <Text style={s.heroHL}>{activeCount}명</Text>이 기다려요!
-                        </Text>
-                        <View style={s.heroProgressLabelRow}>
-                          <Text style={s.heroProgressLabel}>이번달 도움 목표</Text>
-                          <Text style={s.heroProgressValue}>{completedCount} / {HELP_GOAL}</Text>
-                        </View>
-                        <View style={s.heroProgressTrack}>
-                          <View style={[s.heroProgressFill, { width: `${Math.min((completedCount / HELP_GOAL) * 100, 100)}%` }]} />
-                        </View>
-                      </View>
-                    );
-                  }
-                  if (item.type === 'notice') {
-                    const n = item.data;
-                    return (
-                      <TouchableOpacity
-                        style={s.infoCard}
-                        onPress={() => n.link ? Linking.openURL(n.link) : undefined}
-                        activeOpacity={0.85}
-                      >
-                        <View style={s.infoCardTopRow}>
-                          <View style={s.infoTypeBadge}>
-                            <Ionicons name="megaphone-outline" size={11} color={BLUE} />
-                            <Text style={s.infoTypeBadgeText}>공지사항</Text>
-                          </View>
-                          {n.pubDate ? <Text style={s.infoDate}>{n.pubDate}</Text> : null}
-                        </View>
-                        <Text style={s.infoTitle} numberOfLines={2}>{n.titleKo}</Text>
-                        <Text style={s.infoSub} numberOfLines={1}>{n.title}</Text>
-                      </TouchableOpacity>
-                    );
-                  }
-                  const m = item.data;
-                  return (
-                    <View style={s.infoCard}>
-                      <View style={s.infoCardTopRow}>
-                        <View style={s.infoTypeBadge}>
-                          <Ionicons name="restaurant-outline" size={11} color={BLUE} />
-                          <Text style={s.infoTypeBadgeText}>오늘의 학식</Text>
-                        </View>
-                        <Text style={s.infoDate}>{m.cafeteria}</Text>
-                      </View>
-                      <Text style={s.infoTitle} numberOfLines={1}>{m.corner}</Text>
-                      <Text style={s.infoSub} numberOfLines={2}>
-                        {m.menu.split('\n').filter(Boolean).slice(0, 3).join(' · ')}
-                      </Text>
-                    </View>
-                  );
-                }}
-              />
-            </View>
-        )}
+        {/* ── 상단 요약 카드 2개 (학식 / 공지) ── */}
+        <View style={s.summaryRow}>
+          {/* 오늘 학식 */}
+          {(() => {
+            const meal = meals[0];
+            return (
+              <View style={s.summaryCardMeal}>
+                <View style={s.summaryIconWrap}>
+                  <Ionicons name="restaurant-outline" size={14} color={BLUE} />
+                </View>
+                <View style={s.summaryTextWrap}>
+                  <Text style={s.summaryLabel}>오늘 학식</Text>
+                  <Text style={s.summaryValue} numberOfLines={1}>
+                    {meal ? `${meal.corner} · ${meal.menu.split('\n').filter(Boolean)[0] ?? ''}` : '정보 없음'}
+                  </Text>
+                </View>
+              </View>
+            );
+          })()}
 
-        {/* ── 모든 도움 보기 ── */}
+          {/* 새 공지 */}
+          {(() => {
+            const notice = notices[0];
+            return (
+              <TouchableOpacity
+                style={s.summaryCardNotice}
+                onPress={() => notice?.link ? Linking.openURL(notice.link) : undefined}
+                activeOpacity={0.85}
+              >
+                <View style={s.summaryIconWrap}>
+                  <Ionicons name="megaphone-outline" size={14} color={BLUE} />
+                </View>
+                <View style={s.summaryTextWrap}>
+                  <Text style={s.summaryLabel}>새 공지</Text>
+                  <Text style={s.summaryValue} numberOfLines={1}>
+                    {notice ? notice.titleKo : '정보 없음'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })()}
+        </View>
+
+        {/* ── 지금 도움이 필요해요 헤더 ── */}
+        <View style={s.helpHeader}>
+          <View style={s.helpHeaderLeft}>
+            <Text style={s.helpHeaderTitle}>지금 도움이 필요해요</Text>
+            <View style={s.helpCountBadge}>
+              <Text style={s.helpCountText}>{requests.filter(r => r.status === 'WAITING').length}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push('/help-list')}
+            activeOpacity={0.7}
+          >
+            <Text style={s.helpHeaderLink}>전체보기 →</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── 스와이프 카드 ── */}
         <View style={{ marginLeft: 20, marginBottom: 20 }}>
           <SwipeCardStack
             requests={requests.filter(r => r.status === 'WAITING')}
@@ -443,46 +239,76 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── 도움 요청 목록 ── */}
-        <View style={s.sectionCard}>
-          <View style={s.filterRow}>
-            {(['ALL', 'WAITING', 'COMPLETED', 'URGENT'] as const).map(key => (
-              <TouchableOpacity
-                key={key}
-                style={[s.chip, statusFilter === key && (key === 'URGENT' ? s.chipUrgent : s.chipOn)]}
-                onPress={() => setStatusFilter(key)}
-                activeOpacity={0.8}
-              >
-                <Text style={[s.chipText, statusFilter === key && s.chipTextOn]}>
-                  {key === 'ALL' ? '전체' : key === 'WAITING' ? '모집중' : key === 'COMPLETED' ? '모집완료' : '긴급'}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {/* ── 지금 핫한 게시글 ── */}
+        <View style={s.hotSection}>
+          <View style={s.hotHeader}>
+            <Text style={s.hotHeaderEmoji}>🔥</Text>
+            <Text style={s.hotHeaderTitle}>지금 핫한 게시글</Text>
+            <TouchableOpacity onPress={() => router.push('/(main)/community')} activeOpacity={0.7} style={s.hotMoreBtn}>
+              <Text style={s.hotMoreText}>더보기 →</Text>
+            </TouchableOpacity>
           </View>
-          <View style={s.cardList}>
-            {isLoading ? (
-              <View style={s.center}><ActivityIndicator size="large" color={BLUE} /></View>
-            ) : filtered.length === 0 ? (
-              <View style={s.empty}>
-                <Text style={s.emptyEmoji}>📋</Text>
-                <Text style={s.emptyTitle}>해당하는 요청이 없어요</Text>
-                <Text style={s.emptySub}>다른 필터를 선택해보세요</Text>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hotScroll}>
+            {hotPosts.length === 0 ? (
+              <View style={s.hotEmpty}>
+                <Text style={s.hotEmptyText}>아직 인기 게시글이 없어요</Text>
               </View>
-            ) : (
-              filtered.map(renderCard)
-            )}
-          </View>
+            ) : hotPosts.map(post => {
+              const catColor: Record<string, string> = { INFO: BLUE, QUESTION: ORANGE, CHAT: '#6B9DF0', CULTURE: '#8B5CF6' };
+              const catBg:    Record<string, string> = { INFO: BLUE_L, QUESTION: '#FFF3E8', CHAT: BLUE_L, CULTURE: '#F5F3FF' };
+              const catLabel: Record<string, string> = { INFO: '정보공유', QUESTION: '질문', CHAT: '잡담', CULTURE: '문화교류' };
+              const color = catColor[post.category] ?? BLUE;
+              const bg    = catBg[post.category]    ?? BLUE_L;
+              const AVATAR_COLORS = ['#F0A040', '#F06060', BLUE, '#90C4F0', '#A0A8B0'];
+              let h = 0;
+              for (let i = 0; i < post.author.length; i++) h = (h + post.author.charCodeAt(i)) % AVATAR_COLORS.length;
+              const avatarColor = AVATAR_COLORS[h];
+              return (
+                <TouchableOpacity
+                  key={post.id}
+                  style={s.hotCard}
+                  activeOpacity={0.85}
+                  onPress={() => router.push({ pathname: '/community-post', params: { id: post.id } })}
+                >
+                  <View style={s.hotCardTop}>
+                    <View style={[s.hotCatBadge, { backgroundColor: bg }]}>
+                      <Text style={[s.hotCatText, { color }]}>{catLabel[post.category] ?? post.category}</Text>
+                    </View>
+                    {post.likes >= 30 && <Text style={s.hotFire}>🔥</Text>}
+                  </View>
+                  <Text style={s.hotTitle} numberOfLines={2}>{post.title}</Text>
+                  <Text style={s.hotContent} numberOfLines={2}>{post.content}</Text>
+                  <View style={s.hotCardFooter}>
+                    <View style={[s.hotAvatar, { backgroundColor: avatarColor }]}>
+                      <Text style={s.hotAvatarText}>{post.author.charAt(0)}</Text>
+                    </View>
+                    <Text style={s.hotAuthor}>{post.author}</Text>
+                    <View style={s.hotStats}>
+                      <Ionicons name="heart" size={12} color={ORANGE} />
+                      <Text style={s.hotStatText}>{post.likes}</Text>
+                      <Ionicons name="chatbubble-outline" size={12} color={T2} style={{ marginLeft: 6 }} />
+                      <Text style={s.hotStatText}>{post.comments}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
+
       </ScrollView>
 
-      {/* ── 도움 요청하기 FAB ── */}
-      <TouchableOpacity
-        style={s.fab}
-        onPress={() => router.push('/(main)/write')}
-        activeOpacity={0.85}
-      >
-        <Text style={s.fabText}>+ 도움 요청하기</Text>
-      </TouchableOpacity>
+      {/* ── 도움 요청하기 FAB (외국인만) ── */}
+      {(user?.userType === 'INTERNATIONAL' || user?.userType === 'EXCHANGE') && (
+        <TouchableOpacity
+          style={s.fab}
+          onPress={() => router.push('/(main)/write')}
+          activeOpacity={0.85}
+        >
+          <Text style={s.fabText}>+ 도움 요청하기</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -547,24 +373,6 @@ const s = StyleSheet.create({
   heroProgressTrack:    { backgroundColor: '#D4E4FA', borderRadius: 10, height: 6, overflow: 'hidden' },
   heroProgressFill:     { backgroundColor: BLUE, borderRadius: 10, height: '100%' },
 
-  // ── 학교 소식 슬라이드 ──
-  infoSection:    { marginTop: 0, marginBottom: 8, marginHorizontal: 16 },
-  infoCard: {
-    width: PREVIEW_CARD_WIDTH,
-    backgroundColor: '#EEF4FF',
-    borderRadius: 24, padding: 20,
-    shadowColor: 'transparent', shadowOpacity: 0, elevation: 0,
-    justifyContent: 'space-between',
-  },
-  infoCardTopRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  infoTypeBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.7)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
-  },
-  infoTypeBadgeText: { fontSize: 11, fontWeight: '700', color: BLUE },
-  infoDate:          { fontSize: 11, color: '#6B9DF0' },
-  infoTitle:         { fontSize: 16, fontWeight: '900', color: T1, lineHeight: 22, marginBottom: 6, letterSpacing: -0.3 },
-  infoSub:           { fontSize: 12, color: '#6B9DF0', fontWeight: '500', lineHeight: 17 },
 
   // ── Section Card ──
   sectionCard: {
@@ -723,4 +531,115 @@ const s = StyleSheet.create({
   emptyEmoji: { fontSize: 40, marginBottom: 4 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: T1 },
   emptySub:   { fontSize: 14, color: T2 },
+
+  // ── 상단 요약 카드 ──
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    marginTop: 12,
+  },
+  summaryCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 12,
+    gap: 10,
+  },
+  summaryCardMeal: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 12,
+    gap: 10,
+    shadowColor: '#F97316',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  summaryCardNotice: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 12,
+    gap: 10,
+    shadowColor: '#3B6FE8',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  summaryIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: BLUE_L,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryTextWrap: { flex: 1 },
+  summaryLabel:    { fontSize: 11, color: T2, fontWeight: '600', marginBottom: 2 },
+  summaryValue:    { fontSize: 12, color: T1, fontWeight: '700' },
+
+  // ── 지금 도움이 필요해요 헤더 ──
+  helpHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 12,
+  },
+  helpHeaderLeft:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  helpHeaderTitle: { fontSize: 17, fontWeight: '900', color: T1, letterSpacing: -0.4 },
+  helpCountBadge: {
+    backgroundColor: ORANGE,
+    borderRadius: 12,
+    minWidth: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  helpCountText:  { fontSize: 12, fontWeight: '800', color: '#fff' },
+  helpHeaderLink: { fontSize: 13, fontWeight: '700', color: BLUE },
+
+  // ── 핫한 게시글 ──
+  hotSection:    { marginTop: 8, marginBottom: 16 },
+  hotHeader:     { flexDirection: 'row', alignItems: 'center', marginHorizontal: 20, marginBottom: 12 },
+  hotHeaderEmoji:{ fontSize: 16, marginRight: 4 },
+  hotHeaderTitle:{ fontSize: 17, fontWeight: '900', color: T1, letterSpacing: -0.4, flex: 1 },
+  hotMoreBtn:    {},
+  hotMoreText:   { fontSize: 13, fontWeight: '700', color: BLUE },
+  hotScroll:     { paddingHorizontal: 16, gap: 10 },
+  hotEmpty:      { paddingVertical: 20, paddingHorizontal: 16 },
+  hotEmptyText:  { fontSize: 13, color: T2 },
+  hotCard: {
+    width: 180,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#F0F2F6',
+    gap: 6,
+  },
+  hotCardTop:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  hotCatBadge:   { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  hotCatText:    { fontSize: 11, fontWeight: '800' },
+  hotFire:       { fontSize: 13 },
+  hotTitle:      { fontSize: 13, fontWeight: '700', color: T1, lineHeight: 18 },
+  hotContent:    { fontSize: 11, color: T2, lineHeight: 16 },
+  hotCardFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 5 },
+  hotAvatar:     { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  hotAvatarText: { fontSize: 9, color: '#fff', fontWeight: '700' },
+  hotAuthor:     { fontSize: 11, color: T2, fontWeight: '600', flex: 1 },
+  hotStats:      { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  hotStatText:   { fontSize: 11, color: T2, fontWeight: '600' },
 });

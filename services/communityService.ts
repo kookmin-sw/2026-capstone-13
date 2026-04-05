@@ -32,9 +32,19 @@ export interface CommunityPostDetailDto extends CommunityPostDto {
   commentList: PostCommentDto[];
 }
 
+export interface PagedResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  last: boolean;
+  first: boolean;
+}
+
 // 게시글 목록 조회
-export const getCommunityPosts = async (): Promise<ApiResponse<CommunityPostDto[]>> => {
-  const response = await api.get<ApiResponse<CommunityPostDto[]>>('/community');
+export const getCommunityPosts = async (): Promise<ApiResponse<PagedResponse<CommunityPostDto>>> => {
+  const response = await api.get<ApiResponse<PagedResponse<CommunityPostDto>>>('/community');
   return response.data;
 };
 
