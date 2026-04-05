@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import api from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -59,8 +60,13 @@ export default function SchoolScreen() {
   const user = useAuthStore((s) => s.user);
   const langCode = user?.preferredLanguage ?? 'en';
   const langName = LANG_NAMES[langCode] ?? langCode;
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
 
-  const [activeTab, setActiveTab] = useState<TabKey>('CAFETERIA');
+  const [activeTab, setActiveTab] = useState<TabKey>((tab as TabKey) ?? 'CAFETERIA');
+
+  useEffect(() => {
+    if (tab === 'NOTICE' || tab === 'CAFETERIA') setActiveTab(tab);
+  }, [tab]);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedNotice, setExpandedNotice] = useState<number | null>(null);
   const [notices, setNotices] = useState<SchoolNotice[]>([]);

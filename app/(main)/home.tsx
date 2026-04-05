@@ -78,7 +78,10 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    api.get('/notices').then(res => setNotices(Array.isArray(res.data.data) ? res.data.data : [])).catch(() => {});
+    api.get('/notices').then(res => {
+      const data = res.data.data?.content ?? res.data.data ?? [];
+      setNotices(Array.isArray(data) ? data : []);
+    }).catch(() => {});
     api.get('/meals').then(res => setMeals(res.data.data ?? [])).catch(() => {});
     getCommunityPosts().then(res => { if (res.success) setHotPosts(res.data.content.filter(p => p.likes >= 10).slice(0, 6)); }).catch(() => {});
   }, []);
@@ -139,7 +142,11 @@ export default function HomeScreen() {
           {(() => {
             const meal = meals[0];
             return (
-              <View style={s.summaryCardMeal}>
+              <TouchableOpacity
+                style={s.summaryCardMeal}
+                onPress={() => router.push({ pathname: '/(main)/school', params: { tab: 'CAFETERIA' } })}
+                activeOpacity={0.85}
+              >
                 <View style={s.summaryIconWrap}>
                   <Ionicons name="restaurant-outline" size={14} color={BLUE} />
                 </View>
@@ -149,7 +156,7 @@ export default function HomeScreen() {
                     {meal ? `${meal.corner} · ${meal.menu.split('\n').filter(Boolean)[0] ?? ''}` : '정보 없음'}
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })()}
 
@@ -159,7 +166,7 @@ export default function HomeScreen() {
             return (
               <TouchableOpacity
                 style={s.summaryCardNotice}
-                onPress={() => notice?.link ? Linking.openURL(notice.link) : undefined}
+                onPress={() => router.push({ pathname: '/(main)/school', params: { tab: 'NOTICE' } })}
                 activeOpacity={0.85}
               >
                 <View style={s.summaryIconWrap}>
