@@ -474,6 +474,15 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* ── 도움 요청하기 FAB ── */}
+      <TouchableOpacity
+        style={s.fab}
+        onPress={() => router.push('/(main)/write')}
+        activeOpacity={0.85}
+      >
+        <Text style={s.fabText}>+ 도움 요청하기</Text>
+      </TouchableOpacity>
     </View>
   );
 }

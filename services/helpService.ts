@@ -33,8 +33,9 @@ export const createHelpRequest = async (data: CreateHelpRequest): Promise<ApiRes
 
 // 도움 요청 목록 조회
 export const getHelpRequests = async (): Promise<ApiResponse<HelpRequest[]>> => {
-  const response = await api.get<ApiResponse<HelpRequest[]>>('/requests');
-  return { ...response.data, data: response.data.data.map(normalizeHelpRequest) };
+  const response = await api.get('/requests');
+  const content: HelpRequest[] = response.data.data?.content ?? response.data.data ?? [];
+  return { ...response.data, data: content.map(normalizeHelpRequest) };
 };
 
 // 도움 요청 상세 조회
@@ -95,12 +96,14 @@ export const resetToWaiting = async (id: number): Promise<ApiResponse<HelpReques
 
 // 내가 등록한 도움 요청 목록
 export const getMyRequests = async (): Promise<ApiResponse<HelpRequest[]>> => {
-  const response = await api.get<ApiResponse<HelpRequest[]>>('/requests/my');
-  return response.data;
+  const response = await api.get('/requests/my');
+  const content: HelpRequest[] = response.data.data?.content ?? response.data.data ?? [];
+  return { ...response.data, data: content };
 };
 
 // 내가 도움을 준 요청 목록
 export const getHelpedRequests = async (): Promise<ApiResponse<HelpRequest[]>> => {
-  const response = await api.get<ApiResponse<HelpRequest[]>>('/requests/helped');
-  return response.data;
+  const response = await api.get('/requests/helped');
+  const content: HelpRequest[] = response.data.data?.content ?? response.data.data ?? [];
+  return { ...response.data, data: content };
 };
