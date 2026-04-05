@@ -95,26 +95,29 @@ export default function ChatScreen() {
   const [searchQuery, setSearchQuery]     = useState('');
   const searchInputRef = useRef<TextInput>(null);
 
-  const { clearUnread, hasLeft } = useChatStore();
+  const { setUnreadCount, hasLeft } = useChatStore();
 
   useFocusEffect(
     useCallback(() => {
-      clearUnread();
       fetchData();
-    }, [clearUnread, fetchData]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [fetchData]) // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const fetchData = useCallback(async () => {
     try {
       const res = await getChatRooms();
-      if (res.success) setRequests(res.data);
+      if (res.success) {
+        setRequests(res.data);
+        const total = res.data.reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
+        setUnreadCount(total);
+      }
     } catch {
       // 조회 실패 무시
     } finally {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [setUnreadCount]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
   const onRefresh = () => { setRefreshing(true); fetchData(); };
@@ -131,6 +134,7 @@ export default function ChatScreen() {
             requestTitle: room.title,
             partnerNickname: room.partnerNickname,
             partnerProfileImage: toAbsoluteUrl(room.partnerProfileImage) ?? '',
+            roomUnreadCount: String(room.unreadCount ?? 0),
           },
         });
         fetchData();
@@ -181,6 +185,7 @@ export default function ChatScreen() {
         partnerProfileImage: toAbsoluteUrl(room.partnerProfileImage) ?? '',
         requestStatus: room.status,
         requesterId,
+        roomUnreadCount: String(room.unreadCount ?? 0),
       },
     });
   };

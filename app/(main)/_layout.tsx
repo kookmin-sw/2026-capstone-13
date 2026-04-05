@@ -8,14 +8,26 @@ import { Colors } from '../../constants/colors';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
 import { getMyRequests, getHelpedRequests } from '../../services/helpService';
+import { getChatRooms } from '../../services/chatService';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api';
 const WS_URL = BASE_URL.replace(/^http/, 'ws').replace(/\/api$/, '') + '/ws-native';
 
 export default function MainLayout() {
-  const { unreadCount, incrementUnread } = useChatStore();
+  const { unreadCount, incrementUnread, setUnreadCount } = useChatStore();
   const { user } = useAuthStore();
   const globalClientRef = useRef<Client | null>(null);
+
+  // 앱 시작 시 전체 unread 합산
+  useEffect(() => {
+    if (!user) return;
+    getChatRooms().then((res) => {
+      if (res.success && Array.isArray(res.data)) {
+        const total = res.data.reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
+        setUnreadCount(total);
+      }
+    }).catch(() => {});
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;

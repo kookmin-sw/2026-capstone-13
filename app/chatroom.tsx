@@ -61,6 +61,7 @@ export default function ChatRoomScreen() {
     partnerProfileImage?: string;
     requestStatus?: string;
     requesterId?: string;
+    roomUnreadCount?: string;
   }>();
 
   const roomId = Number(params.roomId);
@@ -82,7 +83,7 @@ export default function ChatRoomScreen() {
   const [isSendingVoice, setIsSendingVoice] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [translateEnabled, setTranslateEnabled] = useState(true);
-  const { clearUnread, setActiveChatroom, leaveRoom, rejoinRoom } = useChatStore();
+  const { unreadCount, setUnreadCount, setActiveChatroom, leaveRoom, rejoinRoom } = useChatStore();
   const clientRef = useRef<Client | null>(null);
   const listRef = useRef<FlatList>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -106,12 +107,13 @@ export default function ChatRoomScreen() {
   // 채팅방 입장 시 뱃지 초기화 + 활성 채팅방 등록 + leftRooms 초기화(재입장)
   useEffect(() => {
     setActiveChatroom(roomId);
-    clearUnread();
+    const roomUnread = Number(params.roomUnreadCount ?? 0);
+    if (roomUnread > 0) setUnreadCount(Math.max(0, unreadCount - roomUnread));
     if (user) rejoinRoom(roomId, Number(user.id));
     return () => {
       setActiveChatroom(null);
     };
-  }, [roomId, setActiveChatroom, clearUnread, rejoinRoom, user]);
+  }, [roomId, setActiveChatroom, setUnreadCount, rejoinRoom, user]);
 
   // WebSocket STOMP 연결
   useEffect(() => {

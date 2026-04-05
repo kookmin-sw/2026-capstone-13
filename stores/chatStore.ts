@@ -8,6 +8,7 @@ interface ChatState {
   // 유저별 나간 방 목록: { "userId": [roomId, ...] }
   leftRooms: Record<string, number[]>;
   incrementUnread: () => void;
+  setUnreadCount: (count: number) => void;
   clearUnread: () => void;
   setActiveChatroom: (id: number | null) => void;
   leaveRoom: (roomId: number, userId: number) => void;
@@ -22,6 +23,7 @@ export const useChatStore = create<ChatState>()(
       activeChatroomId: null,
       leftRooms: {},
       incrementUnread: () => set((state) => ({ unreadCount: state.unreadCount + 1 })),
+      setUnreadCount: (count) => set({ unreadCount: count }),
       clearUnread: () => set({ unreadCount: 0 }),
       setActiveChatroom: (id) => set({ activeChatroomId: id }),
       leaveRoom: (roomId, userId) => {
