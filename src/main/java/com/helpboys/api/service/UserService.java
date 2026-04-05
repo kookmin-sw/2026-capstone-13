@@ -43,6 +43,9 @@ public class UserService implements UserDetailsService {
 
     // 회원가입
     public UserResponse register(RegisterRequest request) {
+        if (!request.getEmail().contains(".ac.kr")) {
+            throw new BusinessException("학교 이메일(.ac.kr)만 허용됩니다.");
+        }
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("이미 사용 중인 이메일입니다.");
         }
@@ -130,6 +133,36 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
         user.setFcmToken(fcmToken);
+        userRepository.save(user);
+    }
+
+    // 학생증 이미지 업로드 (심사 대기 상태로)
+    @org.springframework.transaction.annotation.Transactional
+    public void uploadStudentId(Long userId, String imageUrl) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        user.setStudentIdImageUrl(imageUrl);
+        user.setStudentIdStatus(User.StudentIdStatus.PENDING);
+        userRepository.save(user);
+    }
+
+    // 학생증 승인 (어드민용)
+    @org.springframework.transaction.annotation.Transactional
+    public void approveStudentId(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        user.setStudentIdVerified(true);
+        user.setStudentIdStatus(User.StudentIdStatus.APPROVED);
+        userRepository.save(user);
+    }
+
+    // 학생증 거절 (어드민용)
+    @org.springframework.transaction.annotation.Transactional
+    public void rejectStudentId(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        user.setStudentIdVerified(false);
+        user.setStudentIdStatus(User.StudentIdStatus.REJECTED);
         userRepository.save(user);
     }
 }

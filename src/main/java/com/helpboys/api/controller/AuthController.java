@@ -5,6 +5,7 @@ import com.helpboys.api.dto.LoginRequest;
 import com.helpboys.api.dto.LoginResponse;
 import com.helpboys.api.dto.RegisterRequest;
 import com.helpboys.api.dto.UserResponse;
+import com.helpboys.api.service.EmailService;
 import com.helpboys.api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,12 +13,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
     private final UserService userService;
+    private final EmailService emailService;
 
     // POST /api/auth/register - 회원가입
     @PostMapping("/register")
@@ -32,5 +36,22 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = userService.login(request);
         return ResponseEntity.ok(ApiResponse.success("로그인 성공", response));
+    }
+
+    // POST /api/auth/send-code - 이메일 인증번호 발송
+    @PostMapping("/send-code")
+    public ResponseEntity<ApiResponse<String>> sendCode(@RequestBody Map<String, String> body) {
+        emailService.sendVerificationCode(body.get("email"));
+        return ResponseEntity.ok(ApiResponse.success("인증번호가 발송되었습니다.", null));
+    }
+
+    // POST /api/auth/verify-code - 인증번호 확인
+    @PostMapping("/verify-code")
+    public ResponseEntity<ApiResponse<String>> verifyCode(@RequestBody Map<String, String> body) {
+        boolean ok = emailService.verifyCode(body.get("email"), body.get("code"));
+        if (!ok) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("인증번호가 올바르지 않거나 만료되었습니다."));
+        }
+        return ResponseEntity.ok(ApiResponse.success("이메일 인증이 완료되었습니다.", null));
     }
 }

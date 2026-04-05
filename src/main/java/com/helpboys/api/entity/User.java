@@ -65,6 +65,30 @@ public class User {
     @Column(name = "fcm_token", columnDefinition = "TEXT")
     private String fcmToken;
 
+    // 이메일 인증 여부
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private boolean emailVerified = false;
+
+    // 학생증 인증 여부
+    @Column(name = "student_id_verified", nullable = false)
+    @Builder.Default
+    private boolean studentIdVerified = false;
+
+    // 학생증 이미지 URL
+    @Column(name = "student_id_image_url")
+    private String studentIdImageUrl;
+
+    // 학생증 심사 상태
+    @Enumerated(EnumType.STRING)
+    @Column(name = "student_id_status", nullable = false)
+    @Builder.Default
+    private StudentIdStatus studentIdStatus = StudentIdStatus.NONE;
+
+    public enum StudentIdStatus {
+        NONE, PENDING, APPROVED, REJECTED
+    }
+
     @Column(nullable = false)
     @Builder.Default
     private Double rating = 0.0;
