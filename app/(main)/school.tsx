@@ -167,25 +167,30 @@ export default function SchoolScreen() {
               </View>
             ) : (
               <View style={s.sectionCard}>
-                {/* 식당 선택 탭 (| 구분선 스타일) */}
-                <View style={s.cafeteriaTabWrap}>
-                  {cafeteriaList.map((name, idx) => {
-                    const translatedName = meals.find((m) => m.cafeteriaKo === name)?.cafeteria ?? name;
-                    return (
-                      <View key={name} style={s.cafeteriaTabItem}>
-                        {idx > 0 && <Text style={s.cafeteriaTabDivider}>|</Text>}
-                        <TouchableOpacity
-                          onPress={() => setSelectedCafeteria(name)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[s.cafeteriaTabText, selectedCafeteria === name && s.cafeteriaTabTextActive]}>
-                            {translatedName}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </View>
+                {/* 식당 선택 - < 이름 > 방식 */}
+                {cafeteriaList.length > 0 && (() => {
+                  const currentIdx = cafeteriaList.indexOf(selectedCafeteria ?? cafeteriaList[0]);
+                  const translatedName = meals.find((m) => m.cafeteriaKo === cafeteriaList[currentIdx])?.cafeteria ?? cafeteriaList[currentIdx];
+                  return (
+                    <View style={s.cafeteriaTabWrap}>
+                      <TouchableOpacity
+                        onPress={() => setSelectedCafeteria(cafeteriaList[Math.max(0, currentIdx - 1)])}
+                        disabled={currentIdx === 0}
+                        style={s.cafeteriaArrowBtn}
+                      >
+                        <Ionicons name="chevron-back" size={20} color={currentIdx === 0 ? T2 : T1} />
+                      </TouchableOpacity>
+                      <Text style={s.cafeteriaTabName} numberOfLines={1}>{translatedName}</Text>
+                      <TouchableOpacity
+                        onPress={() => setSelectedCafeteria(cafeteriaList[Math.min(cafeteriaList.length - 1, currentIdx + 1)])}
+                        disabled={currentIdx === cafeteriaList.length - 1}
+                        style={s.cafeteriaArrowBtn}
+                      >
+                        <Ionicons name="chevron-forward" size={20} color={currentIdx === cafeteriaList.length - 1 ? T2 : T1} />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })()}
 
                 {/* 3. 위치 정보 */}
                 {selectedMeals.length > 0 && selectedMeals[0].cafeteriaKo ? (
@@ -321,28 +326,21 @@ const s = StyleSheet.create({
   cafeteriaTabWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: DIV,
   },
-  cafeteriaTabItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  cafeteriaArrowBtn: {
+    padding: 4,
   },
-  cafeteriaTabDivider: {
-    fontSize: 14,
-    color: T2,
-    marginHorizontal: 10,
-  },
-  cafeteriaTabText: {
+  cafeteriaTabName: {
+    flex: 1,
     fontSize: 15,
-    fontWeight: '500',
-    color: T2,
-  },
-  cafeteriaTabTextActive: {
-    color: T1,
     fontWeight: '800',
+    color: T1,
+    textAlign: 'center',
   },
   cafeteriaLocation: {
     fontSize: 13,
