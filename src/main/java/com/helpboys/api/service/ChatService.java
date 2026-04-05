@@ -207,13 +207,18 @@ public class ChatService {
         List<HelpRequest.RequestStatus> activeStatuses = List.of(
                 HelpRequest.RequestStatus.MATCHED,
                 HelpRequest.RequestStatus.IN_PROGRESS,
-                HelpRequest.RequestStatus.COMPLETED
+                HelpRequest.RequestStatus.COMPLETED,
+                HelpRequest.RequestStatus.WAITING
         );
         return helpRequestRepository.findChatRooms(userId, activeStatuses).stream()
                 .map(req -> {
                     ChatMessage last = chatMessageRepository
                             .findTopByRoomIdOrderByCreatedAtDesc(req.getId())
                             .orElse(null);
+                    // WAITING 방은 이전 채팅 이력이 있을 때만 목록에 포함 (누군가 나간 경우)
+                    if (req.getStatus() == HelpRequest.RequestStatus.WAITING && last == null) {
+                        return null;
+                    }
                     long unreadCount = chatMessageRepository
                             .countUnreadMessages(req.getId(), userId);
                     return ChatRoomResponse.from(
@@ -223,6 +228,7 @@ public class ChatService {
                             unreadCount
                     );
                 })
+                .filter(r -> r != null)
                 .sorted((a, b) -> {
                     if (a.getLastMessageTime() == null) return 1;
                     if (b.getLastMessageTime() == null) return -1;
