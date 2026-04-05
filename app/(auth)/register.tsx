@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
 import { Colors } from '../../constants/colors';
 import type { UserType } from '../../types';
+import { sendVerificationCode, verifyEmailCode } from '../../services/authService';
 
 const NATIONALITIES = [
   // 아시아 (동아시아)
@@ -157,12 +158,65 @@ export default function RegisterScreen() {
   const [major, setMajor] = useState<string | null>(null);
   const [showMajorModal, setShowMajorModal] = useState(false);
 
+  // 이메일 인증 상태
+  const [codeSent, setCodeSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
+
   const selectedNationality = NATIONALITIES.find((n) => n.code === nationality);
+
+  const handleSendCode = async () => {
+    if (!email.trim()) {
+      Alert.alert('알림', '이메일을 입력해주세요.');
+      return;
+    }
+    if (!email.includes('.ac.kr')) {
+      Alert.alert('학교 이메일 필요', '학교 이메일(.ac.kr)만 가입할 수 있습니다.');
+      return;
+    }
+    setSendingCode(true);
+    try {
+      await sendVerificationCode(email.trim());
+      setCodeSent(true);
+      Alert.alert('발송 완료', '이메일로 6자리 인증번호를 발송했습니다.\n5분 내에 입력해주세요.');
+    } catch {
+      Alert.alert('발송 실패', '이메일 발송에 실패했습니다. 이메일 주소를 확인해주세요.');
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (verificationCode.length !== 6) {
+      Alert.alert('알림', '6자리 인증번호를 입력해주세요.');
+      return;
+    }
+    setVerifyingCode(true);
+    try {
+      const res = await verifyEmailCode(email.trim(), verificationCode);
+      if (res.success) {
+        setEmailVerified(true);
+        Alert.alert('인증 완료', '이메일 인증이 완료되었습니다.');
+      } else {
+        Alert.alert('인증 실패', res.message ?? '인증번호가 올바르지 않습니다.');
+      }
+    } catch {
+      Alert.alert('인증 실패', '인증번호가 올바르지 않거나 만료되었습니다.');
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
 
   const handleRegister = async () => {
     // 입력 검증
     if (!email.trim() || !password.trim() || !nickname.trim()) {
       Alert.alert('알림', '모든 필드를 입력해주세요.');
+      return;
+    }
+    if (!emailVerified) {
+      Alert.alert('알림', '이메일 인증을 완료해주세요.');
       return;
     }
     if (!userType) {
@@ -411,16 +465,62 @@ export default function RegisterScreen() {
 
         {/* 입력 폼 */}
         <View style={styles.form}>
-          <Text style={styles.label}>이메일</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="example@university.ac.kr"
-            placeholderTextColor={Colors.textLight}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          <Text style={styles.label}>이메일 (학교 이메일 필수)</Text>
+          <View style={styles.emailRow}>
+            <TextInput
+              style={[styles.input, styles.emailInput, emailVerified && styles.inputVerified]}
+              placeholder="example@university.ac.kr"
+              placeholderTextColor={Colors.textLight}
+              value={email}
+              onChangeText={(v) => { setEmail(v); setEmailVerified(false); setCodeSent(false); setVerificationCode(''); }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!emailVerified}
+            />
+            {emailVerified ? (
+              <View style={styles.verifiedTag}>
+                <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
+                <Text style={styles.verifiedTagText}>인증됨</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.codeButton, sendingCode && styles.disabledButton]}
+                onPress={handleSendCode}
+                disabled={sendingCode}
+              >
+                {sendingCode ? (
+                  <ActivityIndicator size="small" color={Colors.textWhite} />
+                ) : (
+                  <Text style={styles.codeButtonText}>{codeSent ? '재발송' : '인증번호 받기'}</Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {codeSent && !emailVerified && (
+            <View style={styles.otpRow}>
+              <TextInput
+                style={[styles.input, styles.otpInput]}
+                placeholder="인증번호 6자리"
+                placeholderTextColor={Colors.textLight}
+                value={verificationCode}
+                onChangeText={setVerificationCode}
+                keyboardType="number-pad"
+                maxLength={6}
+              />
+              <TouchableOpacity
+                style={[styles.codeButton, verifyingCode && styles.disabledButton]}
+                onPress={handleVerifyCode}
+                disabled={verifyingCode}
+              >
+                {verifyingCode ? (
+                  <ActivityIndicator size="small" color={Colors.textWhite} />
+                ) : (
+                  <Text style={styles.codeButtonText}>확인</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
 
           <Text style={styles.label}>닉네임</Text>
           <TextInput
@@ -452,9 +552,9 @@ export default function RegisterScreen() {
           />
 
           <TouchableOpacity
-            style={[styles.registerButton, isLoading && styles.disabledButton]}
+            style={[styles.registerButton, (isLoading || !emailVerified) && styles.disabledButton]}
             onPress={handleRegister}
-            disabled={isLoading}
+            disabled={isLoading || !emailVerified}
           >
             {isLoading ? (
               <ActivityIndicator color={Colors.textWhite} />
@@ -653,6 +753,53 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  inputVerified: {
+    borderColor: '#22c55e',
+    backgroundColor: '#f0fdf4',
+  },
+  emailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  emailInput: {
+    flex: 1,
+  },
+  otpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  otpInput: {
+    flex: 1,
+  },
+  codeButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 90,
+  },
+  codeButtonText: {
+    color: Colors.textWhite,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  verifiedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  verifiedTagText: {
+    color: '#22c55e',
+    fontSize: 13,
+    fontWeight: '700',
   },
   registerButton: {
     backgroundColor: Colors.primary,

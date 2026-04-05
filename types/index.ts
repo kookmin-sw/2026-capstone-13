@@ -30,6 +30,9 @@ export interface User {
   helpCount: number;
   createdAt: string;
   preferredLanguage?: string;
+  emailVerified?: boolean;
+  studentIdVerified?: boolean;
+  studentIdStatus?: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
 // 로그인 요청

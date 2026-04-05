@@ -54,6 +54,24 @@ export const getKoreanUsers = async (): Promise<ApiResponse<User[]>> => {
   return response.data;
 };
 
+// 이메일 인증번호 발송
+export const sendVerificationCode = async (email: string): Promise<ApiResponse<null>> => {
+  const response = await api.post<ApiResponse<null>>('/auth/send-code', { email });
+  return response.data;
+};
+
+// 이메일 인증번호 확인
+export const verifyEmailCode = async (email: string, code: string): Promise<ApiResponse<null>> => {
+  const response = await api.post<ApiResponse<null>>('/auth/verify-code', { email, code });
+  return response.data;
+};
+
+// 학생증 이미지 URL 제출
+export const uploadStudentId = async (imageUrl: string): Promise<ApiResponse<null>> => {
+  const response = await api.post<ApiResponse<null>>('/users/student-id', { imageUrl });
+  return response.data;
+};
+
 // 프로필 이미지 업로드
 export const uploadProfileImage = async (imageUri: string): Promise<ApiResponse<User>> => {
   const formData = new FormData();
