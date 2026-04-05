@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: helpboys-api
+
+  # MySQL 설정 (로컬: localhost, Railway: 환경변수로 자동 교체)
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/helpboys?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:helpboys}
+    password: ${SPRING_DATASOURCE_PASSWORD:helpboys1234}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+# 서버 설정
+server:
+  port: ${PORT:8080}
+
+# JWT 설정
+jwt:
+  secret: ${JWT_SECRET:helpboys-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256}
+  expiration: 86400000  # 24시간 (밀리초)
+
+# AI 서버 설정
+ai:
+  server:
+    url: ${AI_SERVER_URL:http://localhost:8000}
+
+# Agora 설정
+agora:
+  app-id: ${AGORA_APP_ID:5be9cb6d40124217977bca952784cff2}
+  app-certificate: ${AGORA_APP_CERTIFICATE:e080d7b8dd2e4dadb7aef5ab616c2ca3}
+
+# 로깅 설정 (Railway 500 logs/sec 제한 대응)
+logging:
+  level:
+    root: WARN
+    com.helpboys: INFO
+    org.springframework.web.socket: WARN
+    org.springframework.messaging: WARN
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate: WARN
+
+# Firebase FCM 설정 (서비스 계정 JSON 전체를 환경변수로)
+firebase:
+  credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+
+# Actuator - 헬스체크 엔드포인트 활성화
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
