@@ -2,8 +2,8 @@ package com.helpboys.api.service;
 
 import com.helpboys.api.entity.EmailVerification;
 import com.helpboys.api.repository.EmailVerificationRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -15,11 +15,16 @@ import java.util.Random;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    @Autowired(required = false)
+    private JavaMailSender mailSender;
+
     private final EmailVerificationRepository verificationRepository;
+
+    public EmailService(EmailVerificationRepository verificationRepository) {
+        this.verificationRepository = verificationRepository;
+    }
 
     /**
      * 인증번호 발송 (ac.kr 도메인만 허용)
@@ -37,6 +42,11 @@ public class EmailService {
                 .expiresAt(LocalDateTime.now().plusMinutes(5))
                 .used(false)
                 .build());
+
+        if (mailSender == null) {
+            log.warn("[이메일 인증] 메일 서버 미설정 - 코드: {}", code);
+            throw new RuntimeException("이메일 서버가 설정되지 않았습니다.");
+        }
 
         try {
             SimpleMailMessage msg = new SimpleMailMessage();
