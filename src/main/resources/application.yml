@@ -52,6 +52,12 @@ logging:
 firebase:
   credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
 
+# Cloudinary 설정
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
+
 # Actuator - 헬스체크 엔드포인트 활성화
 management:
   endpoints:
