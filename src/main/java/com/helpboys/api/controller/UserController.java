@@ -100,4 +100,28 @@ public class UserController {
         String imageUrl = "/uploads/" + fileName;
         return ResponseEntity.ok(ApiResponse.success("업로드 완료", userService.updateProfileImage(userId, imageUrl)));
     }
+
+    // POST /api/users/student-id - 학생증 이미지 URL 저장 (Cloudinary URL)
+    @PostMapping("/student-id")
+    public ResponseEntity<ApiResponse<String>> uploadStudentId(
+            @RequestBody Map<String, String> body,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        userService.uploadStudentId(userId, body.get("imageUrl"));
+        return ResponseEntity.ok(ApiResponse.success("학생증이 제출되었습니다. 심사 후 인증됩니다.", null));
+    }
+
+    // PATCH /api/users/{id}/student-id/approve - 학생증 승인 (어드민용)
+    @PatchMapping("/{id}/student-id/approve")
+    public ResponseEntity<ApiResponse<String>> approveStudentId(@PathVariable Long id) {
+        userService.approveStudentId(id);
+        return ResponseEntity.ok(ApiResponse.success("학생증 인증이 승인되었습니다.", null));
+    }
+
+    // PATCH /api/users/{id}/student-id/reject - 학생증 거절 (어드민용)
+    @PatchMapping("/{id}/student-id/reject")
+    public ResponseEntity<ApiResponse<String>> rejectStudentId(@PathVariable Long id) {
+        userService.rejectStudentId(id);
+        return ResponseEntity.ok(ApiResponse.success("학생증 인증이 거절되었습니다.", null));
+    }
 }
