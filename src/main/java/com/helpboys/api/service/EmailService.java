@@ -2,33 +2,30 @@ package com.helpboys.api.service;
 
 import com.helpboys.api.entity.EmailVerification;
 import com.helpboys.api.repository.EmailVerificationRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class EmailService {
 
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
-
     private final EmailVerificationRepository verificationRepository;
+    private final RestTemplate restTemplate;
 
-    public EmailService(EmailVerificationRepository verificationRepository) {
-        this.verificationRepository = verificationRepository;
-    }
+    @Value("${resend.api-key}")
+    private String resendApiKey;
 
-    /**
-     * 인증번호 발송 (ac.kr 도메인만 허용)
-     */
     @Transactional
     public void sendVerificationCode(String email) {
         if (!email.contains(".ac.kr")) {
@@ -46,17 +43,24 @@ public class EmailService {
                 .used(false)
                 .build());
 
-        if (mailSender == null) {
-            log.warn("[이메일 인증] 메일 서버 미설정 - 코드: {}", code);
-            throw new RuntimeException("이메일 서버가 설정되지 않았습니다.");
-        }
-
         try {
-            SimpleMailMessage msg = new SimpleMailMessage();
-            msg.setTo(email);
-            msg.setSubject("[도와줘코리안] 이메일 인증번호");
-            msg.setText("인증번호: " + code + "\n\n5분 내에 입력해주세요.\n\n도와줘코리안 팀 드림");
-            mailSender.send(msg);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(resendApiKey);
+
+            Map<String, Object> body = Map.of(
+                    "from", "도와줘코리안 <onboarding@resend.dev>",
+                    "to", new String[]{email},
+                    "subject", "[도와줘코리안] 이메일 인증번호",
+                    "text", "인증번호: " + code + "\n\n5분 내에 입력해주세요.\n\n도와줘코리안 팀 드림"
+            );
+
+            restTemplate.exchange(
+                    "https://api.resend.com/emails",
+                    HttpMethod.POST,
+                    new HttpEntity<>(body, headers),
+                    String.class
+            );
             log.info("[이메일 인증] 발송 완료: {}", email);
         } catch (Exception e) {
             log.error("[이메일 인증] 발송 실패: {}", e.getMessage());
@@ -64,9 +68,6 @@ public class EmailService {
         }
     }
 
-    /**
-     * 인증번호 확인
-     */
     @Transactional
     public boolean verifyCode(String email, String code) {
         Optional<EmailVerification> opt =
@@ -83,14 +84,12 @@ public class EmailService {
         return true;
     }
 
-    // 해당 이메일이 인증 완료됐는지 확인 (register 시 체크용)
     public boolean isVerified(String email) {
         return verificationRepository.findTopByEmailOrderByCreatedAtDesc(email)
                 .map(EmailVerification::isUsed)
                 .orElse(false);
     }
 
-    // 인증 정보 삭제 (회원가입 완료 후 정리)
     @Transactional
     public void deleteVerification(String email) {
         verificationRepository.deleteByEmail(email);
