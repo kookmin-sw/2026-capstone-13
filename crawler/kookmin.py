@@ -79,6 +79,10 @@ def _crawl_kmuciss_board(url: str, category_id: str, category_name: str, max_pag
             href = a_tag.get("href", "").replace("&amp;", "&")
             base = url.split("?")[0]
             link = base + href if href.startswith("?") else href
+            # article.offset 파라미터 제거하여 링크 정규화 (중복 방지)
+            import re as _re
+            link = _re.sub(r'[&?]article\.offset=\d+', '', link)
+            link = _re.sub(r'[&?]articleLimit=\d+', '', link)
 
             # 날짜: 같은 tr의 td 중 날짜 형식(YYYY-MM-DD) 텍스트 찾기
             date_str = ""
