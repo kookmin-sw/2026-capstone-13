@@ -45,6 +45,12 @@ dependencies {
     // Firebase Admin SDK (FCM 푸시 알림)
     implementation 'com.google.firebase:firebase-admin:9.3.0'
 
+    // Email 전송
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // Cloudinary (학생증 이미지 업로드)
+    implementation 'com.cloudinary:cloudinary-http44:1.38.0'
+
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'

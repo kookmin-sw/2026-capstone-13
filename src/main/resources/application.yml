@@ -2,6 +2,19 @@ spring:
   application:
     name: helpboys-api
 
+  # 이메일 전송 (Gmail SMTP)
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   # MySQL 설정 (로컬: localhost, Railway: 환경변수로 자동 교체)
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/helpboys?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
@@ -51,6 +64,12 @@ logging:
 # Firebase FCM 설정 (서비스 계정 JSON 전체를 환경변수로)
 firebase:
   credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+
+# Cloudinary (학생증 이미지 업로드)
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
 
 # Actuator - 헬스체크 엔드포인트 활성화
 management:
