@@ -30,6 +30,29 @@ public class UserResponse {
     private boolean studentIdVerified;
     private String studentIdStatus;
 
+    // 타인 프로필 조회용 (이메일 제외)
+    public static UserResponse fromPublic(User user) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .nickname(user.getNickname())
+                .userType(user.getUserType().name())
+                .university(user.getUniversity())
+                .profileImage(user.getProfileImage())
+                .bio(user.getBio())
+                .gender(user.getGender())
+                .age(user.getAge())
+                .major(user.getMajor())
+                .mbti(user.getMbti())
+                .hobbies(user.getHobbies())
+                .rating(user.getRating())
+                .helpCount(user.getHelpCount())
+                .createdAt(user.getCreatedAt().toString())
+                .preferredLanguage(user.getPreferredLanguage())
+                .studentIdVerified(user.isStudentIdVerified())
+                .studentIdStatus(user.getStudentIdStatus().name())
+                .build();
+    }
+
     public static UserResponse from(User user) {
         return UserResponse.builder()
                 .id(user.getId())

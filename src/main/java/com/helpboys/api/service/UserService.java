@@ -150,11 +150,11 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
     }
 
-    // 사용자 조회 (ID)
+    // 사용자 공개 프로필 조회 (이메일 제외)
     public UserResponse getUserById(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-        return UserResponse.from(user);
+        return UserResponse.fromPublic(user);
     }
 
     // 한국인 유저 목록 조회
