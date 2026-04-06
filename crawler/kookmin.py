@@ -22,15 +22,6 @@ KMUCISS_BOARDS = [
     ("https://cms.kookmin.ac.kr/kmuciss/notice/gks.do",         "gks",         "정부초청"),
 ]
 
-# iat 게시판 (국제처)
-IAT_BOARDS = [
-    ("https://iat.kookmin.ac.kr/international/community/notice/", "exchange",  "국제교류"),
-    ("https://iat.kookmin.ac.kr/admission/community/notice/",     "admission", "입학"),
-]
-
-IAT_ADMISSION_PARAM = "sc=434"
-
-
 def crawl_all(max_pages: int = 2) -> list[dict]:
     """
     전체 게시판 공지사항 수집
@@ -40,11 +31,6 @@ def crawl_all(max_pages: int = 2) -> list[dict]:
 
     for url, category_id, category_name in KMUCISS_BOARDS:
         notices = _crawl_kmuciss_board(url, category_id, category_name, max_pages)
-        all_notices.extend(notices)
-        print(f"[크롤러] {category_name}: {len(notices)}건 수집")
-
-    for url, category_id, category_name in IAT_BOARDS:
-        notices = _crawl_iat_board(url, category_id, category_name, max_pages)
         all_notices.extend(notices)
         print(f"[크롤러] {category_name}: {len(notices)}건 수집")
 
