@@ -5,8 +5,10 @@
 """
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
+
+ONE_YEAR_AGO = datetime.now() - timedelta(days=365)
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
@@ -22,7 +24,7 @@ KMUCISS_BOARDS = [
     ("https://cms.kookmin.ac.kr/kmuciss/notice/gks.do",         "gks",         "정부초청"),
 ]
 
-def crawl_all(max_pages: int = 2) -> list[dict]:
+def crawl_all(max_pages: int = 10) -> list[dict]:
     """
     전체 게시판 공지사항 수집
     Returns: [{"title": ..., "link": ..., "date": ..., "category_id": ..., "category_name": ...}]
@@ -81,6 +83,15 @@ def _crawl_kmuciss_board(url: str, category_id: str, category_name: str, max_pag
             date_span = item.select_one(".b-date")
             date_str = date_span.get_text(strip=True) if date_span else ""
             pub_date = _parse_date(date_str)
+
+            # 1년 이내 공지만 수집
+            if pub_date:
+                try:
+                    pub_dt = datetime.strptime(pub_date, "%Y-%m-%d")
+                    if pub_dt < ONE_YEAR_AGO:
+                        return notices  # 날짜순 정렬이므로 이후는 더 오래된 것
+                except Exception:
+                    pass
 
             notices.append({
                 "title": title,
