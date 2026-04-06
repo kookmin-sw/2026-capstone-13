@@ -80,8 +80,15 @@ def _crawl_kmuciss_board(url: str, category_id: str, category_name: str, max_pag
             base = url.split("?")[0]
             link = base + href if href.startswith("?") else href
 
-            date_span = item.select_one(".b-date")
-            date_str = date_span.get_text(strip=True) if date_span else ""
+            # 날짜: 같은 tr의 td 중 날짜 형식(YYYY-MM-DD) 텍스트 찾기
+            date_str = ""
+            parent_tr = item.find_parent("tr")
+            if parent_tr:
+                for td in parent_tr.select("td"):
+                    text = td.get_text(strip=True)
+                    if len(text) == 10 and text.count("-") == 2:
+                        date_str = text
+                        break
             pub_date = _parse_date(date_str)
 
             # 1년 이내 공지만 수집
