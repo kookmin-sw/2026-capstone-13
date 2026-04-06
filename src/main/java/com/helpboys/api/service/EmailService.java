@@ -79,4 +79,17 @@ public class EmailService {
         verificationRepository.save(v);
         return true;
     }
+
+    // 해당 이메일이 인증 완료됐는지 확인 (register 시 체크용)
+    public boolean isVerified(String email) {
+        return verificationRepository.findByEmail(email)
+                .map(EmailVerification::isUsed)
+                .orElse(false);
+    }
+
+    // 인증 정보 삭제 (회원가입 완료 후 정리)
+    @Transactional
+    public void deleteVerification(String email) {
+        verificationRepository.deleteByEmail(email);
+    }
 }

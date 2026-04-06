@@ -61,6 +61,26 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String hobbies;
 
+    // 이메일 인증 여부
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private boolean emailVerified = false;
+
+    // 학생증 이미지 URL
+    @Column(name = "student_id_image_url", columnDefinition = "TEXT")
+    private String studentIdImageUrl;
+
+    // 학생증 인증 상태 (PENDING: 검토중, APPROVED: 승인, REJECTED: 거절)
+    @Column(name = "student_id_status", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private StudentIdStatus studentIdStatus = StudentIdStatus.PENDING;
+
+    // 관리자 여부 (DB에서 직접 설정)
+    @Column(name = "is_admin", nullable = false)
+    @Builder.Default
+    private boolean isAdmin = false;
+
     // FCM 푸시 알림 토큰 (앱 로그인 시 저장)
     @Column(name = "fcm_token", columnDefinition = "TEXT")
     private String fcmToken;
@@ -112,5 +132,9 @@ public class User {
 
     public enum UserType {
         INTERNATIONAL, EXCHANGE, KOREAN
+    }
+
+    public enum StudentIdStatus {
+        PENDING, APPROVED, REJECTED
     }
 }

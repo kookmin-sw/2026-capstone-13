@@ -1,17 +1,15 @@
 package com.helpboys.api.controller;
 
-import com.helpboys.api.dto.ApiResponse;
-import com.helpboys.api.dto.LoginRequest;
-import com.helpboys.api.dto.LoginResponse;
-import com.helpboys.api.dto.RegisterRequest;
-import com.helpboys.api.dto.UserResponse;
+import com.helpboys.api.dto.*;
 import com.helpboys.api.service.EmailService;
 import com.helpboys.api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -28,7 +26,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest request) {
         UserResponse user = userService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("회원가입이 완료되었습니다.", user));
+                .body(ApiResponse.success("회원가입이 완료되었습니다. 학생증 검토 후 로그인 가능합니다.", user));
     }
 
     // POST /api/auth/login - 로그인
@@ -53,5 +51,13 @@ public class AuthController {
             return ResponseEntity.badRequest().body(ApiResponse.error("인증번호가 올바르지 않거나 만료되었습니다."));
         }
         return ResponseEntity.ok(ApiResponse.success("이메일 인증이 완료되었습니다.", null));
+    }
+
+    // POST /api/auth/student-id/upload - 학생증 이미지 업로드 (multipart)
+    @PostMapping(value = "/student-id/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<StudentIdUploadResponse>> uploadStudentId(
+            @RequestParam("file") MultipartFile file) {
+        String imageUrl = userService.uploadStudentIdImage(file);
+        return ResponseEntity.ok(ApiResponse.success("학생증이 업로드되었습니다.", new StudentIdUploadResponse(imageUrl)));
     }
 }
