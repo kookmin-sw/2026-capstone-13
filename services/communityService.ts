@@ -52,7 +52,7 @@ export const uploadCommunityImage = async (uri: string): Promise<string> => {
   const response = await api.post<{ success: boolean; data: { url: string } }>(
     '/community/upload',
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+    { headers: { 'Content-Type': undefined }, timeout: 30000 },
   );
   return response.data.data.url;
 };
