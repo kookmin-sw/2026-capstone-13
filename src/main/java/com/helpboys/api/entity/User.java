@@ -66,15 +66,20 @@ public class User {
     @Builder.Default
     private boolean emailVerified = false;
 
+    // 학생증 인증 여부
+    @Column(name = "student_id_verified", nullable = false)
+    @Builder.Default
+    private boolean studentIdVerified = false;
+
     // 학생증 이미지 URL
     @Column(name = "student_id_image_url", columnDefinition = "TEXT")
     private String studentIdImageUrl;
 
-    // 학생증 인증 상태 (PENDING: 검토중, APPROVED: 승인, REJECTED: 거절)
-    @Column(name = "student_id_status", nullable = false)
+    // 학생증 심사 상태
     @Enumerated(EnumType.STRING)
+    @Column(name = "student_id_status", nullable = false)
     @Builder.Default
-    private StudentIdStatus studentIdStatus = StudentIdStatus.PENDING;
+    private StudentIdStatus studentIdStatus = StudentIdStatus.NONE;
 
     // 관리자 여부 (DB에서 직접 설정)
     @Column(name = "is_admin", nullable = false)
@@ -84,30 +89,6 @@ public class User {
     // FCM 푸시 알림 토큰 (앱 로그인 시 저장)
     @Column(name = "fcm_token", columnDefinition = "TEXT")
     private String fcmToken;
-
-    // 이메일 인증 여부
-    @Column(name = "email_verified", nullable = false)
-    @Builder.Default
-    private boolean emailVerified = false;
-
-    // 학생증 인증 여부
-    @Column(name = "student_id_verified", nullable = false)
-    @Builder.Default
-    private boolean studentIdVerified = false;
-
-    // 학생증 이미지 URL
-    @Column(name = "student_id_image_url")
-    private String studentIdImageUrl;
-
-    // 학생증 심사 상태
-    @Enumerated(EnumType.STRING)
-    @Column(name = "student_id_status", nullable = false)
-    @Builder.Default
-    private StudentIdStatus studentIdStatus = StudentIdStatus.NONE;
-
-    public enum StudentIdStatus {
-        NONE, PENDING, APPROVED, REJECTED
-    }
 
     @Column(nullable = false)
     @Builder.Default
@@ -135,6 +116,6 @@ public class User {
     }
 
     public enum StudentIdStatus {
-        PENDING, APPROVED, REJECTED
+        NONE, PENDING, APPROVED, REJECTED
     }
 }
