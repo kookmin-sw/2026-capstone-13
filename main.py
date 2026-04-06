@@ -85,6 +85,18 @@ async def azure_translate(request: Request):
     return {"success": True, "data": {"translated": translated}}
 
 
+# ── Gemini 전용 번역 (커뮤니티/채팅용) ───────────────────
+@app.post("/api/gemini/translate")
+async def gemini_translate(request: Request):
+    data = await request.json()
+    text = data.get("text", "")
+    target_lang = data.get("target_lang", "en")
+    source_lang = data.get("source_lang")
+
+    result = await translation_service._gemini_translate(text, target_lang, source_lang)
+    return {"success": True, "message": "Gemini 번역 완료", "data": result}
+
+
 # ── 번역 ──────────────────────────────────────────────────
 @app.post("/api/translate")
 async def translate(request: Request):
