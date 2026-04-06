@@ -92,8 +92,9 @@ async def gemini_translate(request: Request):
     text = data.get("text", "")
     target_lang = data.get("target_lang", "en")
     source_lang = data.get("source_lang")
+    context = data.get("context")  # 게시글 맥락 (선택)
 
-    result = await translation_service._gemini_translate(text, target_lang, source_lang)
+    result = await translation_service._gemini_translate(text, target_lang, source_lang, context)
     return {"success": True, "message": "Gemini 번역 완료", "data": result}
 
 
