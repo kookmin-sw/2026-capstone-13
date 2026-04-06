@@ -86,6 +86,7 @@ public class MealService {
                     if (meal.getMenu().equals(newMenu)) continue;
                     meal.setMenu(newMenu);
                     meal.getTranslations().clear();
+                    mealRepository.saveAndFlush(meal);
                     addTranslations(meal, translations, cafeteriaKo, cornerKo);
                     mealRepository.save(meal);
                     updatedCount++;
