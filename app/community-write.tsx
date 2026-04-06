@@ -9,7 +9,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../constants/colors';
-import { createCommunityPost, updateCommunityPost } from '../services/communityService';
+import { createCommunityPost, updateCommunityPost, uploadCommunityImage } from '../services/communityService';
 import { useAuthStore } from '../stores/authStore';
 import type { PostCategory } from '../types';
 
@@ -38,8 +38,9 @@ export default function CommunityWriteScreen() {
   const [title, setTitle] = useState(params.title ?? '');
   const [content, setContent] = useState(params.content ?? '');
   const [images, setImages] = useState<string[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
-  const isSubmitEnabled = selectedCategory !== null && title.trim().length > 0 && content.trim().length > 0;
+  const isSubmitEnabled = selectedCategory !== null && title.trim().length > 0 && content.trim().length > 0 && !uploadingImage;
 
   const handleAddImage = async () => {
     if (images.length >= MAX_IMAGES) {
@@ -58,7 +59,15 @@ export default function CommunityWriteScreen() {
           }
           const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
           if (!result.canceled && result.assets[0]) {
-            setImages((prev) => [...prev, result.assets[0].uri]);
+            try {
+              setUploadingImage(true);
+              const url = await uploadCommunityImage(result.assets[0].uri);
+              setImages((prev) => [...prev, url]);
+            } catch {
+              Alert.alert('오류', '이미지 업로드에 실패했습니다.');
+            } finally {
+              setUploadingImage(false);
+            }
           }
         },
       },
@@ -76,7 +85,15 @@ export default function CommunityWriteScreen() {
             quality: 0.8,
           });
           if (!result.canceled && result.assets[0]) {
-            setImages((prev) => [...prev, result.assets[0].uri]);
+            try {
+              setUploadingImage(true);
+              const url = await uploadCommunityImage(result.assets[0].uri);
+              setImages((prev) => [...prev, url]);
+            } catch {
+              Alert.alert('오류', '이미지 업로드에 실패했습니다.');
+            } finally {
+              setUploadingImage(false);
+            }
           }
         },
       },
