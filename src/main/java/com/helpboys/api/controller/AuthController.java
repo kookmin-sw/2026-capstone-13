@@ -11,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -34,17 +36,20 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("로그인 성공", response));
     }
 
-    // POST /api/auth/email/send-code - 이메일 인증 코드 발송
-    @PostMapping("/email/send-code")
-    public ResponseEntity<ApiResponse<Void>> sendEmailCode(@Valid @RequestBody EmailSendRequest request) {
-        emailService.sendVerificationCode(request.getEmail());
-        return ResponseEntity.ok(ApiResponse.success("인증 코드가 발송되었습니다. 10분 내에 입력해주세요.", null));
+    // POST /api/auth/send-code - 이메일 인증번호 발송
+    @PostMapping("/send-code")
+    public ResponseEntity<ApiResponse<String>> sendCode(@RequestBody Map<String, String> body) {
+        emailService.sendVerificationCode(body.get("email"));
+        return ResponseEntity.ok(ApiResponse.success("인증번호가 발송되었습니다.", null));
     }
 
-    // POST /api/auth/email/verify - 이메일 인증 코드 확인
-    @PostMapping("/email/verify")
-    public ResponseEntity<ApiResponse<Void>> verifyEmailCode(@Valid @RequestBody EmailVerifyRequest request) {
-        emailService.verifyCode(request.getEmail(), request.getCode());
+    // POST /api/auth/verify-code - 인증번호 확인
+    @PostMapping("/verify-code")
+    public ResponseEntity<ApiResponse<String>> verifyCode(@RequestBody Map<String, String> body) {
+        boolean ok = emailService.verifyCode(body.get("email"), body.get("code"));
+        if (!ok) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("인증번호가 올바르지 않거나 만료되었습니다."));
+        }
         return ResponseEntity.ok(ApiResponse.success("이메일 인증이 완료되었습니다.", null));
     }
 

@@ -26,8 +26,9 @@ public class UserResponse {
     private Integer helpCount;
     private String createdAt;
     private String preferredLanguage;
-    private String studentIdStatus;
     private boolean emailVerified;
+    private boolean studentIdVerified;
+    private String studentIdStatus;
 
     public static UserResponse from(User user) {
         return UserResponse.builder()
@@ -47,8 +48,9 @@ public class UserResponse {
                 .helpCount(user.getHelpCount())
                 .createdAt(user.getCreatedAt().toString())
                 .preferredLanguage(user.getPreferredLanguage())
-                .studentIdStatus(user.getStudentIdStatus().name())
                 .emailVerified(user.isEmailVerified())
+                .studentIdVerified(user.isStudentIdVerified())
+                .studentIdStatus(user.getStudentIdStatus().name())
                 .build();
     }
 }

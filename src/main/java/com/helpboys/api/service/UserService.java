@@ -50,12 +50,12 @@ public class UserService implements UserDetailsService {
     // 회원가입 (이메일 인증 완료 + 학생증 이미지 필요)
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        // 이메일 중복 확인
+        if (!request.getEmail().contains(".ac.kr")) {
+            throw new BusinessException("학교 이메일(.ac.kr)만 허용됩니다.");
+        }
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("이미 사용 중인 이메일입니다.");
         }
-
-        // 이메일 인증 완료 여부 확인
         if (!emailService.isVerified(request.getEmail())) {
             throw new BusinessException("이메일 인증을 완료해주세요.");
         }
@@ -73,10 +73,7 @@ public class UserService implements UserDetailsService {
                 .build();
 
         UserResponse response = UserResponse.from(userRepository.save(user));
-
-        // 이메일 인증 정보 정리
         emailService.deleteVerification(request.getEmail());
-
         return response;
     }
 
@@ -89,7 +86,6 @@ public class UserService implements UserDetailsService {
             throw new BusinessException("이메일 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED);
         }
 
-        // 학생증 인증 상태 확인
         if (user.getStudentIdStatus() == User.StudentIdStatus.PENDING) {
             throw new BusinessException("학생증 검토 중입니다. 승인 후 로그인 가능합니다.", HttpStatus.FORBIDDEN);
         }
@@ -118,20 +114,17 @@ public class UserService implements UserDetailsService {
         }
     }
 
-    // 사용자 조회 (이메일)
-    public User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
+    // 학생증 URL 저장 (심사 대기 상태로)
+    @Transactional
+    public void uploadStudentId(Long userId, String imageUrl) {
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        user.setStudentIdImageUrl(imageUrl);
+        user.setStudentIdStatus(User.StudentIdStatus.PENDING);
+        userRepository.save(user);
     }
 
-    // 사용자 조회 (ID)
-    public UserResponse getUserById(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-        return UserResponse.from(user);
-    }
-
-    // 학생증 검토 대기 목록 조회 (관리자용)
+    // 학생증 검토 대기 목록 (관리자용)
     public List<UserResponse> getPendingStudentIds() {
         return userRepository.findByStudentIdStatus(User.StudentIdStatus.PENDING)
                 .stream()
@@ -144,6 +137,7 @@ public class UserService implements UserDetailsService {
     public void approveStudentId(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        user.setStudentIdVerified(true);
         user.setStudentIdStatus(User.StudentIdStatus.APPROVED);
         userRepository.save(user);
     }
@@ -153,8 +147,30 @@ public class UserService implements UserDetailsService {
     public void rejectStudentId(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        user.setStudentIdVerified(false);
         user.setStudentIdStatus(User.StudentIdStatus.REJECTED);
         userRepository.save(user);
+    }
+
+    // 이메일로 사용자 조회 (관리자 체크용)
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+    }
+
+    // 사용자 조회 (ID)
+    public UserResponse getUserById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        return UserResponse.from(user);
+    }
+
+    // 한국인 유저 목록 조회
+    public List<UserResponse> getKoreanUsers() {
+        return userRepository.findByUserType(User.UserType.KOREAN)
+                .stream()
+                .map(UserResponse::from)
+                .collect(Collectors.toList());
     }
 
     // 자기소개 수정
@@ -166,7 +182,7 @@ public class UserService implements UserDetailsService {
         return UserResponse.from(userRepository.save(user));
     }
 
-    // 프로필 상세 수정 (bio, gender, age, major, mbti, hobbies)
+    // 프로필 상세 수정
     @Transactional
     public UserResponse updateProfile(Long userId, Map<String, String> body) {
         User user = userRepository.findById(userId)
@@ -191,7 +207,7 @@ public class UserService implements UserDetailsService {
         return UserResponse.from(userRepository.save(user));
     }
 
-    // FCM 토큰 저장 (앱 로그인/포그라운드 진입 시 호출)
+    // FCM 토큰 저장
     @Transactional
     public void updateFcmToken(Long userId, String fcmToken) {
         User user = userRepository.findById(userId)
