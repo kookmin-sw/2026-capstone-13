@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getCommunityPost, addCommunityComment, toggleCommunityLike, updateCommunityPost, deleteCommunityPost, deleteCommunityComment, translateCommunityPost, type CommunityPostDetailDto, type PostCommentDto } from '../services/communityService';
+import { getCommunityPost, addCommunityComment, toggleCommunityLike, updateCommunityPost, deleteCommunityPost, deleteCommunityComment, translateCommunityPost, translateCommunityComment, type CommunityPostDetailDto, type PostCommentDto } from '../services/communityService';
 import { useAuthStore } from '../stores/authStore';
 
 const BLUE    = '#3B6FE8';
@@ -61,6 +61,8 @@ export default function CommunityPostScreen() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [translation, setTranslation] = useState<{ title: string; content: string } | null>(null);
   const [translating, setTranslating] = useState(false);
+  const [commentTranslations, setCommentTranslations] = useState<Record<number, string>>({});
+  const [translatingComments, setTranslatingComments] = useState<Record<number, boolean>>({});
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -182,6 +184,24 @@ export default function CommunityPostScreen() {
       }
     } catch {
       // ignore
+    }
+  };
+
+  const handleTranslateComment = async (commentId: number) => {
+    if (commentTranslations[commentId] !== undefined) {
+      setCommentTranslations((prev) => { const next = { ...prev }; delete next[commentId]; return next; });
+      return;
+    }
+    setTranslatingComments((prev) => ({ ...prev, [commentId]: true }));
+    try {
+      const res = await translateCommunityComment(commentId);
+      if (res.success && res.data) {
+        setCommentTranslations((prev) => ({ ...prev, [commentId]: res.data.content }));
+      }
+    } catch (e) {
+      Alert.alert('번역 실패', '잠시 후 다시 시도해주세요.');
+    } finally {
+      setTranslatingComments((prev) => ({ ...prev, [commentId]: false }));
     }
   };
 
@@ -350,7 +370,21 @@ export default function CommunityPostScreen() {
                       </TouchableOpacity>
                     )}
                   </View>
-                  <Text style={s.commentContent}>{c.content}</Text>
+                  <Text style={s.commentContent}>
+                    {commentTranslations[c.id] !== undefined ? commentTranslations[c.id] : c.content}
+                  </Text>
+                  <TouchableOpacity
+                    style={s.commentTranslateBtn}
+                    onPress={() => handleTranslateComment(c.id)}
+                    disabled={translatingComments[c.id]}
+                  >
+                    {translatingComments[c.id]
+                      ? <ActivityIndicator size="small" color={BLUE} />
+                      : <Text style={[s.commentTranslateText, commentTranslations[c.id] !== undefined && s.commentTranslateTextActive]}>
+                          {commentTranslations[c.id] !== undefined ? '원문 보기' : '번역 보기'}
+                        </Text>
+                    }
+                  </TouchableOpacity>
                 </View>
               </View>
             ))
@@ -480,6 +514,9 @@ const s = StyleSheet.create({
   commentDeleteBtn: { marginLeft: 'auto' },
   commentDeleteText: { fontSize: 10, color: '#EF4444', fontWeight: '600' },
   commentContent: { fontSize: 13, color: T1, lineHeight: 19 },
+  commentTranslateBtn: { marginTop: 4, alignSelf: 'flex-start' },
+  commentTranslateText: { fontSize: 11, color: T2, fontWeight: '600' },
+  commentTranslateTextActive: { color: BLUE },
   moreBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: BLUE_L, justifyContent: 'center', alignItems: 'center',
