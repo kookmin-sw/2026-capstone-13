@@ -656,9 +656,11 @@ export default function ChatRoomScreen() {
           data={[...listData].reverse()}
           inverted
           renderItem={renderItem}
-          keyExtractor={(item) =>
-            'type' in item ? item.id : `${item.senderId}-${item.createdAt}-${item.content.slice(0, 8)}`
-          }
+          keyExtractor={(item) => {
+            if ('type' in item) return item.id;
+            if (item.id != null) return String(item.id);
+            return `${item.senderId}-${item.createdAt}-${item.content}`;
+          }}
           contentContainerStyle={[
             styles.messageList,
             listData.length <= 1 && styles.messageListEmpty,
