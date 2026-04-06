@@ -163,10 +163,20 @@ Respond ONLY with the explanation or "null". No extra text."""
                 return await self._gemini_translate(text, target_lang, source_lang)
             return self._dummy_translate(text, target_lang, source_lang)
 
-    async def _gemini_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
+    async def _gemini_translate(self, text: str, target_lang: str, source_lang: Optional[str], context: Optional[str] = None):
         """Gemini API로 자연스러운 번역"""
         lang_name = LANG_NAMES.get(target_lang, target_lang)
-        prompt = f"""Translate this text into natural, colloquial {lang_name}.
+        if context:
+            prompt = f"""Translate this comment into natural, colloquial {lang_name}.
+The comment is from a community post. Use the post context below to understand the nuance and translate accordingly.
+Return ONLY the translation.
+
+Post context:
+{context}
+
+Comment to translate: {text}"""
+        else:
+            prompt = f"""Translate this text into natural, colloquial {lang_name}.
 If it's a chat message, make it sound like a native speaker's chat.
 Return ONLY the translation.
 
