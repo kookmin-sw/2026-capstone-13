@@ -139,6 +139,16 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.success("번역 완료", communityService.translatePost(id, langCode)));
     }
 
+    // GET /api/community/comments/{commentId}/translate - 댓글 번역
+    @GetMapping("/comments/{commentId}/translate")
+    public ResponseEntity<ApiResponse<Map<String, String>>> translateComment(
+            @PathVariable Long commentId,
+            @RequestParam(required = false) String lang,
+            @RequestHeader("Authorization") String token) {
+        String langCode = resolveLang(lang, token);
+        return ResponseEntity.ok(ApiResponse.success("번역 완료", communityService.translateComment(commentId, langCode)));
+    }
+
     // GET /api/community/search?keyword=... - 게시글 검색
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<Page<CommunityPostResponse>>> searchPosts(
