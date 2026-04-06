@@ -9,18 +9,20 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:helpboys1234}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-  # 이메일 (Gmail SMTP)
+  # 이메일 (Gmail SMTP SSL)
   mail:
     host: smtp.gmail.com
-    port: 587
+    port: 465
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
           auth: true
-          starttls:
+          ssl:
             enable: true
+          starttls:
+            enable: false
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000
