@@ -1,9 +1,11 @@
 package com.helpboys.api.controller;
 
+import com.cloudinary.Cloudinary;
 import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.CommunityPostRequest;
 import com.helpboys.api.dto.CommunityPostResponse;
 import com.helpboys.api.dto.PostCommentResponse;
+import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.service.CommunityService;
 import com.helpboys.api.util.JwtUtil;
@@ -11,9 +13,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Map;
 
 @RestController
@@ -24,6 +29,25 @@ public class CommunityController {
     private final CommunityService communityService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final Cloudinary cloudinary;
+
+    // POST /api/community/upload - 게시글 이미지 Cloudinary 업로드
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("Authorization") String token) {
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    Map.of("folder", "community")
+            );
+            String url = (String) result.get("secure_url");
+            return ResponseEntity.ok(ApiResponse.success("업로드 완료", Map.of("url", url)));
+        } catch (IOException e) {
+            throw new BusinessException("이미지 업로드에 실패했습니다.");
+        }
+    }
 
     // GET /api/community - 게시글 목록
     @GetMapping
