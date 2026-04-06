@@ -69,7 +69,6 @@ public class UserService implements UserDetailsService {
                 .major(request.getMajor())
                 .emailVerified(true)
                 .studentIdImageUrl(request.getStudentIdImageUrl())
-                .studentIdStatus(User.StudentIdStatus.PENDING)
                 .build();
 
         UserResponse response = UserResponse.from(userRepository.save(user));
@@ -84,13 +83,6 @@ public class UserService implements UserDetailsService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BusinessException("이메일 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED);
-        }
-
-        if (user.getStudentIdStatus() == User.StudentIdStatus.PENDING) {
-            throw new BusinessException("학생증 검토 중입니다. 승인 후 로그인 가능합니다.", HttpStatus.FORBIDDEN);
-        }
-        if (user.getStudentIdStatus() == User.StudentIdStatus.REJECTED) {
-            throw new BusinessException("학생증 인증이 거절되었습니다. 고객센터에 문의해주세요.", HttpStatus.FORBIDDEN);
         }
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getId());
