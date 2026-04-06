@@ -17,6 +17,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -192,7 +193,7 @@ public class MealService {
      */
     @Transactional(readOnly = true)
     public List<MealResponse> getTodayMeals(String langCode) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         List<Meal> meals = mealRepository.findByMealDateWithTranslations(today);
         return meals.stream()
                 .map(m -> MealResponse.from(m, langCode))
