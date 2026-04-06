@@ -50,6 +50,12 @@ Your goal is to provide natural, casual, and context-aware translations.
 - Maintain the tone: If the source is casual/slang, the translation should be casual/slang.
 - Handle profanity naturally: Translate Korean swear words (ㅅㅂ, 존나) into appropriate equivalents (damn, freaking, etc.).
 - Context: These are university students chatting. Make it sound like a real Gen Z conversation.
+- CRITICAL: Korean university cafeteria and building names must NEVER be translated into common nouns. Always romanize or keep as proper nouns. Examples:
+  - '한울식당' → "Hanul Cafeteria" (NOT "one cafeteria" or just "cafeteria")
+  - '복지관' → "Bokjigwan" (NOT "welfare hall" or "welfare center")
+  - '북악관' → "Bugak Hall" (NOT "north mountain hall")
+  - '교직원식당' → "Faculty Cafeteria" (NOT "teacher cafeteria")
+  - '생활관' → "Dormitory Cafeteria" (NOT "living hall")
 """
         gemini_key = os.getenv("GEMINI_API_KEY")
         if gemini_key:
