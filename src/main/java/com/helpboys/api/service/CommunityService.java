@@ -228,13 +228,33 @@ public class CommunityService {
         return Map.of("title", translatedTitle, "content", translatedContent, "langCode", langCode);
     }
 
-    // 댓글 번역 (캐시 없이 매번 AI 서버 호출)
+    // 댓글 번역 (게시글 맥락 포함)
     @Transactional(readOnly = true)
     public Map<String, String> translateComment(Long commentId, String langCode) {
         PostComment comment = postCommentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException("댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-        String translatedContent = callTranslate(comment.getContent(), langCode);
+        CommunityPost post = comment.getPost();
+        String context = post.getTitle() + "\n" + post.getContent();
+        String translatedContent = callTranslateWithContext(comment.getContent(), langCode, context);
         return Map.of("content", translatedContent, "langCode", langCode);
+    }
+
+    private String callTranslateWithContext(String text, String langCode, String context) {
+        try {
+            String body = objectMapper.writeValueAsString(
+                    Map.of("text", text, "target_lang", langCode, "context", context));
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                    .header("Content-Type", "application/json")
+                    .timeout(java.time.Duration.ofSeconds(30))
+                    .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            JsonNode result = objectMapper.readTree(resp.body());
+            return result.path("data").path("translated").asText(text);
+        } catch (Exception e) {
+            log.warn("[번역] 실패: {}", e.getMessage());
+            return text;
+        }
     }
 
     private String callTranslate(String text, String langCode) {
