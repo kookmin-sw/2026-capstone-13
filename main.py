@@ -24,6 +24,27 @@ app.add_middleware(
 
 SUPPORTED_LANGUAGES = ["en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru"]
 
+# 식당 고유명사 교정 매핑 (Azure 번역 오류 수정)
+CAFETERIA_NAME_CORRECTIONS = {
+    "en": {
+        "Hanul Restaurant": "Hanul Cafeteria",
+        "One Restaurant": "Hanul Cafeteria",
+        "Hanul Dining": "Hanul Cafeteria",
+        "Faculty Restaurant": "Faculty Cafeteria",
+        "Teacher Restaurant": "Faculty Cafeteria",
+        "Student Restaurant": "Student Cafeteria",
+        "Dormitory Restaurant": "Dormitory Cafeteria",
+        "Living Hall Restaurant": "Dormitory Cafeteria",
+    }
+}
+
+def _correct_cafeteria_name(name: str, lang: str) -> str:
+    corrections = CAFETERIA_NAME_CORRECTIONS.get(lang, {})
+    for wrong, right in corrections.items():
+        if wrong.lower() in name.lower():
+            return name.lower().replace(wrong.lower(), right)
+    return name
+
 
 # ── 헬스체크 ──────────────────────────────────────────────
 @app.get("/")
@@ -206,7 +227,7 @@ async def crawl_meals():
                 cor_map  = {t["to"]: t["text"] for t in data[1]["translations"]}
                 menu_map = {t["to"]: t["text"] for t in data[2]["translations"]}
                 translations = {
-                    lang: {"cafeteria": caf_map.get(lang, meal["cafeteria"]),
+                    lang: {"cafeteria": _correct_cafeteria_name(caf_map.get(lang, meal["cafeteria"]), lang),
                            "corner":    cor_map.get(lang, meal["corner"]),
                            "menu":      menu_map.get(lang, meal["menu"])}
                     for lang in SUPPORTED_LANGUAGES
