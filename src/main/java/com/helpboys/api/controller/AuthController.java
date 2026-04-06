@@ -1,8 +1,11 @@
 package com.helpboys.api.controller;
 
 import com.helpboys.api.dto.*;
+import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.service.EmailService;
 import com.helpboys.api.service.UserService;
+import com.helpboys.api.util.RateLimiter;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +23,7 @@ public class AuthController {
 
     private final UserService userService;
     private final EmailService emailService;
+    private final RateLimiter rateLimiter;
 
     // POST /api/auth/register - 회원가입
     @PostMapping("/register")
@@ -29,17 +33,30 @@ public class AuthController {
                 .body(ApiResponse.success("회원가입이 완료되었습니다. 학생증 검토 후 로그인 가능합니다.", user));
     }
 
-    // POST /api/auth/login - 로그인
+    // POST /api/auth/login - 로그인 (분당 10회 제한)
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
+        String key = "login:" + request.getEmail();
+        if (!rateLimiter.isAllowed(key, 10, 60)) {
+            throw new BusinessException("로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.", HttpStatus.TOO_MANY_REQUESTS);
+        }
         LoginResponse response = userService.login(request);
         return ResponseEntity.ok(ApiResponse.success("로그인 성공", response));
     }
 
-    // POST /api/auth/send-code - 이메일 인증번호 발송
+    // POST /api/auth/send-code - 이메일 인증번호 발송 (분당 3회 제한)
     @PostMapping("/send-code")
-    public ResponseEntity<ApiResponse<String>> sendCode(@RequestBody Map<String, String> body) {
-        emailService.sendVerificationCode(body.get("email"));
+    public ResponseEntity<ApiResponse<String>> sendCode(
+            @RequestBody Map<String, String> body,
+            HttpServletRequest httpRequest) {
+        String email = body.get("email");
+        String key = "send-code:" + email;
+        if (!rateLimiter.isAllowed(key, 3, 60)) {
+            throw new BusinessException("인증번호 요청이 너무 많습니다. 1분 후 다시 시도해주세요.", HttpStatus.TOO_MANY_REQUESTS);
+        }
+        emailService.sendVerificationCode(email);
         return ResponseEntity.ok(ApiResponse.success("인증번호가 발송되었습니다.", null));
     }
 

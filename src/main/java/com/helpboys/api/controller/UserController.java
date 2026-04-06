@@ -12,13 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
@@ -87,17 +82,13 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("FCM 토큰 저장 완료", null));
     }
 
-    // POST /api/users/profile-image - 프로필 이미지 업로드
+    // POST /api/users/profile-image - 프로필 이미지 업로드 (Cloudinary)
     @PostMapping("/profile-image")
     public ResponseEntity<ApiResponse<UserResponse>> uploadProfileImage(
             @RequestParam("image") MultipartFile file,
-            @RequestHeader("Authorization") String token) throws IOException {
+            @RequestHeader("Authorization") String token) {
         Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
-        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-        Path uploadDir = Paths.get("uploads");
-        Files.createDirectories(uploadDir);
-        Files.copy(file.getInputStream(), uploadDir.resolve(fileName));
-        String imageUrl = "/uploads/" + fileName;
+        String imageUrl = userService.uploadImage(file, "profile-images");
         return ResponseEntity.ok(ApiResponse.success("업로드 완료", userService.updateProfileImage(userId, imageUrl)));
     }
 

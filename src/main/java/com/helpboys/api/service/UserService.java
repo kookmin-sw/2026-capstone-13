@@ -92,18 +92,23 @@ public class UserService implements UserDetailsService {
                 .build();
     }
 
-    // 학생증 이미지 Cloudinary 업로드
-    public String uploadStudentIdImage(MultipartFile file) {
+    // 이미지 Cloudinary 업로드 (공통)
+    public String uploadImage(MultipartFile file, String folder) {
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> result = cloudinary.uploader().upload(
                     file.getBytes(),
-                    Map.of("folder", "student-ids")
+                    Map.of("folder", folder)
             );
             return (String) result.get("secure_url");
         } catch (IOException e) {
             throw new BusinessException("이미지 업로드에 실패했습니다.");
         }
+    }
+
+    // 학생증 이미지 Cloudinary 업로드
+    public String uploadStudentIdImage(MultipartFile file) {
+        return uploadImage(file, "student-ids");
     }
 
     // 학생증 URL 저장 (심사 대기 상태로)
