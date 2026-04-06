@@ -19,11 +19,11 @@ public interface NoticeRepository extends JpaRepository<Notice, Long> {
     @Query("SELECT DISTINCT n FROM Notice n LEFT JOIN FETCH n.translations WHERE n.categoryId = :categoryId ORDER BY n.pubDate DESC NULLS LAST, n.createdAt DESC")
     List<Notice> findByCategoryIdOrderByPubDateDescCreatedAtDesc(@Param("categoryId") String categoryId);
 
-    @Query(value = "SELECT n FROM Notice n ORDER BY n.pubDate DESC NULLS LAST, n.createdAt DESC",
+    @Query(value = "SELECT n FROM Notice n ORDER BY n.createdAt DESC",
            countQuery = "SELECT COUNT(n) FROM Notice n")
     Page<Notice> findAllPaged(Pageable pageable);
 
-    @Query(value = "SELECT n FROM Notice n WHERE n.categoryId = :categoryId ORDER BY n.pubDate DESC NULLS LAST, n.createdAt DESC",
+    @Query(value = "SELECT n FROM Notice n WHERE n.categoryId = :categoryId ORDER BY n.createdAt DESC",
            countQuery = "SELECT COUNT(n) FROM Notice n WHERE n.categoryId = :categoryId")
     Page<Notice> findByCategoryIdPaged(@Param("categoryId") String categoryId, Pageable pageable);
 
