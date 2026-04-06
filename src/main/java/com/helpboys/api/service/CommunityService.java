@@ -242,7 +242,7 @@ public class CommunityService {
             String body = objectMapper.writeValueAsString(
                     Map.of("text", text, "target_lang", langCode));
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(aiServerUrl + "/api/translate"))
+                    .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
                     .header("Content-Type", "application/json")
                     .timeout(java.time.Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
