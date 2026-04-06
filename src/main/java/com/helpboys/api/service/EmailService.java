@@ -29,10 +29,13 @@ public class EmailService {
     /**
      * 인증번호 발송 (ac.kr 도메인만 허용)
      */
+    @Transactional
     public void sendVerificationCode(String email) {
         if (!email.contains(".ac.kr")) {
             throw new IllegalArgumentException("학교 이메일(.ac.kr)만 허용됩니다.");
         }
+
+        verificationRepository.deleteByEmail(email);
 
         String code = String.format("%06d", new Random().nextInt(1000000));
 
@@ -82,7 +85,7 @@ public class EmailService {
 
     // 해당 이메일이 인증 완료됐는지 확인 (register 시 체크용)
     public boolean isVerified(String email) {
-        return verificationRepository.findByEmail(email)
+        return verificationRepository.findTopByEmailOrderByCreatedAtDesc(email)
                 .map(EmailVerification::isUsed)
                 .orElse(false);
     }
