@@ -82,7 +82,7 @@ public class ChatService {
                             java.util.Map.of("text", content, "target_lang", targetLang)
                     );
                     HttpRequest translateRequest = HttpRequest.newBuilder()
-                            .uri(URI.create(aiServerUrl + "/api/translate"))
+                            .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
                             .header("Content-Type", "application/json")
                             .timeout(java.time.Duration.ofSeconds(10))
                             .POST(HttpRequest.BodyPublishers.ofString(translateBody))
@@ -340,7 +340,7 @@ public class ChatService {
                         java.util.Map.of("text", recognizedText, "target_lang", targetLang, "source_lang", detectedLanguage)
                 );
                 HttpRequest translateRequest = HttpRequest.newBuilder()
-                        .uri(URI.create(aiServerUrl + "/api/translate"))
+                        .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(translateBody))
                         .build();
@@ -402,7 +402,7 @@ public class ChatService {
             String body = objectMapper.writeValueAsString(
                     java.util.Map.of("text", message.getContent(), "target_lang", targetLang));
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(aiServerUrl + "/api/translate"))
+                    .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
                     .header("Content-Type", "application/json")
                     .timeout(java.time.Duration.ofSeconds(15))
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
