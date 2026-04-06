@@ -125,13 +125,30 @@ async def crawl_notices():
         result = []
         for notice in raw_notices:
             title_ko = notice["title"]
-            translations = {}
-            for lang in SUPPORTED_LANGUAGES:
-                try:
-                    translated = await translation_service.azure_translate_text(title_ko, lang, "ko")
-                    translations[lang] = translated
-                except Exception:
-                    translations[lang] = title_ko
+            # 10개 언어를 한 번에 요청
+            try:
+                headers = {
+                    "Ocp-Apim-Subscription-Key": translation_service.azure_key,
+                    "Ocp-Apim-Subscription-Region": translation_service.azure_region,
+                    "Content-Type": "application/json",
+                }
+                import requests as req_lib, uuid
+                params = {"api-version": "3.0", "from": "ko", "to": SUPPORTED_LANGUAGES}
+                resp = await asyncio.to_thread(
+                    lambda: req_lib.post(
+                        "https://api.cognitive.microsofttranslator.com/translate",
+                        headers={**headers, "X-ClientTraceId": str(uuid.uuid4())},
+                        params=params,
+                        json=[{"text": title_ko}],
+                        timeout=10,
+                    )
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                translations = {t["to"]: t["text"] for t in data[0]["translations"]}
+            except Exception:
+                translations = {lang: title_ko for lang in SUPPORTED_LANGUAGES}
+            await asyncio.sleep(0.3)
             result.append({
                 "title_ko": title_ko,
                 "translations": translations,
@@ -153,19 +170,40 @@ async def crawl_meals():
         result = []
         for meal in raw_meals:
             translations = {}
-            for lang in SUPPORTED_LANGUAGES:
-                try:
-                    translated_cafeteria = await translation_service.azure_translate_text(meal["cafeteria"], lang, "ko")
-                    translated_corner    = await translation_service.azure_translate_text(meal["corner"], lang, "ko")
-                    translations[lang] = {
-                        "cafeteria": translated_cafeteria,
-                        "corner":    translated_corner,
-                    }
-                except Exception:
-                    translations[lang] = {
-                        "cafeteria": meal["cafeteria"],
-                        "corner":    meal["corner"],
-                    }
+            try:
+                import requests as req_lib, uuid
+                headers = {
+                    "Ocp-Apim-Subscription-Key": translation_service.azure_key,
+                    "Ocp-Apim-Subscription-Region": translation_service.azure_region,
+                    "Content-Type": "application/json",
+                }
+                params = {"api-version": "3.0", "from": "ko", "to": SUPPORTED_LANGUAGES}
+                resp = await asyncio.to_thread(
+                    lambda: req_lib.post(
+                        "https://api.cognitive.microsofttranslator.com/translate",
+                        headers={**headers, "X-ClientTraceId": str(uuid.uuid4())},
+                        params=params,
+                        json=[{"text": meal["cafeteria"]}, {"text": meal["corner"]}, {"text": meal["menu"]}],
+                        timeout=10,
+                    )
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                caf_map  = {t["to"]: t["text"] for t in data[0]["translations"]}
+                cor_map  = {t["to"]: t["text"] for t in data[1]["translations"]}
+                menu_map = {t["to"]: t["text"] for t in data[2]["translations"]}
+                translations = {
+                    lang: {"cafeteria": caf_map.get(lang, meal["cafeteria"]),
+                           "corner":    cor_map.get(lang, meal["corner"]),
+                           "menu":      menu_map.get(lang, meal["menu"])}
+                    for lang in SUPPORTED_LANGUAGES
+                }
+            except Exception:
+                translations = {
+                    lang: {"cafeteria": meal["cafeteria"], "corner": meal["corner"], "menu": meal["menu"]}
+                    for lang in SUPPORTED_LANGUAGES
+                }
+            await asyncio.sleep(0.3)
             result.append({
                 "cafeteria_ko": meal["cafeteria"],
                 "corner_ko":    meal["corner"],
