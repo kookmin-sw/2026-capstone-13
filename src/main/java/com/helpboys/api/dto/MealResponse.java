@@ -29,6 +29,7 @@ public class MealResponse {
 
         String cafeteria = (t != null) ? t.getCafeteria() : meal.getCafeteria();
         String corner    = (t != null) ? t.getCorner()    : meal.getCorner();
+        String menu      = (t != null && t.getMenu() != null) ? t.getMenu() : meal.getMenu();
 
         return MealResponse.builder()
                 .id(meal.getId())
@@ -37,7 +38,7 @@ public class MealResponse {
                 .corner(corner)
                 .cafeteriaKo(meal.getCafeteria())
                 .cornerKo(meal.getCorner())
-                .menu(meal.getMenu())
+                .menu(menu)
                 .build();
     }
 }

@@ -116,11 +116,13 @@ public class MealService {
         List<MealTranslation> translationList = new ArrayList<>();
         translations.fields().forEachRemaining(entry -> {
             JsonNode t = entry.getValue();
+            String menuTranslated = t.path("menu").asText(null);
             translationList.add(MealTranslation.builder()
                     .meal(meal)
                     .langCode(entry.getKey())
                     .cafeteria(t.path("cafeteria").asText(cafeteriaKo))
                     .corner(t.path("corner").asText(cornerKo))
+                    .menu(menuTranslated)
                     .build());
         });
         meal.getTranslations().addAll(translationList);
@@ -177,9 +179,20 @@ public class MealService {
                 String translatedCor = objectMapper.readTree(corResp.body())
                         .path("data").path("translated").asText(meal.getCorner());
 
+                String menuBody = objectMapper.writeValueAsString(
+                        Map.of("text", meal.getMenu(), "target_lang", lang, "source_lang", "ko"));
+                HttpRequest menuReq = HttpRequest.newBuilder()
+                        .uri(URI.create(aiServerUrl + "/api/azure/translate"))
+                        .header("Content-Type", "application/json")
+                        .timeout(java.time.Duration.ofSeconds(15))
+                        .POST(HttpRequest.BodyPublishers.ofString(menuBody)).build();
+                HttpResponse<String> menuResp = httpClient.send(menuReq, HttpResponse.BodyHandlers.ofString());
+                String translatedMenu = objectMapper.readTree(menuResp.body())
+                        .path("data").path("translated").asText(meal.getMenu());
+
                 meal.getTranslations().add(MealTranslation.builder()
                         .meal(meal).langCode(lang)
-                        .cafeteria(translatedCaf).corner(translatedCor)
+                        .cafeteria(translatedCaf).corner(translatedCor).menu(translatedMenu)
                         .build());
             } catch (Exception e) {
                 log.warn("[식단 재번역] id={} {} 언어 실패: {}", mealId, lang, e.getMessage());

@@ -228,6 +228,15 @@ public class CommunityService {
         return Map.of("title", translatedTitle, "content", translatedContent, "langCode", langCode);
     }
 
+    // 댓글 번역 (캐시 없이 매번 AI 서버 호출)
+    @Transactional(readOnly = true)
+    public Map<String, String> translateComment(Long commentId, String langCode) {
+        PostComment comment = postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new BusinessException("댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        String translatedContent = callTranslate(comment.getContent(), langCode);
+        return Map.of("content", translatedContent, "langCode", langCode);
+    }
+
     private String callTranslate(String text, String langCode) {
         try {
             String body = objectMapper.writeValueAsString(

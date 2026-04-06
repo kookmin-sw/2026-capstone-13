@@ -30,4 +30,7 @@ public class MealTranslation {
 
     @Column(nullable = false)
     private String corner;
+
+    @Column(columnDefinition = "TEXT")
+    private String menu;
 }
