@@ -113,15 +113,26 @@ public class UserController {
 
     // PATCH /api/users/{id}/student-id/approve - 학생증 승인 (어드민용)
     @PatchMapping("/{id}/student-id/approve")
-    public ResponseEntity<ApiResponse<String>> approveStudentId(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> approveStudentId(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token) {
+        checkAdmin(token);
         userService.approveStudentId(id);
         return ResponseEntity.ok(ApiResponse.success("학생증 인증이 승인되었습니다.", null));
     }
 
     // PATCH /api/users/{id}/student-id/reject - 학생증 거절 (어드민용)
     @PatchMapping("/{id}/student-id/reject")
-    public ResponseEntity<ApiResponse<String>> rejectStudentId(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<String>> rejectStudentId(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token) {
+        checkAdmin(token);
         userService.rejectStudentId(id);
         return ResponseEntity.ok(ApiResponse.success("학생증 인증이 거절되었습니다.", null));
+    }
+
+    private void checkAdmin(String bearerToken) {
+        Long userId = jwtUtil.extractUserId(bearerToken.replace("Bearer ", ""));
+        userService.checkAdmin(userId);
     }
 }

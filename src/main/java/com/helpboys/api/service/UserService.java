@@ -144,6 +144,15 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
+    // 어드민 권한 확인
+    public void checkAdmin(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        if (!user.isAdmin()) {
+            throw new BusinessException("관리자 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+    }
+
     // 이메일로 사용자 조회 (관리자 체크용)
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
