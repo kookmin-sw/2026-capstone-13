@@ -1,12 +1,20 @@
 // 커뮤니티 화면 - HelloTalk 피드 스타일
-import { useCallback, useState, useRef } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
-  ScrollView, RefreshControl, Image, Platform, TextInput, ActivityIndicator,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Image, Platform,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { getCommunityPosts, type CommunityPostDto } from '../../services/communityService';
 import type { PostCategory } from '../../types';
 
@@ -21,13 +29,13 @@ const T2       = '#6B7A99';
 const T3       = '#6B9DF0';
 const BG       = '#F4F6FB';
 
-type FilterCategory = 'ALL' | PostCategory;
+type FilterCategory = 'ALL' | 'HOT' | PostCategory;
 
 const CATEGORY_FILTERS: { key: FilterCategory; label: string }[] = [
-  { key: 'ALL',      label: '전체'    },
-  { key: 'INFO',     label: '정보공유' },
+  { key: 'ALL',      label: '최신'    },
+  { key: 'HOT',      label: '추천'    },
   { key: 'QUESTION', label: '질문'    },
-  { key: 'CHAT',     label: '잡담'    },
+  { key: 'CHAT',     label: '자유'    },
   { key: 'CULTURE',  label: '문화교류' },
 ];
 
@@ -177,6 +185,23 @@ function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => vo
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* ── 댓글 미리보기 ── */}
+      {item.commentList && item.commentList.length > 0 && (
+        <View style={s.commentPreview}>
+          {item.commentList.map((c) => (
+            <View key={c.id} style={s.commentPreviewItem}>
+              <Text style={s.commentPreviewAuthor}>{c.author}</Text>
+              <Text style={s.commentPreviewContent} numberOfLines={1}>{c.content}</Text>
+            </View>
+          ))}
+          {item.comments > 3 && (
+            <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+              <Text style={s.commentPreviewMore}>모든 {item.comments} 코멘트 보기</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -192,6 +217,7 @@ export default function CommunityScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<SearchMode>('title');
   const searchInputRef = useRef<TextInput>(null);
+  const HEADER_HEIGHT = Platform.OS === 'ios' ? 160 : 125;
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -221,7 +247,9 @@ export default function CommunityScreen() {
 
   const categoryFiltered = selectedCategory === 'ALL'
     ? posts
-    : posts.filter((p) => p.category === (selectedCategory as PostCategory));
+    : selectedCategory === 'HOT'
+      ? posts.filter((p) => p.likes >= 30)
+      : posts.filter((p) => p.category === (selectedCategory as PostCategory));
 
   const filteredPosts = searchQuery.trim()
     ? categoryFiltered.filter((p) => {
@@ -240,86 +268,15 @@ export default function CommunityScreen() {
 
   return (
     <View style={s.container}>
-      {/* 상단 여백 */}
-      <View style={s.topSpacer} />
-
-      {/* 검색 바 */}
-      {searchVisible && (
-        <View style={s.searchWrap}>
-          <View style={s.searchBar}>
-            <Ionicons name="search-outline" size={14} color={BLUE_MID} />
-            <TextInput
-              ref={searchInputRef}
-              style={s.searchInput}
-              placeholder="검색어를 입력하세요"
-              placeholderTextColor={BLUE_MID}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={14} color={BLUE_MID} />
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity style={s.searchCancel} onPress={closeSearch}>
-            <Text style={s.searchCancelText}>취소</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* 검색 모드 선택 */}
-      {searchVisible && (
-        <View style={s.searchModeRow}>
-          <TouchableOpacity
-            style={[s.modeChip, searchMode === 'title' && s.modeChipOn]}
-            onPress={() => setSearchMode('title')}
-          >
-            <Text style={[s.modeChipText, searchMode === 'title' && s.modeChipTextOn]}>제목</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[s.modeChip, searchMode === 'title+content' && s.modeChipOn]}
-            onPress={() => setSearchMode('title+content')}
-          >
-            <Text style={[s.modeChipText, searchMode === 'title+content' && s.modeChipTextOn]}>제목 + 내용</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* 카테고리 필터 + 검색 버튼 */}
-      <View style={s.filterWrap}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll}>
-          {CATEGORY_FILTERS.map(({ key, label }) => (
-            <TouchableOpacity
-              key={key}
-              style={[s.chip, selectedCategory === key && s.chipOn]}
-              onPress={() => setSelectedCategory(key)}
-              activeOpacity={0.8}
-            >
-              <Text style={[s.chipText, selectedCategory === key && s.chipTextOn]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        <TouchableOpacity style={s.searchIconBtn} onPress={openSearch}>
-          <Ionicons name="search-outline" size={15} color={T3} />
-        </TouchableOpacity>
-      </View>
-
-      {/* 구분선 */}
-      <View style={s.headerDivider} />
-
-      {/* 게시글 목록 */}
+      {/* 게시글 목록 — 상단에 헤더 높이만큼 패딩 */}
       {isLoading ? (
-        <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 60 }} />
+        <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 80 }} />
       ) : null}
       <FlatList
         data={filteredPosts}
         renderItem={renderPost}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={s.list}
+        contentContainerStyle={[s.list, { paddingTop: HEADER_HEIGHT }]}
         ItemSeparatorComponent={() => <View style={s.postDivider} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
         ListEmptyComponent={
@@ -333,16 +290,68 @@ export default function CommunityScreen() {
         }
       />
 
-      {/* FAB */}
-      <View style={s.fabWrap}>
-        <TouchableOpacity
-          style={s.fab}
-          onPress={() => router.push('/community-write')}
-          activeOpacity={0.88}
-        >
-          <Ionicons name="add" size={13} color="#fff" />
-          <Text style={s.fabText}>글쓰기</Text>
-        </TouchableOpacity>
+      {/* 헤더 — 스크롤에 따라 translateY로 붙었다 떨어졌다 */}
+      <View style={s.stickyHeader}>
+        <View style={s.topSpacer} />
+        <View style={s.header}>
+          <View style={s.headerSearchBar}>
+            <Ionicons name="search-outline" size={16} color={T2} />
+            <TextInput
+              ref={searchInputRef}
+              style={s.headerSearchInput}
+              placeholder="검색"
+              placeholderTextColor={T2}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onFocus={() => setSearchVisible(true)}
+              onBlur={() => { if (!searchQuery) setSearchVisible(false); }}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchVisible(false); }}>
+                <Ionicons name="close-circle" size={16} color={T2} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <TouchableOpacity
+            style={s.writeBtn}
+            onPress={() => router.push('/community-write')}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="create-outline" size={26} color={T1} />
+          </TouchableOpacity>
+        </View>
+        {searchVisible && (
+          <View style={s.searchModeRow}>
+            <TouchableOpacity
+              style={[s.modeChip, searchMode === 'title' && s.modeChipOn]}
+              onPress={() => setSearchMode('title')}
+            >
+              <Text style={[s.modeChipText, searchMode === 'title' && s.modeChipTextOn]}>제목</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.modeChip, searchMode === 'title+content' && s.modeChipOn]}
+              onPress={() => setSearchMode('title+content')}
+            >
+              <Text style={[s.modeChipText, searchMode === 'title+content' && s.modeChipTextOn]}>제목 + 내용</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        <View style={s.filterWrap}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll}>
+            {CATEGORY_FILTERS.map(({ key, label }) => (
+              <TouchableOpacity
+                key={key}
+                style={[s.chip, selectedCategory === key && s.chipOn]}
+                onPress={() => setSelectedCategory(key)}
+                activeOpacity={0.8}
+              >
+                <Text style={[s.chipText, selectedCategory === key && s.chipTextOn]}>{label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+        <View style={s.headerDivider} />
       </View>
     </View>
   );
@@ -351,24 +360,33 @@ export default function CommunityScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
 
-  // ── 상단 여백 ──
-  topSpacer: { height: Platform.OS === 'ios' ? 60 : 32 },
+  // ── 고정 헤더 (위로 스크롤 시 나타남) ──
+  stickyHeader: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    zIndex: 10, backgroundColor: '#fff',
+  },
 
-  // ── Search ──
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4,
+  // ── 상단 여백 ──
+  topSpacer: { height: Platform.OS === 'ios' ? 65 : 125, backgroundColor: '#fff' },
+
+  // ── Header ──
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     backgroundColor: '#fff',
+    gap: 10,
   },
-  searchBar: {
+  headerSearchBar: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#F4F6FB', borderRadius: 12,
-    borderWidth: 1, borderColor: BORDER,
-    paddingHorizontal: 12, paddingVertical: 9,
+    backgroundColor: BG, borderRadius: 22,
+    paddingHorizontal: 14, paddingVertical: 10,
   },
-  searchInput: { flex: 1, fontSize: 14, color: T1, padding: 0 },
-  searchCancel: { paddingHorizontal: 4 },
-  searchCancelText: { fontSize: 14, color: BLUE, fontWeight: '700' },
+  headerSearchInput: { flex: 1, fontSize: 15, color: T1, padding: 0 },
+  writeBtn: { padding: 4 },
+
+  // ── Search mode ──
   searchModeRow: {
     flexDirection: 'row', gap: 6,
     paddingHorizontal: 16, paddingBottom: 8,
@@ -385,15 +403,8 @@ const s = StyleSheet.create({
 
   // ── Filter ──
   filterWrap: {
-    paddingTop: 12, paddingBottom: 12,
-    flexDirection: 'row', alignItems: 'center',
+    paddingTop: 10, paddingBottom: 10,
     backgroundColor: '#fff',
-  },
-  searchIconBtn: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: BLUE_L,
-    justifyContent: 'center', alignItems: 'center',
-    marginRight: 16, flexShrink: 0,
   },
   filterScroll: { paddingHorizontal: 16, gap: 6 },
   chip: {
@@ -517,23 +528,36 @@ const s = StyleSheet.create({
   reactionCount: { fontSize: 13, color: T2, fontWeight: '600' },
   iconBtn: { padding: 4 },
 
+  // ── 댓글 미리보기 ──
+  commentPreview: {
+    paddingHorizontal: 0,
+    paddingBottom: 12,
+    gap: 4,
+  },
+  commentPreviewItem: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  commentPreviewAuthor: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T1,
+  },
+  commentPreviewContent: {
+    fontSize: 13,
+    color: T2,
+    flex: 1,
+  },
+  commentPreviewMore: {
+    fontSize: 13,
+    color: T2,
+    marginTop: 2,
+  },
+
   // ── Empty ──
   empty:      { alignItems: 'center', paddingVertical: 60, gap: 8 },
   emptyEmoji: { fontSize: 44, marginBottom: 4 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: T1 },
   emptySub:   { fontSize: 16, color: BLUE_MID },
 
-  // ── FAB ──
-  fabWrap: {
-    position: 'absolute', bottom: 24, left: 0, right: 0,
-    alignItems: 'center',
-  },
-  fab: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    backgroundColor: BLUE,
-    borderRadius: 26, paddingHorizontal: 28, paddingVertical: 12,
-    shadowColor: BLUE, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 24, elevation: 8,
-  },
-  fabText: { color: '#fff', fontSize: 14, fontWeight: '800', letterSpacing: -0.2 },
 });

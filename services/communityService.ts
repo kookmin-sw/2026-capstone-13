@@ -16,6 +16,7 @@ export interface CommunityPostDto {
   userType: string;
   likes: number;
   comments: number;
+  commentList: PostCommentDto[];
   liked: boolean;
   createdAt: string;
 }

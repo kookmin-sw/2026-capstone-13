@@ -63,6 +63,7 @@ export default function CommunityPostScreen() {
   const [translating, setTranslating] = useState(false);
   const [commentTranslations, setCommentTranslations] = useState<Record<number, string>>({});
   const [translatingComments, setTranslatingComments] = useState<Record<number, boolean>>({});
+  const [showAllComments, setShowAllComments] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -347,47 +348,55 @@ export default function CommunityPostScreen() {
               <Text style={s.noCommentText}>첫 댓글을 달아보세요!</Text>
             </View>
           ) : (
-            comments.map((c) => (
-              <View key={c.id} style={s.commentItem}>
-                {toAbsoluteUrl(c.authorProfileImage)
-                  ? <Image source={{ uri: toAbsoluteUrl(c.authorProfileImage)! }} style={s.commentAvatar} />
-                  : <View style={[s.commentAvatar, { backgroundColor: avatarColor(c.author) }]}>
-                      <Text style={s.commentAvatarText}>{c.author.charAt(0)}</Text>
-                    </View>
-                }
-                <View style={s.commentBody}>
-                  <View style={s.commentMeta}>
-                    <Text style={s.commentAuthor}>{c.author}</Text>
-                    {c.userType !== 'KOREAN' && (
-                      <View style={s.commentIntlBadge}>
-                        <Text style={s.commentIntlBadgeText}>{c.userType === 'EXCHANGE' ? '교환학생' : '유학생'}</Text>
+            <>
+              {(showAllComments ? comments : comments.slice(0, 3)).map((c) => (
+                <View key={c.id} style={s.commentItem}>
+                  {toAbsoluteUrl(c.authorProfileImage)
+                    ? <Image source={{ uri: toAbsoluteUrl(c.authorProfileImage)! }} style={s.commentAvatar} />
+                    : <View style={[s.commentAvatar, { backgroundColor: avatarColor(c.author) }]}>
+                        <Text style={s.commentAvatarText}>{c.author.charAt(0)}</Text>
                       </View>
-                    )}
-                    <Text style={s.commentTime}>{formatTime(c.createdAt)}</Text>
-                    {c.author === user?.nickname && (
-                      <TouchableOpacity onPress={() => handleDeleteComment(c.id)} style={s.commentDeleteBtn}>
-                        <Text style={s.commentDeleteText}>삭제</Text>
-                      </TouchableOpacity>
-                    )}
+                  }
+                  <View style={s.commentBody}>
+                    <View style={s.commentMeta}>
+                      <Text style={s.commentAuthor}>{c.author}</Text>
+                      {c.userType !== 'KOREAN' && (
+                        <View style={s.commentIntlBadge}>
+                          <Text style={s.commentIntlBadgeText}>{c.userType === 'EXCHANGE' ? '교환학생' : '유학생'}</Text>
+                        </View>
+                      )}
+                      <Text style={s.commentTime}>{formatTime(c.createdAt)}</Text>
+                      {c.author === user?.nickname && (
+                        <TouchableOpacity onPress={() => handleDeleteComment(c.id)} style={s.commentDeleteBtn}>
+                          <Text style={s.commentDeleteText}>삭제</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <Text style={s.commentContent}>
+                      {commentTranslations[c.id] !== undefined ? commentTranslations[c.id] : c.content}
+                    </Text>
+                    <TouchableOpacity
+                      style={s.commentTranslateBtn}
+                      onPress={() => handleTranslateComment(c.id)}
+                      disabled={translatingComments[c.id]}
+                    >
+                      {translatingComments[c.id]
+                        ? <ActivityIndicator size="small" color={BLUE} />
+                        : <Text style={[s.commentTranslateText, commentTranslations[c.id] !== undefined && s.commentTranslateTextActive]}>
+                            {commentTranslations[c.id] !== undefined ? '원문 보기' : '번역 보기'}
+                          </Text>
+                      }
+                    </TouchableOpacity>
                   </View>
-                  <Text style={s.commentContent}>
-                    {commentTranslations[c.id] !== undefined ? commentTranslations[c.id] : c.content}
-                  </Text>
-                  <TouchableOpacity
-                    style={s.commentTranslateBtn}
-                    onPress={() => handleTranslateComment(c.id)}
-                    disabled={translatingComments[c.id]}
-                  >
-                    {translatingComments[c.id]
-                      ? <ActivityIndicator size="small" color={BLUE} />
-                      : <Text style={[s.commentTranslateText, commentTranslations[c.id] !== undefined && s.commentTranslateTextActive]}>
-                          {commentTranslations[c.id] !== undefined ? '원문 보기' : '번역 보기'}
-                        </Text>
-                    }
-                  </TouchableOpacity>
                 </View>
-              </View>
-            ))
+              ))}
+              {comments.length > 3 && !showAllComments && (
+                <TouchableOpacity style={s.showAllBtn} onPress={() => setShowAllComments(true)} activeOpacity={0.7}>
+                  <Text style={s.showAllBtnText}>모든 {comments.length} 코멘트 보기</Text>
+                  <Ionicons name="chevron-down" size={14} color={T3} />
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       </ScrollView>
@@ -517,6 +526,11 @@ const s = StyleSheet.create({
   commentTranslateBtn: { marginTop: 4, alignSelf: 'flex-start' },
   commentTranslateText: { fontSize: 11, color: T2, fontWeight: '600' },
   commentTranslateTextActive: { color: BLUE },
+  showAllBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingVertical: 12, marginTop: 4,
+  },
+  showAllBtnText: { fontSize: 13, fontWeight: '700', color: T3 },
   moreBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: BLUE_L, justifyContent: 'center', alignItems: 'center',
