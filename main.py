@@ -196,6 +196,50 @@ async def crawl_notices():
         return JSONResponse(status_code=500, content={"success": False, "message": f"크롤링 실패: {str(e)}", "data": None})
 
 
+# ── 식단 단건 배치 번역 (retranslate용) ──────────────────
+@app.post("/api/meals/translate-batch")
+async def translate_meal_batch(request: Request):
+    """식당명·코너명·메뉴를 10개 언어로 한 번에 번역"""
+    try:
+        data = await request.json()
+        cafeteria = data.get("cafeteria", "")
+        corner    = data.get("corner", "")
+        menu      = data.get("menu", "")
+
+        import requests as req_lib, uuid
+        headers = {
+            "Ocp-Apim-Subscription-Key": translation_service.azure_key,
+            "Ocp-Apim-Subscription-Region": translation_service.azure_region,
+            "Content-Type": "application/json",
+        }
+        params = {"api-version": "3.0", "from": "ko", "to": SUPPORTED_LANGUAGES}
+        resp = await asyncio.to_thread(
+            lambda: req_lib.post(
+                "https://api.cognitive.microsofttranslator.com/translate",
+                headers={**headers, "X-ClientTraceId": str(uuid.uuid4())},
+                params=params,
+                json=[{"text": cafeteria}, {"text": corner}, {"text": menu}],
+                timeout=10,
+            )
+        )
+        resp.raise_for_status()
+        raw = resp.json()
+        caf_map  = {t["to"]: t["text"] for t in raw[0]["translations"]}
+        cor_map  = {t["to"]: t["text"] for t in raw[1]["translations"]}
+        menu_map = {t["to"]: t["text"] for t in raw[2]["translations"]}
+        translations = {
+            lang: {
+                "cafeteria": _correct_cafeteria_name(caf_map.get(lang, cafeteria), lang),
+                "corner":    cor_map.get(lang, corner),
+                "menu":      menu_map.get(lang, menu),
+            }
+            for lang in SUPPORTED_LANGUAGES
+        }
+        return {"success": True, "data": translations}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"success": False, "message": str(e), "data": None})
+
+
 # ── 식단 크롤링 ───────────────────────────────────────────
 @app.get("/api/meals/crawl")
 async def crawl_meals():
