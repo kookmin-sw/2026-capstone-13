@@ -98,6 +98,7 @@ public class UserService implements UserDetailsService {
 
     // 이미지 Cloudinary 업로드 (공통)
     public String uploadImage(MultipartFile file, String folder) {
+        validateImageFile(file);
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> result = cloudinary.uploader().upload(
@@ -107,6 +108,16 @@ public class UserService implements UserDetailsService {
             return (String) result.get("secure_url");
         } catch (IOException e) {
             throw new BusinessException("이미지 업로드에 실패했습니다.");
+        }
+    }
+
+    private void validateImageFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("파일이 없습니다.");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new BusinessException("이미지 파일만 업로드할 수 있습니다. (jpg, png, gif 등)");
         }
     }
 

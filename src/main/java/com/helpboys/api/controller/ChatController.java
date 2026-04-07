@@ -3,6 +3,8 @@ package com.helpboys.api.controller;
 import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.ChatMessageDto;
 import com.helpboys.api.dto.ChatRoomResponse;
+import com.helpboys.api.exception.BusinessException;
+import com.helpboys.api.util.RateLimiter;
 import com.helpboys.api.service.ChatService;
 import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class ChatController {
     private final ChatService chatService;
     private final SimpMessagingTemplate messagingTemplate;
     private final JwtUtil jwtUtil;
+    private final RateLimiter rateLimiter;
 
     // WebSocket: /app/chat/send → 메시지 저장 후 /topic/chat/{roomId} 브로드캐스트
     @MessageMapping("/chat/send")
@@ -112,6 +115,14 @@ public class ChatController {
             @RequestHeader("Authorization") String token) {
         try {
             Long senderId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+            if (!rateLimiter.isAllowed("voice:min:" + senderId, 10, 60) ||
+                !rateLimiter.isAllowed("voice:day:" + senderId, 100, 86400)) {
+                throw new BusinessException("음성 메시지 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+            }
+            String contentType = audioFile.getContentType();
+            if (contentType == null || !contentType.startsWith("audio/")) {
+                throw new BusinessException("오디오 파일만 업로드할 수 있습니다.");
+            }
             byte[] audioBytes = audioFile.getBytes();
             ChatMessageDto result = chatService.saveVoiceMessage(roomId, senderId, audioBytes);
             return ResponseEntity.ok(ApiResponse.success("음성 메시지 전송 성공", result));

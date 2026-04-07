@@ -2,11 +2,13 @@ package com.helpboys.api.controller;
 
 import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.PasswordChangeRequest;
+import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.dto.ReviewResponse;
 import com.helpboys.api.dto.UserResponse;
 import com.helpboys.api.service.ReviewService;
 import com.helpboys.api.service.UserService;
 import com.helpboys.api.util.JwtUtil;
+import com.helpboys.api.util.RateLimiter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,6 +27,7 @@ public class UserController {
     private final UserService userService;
     private final ReviewService reviewService;
     private final JwtUtil jwtUtil;
+    private final RateLimiter rateLimiter;
 
     // GET /api/users/list/koreans - 한국인 유저 목록 조회 (외국인/교환학생이 도움 요청할 한국인 탐색)
     @GetMapping("/list/koreans")
@@ -90,6 +93,10 @@ public class UserController {
             @RequestParam("image") MultipartFile file,
             @RequestHeader("Authorization") String token) {
         Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        if (!rateLimiter.isAllowed("upload:min:" + userId, 10, 60) ||
+            !rateLimiter.isAllowed("upload:day:" + userId, 50, 86400)) {
+            throw new BusinessException("업로드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+        }
         String imageUrl = userService.uploadImage(file, "profile-images");
         return ResponseEntity.ok(ApiResponse.success("업로드 완료", userService.updateProfileImage(userId, imageUrl)));
     }
