@@ -24,12 +24,14 @@ export interface CommunityPostDto {
 export interface PostCommentDto {
   id: number;
   postId: number;
+  parentCommentId?: number;
   author: string;
   authorProfileImage?: string;
   university: string;
   userType: string;
   content: string;
   createdAt: string;
+  replyCount?: number;
 }
 
 export interface CommunityPostDetailDto extends CommunityPostDto {
@@ -124,6 +126,18 @@ export const deleteCommunityPost = async (postId: number): Promise<ApiResponse<n
 // 댓글 삭제
 export const deleteCommunityComment = async (commentId: number): Promise<ApiResponse<null>> => {
   const response = await api.delete<ApiResponse<null>>(`/community/comments/${commentId}`);
+  return response.data;
+};
+
+// 대댓글 조회
+export const getCommunityReplies = async (commentId: number): Promise<ApiResponse<PostCommentDto[]>> => {
+  const response = await api.get<ApiResponse<PostCommentDto[]>>(`/community/comments/${commentId}/replies`);
+  return response.data;
+};
+
+// 대댓글 작성
+export const addCommunityReply = async (commentId: number, content: string): Promise<ApiResponse<PostCommentDto>> => {
+  const response = await api.post<ApiResponse<PostCommentDto>>(`/community/comments/${commentId}/replies`, { content });
   return response.data;
 };
 

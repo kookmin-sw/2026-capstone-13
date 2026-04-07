@@ -351,7 +351,12 @@ export default function CommunityPostScreen() {
           ) : (
             <>
               {comments.map((c) => (
-                <View key={c.id} style={s.commentItem}>
+                <TouchableOpacity
+                  key={c.id}
+                  style={s.commentItem}
+                  activeOpacity={0.85}
+                  onPress={() => router.push({ pathname: '/comment-detail', params: { commentId: c.id, postId: post!.id, authorName: c.author, authorProfileImage: c.authorProfileImage ?? '', content: c.content, createdAt: c.createdAt, userType: c.userType } })}
+                >
                   {toAbsoluteUrl(c.authorProfileImage)
                     ? <Image source={{ uri: toAbsoluteUrl(c.authorProfileImage)! }} style={s.commentAvatar} />
                     : <View style={[s.commentAvatar, { backgroundColor: avatarColor(c.author) }]}>
@@ -376,20 +381,25 @@ export default function CommunityPostScreen() {
                     <Text style={s.commentContent}>
                       {commentTranslations[c.id] !== undefined ? commentTranslations[c.id] : c.content}
                     </Text>
-                    <TouchableOpacity
-                      style={s.commentTranslateBtn}
-                      onPress={() => handleTranslateComment(c.id)}
-                      disabled={translatingComments[c.id]}
-                    >
-                      {translatingComments[c.id]
-                        ? <ActivityIndicator size="small" color={BLUE} />
-                        : <Text style={[s.commentTranslateText, commentTranslations[c.id] !== undefined && s.commentTranslateTextActive]}>
-                            {commentTranslations[c.id] !== undefined ? '원문 보기' : '번역 보기'}
-                          </Text>
-                      }
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <TouchableOpacity
+                        style={s.commentTranslateBtn}
+                        onPress={() => handleTranslateComment(c.id)}
+                        disabled={translatingComments[c.id]}
+                      >
+                        {translatingComments[c.id]
+                          ? <ActivityIndicator size="small" color={BLUE} />
+                          : <Text style={[s.commentTranslateText, commentTranslations[c.id] !== undefined && s.commentTranslateTextActive]}>
+                              {commentTranslations[c.id] !== undefined ? '원문 보기' : '번역 보기'}
+                            </Text>
+                        }
+                      </TouchableOpacity>
+                      {(c.replyCount ?? 0) > 0 && (
+                        <Text style={s.replyCountText}>답글 {c.replyCount}개</Text>
+                      )}
+                    </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </>
           )}
@@ -517,6 +527,7 @@ const s = StyleSheet.create({
   commentTime: { fontSize: 10, color: T2 },
   commentDeleteBtn: { marginLeft: 'auto' },
   commentDeleteText: { fontSize: 10, color: '#EF4444', fontWeight: '600' },
+  replyCountText: { fontSize: 12, color: BLUE, fontWeight: '600' },
   commentContent: { fontSize: 13, color: T1, lineHeight: 19 },
   commentTranslateBtn: { marginTop: 4, alignSelf: 'flex-start' },
   commentTranslateText: { fontSize: 11, color: T2, fontWeight: '600' },
