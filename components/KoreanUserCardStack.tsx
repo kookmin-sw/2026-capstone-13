@@ -7,6 +7,7 @@ import {
   Dimensions,
   Image,
   TouchableOpacity,
+  PanResponder,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { User } from '../types';
@@ -107,38 +108,79 @@ interface KoreanUserCardStackProps {
   onPress?: (user: User) => void;
 }
 
+const SWIPE_THRESHOLD = 80;
+
 export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardStackProps) {
   const [topIdx, setTopIdx] = useState(0);
   const isSwiping = useRef(false);
-  const exitX = useRef(new Animated.Value(0)).current;
+  const exitX    = useRef(new Animated.Value(0)).current;
   const progress = useRef(new Animated.Value(0)).current;
 
-  const midX  = progress.interpolate({ inputRange: [0, 1], outputRange: [SLOT_OFFSET[1], SLOT_OFFSET[0]] });
-  const midOp = progress.interpolate({ inputRange: [0, 1], outputRange: [SLOT_OPACITY[1], SLOT_OPACITY[0]] });
+  const midX   = progress.interpolate({ inputRange: [0, 1], outputRange: [SLOT_OFFSET[1], SLOT_OFFSET[0]] });
+  const midOp  = progress.interpolate({ inputRange: [0, 1], outputRange: [SLOT_OPACITY[1], SLOT_OPACITY[0]] });
   const backX  = progress.interpolate({ inputRange: [0, 1], outputRange: [SLOT_OFFSET[2], SLOT_OFFSET[1]] });
   const backOp = progress.interpolate({ inputRange: [0, 1], outputRange: [SLOT_OPACITY[2], SLOT_OPACITY[1]] });
+
+  const rotate = exitX.interpolate({
+    inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+    outputRange: ['-12deg', '0deg', '12deg'],
+  });
 
   const n = users.length;
   const card0 = n > 0 ? users[topIdx % n] : null;
   const card1 = n > 0 ? users[(topIdx + 1) % n] : null;
   const card2 = n > 0 ? users[(topIdx + 2) % n] : null;
 
-  const triggerSwipe = useCallback((dir: 'left' | 'right') => {
-    if (isSwiping.current || !card0) return;
-    isSwiping.current = true;
+  const card0Ref  = useRef(card0);
+  const onPressRef = useRef(onPress);
+  card0Ref.current  = card0;
+  onPressRef.current = onPress;
 
-    const toX = dir === 'right' ? SCREEN_WIDTH + 200 : -(SCREEN_WIDTH + 200);
-
+  const flyOut = (toX: number, cb?: () => void) => {
     Animated.parallel([
-      Animated.timing(exitX,    { toValue: toX, duration: 280, useNativeDriver: true }),
-      Animated.timing(progress, { toValue: 1,   duration: 280, useNativeDriver: false }),
+      Animated.timing(exitX,    { toValue: toX, duration: 220, useNativeDriver: true }),
+      Animated.timing(progress, { toValue: 1,   duration: 220, useNativeDriver: false }),
     ]).start(() => {
       setTopIdx(prev => prev + 1);
       exitX.setValue(0);
       progress.setValue(0);
       isSwiping.current = false;
+      cb?.();
     });
-  }, [card0, exitX, progress]);
+  };
+
+  const panResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => !isSwiping.current,
+    onMoveShouldSetPanResponder: (_, { dx, dy }) =>
+      !isSwiping.current && Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 8,
+    onPanResponderMove: (_, { dx }) => {
+      if (isSwiping.current) return;
+      exitX.setValue(dx);
+      progress.setValue(Math.min(Math.abs(dx) / SCREEN_WIDTH, 1));
+    },
+    onPanResponderRelease: (_, { dx, vx }) => {
+      if (isSwiping.current) return;
+      const swipedRight = dx > SWIPE_THRESHOLD || vx > 0.8;
+      const swipedLeft  = dx < -SWIPE_THRESHOLD || vx < -0.8;
+
+      if (swipedRight) {
+        // 오른쪽 스와이프 = O (채팅)
+        isSwiping.current = true;
+        const card = card0Ref.current;
+        if (card) onPressRef.current?.(card);
+        flyOut(SCREEN_WIDTH + 200);
+      } else if (swipedLeft) {
+        // 왼쪽 스와이프 = X (건너뛰기)
+        isSwiping.current = true;
+        flyOut(-(SCREEN_WIDTH + 200));
+      } else {
+        Animated.parallel([
+          Animated.spring(exitX,    { toValue: 0, useNativeDriver: true, tension: 40, friction: 7 }),
+          Animated.spring(progress, { toValue: 0, useNativeDriver: false, tension: 40, friction: 7 }),
+        ]).start();
+      }
+    },
+  })).current;
 
   if (n === 0) return null;
 
@@ -157,15 +199,20 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
           </Animated.View>
         )}
 
-        <Animated.View style={[styles.cardSlot, { zIndex: 3, transform: [{ translateX: exitX }] }]}>
+        <Animated.View
+          style={[styles.cardSlot, { zIndex: 3, transform: [{ translateX: exitX }, { rotate }] }]}
+          {...panResponder.panHandlers}
+        >
           <CardContent user={card0!} />
-          <View style={styles.btnRow}>
-            <TouchableOpacity style={[styles.btn, styles.skipBtn]} onPress={() => triggerSwipe('left')} activeOpacity={0.8}>
-              <Ionicons name="close" size={24} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, styles.acceptBtn]} onPress={() => { onPress?.(card0!); triggerSwipe('right'); }} activeOpacity={0.8}>
-              <Ionicons name="chatbubble-outline" size={22} color="#fff" />
-            </TouchableOpacity>
+          <View style={styles.hintRow} pointerEvents="none">
+            <View style={styles.hintBadgeRed}>
+              <Ionicons name="arrow-back" size={14} color="#EF4444" />
+              <Ionicons name="close" size={20} color="#EF4444" />
+            </View>
+            <View style={styles.hintBadgeGreen}>
+              <Ionicons name="chatbubble-outline" size={18} color="#22C55E" />
+              <Ionicons name="arrow-forward" size={14} color="#22C55E" />
+            </View>
           </View>
         </Animated.View>
       </View>
@@ -254,24 +301,24 @@ const styles = StyleSheet.create({
   requestLabel: { fontSize: 13, fontWeight: '700', color: ACCENT, letterSpacing: 0.5, marginBottom: 8 },
   requestText: { fontSize: 17, fontWeight: '600', color: '#0C1C3C', lineHeight: 26 },
   detailPlaceholder: { fontSize: 15, color: '#AABBCC', fontStyle: 'italic' },
-  /* 버튼 */
-  btnRow: {
+  /* 스와이프 힌트 */
+  hintRow: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    bottom: 16, left: 16, right: 16,
     flexDirection: 'row',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    overflow: 'hidden',
-    zIndex: 10,
-  },
-  btn: {
-    flex: 1,
-    height: 52,
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  skipBtn:   { backgroundColor: '#CBD5E1' },
-  acceptBtn: { backgroundColor: '#0EA5E9' },
+  hintBadgeRed: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    backgroundColor: '#FEE2E2', borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderWidth: 1.5, borderColor: '#EF4444',
+  },
+  hintBadgeGreen: {
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    backgroundColor: '#DCFCE7', borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderWidth: 1.5, borderColor: '#22C55E',
+  },
 });
