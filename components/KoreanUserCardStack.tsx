@@ -64,7 +64,9 @@ function CardContent({ user }: { user: User }) {
               <Text style={[styles.levelText, { color: lv.color }]}>{lv.label}</Text>
             </View>
           </View>
-          {user.university ? (
+          {user.major ? (
+            <Text style={styles.subText} numberOfLines={1}>{user.major}</Text>
+          ) : user.university ? (
             <Text style={styles.subText} numberOfLines={1}>{user.university}</Text>
           ) : null}
           <View style={styles.ratingRow}>

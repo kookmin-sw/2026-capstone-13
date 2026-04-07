@@ -84,8 +84,14 @@ function CardContent({ card }: { card: HelpRequest }) {
               <Text style={[styles.urgencyText, { color: urgency.color }]}>{urgency.label}</Text>
             </View>
           </View>
-          {card.requester.major && (
-            <Text style={styles.subText} numberOfLines={1}>{card.requester.major}</Text>
+          {card.requester.userType !== 'KOREAN' ? (
+            card.requester.major ? (
+              <Text style={styles.subText} numberOfLines={1}>{card.requester.major}</Text>
+            ) : null
+          ) : (
+            card.requester.university ? (
+              <Text style={styles.subText} numberOfLines={1}>{card.requester.university}</Text>
+            ) : null
           )}
           <View style={styles.timeRow}>
             <Ionicons name="time-outline" size={11} color="#7799BB" />

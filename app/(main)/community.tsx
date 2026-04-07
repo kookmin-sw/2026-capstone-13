@@ -1,4 +1,4 @@
-// 커뮤니티 화면
+// 커뮤니티 화면 - HelloTalk 피드 스타일
 import { useCallback, useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
@@ -10,14 +10,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { getCommunityPosts, type CommunityPostDto } from '../../services/communityService';
 import type { PostCategory } from '../../types';
 
-// ── Design tokens (홈 화면과 동일) ──
+// ── Design tokens ──
 const BLUE     = '#3B6FE8';
 const BLUE_L   = '#EEF4FF';
 const BLUE_MID = '#A8C8FA';
-const BORDER   = '#D4E4FA';
+const BORDER   = '#E8EDF5';
 const ORANGE   = '#F97316';
 const T1       = '#0E1E40';
+const T2       = '#6B7A99';
 const T3       = '#6B9DF0';
+const BG       = '#F4F6FB';
 
 type FilterCategory = 'ALL' | PostCategory;
 
@@ -38,7 +40,7 @@ const CATEGORY_COLOR: Record<PostCategory, string> = {
 };
 
 const CATEGORY_BG: Record<PostCategory, string> = {
-  INFO: BLUE_L, QUESTION: '#FFF3E8', CHAT: BLUE_L, CULTURE: '#F5F3FF',
+  INFO: BLUE_L, QUESTION: '#FFF3E8', CHAT: '#EEF4FF', CULTURE: '#F5F3FF',
 };
 
 const AVATAR_COLORS = ['#F0A040', '#F06060', BLUE, '#90C4F0', '#A0A8B0'];
@@ -69,6 +71,117 @@ function formatTime(createdAt: string): string {
 
 type SearchMode = 'title' | 'title+content';
 
+// ── 피드 카드 컴포넌트 ──────────────────────────────────────
+function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => void }) {
+  const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
+  const profileUri = toAbsoluteUrl(item.authorProfileImage);
+  const catColor = CATEGORY_COLOR[item.category];
+  const catBg    = CATEGORY_BG[item.category];
+  const isHot    = item.likes >= 30;
+
+  const validImages = item.images.filter((_, i) => !imgErrors[i]);
+
+  return (
+    <TouchableOpacity style={s.feedCard} activeOpacity={0.95} onPress={onPress}>
+      {/* ── 유저 헤더 ── */}
+      <View style={s.feedHeader}>
+        <View style={s.feedAvatarWrap}>
+          {profileUri ? (
+            <Image source={{ uri: profileUri }} style={s.feedAvatar} />
+          ) : (
+            <View style={[s.feedAvatar, { backgroundColor: avatarColor(item.author), justifyContent: 'center', alignItems: 'center' }]}>
+              <Text style={s.feedAvatarText}>{item.author.charAt(0)}</Text>
+            </View>
+          )}
+        </View>
+        <View style={s.feedAuthorInfo}>
+          <View style={s.feedNameRow}>
+            <Text style={s.feedAuthorName}>{item.author}</Text>
+            {isHot && (
+              <View style={s.hotBadge}>
+                <Text style={s.hotBadgeText}>🔥 인기</Text>
+              </View>
+            )}
+          </View>
+          <View style={s.feedMetaRow}>
+            <View style={[s.catBadge, { backgroundColor: catBg }]}>
+              <Text style={[s.catBadgeText, { color: catColor }]}>{CATEGORY_LABEL[item.category]}</Text>
+            </View>
+            <Text style={s.feedTime}>{formatTime(item.createdAt)}</Text>
+            {item.university ? (
+              <Text style={s.feedUniv} numberOfLines={1}>{item.university}</Text>
+            ) : null}
+          </View>
+        </View>
+        <TouchableOpacity style={s.moreBtn} activeOpacity={0.7} onPress={onPress}>
+          <Ionicons name="ellipsis-horizontal" size={18} color={T2} />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── 본문 ── */}
+      <View style={s.feedBody}>
+        <Text style={s.feedTitle} numberOfLines={2}>{item.title}</Text>
+        {item.content ? (
+          <Text style={s.feedContent} numberOfLines={3}>{item.content}</Text>
+        ) : null}
+      </View>
+
+      {/* ── 이미지 그리드 ── */}
+      {validImages.length === 1 && (
+        <Image
+          source={{ uri: validImages[0] }}
+          style={s.singleImage}
+          onError={() => setImgErrors(prev => ({ ...prev, 0: true }))}
+        />
+      )}
+      {validImages.length === 2 && (
+        <View style={s.imageGrid2}>
+          {validImages.map((uri, idx) => (
+            <Image
+              key={idx}
+              source={{ uri }}
+              style={s.gridImage2}
+              onError={() => setImgErrors(prev => ({ ...prev, [idx]: true }))}
+            />
+          ))}
+        </View>
+      )}
+      {validImages.length >= 3 && (
+        <View style={s.imageGrid3}>
+          {validImages.slice(0, 6).map((uri, idx) => (
+            <Image
+              key={idx}
+              source={{ uri }}
+              style={s.gridImage3}
+              onError={() => setImgErrors(prev => ({ ...prev, [idx]: true }))}
+            />
+          ))}
+        </View>
+      )}
+
+      {/* ── 반응 바 ── */}
+      <View style={s.feedFooter}>
+        <View style={s.reactionLeft}>
+          <View style={s.reactionItem}>
+            <Ionicons name="heart-outline" size={16} color={T2} />
+            <Text style={s.reactionCount}>{item.likes}</Text>
+          </View>
+          <View style={s.reactionItem}>
+            <Ionicons name="chatbubble-outline" size={15} color={T2} />
+            <Text style={s.reactionCount}>{item.comments}</Text>
+          </View>
+        </View>
+        <View style={s.reactionRight}>
+          <TouchableOpacity style={s.iconBtn} activeOpacity={0.7}>
+            <Ionicons name="share-outline" size={16} color={T2} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ── 메인 화면 ────────────────────────────────────────────────
 export default function CommunityScreen() {
   const router = useRouter();
   const [posts, setPosts] = useState<CommunityPostDto[]>([]);
@@ -118,84 +231,12 @@ export default function CommunityScreen() {
       })
     : categoryFiltered;
 
-  const isHot = (item: CommunityPostDto) => item.likes >= 30;
-
-  const renderPost = useCallback(({ item }: { item: CommunityPostDto }) => {
-    const catColor = CATEGORY_COLOR[item.category];
-    const catBg    = CATEGORY_BG[item.category];
-    const hot = isHot(item);
-    return (
-      <TouchableOpacity
-        style={s.card}
-        activeOpacity={0.85}
-        onPress={() => router.push({ pathname: '/community-post', params: { id: item.id } })}
-      >
-        {/* 홈 카드와 동일한 왼쪽 컬러 바 */}
-        <View style={[s.cardBar, { backgroundColor: catColor }]} />
-        <View style={s.cardContent}>
-          {/* 상단 메타 */}
-          <View style={s.cardMeta}>
-            <View style={[s.catBadge, { backgroundColor: catBg }]}>
-              <Text style={[s.catBadgeText, { color: catColor }]}>
-                {CATEGORY_LABEL[item.category]}
-              </Text>
-            </View>
-            {item.userType !== 'KOREAN' && (
-              <View style={s.intlBadge}>
-                <Text style={s.intlBadgeText}>{item.userType === 'EXCHANGE' ? '교환학생' : '유학생'}</Text>
-              </View>
-            )}
-            <View style={s.dotSep} />
-            <Text style={s.metaTime}>{formatTime(item.createdAt)}</Text>
-            {hot && (
-              <View style={s.hotBadge}>
-                <View style={s.hotDot} />
-                <Text style={s.hotBadgeText}>인기</Text>
-              </View>
-            )}
-          </View>
-
-          {/* 제목 */}
-          <Text style={s.title} numberOfLines={2}>{item.title}</Text>
-
-          {/* 내용 미리보기 */}
-          <Text style={s.content} numberOfLines={2}>{item.content}</Text>
-
-          {/* 이미지 미리보기 */}
-          {item.images.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.imageScroll}>
-              {item.images.map((uri, idx) => (
-                <Image key={idx} source={{ uri }} style={s.imageThumbnail} />
-              ))}
-            </ScrollView>
-          )}
-
-          {/* 푸터 */}
-          <View style={s.footer}>
-            <View style={s.authorRow}>
-              {toAbsoluteUrl(item.authorProfileImage)
-                ? <Image source={{ uri: toAbsoluteUrl(item.authorProfileImage)! }} style={s.avatar} />
-                : <View style={[s.avatar, { backgroundColor: avatarColor(item.author) }]}>
-                    <Text style={s.avatarText}>{item.author.charAt(0)}</Text>
-                  </View>
-              }
-              <Text style={s.authorName}>{item.author}</Text>
-            </View>
-            <View style={s.reactions}>
-              <View style={s.reactionItem}>
-                <Ionicons name="heart-outline" size={13} color={BLUE_MID} />
-                <Text style={s.reactionCount}>{item.likes}</Text>
-              </View>
-              <View style={s.reactionItem}>
-                <Ionicons name="chatbubble-outline" size={13} color={BLUE_MID} />
-                <Text style={s.reactionCount}>{item.comments}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  }, []);
+  const renderPost = useCallback(({ item }: { item: CommunityPostDto }) => (
+    <FeedCard
+      item={item}
+      onPress={() => router.push({ pathname: '/community-post', params: { id: item.id } })}
+    />
+  ), [router]);
 
   return (
     <View style={s.container}>
@@ -267,6 +308,9 @@ export default function CommunityScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* 구분선 */}
+      <View style={s.headerDivider} />
+
       {/* 게시글 목록 */}
       {isLoading ? (
         <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 60 }} />
@@ -276,14 +320,16 @@ export default function CommunityScreen() {
         renderItem={renderPost}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={s.list}
-        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        ItemSeparatorComponent={() => <View style={s.postDivider} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
         ListEmptyComponent={
-          <View style={s.empty}>
-            <Text style={s.emptyEmoji}>{searchQuery ? '🔍' : '💬'}</Text>
-            <Text style={s.emptyTitle}>{searchQuery ? '검색 결과가 없습니다' : '게시글이 없습니다'}</Text>
-            <Text style={s.emptySub}>{searchQuery ? '다른 검색어로 시도해보세요' : '첫 번째 글을 작성해보세요!'}</Text>
-          </View>
+          !isLoading ? (
+            <View style={s.empty}>
+              <Text style={s.emptyEmoji}>{searchQuery ? '🔍' : '💬'}</Text>
+              <Text style={s.emptyTitle}>{searchQuery ? '검색 결과가 없습니다' : '게시글이 없습니다'}</Text>
+              <Text style={s.emptySub}>{searchQuery ? '다른 검색어로 시도해보세요' : '첫 번째 글을 작성해보세요!'}</Text>
+            </View>
+          ) : null
         }
       />
 
@@ -303,34 +349,20 @@ export default function CommunityScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  container: { flex: 1, backgroundColor: BG },
 
-  // ── NAV (홈과 동일) ──
-  nav: {
-    backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'ios' ? 72 : 40,
-    paddingBottom: 0,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  navTitle: { fontSize: 22, fontWeight: '900', color: T1, letterSpacing: -0.5 },
-  navIcons: { flexDirection: 'row', gap: 8 },
-  notifBtn: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: BLUE_L,
-    justifyContent: 'center', alignItems: 'center',
-  },
+  // ── 상단 여백 ──
+  topSpacer: { height: Platform.OS === 'ios' ? 60 : 32 },
 
   // ── Search ──
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4,
+    backgroundColor: '#fff',
   },
   searchBar: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#fff', borderRadius: 12,
+    backgroundColor: '#F4F6FB', borderRadius: 12,
     borderWidth: 1, borderColor: BORDER,
     paddingHorizontal: 12, paddingVertical: 9,
   },
@@ -339,20 +371,24 @@ const s = StyleSheet.create({
   searchCancelText: { fontSize: 14, color: BLUE, fontWeight: '700' },
   searchModeRow: {
     flexDirection: 'row', gap: 6,
-    paddingHorizontal: 16, paddingBottom: 6,
+    paddingHorizontal: 16, paddingBottom: 8,
+    backgroundColor: '#fff',
   },
   modeChip: {
     paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: 16, backgroundColor: '#fff',
+    borderRadius: 16, backgroundColor: '#F4F6FB',
     borderWidth: 1, borderColor: BORDER,
   },
   modeChipOn: { backgroundColor: BLUE, borderColor: BLUE },
   modeChipText: { fontSize: 13, fontWeight: '700', color: BLUE_MID },
   modeChipTextOn: { color: '#fff' },
 
-  // ── Filter (홈 칩과 동일) ──
-  topSpacer: { height: Platform.OS === 'ios' ? 60 : 32 },
-  filterWrap: { paddingTop: 14, flexDirection: 'row', alignItems: 'center' },
+  // ── Filter ──
+  filterWrap: {
+    paddingTop: 12, paddingBottom: 12,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff',
+  },
   searchIconBtn: {
     width: 34, height: 34, borderRadius: 17,
     backgroundColor: BLUE_L,
@@ -361,73 +397,133 @@ const s = StyleSheet.create({
   },
   filterScroll: { paddingHorizontal: 16, gap: 6 },
   chip: {
-    paddingHorizontal: 18, paddingVertical: 9,
-    borderRadius: 22, backgroundColor: '#fff',
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderRadius: 20, backgroundColor: '#F4F6FB',
     borderWidth: 1, borderColor: BORDER, flexShrink: 0,
   },
   chipOn:     { backgroundColor: BLUE, borderColor: BLUE },
-  chipText:   { fontSize: 14, fontWeight: '700', color: BLUE_MID },
-  chipTextOn: { color: '#fff' },
+  chipText:   { fontSize: 14, fontWeight: '600', color: T2 },
+  chipTextOn: { color: '#fff', fontWeight: '700' },
+
+  headerDivider: { height: 1, backgroundColor: BORDER },
 
   // ── List ──
-  list: { padding: 16, paddingBottom: 100 },
+  list: { paddingBottom: 100 },
+  postDivider: { height: 8, backgroundColor: BG },
 
-  // ── Card (홈 카드 스타일 통일) ──
-  card: {
+  // ── Feed Card ──
+  feedCard: {
     backgroundColor: '#fff',
-    borderRadius: 16, overflow: 'hidden',
-    borderWidth: 1, borderColor: BORDER,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+
+  // 유저 헤더
+  feedHeader: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+    gap: 10,
   },
-  cardBar:     { width: 5, flexShrink: 0 },
-  cardContent: { flex: 1, paddingHorizontal: 16, paddingVertical: 12 },
+  feedAvatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  feedAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  feedAvatarText: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  feedAuthorInfo: { flex: 1, gap: 4 },
+  feedNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  feedAuthorName: { fontSize: 15, fontWeight: '700', color: T1 },
+  feedMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  feedTime: { fontSize: 12, color: T2 },
+  feedUniv: { fontSize: 12, color: T2, flex: 1 },
+  moreBtn: { padding: 4 },
 
-  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  catBadge: { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 7 },
-  catBadgeText: { fontSize: 13, fontWeight: '800' },
-  intlBadge: {
-    paddingHorizontal: 9, paddingVertical: 3, borderRadius: 7,
-    backgroundColor: '#FFF0E6',
-  },
-  intlBadgeText: { fontSize: 13, fontWeight: '800', color: '#C45A10' },
-  dotSep: { width: 4, height: 4, borderRadius: 2, backgroundColor: BORDER },
-  metaTime: { fontSize: 13, color: BLUE_MID, fontWeight: '500' },
+  // 카테고리 배지
+  catBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  catBadgeText: { fontSize: 11, fontWeight: '700' },
+
+  // 인기 배지
   hotBadge: {
-    marginLeft: 'auto',
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#FFF3E6', borderRadius: 7,
-    paddingHorizontal: 9, paddingVertical: 3,
+    backgroundColor: '#FFF3E8',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
   },
-  hotDot:      { width: 5, height: 5, borderRadius: 3, backgroundColor: ORANGE },
-  hotBadgeText:{ fontSize: 13, fontWeight: '800', color: '#C45A10' },
+  hotBadgeText: { fontSize: 11, fontWeight: '700', color: ORANGE },
 
-  title:   { fontSize: 17, fontWeight: '700', color: T1, lineHeight: 24, marginBottom: 6, letterSpacing: -0.3 },
-  content: { fontSize: 14, color: T3, lineHeight: 20, marginBottom: 10 },
+  // 본문
+  feedBody: { marginBottom: 10 },
+  feedTitle: { fontSize: 15, fontWeight: '700', color: T1, lineHeight: 22, marginBottom: 4 },
+  feedContent: { fontSize: 14, color: T2, lineHeight: 20 },
 
-  imageScroll:    { marginBottom: 10 },
-  imageThumbnail: { width: 72, height: 72, borderRadius: 10, marginRight: 8 },
-
-  footer: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  // 이미지 - 1장
+  singleImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 12,
+    marginBottom: 10,
+    backgroundColor: '#E8EDF5',
   },
-  authorRow:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  avatar: {
-    width: 24, height: 24, borderRadius: 12,
-    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
-  },
-  avatarText:   { fontSize: 11, color: '#fff', fontWeight: '700' },
-  authorName:   { fontSize: 14, color: BLUE_MID, fontWeight: '500' },
-  reactions:    { flexDirection: 'row', gap: 10 },
-  reactionItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  reactionCount:{ fontSize: 13, color: BLUE_MID, fontWeight: '600' },
 
-  // ── Empty (홈과 동일) ──
+  // 이미지 - 2장
+  imageGrid2: {
+    flexDirection: 'row',
+    gap: 3,
+    marginBottom: 10,
+  },
+  gridImage2: {
+    flex: 1,
+    height: 180,
+    borderRadius: 10,
+    backgroundColor: '#E8EDF5',
+  },
+
+  // 이미지 - 3장+
+  imageGrid3: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 3,
+    marginBottom: 10,
+  },
+  gridImage3: {
+    width: '32%',
+    aspectRatio: 1,
+    borderRadius: 8,
+    backgroundColor: '#E8EDF5',
+  },
+
+  // 반응 바
+  feedFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F3F8',
+    marginTop: 6,
+  },
+  reactionLeft: { flexDirection: 'row', gap: 16 },
+  reactionRight: { flexDirection: 'row', gap: 12 },
+  reactionItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  reactionCount: { fontSize: 13, color: T2, fontWeight: '600' },
+  iconBtn: { padding: 4 },
+
+  // ── Empty ──
   empty:      { alignItems: 'center', paddingVertical: 60, gap: 8 },
   emptyEmoji: { fontSize: 44, marginBottom: 4 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: T1 },
   emptySub:   { fontSize: 16, color: BLUE_MID },
 
-  // ── FAB (홈과 동일, 중앙 정렬) ──
+  // ── FAB ──
   fabWrap: {
     position: 'absolute', bottom: 24, left: 0, right: 0,
     alignItems: 'center',
