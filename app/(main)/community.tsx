@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getCommunityPosts, type CommunityPostDto } from '../../services/communityService';
+import { getCommunityPosts, toggleCommunityLike, type CommunityPostDto } from '../../services/communityService';
 import type { PostCategory } from '../../types';
 
 // ── Design tokens ──
@@ -82,6 +82,8 @@ type SearchMode = 'title' | 'title+content';
 // ── 피드 카드 컴포넌트 ──────────────────────────────────────
 function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => void }) {
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
+  const [liked, setLiked] = useState(item.liked);
+  const [likeCount, setLikeCount] = useState(item.likes);
   const profileUri = toAbsoluteUrl(item.authorProfileImage);
   const catColor = CATEGORY_COLOR[item.category];
   const catBg    = CATEGORY_BG[item.category];
@@ -170,10 +172,23 @@ function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => vo
       {/* ── 반응 바 ── */}
       <View style={s.feedFooter}>
         <View style={s.reactionLeft}>
-          <View style={s.reactionItem}>
-            <Ionicons name="heart-outline" size={16} color={T2} />
-            <Text style={s.reactionCount}>{item.likes}</Text>
-          </View>
+          <TouchableOpacity
+            style={s.reactionItem}
+            activeOpacity={0.7}
+            onPress={async () => {
+              setLiked((prev) => !prev);
+              setLikeCount((prev) => liked ? prev - 1 : prev + 1);
+              try {
+                await toggleCommunityLike(item.id);
+              } catch {
+                setLiked((prev) => !prev);
+                setLikeCount((prev) => liked ? prev + 1 : prev - 1);
+              }
+            }}
+          >
+            <Ionicons name={liked ? 'heart' : 'heart-outline'} size={16} color={liked ? '#EF4444' : T2} />
+            <Text style={s.reactionCount}>{likeCount}</Text>
+          </TouchableOpacity>
           <View style={s.reactionItem}>
             <Ionicons name="chatbubble-outline" size={15} color={T2} />
             <Text style={s.reactionCount}>{item.comments}</Text>
