@@ -144,8 +144,11 @@ export default function ChatRoomScreen() {
           setIsConnected(true);
           client.subscribe(`/topic/chat/${roomId}`, (frame) => {
             try {
-              const msg: ChatMessageDto = JSON.parse(frame.body);
+              const msg = JSON.parse(frame.body);
               if (!mounted) return;
+
+              // READ 등 컨트롤 이벤트는 채팅 메시지 목록에 추가하지 않음
+              if (msg.type === 'READ') return;
 
               // 통화 요청 메시지 처리 (수신자만)
               if (msg.content?.startsWith(SYS_CALL_VOICE) || msg.content?.startsWith(SYS_CALL_VIDEO)) {
