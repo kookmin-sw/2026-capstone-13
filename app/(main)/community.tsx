@@ -142,36 +142,17 @@ function FeedCard({ item, onPress, onLike }: { item: CommunityPostDto; onPress: 
       </View>
 
       {/* ── 이미지 그리드 ── */}
-      {validImages.length === 1 && (
-        <Image
-          source={{ uri: validImages[0] }}
-          style={s.singleImage}
-          onError={() => setImgErrors(prev => ({ ...prev, 0: true }))}
-        />
-      )}
-      {validImages.length === 2 && (
-        <View style={s.imageGrid2}>
+      {validImages.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.imageScroll}>
           {validImages.map((uri, idx) => (
             <Image
               key={idx}
               source={{ uri }}
-              style={s.gridImage2}
+              style={s.feedImage}
               onError={() => setImgErrors(prev => ({ ...prev, [idx]: true }))}
             />
           ))}
-        </View>
-      )}
-      {validImages.length >= 3 && (
-        <View style={s.imageGrid3}>
-          {validImages.slice(0, 6).map((uri, idx) => (
-            <Image
-              key={idx}
-              source={{ uri }}
-              style={s.gridImage3}
-              onError={() => setImgErrors(prev => ({ ...prev, [idx]: true }))}
-            />
-          ))}
-        </View>
+        </ScrollView>
       )}
 
       {/* ── 반응 바 ── */}
@@ -497,41 +478,13 @@ const s = StyleSheet.create({
   feedTitle: { fontSize: 15, fontWeight: '700', color: T1, lineHeight: 22, marginBottom: 4 },
   feedContent: { fontSize: 14, color: T2, lineHeight: 20 },
 
-  // 이미지 - 1장
-  singleImage: {
-    width: '75%',
-    height: 160,
-    borderRadius: 10,
-    marginBottom: 10,
-    backgroundColor: '#E8EDF5',
-  },
-
-  // 이미지 - 2장
-  imageGrid2: {
-    flexDirection: 'row',
-    gap: 3,
-    marginBottom: 10,
-    width: '75%',
-  },
-  gridImage2: {
-    flex: 1,
-    height: 130,
-    borderRadius: 8,
-    backgroundColor: '#E8EDF5',
-  },
-
-  // 이미지 - 3장+
-  imageGrid3: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 3,
-    marginBottom: 10,
-    width: '75%',
-  },
-  gridImage3: {
-    width: '32%',
-    aspectRatio: 1.2,
-    borderRadius: 7,
+  // 이미지
+  imageScroll: { marginBottom: 10 },
+  feedImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    marginRight: 8,
     backgroundColor: '#E8EDF5',
   },
 
