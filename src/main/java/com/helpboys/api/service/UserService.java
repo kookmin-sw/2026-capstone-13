@@ -5,6 +5,7 @@ import com.helpboys.api.dto.LoginRequest;
 import com.helpboys.api.dto.LoginResponse;
 import com.helpboys.api.dto.RegisterRequest;
 import com.helpboys.api.dto.UserResponse;
+import com.helpboys.api.entity.Notification;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.UserRepository;
@@ -34,6 +35,7 @@ public class UserService implements UserDetailsService {
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
     private final Cloudinary cloudinary;
+    private final NotificationService notificationService;
 
     // Spring Security UserDetailsService 구현
     @Override
@@ -69,6 +71,7 @@ public class UserService implements UserDetailsService {
                 .major(request.getMajor())
                 .emailVerified(true)
                 .studentIdImageUrl(request.getStudentIdImageUrl())
+                .studentIdStatus(User.StudentIdStatus.PENDING)
                 .build();
 
         UserResponse response = UserResponse.from(userRepository.save(user));
@@ -137,6 +140,13 @@ public class UserService implements UserDetailsService {
         user.setStudentIdVerified(true);
         user.setStudentIdStatus(User.StudentIdStatus.APPROVED);
         userRepository.save(user);
+
+        notificationService.createNotification(
+                userId,
+                Notification.NotificationType.STUDENT_ID_APPROVED,
+                "학생증 인증이 승인되었습니다. 이제 모든 서비스를 이용할 수 있어요!",
+                null
+        );
     }
 
     // 학생증 거절 (관리자용)
@@ -147,6 +157,13 @@ public class UserService implements UserDetailsService {
         user.setStudentIdVerified(false);
         user.setStudentIdStatus(User.StudentIdStatus.REJECTED);
         userRepository.save(user);
+
+        notificationService.createNotification(
+                userId,
+                Notification.NotificationType.STUDENT_ID_REJECTED,
+                "학생증 인증이 거절되었습니다. 학생증 사진을 다시 제출해주세요.",
+                null
+        );
     }
 
     // 어드민 권한 확인
