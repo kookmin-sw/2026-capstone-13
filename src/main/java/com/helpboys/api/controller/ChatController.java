@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.Principal;
 import java.util.List;
 
 @Controller
@@ -34,7 +35,10 @@ public class ChatController {
 
     // WebSocket: /app/chat/send → 메시지 저장 후 /topic/chat/{roomId} 브로드캐스트
     @MessageMapping("/chat/send")
-    public void sendMessage(@Payload ChatMessageDto messageDto) {
+    public void sendMessage(@Payload ChatMessageDto messageDto, Principal principal) {
+        if (principal == null) return; // 인증 안 된 연결 차단
+        // 클라이언트가 보낸 senderId 무시 → 토큰에서 추출한 userId로 강제 교체
+        messageDto.setSenderId(Long.parseLong(principal.getName()));
         ChatMessageDto saved = chatService.saveMessage(messageDto);
         messagingTemplate.convertAndSend("/topic/chat/" + saved.getRoomId(), saved);
     }
