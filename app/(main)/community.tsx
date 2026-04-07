@@ -201,22 +201,6 @@ function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => vo
         </View>
       </View>
 
-      {/* ── 댓글 미리보기 ── */}
-      {item.commentList && item.commentList.length > 0 && (
-        <View style={s.commentPreview}>
-          {item.commentList.map((c) => (
-            <View key={c.id} style={s.commentPreviewItem}>
-              <Text style={s.commentPreviewAuthor}>{c.author}</Text>
-              <Text style={s.commentPreviewContent} numberOfLines={1}>{c.content}</Text>
-            </View>
-          ))}
-          {item.comments > 3 && (
-            <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-              <Text style={s.commentPreviewMore}>모든 {item.comments} 코멘트 보기</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
     </TouchableOpacity>
   );
 }
