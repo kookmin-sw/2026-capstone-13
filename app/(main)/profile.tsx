@@ -257,6 +257,9 @@ export default function ProfileScreen() {
               <Text style={[styles.nickname, { color: '#111111' }]}>
                 {user?.nickname ?? '사용자'}
               </Text>
+              {(user?.studentIdVerified || user?.studentIdStatus === 'APPROVED') && (
+                <Ionicons name="shield-checkmark" size={20} color="#22c55e" />
+              )}
             </View>
             <View style={styles.handleRow}>
               {(user?.university || user?.major) ? (
@@ -265,7 +268,6 @@ export default function ProfileScreen() {
                   {user?.university && user?.major ? ')' : ''}
                 </Text>
               ) : null}
-              {user?.studentIdVerified && <VerifiedBadge size="sm" />}
             </View>
           </View>
         </View>
