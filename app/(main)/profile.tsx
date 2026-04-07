@@ -257,32 +257,23 @@ export default function ProfileScreen() {
               <Text style={[styles.nickname, { color: '#111111' }]}>
                 {user?.nickname ?? '사용자'}
               </Text>
-              {(() => {
-                const helpCount = isKorean
-                  ? helpHistory.filter((h) => h.status === 'COMPLETED').length
-                  : myRequests.filter((r) => r.status === 'COMPLETED').length;
-                const lv = getLevel(helpCount);
-                return (
-                  <View style={[styles.levelBadge, { backgroundColor: lv.bg }]}>
-                    <Text style={[styles.levelBadgeText, { color: lv.color }]}>{lv.label}</Text>
-                  </View>
-                );
-              })()}
             </View>
             <View style={styles.handleRow}>
-              {user?.major ? (
-                <Text style={styles.handleText}>{user.major}</Text>
+              {(user?.university || user?.major) ? (
+                <Text style={styles.handleText} numberOfLines={1}>
+                  {[user.university, user.major].filter(Boolean).join('(')}
+                  {user?.university && user?.major ? ')' : ''}
+                </Text>
               ) : null}
               {user?.studentIdVerified && <VerifiedBadge size="sm" />}
             </View>
           </View>
-
-          <TouchableOpacity style={styles.editBtn} onPress={handleOpenProfileModal} activeOpacity={0.8}>
-            <Ionicons name="create-outline" size={14} color="#fff" />
-            <Text style={styles.editBtnText}> 수정</Text>
-          </TouchableOpacity>
         </View>
 
+        <TouchableOpacity style={styles.editBtn} onPress={handleOpenProfileModal} activeOpacity={0.8}>
+          <Ionicons name="create-outline" size={14} color="#fff" />
+          <Text style={styles.editBtnText}> 수정</Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── 활동 카드 ── */}
@@ -619,8 +610,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F4FA',
     marginBottom: 4,
     paddingHorizontal: 20, paddingTop: 20, paddingBottom: 8,
+    position: 'relative',
   },
-  profileRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 14 },
+  profileRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
   avatarWrapper: { alignItems: 'center' },
   avatarRing: {
     width: 70, height: 70, borderRadius: 35,
@@ -650,7 +642,7 @@ const styles = StyleSheet.create({
   flagText: { fontSize: 16, textAlign: 'center', includeFontPadding: false, lineHeight: 16, marginLeft: 1 },
   avatarProgressText: { fontSize: 12, fontWeight: '700', color: BLUE_MID },
 
-  profileInfo: { flex: 1, gap: 4 },
+  profileInfo: { flex: 1, gap: 0, marginTop: -4 },
   nicknameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   nickname: { fontSize: 24, fontWeight: '900', color: T1, letterSpacing: -0.5 },
   levelBadge: {
@@ -658,7 +650,7 @@ const styles = StyleSheet.create({
   },
   levelBadgeText: { fontSize: 14, fontWeight: '900' },
 
-  handleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  handleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -2 },
   handleText: { fontSize: 16, color: '#999999', fontWeight: '700' },
 
   followRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
@@ -667,11 +659,11 @@ const styles = StyleSheet.create({
 
   editBtn: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: BLUE, borderRadius: 16,
-    paddingHorizontal: 12, paddingVertical: 6,
-    alignSelf: 'center',
+    backgroundColor: BLUE, borderRadius: 12,
+    paddingHorizontal: 8, paddingVertical: 4,
+    position: 'absolute', top: 20, right: 20,
   },
-  editBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  editBtnText: { fontSize: 11, fontWeight: '700', color: '#fff' },
 
   detailBio: { fontSize: 13, color: T1, lineHeight: 18, marginBottom: 10 },
 
