@@ -71,6 +71,9 @@ public class NotificationService {
                 case COMMENT -> "새 댓글";
                 case LIKE -> "좋아요";
                 case HELP_OFFER -> "도움 제안";
+                case REVIEW_REQUEST -> "리뷰 작성 요청";
+                case STUDENT_ID_APPROVED -> "학생증 인증 승인";
+                case STUDENT_ID_REJECTED -> "학생증 인증 거절";
             };
             fcmService.sendPush(recipient.getFcmToken(), title, message);
         }

@@ -450,6 +450,15 @@ public class ChatService {
     // 채팅방 메시지 이력 조회 + 자동 읽음 처리
     @Transactional
     public List<ChatMessageDto> getMessages(Long roomId, Long userId) {
+        // 참여자 검증
+        HelpRequest room = helpRequestRepository.findById(roomId)
+                .orElseThrow(() -> new BusinessException("채팅방을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        boolean isParticipant = room.getRequester().getId().equals(userId)
+                || (room.getHelper() != null && room.getHelper().getId().equals(userId));
+        if (!isParticipant) {
+            throw new BusinessException("접근 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+
         // 입장 시 상대방이 보낸 메시지 모두 읽음 처리
         markAsRead(roomId, userId);
 

@@ -4,6 +4,7 @@ import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.NoticeResponse;
 import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.service.NoticeService;
+import com.helpboys.api.service.UserService;
 import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class NoticeController {
 
     private final NoticeService noticeService;
+    private final UserService userService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
 
@@ -41,7 +43,9 @@ public class NoticeController {
      * POST /api/notices/crawl - 수동 크롤링 트리거 (관리자용)
      */
     @PostMapping("/crawl")
-    public ResponseEntity<ApiResponse<String>> triggerCrawl() {
+    public ResponseEntity<ApiResponse<String>> triggerCrawl(
+            @RequestHeader("Authorization") String token) {
+        userService.checkAdmin(jwtUtil.extractUserId(token.replace("Bearer ", "")));
         int count = noticeService.crawlAndSave();
         return ResponseEntity.ok(ApiResponse.success("크롤링 완료", count + "건 저장됨"));
     }
@@ -50,7 +54,9 @@ public class NoticeController {
      * POST /api/notices/retranslate - 기존 공지 재번역 (관리자용)
      */
     @PostMapping("/retranslate")
-    public ResponseEntity<ApiResponse<String>> retranslate() {
+    public ResponseEntity<ApiResponse<String>> retranslate(
+            @RequestHeader("Authorization") String token) {
+        userService.checkAdmin(jwtUtil.extractUserId(token.replace("Bearer ", "")));
         new Thread(() -> noticeService.retranslateAll()).start();
         return ResponseEntity.ok(ApiResponse.success("재번역 시작됨", "백그라운드에서 처리 중"));
     }

@@ -3,8 +3,10 @@ package com.helpboys.api.service;
 import com.cloudinary.Cloudinary;
 import com.helpboys.api.dto.LoginRequest;
 import com.helpboys.api.dto.LoginResponse;
+import com.helpboys.api.dto.PasswordChangeRequest;
 import com.helpboys.api.dto.RegisterRequest;
 import com.helpboys.api.dto.UserResponse;
+import com.helpboys.api.entity.Notification;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.UserRepository;
@@ -34,6 +36,7 @@ public class UserService implements UserDetailsService {
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
     private final Cloudinary cloudinary;
+    private final NotificationService notificationService;
 
     // Spring Security UserDetailsService 구현
     @Override
@@ -69,6 +72,7 @@ public class UserService implements UserDetailsService {
                 .major(request.getMajor())
                 .emailVerified(true)
                 .studentIdImageUrl(request.getStudentIdImageUrl())
+                .studentIdStatus(User.StudentIdStatus.PENDING)
                 .build();
 
         UserResponse response = UserResponse.from(userRepository.save(user));
@@ -94,6 +98,7 @@ public class UserService implements UserDetailsService {
 
     // 이미지 Cloudinary 업로드 (공통)
     public String uploadImage(MultipartFile file, String folder) {
+        validateImageFile(file);
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> result = cloudinary.uploader().upload(
@@ -103,6 +108,16 @@ public class UserService implements UserDetailsService {
             return (String) result.get("secure_url");
         } catch (IOException e) {
             throw new BusinessException("이미지 업로드에 실패했습니다.");
+        }
+    }
+
+    private void validateImageFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("파일이 없습니다.");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new BusinessException("이미지 파일만 업로드할 수 있습니다. (jpg, png, gif 등)");
         }
     }
 
@@ -137,6 +152,13 @@ public class UserService implements UserDetailsService {
         user.setStudentIdVerified(true);
         user.setStudentIdStatus(User.StudentIdStatus.APPROVED);
         userRepository.save(user);
+
+        notificationService.createNotification(
+                userId,
+                Notification.NotificationType.STUDENT_ID_APPROVED,
+                "학생증 인증이 승인되었습니다. 이제 모든 서비스를 이용할 수 있어요!",
+                null
+        );
     }
 
     // 학생증 거절 (관리자용)
@@ -147,6 +169,13 @@ public class UserService implements UserDetailsService {
         user.setStudentIdVerified(false);
         user.setStudentIdStatus(User.StudentIdStatus.REJECTED);
         userRepository.save(user);
+
+        notificationService.createNotification(
+                userId,
+                Notification.NotificationType.STUDENT_ID_REJECTED,
+                "학생증 인증이 거절되었습니다. 학생증 사진을 다시 제출해주세요.",
+                null
+        );
     }
 
     // 어드민 권한 확인
@@ -219,6 +248,36 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
         user.setFcmToken(fcmToken);
+        userRepository.save(user);
+    }
+
+    // 비밀번호 변경
+    @Transactional
+    public void changePassword(Long userId, PasswordChangeRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BusinessException("현재 비밀번호가 올바르지 않습니다.", HttpStatus.BAD_REQUEST);
+        }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    // 회원 탈퇴 (소프트 삭제 + 개인정보 익명화)
+    @Transactional
+    public void deleteAccount(Long userId, String password) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new BusinessException("비밀번호가 올바르지 않습니다.", HttpStatus.BAD_REQUEST);
+        }
+        user.setDeleted(true);
+        user.setEmail("deleted_" + userId + "@deleted.com");
+        user.setNickname("(알 수 없음)");
+        user.setProfileImage(null);
+        user.setBio(null);
+        user.setFcmToken(null);
+        user.setStudentIdImageUrl(null);
         userRepository.save(user);
     }
 }

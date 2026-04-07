@@ -4,6 +4,7 @@ import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.MealResponse;
 import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.service.MealService;
+import com.helpboys.api.service.UserService;
 import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import java.util.List;
 public class MealController {
 
     private final MealService mealService;
+    private final UserService userService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
 
