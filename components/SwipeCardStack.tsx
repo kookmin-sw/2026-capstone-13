@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#BAE6FD',
+    borderColor: '#D0D0D0',
   },
   avatarText: { fontSize: 52, fontWeight: '900', color: ACCENT },
   avatarImage: { width: '100%', height: '100%', borderRadius: 65 },

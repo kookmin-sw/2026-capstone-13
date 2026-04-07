@@ -6,7 +6,7 @@ import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Image, Platform,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -217,7 +217,7 @@ export default function CommunityScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<SearchMode>('title');
   const searchInputRef = useRef<TextInput>(null);
-  const HEADER_HEIGHT = Platform.OS === 'ios' ? 160 : 125;
+  const HEADER_HEIGHT = 165;
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -268,15 +268,13 @@ export default function CommunityScreen() {
 
   return (
     <View style={s.container}>
-      {/* 게시글 목록 — 상단에 헤더 높이만큼 패딩 */}
-      {isLoading ? (
-        <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 80 }} />
-      ) : null}
       <FlatList
         data={filteredPosts}
         renderItem={renderPost}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={[s.list, { paddingTop: HEADER_HEIGHT }]}
+        bounces={false}
+        overScrollMode="never"
         ItemSeparatorComponent={() => <View style={s.postDivider} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
         ListEmptyComponent={
@@ -290,9 +288,8 @@ export default function CommunityScreen() {
         }
       />
 
-      {/* 헤더 — 스크롤에 따라 translateY로 붙었다 떨어졌다 */}
+      {/* 고정 헤더 */}
       <View style={s.stickyHeader}>
-        <View style={s.topSpacer} />
         <View style={s.header}>
           <View style={s.headerSearchBar}>
             <Ionicons name="search-outline" size={16} color={T2} />
@@ -352,6 +349,7 @@ export default function CommunityScreen() {
           </ScrollView>
         </View>
         <View style={s.headerDivider} />
+        {isLoading ? <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 40 }} /> : null}
       </View>
     </View>
   );
@@ -359,15 +357,12 @@ export default function CommunityScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
-
-  // ── 고정 헤더 (위로 스크롤 시 나타남) ──
+  listHeader: { backgroundColor: '#fff', paddingTop: 60 },
   stickyHeader: {
     position: 'absolute', top: 0, left: 0, right: 0,
     zIndex: 10, backgroundColor: '#fff',
+    paddingTop: 55,
   },
-
-  // ── 상단 여백 ──
-  topSpacer: { height: Platform.OS === 'ios' ? 65 : 125, backgroundColor: '#fff' },
 
   // ── Header ──
   header: {
@@ -478,9 +473,9 @@ const s = StyleSheet.create({
 
   // 이미지 - 1장
   singleImage: {
-    width: '100%',
-    height: 220,
-    borderRadius: 12,
+    width: '75%',
+    height: 160,
+    borderRadius: 10,
     marginBottom: 10,
     backgroundColor: '#E8EDF5',
   },
@@ -490,11 +485,12 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     gap: 3,
     marginBottom: 10,
+    width: '75%',
   },
   gridImage2: {
     flex: 1,
-    height: 180,
-    borderRadius: 10,
+    height: 130,
+    borderRadius: 8,
     backgroundColor: '#E8EDF5',
   },
 
@@ -504,11 +500,12 @@ const s = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 3,
     marginBottom: 10,
+    width: '75%',
   },
   gridImage3: {
     width: '32%',
-    aspectRatio: 1,
-    borderRadius: 8,
+    aspectRatio: 1.2,
+    borderRadius: 7,
     backgroundColor: '#E8EDF5',
   },
 

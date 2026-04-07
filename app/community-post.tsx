@@ -63,7 +63,6 @@ export default function CommunityPostScreen() {
   const [translating, setTranslating] = useState(false);
   const [commentTranslations, setCommentTranslations] = useState<Record<number, string>>({});
   const [translatingComments, setTranslatingComments] = useState<Record<number, boolean>>({});
-  const [showAllComments, setShowAllComments] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -349,7 +348,7 @@ export default function CommunityPostScreen() {
             </View>
           ) : (
             <>
-              {(showAllComments ? comments : comments.slice(0, 3)).map((c) => (
+              {comments.map((c) => (
                 <View key={c.id} style={s.commentItem}>
                   {toAbsoluteUrl(c.authorProfileImage)
                     ? <Image source={{ uri: toAbsoluteUrl(c.authorProfileImage)! }} style={s.commentAvatar} />
@@ -390,12 +389,6 @@ export default function CommunityPostScreen() {
                   </View>
                 </View>
               ))}
-              {comments.length > 3 && !showAllComments && (
-                <TouchableOpacity style={s.showAllBtn} onPress={() => setShowAllComments(true)} activeOpacity={0.7}>
-                  <Text style={s.showAllBtnText}>모든 {comments.length} 코멘트 보기</Text>
-                  <Ionicons name="chevron-down" size={14} color={T3} />
-                </TouchableOpacity>
-              )}
             </>
           )}
         </View>
@@ -526,11 +519,6 @@ const s = StyleSheet.create({
   commentTranslateBtn: { marginTop: 4, alignSelf: 'flex-start' },
   commentTranslateText: { fontSize: 11, color: T2, fontWeight: '600' },
   commentTranslateTextActive: { color: BLUE },
-  showAllBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingVertical: 12, marginTop: 4,
-  },
-  showAllBtnText: { fontSize: 13, fontWeight: '700', color: T3 },
   moreBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: BLUE_L, justifyContent: 'center', alignItems: 'center',
