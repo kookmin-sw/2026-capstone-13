@@ -6,8 +6,9 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/helpboys?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
     username: ${SPRING_DATASOURCE_USERNAME:helpboys}
-    password: ${SPRING_DATASOURCE_PASSWORD:helpboys1234}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
 
   # JPA 설정
   jpa:
@@ -24,7 +25,7 @@ server:
 
 # JWT 설정
 jwt:
-  secret: ${JWT_SECRET:helpboys-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256}
+  secret: ${JWT_SECRET}
   expiration: 86400000  # 24시간 (밀리초)
 
 # AI 서버 설정
@@ -34,8 +35,8 @@ ai:
 
 # Agora 설정
 agora:
-  app-id: ${AGORA_APP_ID:5be9cb6d40124217977bca952784cff2}
-  app-certificate: ${AGORA_APP_CERTIFICATE:e080d7b8dd2e4dadb7aef5ab616c2ca3}
+  app-id: ${AGORA_APP_ID}
+  app-certificate: ${AGORA_APP_CERTIFICATE}
 
 # 로깅 설정 (Railway 500 logs/sec 제한 대응)
 logging:
@@ -48,9 +49,19 @@ logging:
     org.springframework.security: WARN
     org.hibernate: WARN
 
+# Resend 이메일 API
+resend:
+  api-key: ${RESEND_API_KEY}
+
 # Firebase FCM 설정 (서비스 계정 JSON 전체를 환경변수로)
 firebase:
   credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+
+# Cloudinary 설정
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
 
 # Actuator - 헬스체크 엔드포인트 활성화
 management:

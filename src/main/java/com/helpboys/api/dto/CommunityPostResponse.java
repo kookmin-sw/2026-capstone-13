@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 @Getter
 @AllArgsConstructor
@@ -30,8 +31,14 @@ public class CommunityPostResponse {
     private boolean liked;
     private String createdAt;
 
-    // 목록용 (댓글 미포함)
+    // 목록용 (최근 댓글 3개 포함)
     public static CommunityPostResponse fromList(CommunityPost post, boolean liked) {
+        List<PostCommentResponse> recentComments = post.getCommentList().stream()
+                .sorted(Comparator.comparing(c -> c.getCreatedAt()))
+                .limit(3)
+                .map(PostCommentResponse::from)
+                .collect(Collectors.toList());
+
         return CommunityPostResponse.builder()
                 .id(post.getId())
                 .category(post.getCategory().name())
@@ -44,7 +51,7 @@ public class CommunityPostResponse {
                 .userType(post.getAuthor().getUserType().name())
                 .likes(post.getLikes())
                 .comments(post.getCommentList().size())
-                .commentList(Collections.emptyList())
+                .commentList(recentComments)
                 .liked(liked)
                 .createdAt(post.getCreatedAt().toString())
                 .build();
