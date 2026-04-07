@@ -79,6 +79,9 @@ function CardContent({ card }: { card: HelpRequest }) {
         <View style={styles.profileInfo}>
           <View style={styles.nameRow}>
             <Text style={styles.cardName}>{card.requester.nickname}</Text>
+            {(card.requester.studentIdVerified || card.requester.studentIdStatus === 'APPROVED') && (
+              <Ionicons name="shield-checkmark" size={16} color="#22c55e" style={{ marginLeft: -4 }} />
+            )}
             <View style={styles.urgencyBadge}>
               <View style={[styles.urgencyDot, { backgroundColor: urgency.color }]} />
               <Text style={[styles.urgencyText, { color: urgency.color }]}>{urgency.label}</Text>
@@ -229,24 +232,24 @@ const styles = StyleSheet.create({
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 8,
     marginBottom: 18,
   },
   avatarWrap: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
+    width: 78,
+    height: 78,
+    borderRadius: 39,
     backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: '#D0D0D0',
   },
-  avatarText: { fontSize: 52, fontWeight: '900', color: ACCENT },
-  avatarImage: { width: '100%', height: '100%', borderRadius: 65 },
-  profileInfo: { flex: 1, gap: 4 },
+  avatarText: { fontSize: 31, fontWeight: '900', color: ACCENT },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 39 },
+  profileInfo: { flex: 1, gap: 0 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardName: { fontSize: 21, fontWeight: '800', color: '#0C1C3C', letterSpacing: -0.3 },
+  cardName: { fontSize: 19, fontWeight: '800', color: '#0C1C3C', letterSpacing: -0.3 },
   urgencyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -258,8 +261,8 @@ const styles = StyleSheet.create({
   },
   urgencyDot:  { width: 6, height: 6, borderRadius: 3 },
   urgencyText: { fontSize: 11, fontWeight: '700' },
-  subText:  { fontSize: 14, color: '#667799', fontWeight: '600' },
-  timeRow:  { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  subText:  { fontSize: 14, color: '#667799', fontWeight: '600', marginTop: -2 },
+  timeRow:  { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 0 },
   timeSmall: { fontSize: 13, color: '#7799BB' },
   /* 구분선 */
   divider: {

@@ -60,6 +60,9 @@ function CardContent({ user }: { user: User }) {
         <View style={styles.profileInfo}>
           <View style={styles.nameRow}>
             <Text style={styles.cardName}>{user.nickname}</Text>
+            {(user.studentIdVerified || user.studentIdStatus === 'APPROVED') && (
+              <Ionicons name="shield-checkmark" size={16} color="#22c55e" style={{ marginLeft: -4 }} />
+            )}
             <View style={[styles.levelBadge, { backgroundColor: lv.color + '18', borderColor: lv.color + '40' }]}>
               <Text style={[styles.levelText, { color: lv.color }]}>{lv.label}</Text>
             </View>
@@ -206,24 +209,24 @@ const styles = StyleSheet.create({
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 8,
     marginBottom: 18,
   },
   avatarWrap: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
+    width: 78,
+    height: 78,
+    borderRadius: 39,
     backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: '#BAE6FD',
   },
-  avatarText: { fontSize: 52, fontWeight: '900', color: ACCENT },
-  avatarImage: { width: '100%', height: '100%', borderRadius: 65 },
-  profileInfo: { flex: 1, gap: 4 },
+  avatarText: { fontSize: 31, fontWeight: '900', color: ACCENT },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 39 },
+  profileInfo: { flex: 1, gap: 0 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardName: { fontSize: 21, fontWeight: '800', color: '#0C1C3C', letterSpacing: -0.3 },
+  cardName: { fontSize: 19, fontWeight: '800', color: '#0C1C3C', letterSpacing: -0.3 },
   levelBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -233,8 +236,8 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   levelText: { fontSize: 11, fontWeight: '700' },
-  subText: { fontSize: 14, color: '#667799', fontWeight: '600' },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  subText: { fontSize: 14, color: '#667799', fontWeight: '600', marginTop: -2 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 0 },
   ratingText: { fontSize: 13, color: '#7799BB', fontWeight: '600' },
   dotSep: { fontSize: 13, color: '#AABBCC' },
   helpCountText: { fontSize: 13, color: '#7799BB', fontWeight: '600' },
