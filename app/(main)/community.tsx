@@ -81,7 +81,13 @@ function formatTime(createdAt: string): string {
 type SearchMode = 'title' | 'title+content';
 
 // ── 피드 카드 컴포넌트 ──────────────────────────────────────
-function FeedCard({ item, onPress, onLike }: { item: CommunityPostDto; onPress: () => void; onLike: (postId: number, liked: boolean, likeCount: number) => void }) {
+function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd }: {
+  item: CommunityPostDto;
+  onPress: () => void;
+  onLike: (postId: number, liked: boolean, likeCount: number) => void;
+  onImageScrollStart?: () => void;
+  onImageScrollEnd?: () => void;
+}) {
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
   const [liked, setLiked] = useState(item.liked);
   const [likeCount, setLikeCount] = useState(item.likes);
@@ -97,53 +103,65 @@ function FeedCard({ item, onPress, onLike }: { item: CommunityPostDto; onPress: 
   const validImages = item.images.filter((_, i) => !imgErrors[i]);
 
   return (
-    <TouchableOpacity style={s.feedCard} activeOpacity={0.95} onPress={onPress}>
-      {/* ── 유저 헤더 ── */}
-      <View style={s.feedHeader}>
-        <View style={s.feedAvatarWrap}>
-          {profileUri ? (
-            <Image source={{ uri: profileUri }} style={s.feedAvatar} />
-          ) : (
-            <View style={[s.feedAvatar, { backgroundColor: avatarColor(item.author), justifyContent: 'center', alignItems: 'center' }]}>
-              <Text style={s.feedAvatarText}>{item.author.charAt(0)}</Text>
-            </View>
-          )}
-        </View>
-        <View style={s.feedAuthorInfo}>
-          <View style={s.feedNameRow}>
-            <Text style={s.feedAuthorName}>{item.author}</Text>
-            {isHot && (
-              <View style={s.hotBadge}>
-                <Text style={s.hotBadgeText}>🔥 인기</Text>
+    <View style={s.feedCard}>
+      {/* ── 유저 헤더 + 본문 (터치 가능) ── */}
+      <TouchableOpacity activeOpacity={0.95} onPress={onPress}>
+        <View style={s.feedHeader}>
+          <View style={s.feedAvatarWrap}>
+            {profileUri ? (
+              <Image source={{ uri: profileUri }} style={s.feedAvatar} />
+            ) : (
+              <View style={[s.feedAvatar, { backgroundColor: avatarColor(item.author), justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={s.feedAvatarText}>{item.author.charAt(0)}</Text>
               </View>
             )}
           </View>
-          <View style={s.feedMetaRow}>
-            <View style={[s.catBadge, { backgroundColor: catBg }]}>
-              <Text style={[s.catBadgeText, { color: catColor }]}>{CATEGORY_LABEL[item.category]}</Text>
+          <View style={s.feedAuthorInfo}>
+            <View style={s.feedNameRow}>
+              <Text style={s.feedAuthorName}>{item.author}</Text>
+              {isHot && (
+                <View style={s.hotBadge}>
+                  <Text style={s.hotBadgeText}>🔥 인기</Text>
+                </View>
+              )}
             </View>
-            <Text style={s.feedTime}>{formatTime(item.createdAt)}</Text>
-            {item.university ? (
-              <Text style={s.feedUniv} numberOfLines={1}>{item.university}</Text>
-            ) : null}
+            <View style={s.feedMetaRow}>
+              <View style={[s.catBadge, { backgroundColor: catBg }]}>
+                <Text style={[s.catBadgeText, { color: catColor }]}>{CATEGORY_LABEL[item.category]}</Text>
+              </View>
+              <Text style={s.feedTime}>{formatTime(item.createdAt)}</Text>
+              {item.university ? (
+                <Text style={s.feedUniv} numberOfLines={1}>{item.university}</Text>
+              ) : null}
+            </View>
+          </View>
+          <View style={s.moreBtn}>
+            <Ionicons name="ellipsis-horizontal" size={18} color={T2} />
           </View>
         </View>
-        <TouchableOpacity style={s.moreBtn} activeOpacity={0.7} onPress={onPress}>
-          <Ionicons name="ellipsis-horizontal" size={18} color={T2} />
-        </TouchableOpacity>
-      </View>
 
-      {/* ── 본문 ── */}
-      <View style={s.feedBody}>
-        <Text style={s.feedTitle} numberOfLines={2}>{translated ? translated.title : item.title}</Text>
-        {(translated ? translated.content : item.content) ? (
-          <Text style={s.feedContent} numberOfLines={3}>{translated ? translated.content : item.content}</Text>
-        ) : null}
-      </View>
+        {/* ── 본문 ── */}
+        <View style={s.feedBody}>
+          <Text style={s.feedTitle} numberOfLines={2}>{translated ? translated.title : item.title}</Text>
+          {(translated ? translated.content : item.content) ? (
+            <Text style={s.feedContent} numberOfLines={3}>{translated ? translated.content : item.content}</Text>
+          ) : null}
+        </View>
+      </TouchableOpacity>
 
-      {/* ── 이미지 그리드 ── */}
+      {/* ── 이미지 (터치 독립) ── */}
       {validImages.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.imageScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={s.imageScroll}
+          nestedScrollEnabled={true}
+          directionalLockEnabled={true}
+          decelerationRate="fast"
+          onScrollBeginDrag={onImageScrollStart}
+          onScrollEndDrag={onImageScrollEnd}
+          onMomentumScrollEnd={onImageScrollEnd}
+        >
           {validImages.map((uri, idx) => (
             <Image
               key={idx}
@@ -204,8 +222,7 @@ function FeedCard({ item, onPress, onLike }: { item: CommunityPostDto; onPress: 
         </View>
         <View style={s.reactionRight} />
       </View>
-
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -216,6 +233,7 @@ export default function CommunityScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('ALL');
   const [refreshing, setRefreshing] = useState(false);
+  const [flatListScrollEnabled, setFlatListScrollEnabled] = useState(true);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<SearchMode>('title');
@@ -241,6 +259,9 @@ export default function CommunityScreen() {
   const handleLike = useCallback((postId: number, liked: boolean, likeCount: number) => {
     setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, liked, likes: likeCount } : p));
   }, []);
+
+  const handleImageScrollStart = useCallback(() => setFlatListScrollEnabled(false), []);
+  const handleImageScrollEnd = useCallback(() => setFlatListScrollEnabled(true), []);
 
   const openSearch = () => {
     setSearchVisible(true);
@@ -271,8 +292,10 @@ export default function CommunityScreen() {
       item={item}
       onPress={() => router.push({ pathname: '/community-post', params: { id: item.id } })}
       onLike={handleLike}
+      onImageScrollStart={handleImageScrollStart}
+      onImageScrollEnd={handleImageScrollEnd}
     />
-  ), [router, handleLike]);
+  ), [router, handleLike, handleImageScrollStart, handleImageScrollEnd]);
 
   return (
     <View style={s.container}>
@@ -282,6 +305,7 @@ export default function CommunityScreen() {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={[s.list, { paddingTop: HEADER_HEIGHT }]}
         overScrollMode="always"
+        scrollEnabled={flatListScrollEnabled}
         ItemSeparatorComponent={() => <View style={s.postDivider} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} progressViewOffset={HEADER_HEIGHT} />}
         ListEmptyComponent={
