@@ -1,5 +1,5 @@
 // 학교생활 화면
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   Linking,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -70,6 +71,9 @@ export default function SchoolScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [expandedNotice, setExpandedNotice] = useState<number | null>(null);
   const [notices, setNotices] = useState<SchoolNotice[]>([]);
+  const [noticeSearch, setNoticeSearch] = useState('');
+  const [noticeSearchVisible, setNoticeSearchVisible] = useState(false);
+  const noticeSearchRef = useRef<TextInput>(null);
   const [noticesLoading, setNoticesLoading] = useState(false);
   const [meals, setMeals] = useState<MealData[]>([]);
   const [mealsLoading, setMealsLoading] = useState(false);
@@ -254,11 +258,46 @@ export default function SchoolScreen() {
         {/* ── 공지사항 콘텐츠 ── */}
         {activeTab === 'NOTICE' && (
           <>
-            {/* 번역 안내 배지 */}
-            <View style={s.translateBadge}>
-              <Ionicons name="language-outline" size={13} color={BLUE} />
-              <Text style={s.translateBadgeText}>공지사항 제목을 {langName}로 번역했어요</Text>
+            {/* 번역 안내 배지 + 검색 버튼 */}
+            <View style={s.noticeTopRow}>
+              <View style={s.translateBadge}>
+                <Ionicons name="language-outline" size={13} color={BLUE} />
+                <Text style={s.translateBadgeText}>공지사항 제목을 {langName}로 번역했어요</Text>
+              </View>
+              <TouchableOpacity
+                style={s.searchIconBtn}
+                onPress={() => {
+                  setNoticeSearchVisible((v) => {
+                    if (v) { setNoticeSearch(''); }
+                    else { setTimeout(() => noticeSearchRef.current?.focus(), 100); }
+                    return !v;
+                  });
+                }}
+              >
+                <Ionicons name={noticeSearchVisible ? 'close-outline' : 'search-outline'} size={20} color={BLUE} />
+              </TouchableOpacity>
             </View>
+
+            {/* 검색창 */}
+            {noticeSearchVisible && (
+              <View style={s.noticeSearchBar}>
+                <Ionicons name="search-outline" size={15} color={T2} />
+                <TextInput
+                  ref={noticeSearchRef}
+                  style={s.noticeSearchInput}
+                  placeholder="공지사항 검색"
+                  placeholderTextColor={T2}
+                  value={noticeSearch}
+                  onChangeText={setNoticeSearch}
+                  returnKeyType="search"
+                />
+                {noticeSearch.length > 0 && (
+                  <TouchableOpacity onPress={() => setNoticeSearch('')}>
+                    <Ionicons name="close-circle" size={16} color={T2} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
 
             {noticesLoading ? (
               <ActivityIndicator color={BLUE} style={{ marginTop: 60 }} />
@@ -269,7 +308,13 @@ export default function SchoolScreen() {
                 <Text style={s.emptySub}>나중에 다시 확인해보세요</Text>
               </View>
             ) : (
-              notices.map((notice) => (
+              notices
+                .filter((n) => {
+                  if (!noticeSearch.trim()) return true;
+                  const q = noticeSearch.trim().toLowerCase();
+                  return n.titleKo.toLowerCase().includes(q) || n.title.toLowerCase().includes(q);
+                })
+                .map((notice) => (
                 <TouchableOpacity
                   key={notice.id}
                   style={s.noticeCard}
@@ -332,6 +377,7 @@ export default function SchoolScreen() {
             )}
           </>
         )}
+
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -448,12 +494,25 @@ const s = StyleSheet.create({
   },
 
   // ── 번역 배지 ──
+  noticeTopRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: 4, marginBottom: 2,
+  },
   translateBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: BLUE_L, paddingHorizontal: 10, paddingVertical: 7,
     borderRadius: 10, alignSelf: 'flex-start',
   },
   translateBadgeText: { fontSize: 12, color: BLUE, fontWeight: '600' },
+  searchIconBtn: { padding: 6 },
+  noticeSearchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#F4F6FB', borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 8,
+    marginBottom: 8,
+  },
+  noticeSearchInput: { flex: 1, fontSize: 14, color: T1, padding: 0 },
 
   // ── 공지 카드 ──
   noticeCard: {
