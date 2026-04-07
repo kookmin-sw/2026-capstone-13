@@ -24,6 +24,16 @@ public class MealScheduler {
     }
 
     /**
+     * 매일 오전 8시 30분 번역 누락 식단 재번역 (크롤 후 30분 뒤)
+     */
+    @Scheduled(cron = "0 30 8 * * *", zone = "Asia/Seoul")
+    public void scheduledRetranslateMissing() {
+        log.info("[스케줄러] 번역 누락 식단 재번역 시작");
+        int count = mealService.retranslateMissing();
+        log.info("[스케줄러] 번역 누락 식단 {}건 재번역 완료", count);
+    }
+
+    /**
      * 매일 자정 지난 식단 자동 삭제
      */
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")

@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/meals").permitAll()
                 .requestMatchers("/api/meals/crawl").permitAll()
                 .requestMatchers("/api/meals/retranslate").permitAll()
+                .requestMatchers("/api/meals/retranslate-missing").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
