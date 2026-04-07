@@ -238,7 +238,7 @@ export default function CommunityScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<SearchMode>('title');
   const searchInputRef = useRef<TextInput>(null);
-  const HEADER_HEIGHT = 165;
+  const HEADER_HEIGHT = 134;
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -392,7 +392,7 @@ const s = StyleSheet.create({
   stickyHeader: {
     position: 'absolute', top: 0, left: 0, right: 0,
     zIndex: 10, backgroundColor: '#fff',
-    paddingTop: 55,
+    paddingTop: 24,
   },
 
   // ── Header ──
