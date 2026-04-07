@@ -86,6 +86,11 @@ public class User {
     @Builder.Default
     private boolean isAdmin = false;
 
+    // 탈퇴 여부
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private boolean isDeleted = false;
+
     // FCM 푸시 알림 토큰 (앱 로그인 시 저장)
     @Column(name = "fcm_token", columnDefinition = "TEXT")
     private String fcmToken;
