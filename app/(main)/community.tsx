@@ -2,7 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -81,10 +81,11 @@ function formatTime(createdAt: string): string {
 type SearchMode = 'title' | 'title+content';
 
 // ── 피드 카드 컴포넌트 ──────────────────────────────────────
-function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => void }) {
+function FeedCard({ item, onPress, onLike }: { item: CommunityPostDto; onPress: () => void; onLike: (postId: number, liked: boolean, likeCount: number) => void }) {
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
   const [liked, setLiked] = useState(item.liked);
   const [likeCount, setLikeCount] = useState(item.likes);
+  useEffect(() => { setLiked(item.liked); setLikeCount(item.likes); }, [item.id, item.liked, item.likes]);
   const [translating, setTranslating] = useState(false);
   const { getTranslation, setTranslation } = useCommunityStore();
   const translated = getTranslation(item.id);
@@ -180,13 +181,17 @@ function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => vo
             style={s.reactionItem}
             activeOpacity={0.7}
             onPress={async () => {
-              setLiked((prev) => !prev);
-              setLikeCount((prev) => liked ? prev - 1 : prev + 1);
+              const newLiked = !liked;
+              const newCount = liked ? likeCount - 1 : likeCount + 1;
+              setLiked(newLiked);
+              setLikeCount(newCount);
+              onLike(item.id, newLiked, newCount);
               try {
                 await toggleCommunityLike(item.id);
               } catch {
-                setLiked((prev) => !prev);
-                setLikeCount((prev) => liked ? prev + 1 : prev - 1);
+                setLiked(liked);
+                setLikeCount(likeCount);
+                onLike(item.id, liked, likeCount);
               }
             }}
           >
@@ -252,6 +257,10 @@ export default function CommunityScreen() {
 
   const onRefresh = () => { setRefreshing(true); fetchPosts(); };
 
+  const handleLike = useCallback((postId: number, liked: boolean, likeCount: number) => {
+    setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, liked, likes: likeCount } : p));
+  }, []);
+
   const openSearch = () => {
     setSearchVisible(true);
     setTimeout(() => searchInputRef.current?.focus(), 100);
@@ -280,8 +289,9 @@ export default function CommunityScreen() {
     <FeedCard
       item={item}
       onPress={() => router.push({ pathname: '/community-post', params: { id: item.id } })}
+      onLike={handleLike}
     />
-  ), [router]);
+  ), [router, handleLike]);
 
   return (
     <View style={s.container}>
