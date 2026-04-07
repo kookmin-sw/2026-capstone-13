@@ -156,49 +156,35 @@ public class MealService {
         Meal meal = mealRepository.findById(mealId).orElseThrow();
         meal.getTranslations().clear();
         mealRepository.saveAndFlush(meal);
-        for (String lang : SUPPORTED_LANGUAGES) {
-            try {
-                String cafBody = objectMapper.writeValueAsString(
-                        Map.of("text", meal.getCafeteria(), "target_lang", lang, "source_lang", "ko"));
-                HttpRequest cafReq = HttpRequest.newBuilder()
-                        .uri(URI.create(aiServerUrl + "/api/azure/translate"))
-                        .header("Content-Type", "application/json")
-                        .timeout(java.time.Duration.ofSeconds(15))
-                        .POST(HttpRequest.BodyPublishers.ofString(cafBody)).build();
-                HttpResponse<String> cafResp = httpClient.send(cafReq, HttpResponse.BodyHandlers.ofString());
-                String translatedCaf = objectMapper.readTree(cafResp.body())
-                        .path("data").path("translated").asText(meal.getCafeteria());
 
-                String corBody = objectMapper.writeValueAsString(
-                        Map.of("text", meal.getCorner(), "target_lang", lang, "source_lang", "ko"));
-                HttpRequest corReq = HttpRequest.newBuilder()
-                        .uri(URI.create(aiServerUrl + "/api/azure/translate"))
-                        .header("Content-Type", "application/json")
-                        .timeout(java.time.Duration.ofSeconds(15))
-                        .POST(HttpRequest.BodyPublishers.ofString(corBody)).build();
-                HttpResponse<String> corResp = httpClient.send(corReq, HttpResponse.BodyHandlers.ofString());
-                String translatedCor = objectMapper.readTree(corResp.body())
-                        .path("data").path("translated").asText(meal.getCorner());
+        try {
+            // 10개 언어 × 3개 텍스트를 한 번에 번역
+            String body = objectMapper.writeValueAsString(Map.of(
+                    "cafeteria", meal.getCafeteria(),
+                    "corner",    meal.getCorner(),
+                    "menu",      meal.getMenu()
+            ));
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(aiServerUrl + "/api/meals/translate-batch"))
+                    .header("Content-Type", "application/json")
+                    .timeout(java.time.Duration.ofSeconds(15))
+                    .POST(HttpRequest.BodyPublishers.ofString(body)).build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            JsonNode translations = objectMapper.readTree(resp.body()).path("data");
 
-                String menuBody = objectMapper.writeValueAsString(
-                        Map.of("text", meal.getMenu(), "target_lang", lang, "source_lang", "ko"));
-                HttpRequest menuReq = HttpRequest.newBuilder()
-                        .uri(URI.create(aiServerUrl + "/api/azure/translate"))
-                        .header("Content-Type", "application/json")
-                        .timeout(java.time.Duration.ofSeconds(15))
-                        .POST(HttpRequest.BodyPublishers.ofString(menuBody)).build();
-                HttpResponse<String> menuResp = httpClient.send(menuReq, HttpResponse.BodyHandlers.ofString());
-                String translatedMenu = objectMapper.readTree(menuResp.body())
-                        .path("data").path("translated").asText(meal.getMenu());
-
+            translations.fields().forEachRemaining(entry -> {
+                JsonNode t = entry.getValue();
                 meal.getTranslations().add(MealTranslation.builder()
-                        .meal(meal).langCode(lang)
-                        .cafeteria(translatedCaf).corner(translatedCor).menu(translatedMenu)
+                        .meal(meal).langCode(entry.getKey())
+                        .cafeteria(t.path("cafeteria").asText(meal.getCafeteria()))
+                        .corner(t.path("corner").asText(meal.getCorner()))
+                        .menu(t.path("menu").asText(meal.getMenu()))
                         .build());
-            } catch (Exception e) {
-                log.warn("[식단 재번역] id={} {} 언어 실패: {}", mealId, lang, e.getMessage());
-            }
+            });
+        } catch (Exception e) {
+            log.warn("[식단 재번역] id={} 실패: {}", mealId, e.getMessage());
         }
+
         mealRepository.save(meal);
     }
 
