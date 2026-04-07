@@ -38,6 +38,8 @@ public class SecurityConfig {
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/api/notices").permitAll()
                 .requestMatchers("/api/meals").permitAll()
+                .requestMatchers("/api/meals/crawl").permitAll()
+                .requestMatchers("/api/meals/retranslate").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
