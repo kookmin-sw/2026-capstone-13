@@ -11,6 +11,7 @@ import com.helpboys.api.service.CommunityService;
 import com.helpboys.api.util.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/community")
 @RequiredArgsConstructor
@@ -44,8 +46,9 @@ public class CommunityController {
             );
             String url = (String) result.get("secure_url");
             return ResponseEntity.ok(ApiResponse.success("업로드 완료", Map.of("url", url)));
-        } catch (IOException e) {
-            throw new BusinessException("이미지 업로드에 실패했습니다.");
+        } catch (Exception e) {
+            log.error("[Cloudinary] 이미지 업로드 실패: {}", e.getMessage(), e);
+            throw new BusinessException("이미지 업로드에 실패했습니다: " + e.getMessage());
         }
     }
 
