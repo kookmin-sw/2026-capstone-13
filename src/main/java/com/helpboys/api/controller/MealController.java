@@ -4,6 +4,7 @@ import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.MealResponse;
 import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.service.MealService;
+import com.helpboys.api.service.UserService;
 import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import java.util.List;
 public class MealController {
 
     private final MealService mealService;
+    private final UserService userService;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
 
@@ -38,7 +40,9 @@ public class MealController {
      * POST /api/meals/crawl - 수동 크롤링 트리거 (관리자용)
      */
     @PostMapping("/crawl")
-    public ResponseEntity<ApiResponse<String>> triggerCrawl() {
+    public ResponseEntity<ApiResponse<String>> triggerCrawl(
+            @RequestHeader("Authorization") String token) {
+        userService.checkAdmin(jwtUtil.extractUserId(token.replace("Bearer ", "")));
         int count = mealService.crawlAndSave();
         return ResponseEntity.ok(ApiResponse.success("크롤링 완료", count + "건 저장됨"));
     }
@@ -47,7 +51,9 @@ public class MealController {
      * POST /api/meals/retranslate - 기존 식단 재번역 (관리자용)
      */
     @PostMapping("/retranslate")
-    public ResponseEntity<ApiResponse<String>> retranslate() {
+    public ResponseEntity<ApiResponse<String>> retranslate(
+            @RequestHeader("Authorization") String token) {
+        userService.checkAdmin(jwtUtil.extractUserId(token.replace("Bearer ", "")));
         new Thread(() -> mealService.retranslateAll()).start();
         return ResponseEntity.ok(ApiResponse.success("재번역 시작됨", "백그라운드에서 처리 중"));
     }
