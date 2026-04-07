@@ -1,11 +1,13 @@
 package com.helpboys.api.controller;
 
 import com.helpboys.api.dto.ApiResponse;
+import com.helpboys.api.dto.PasswordChangeRequest;
 import com.helpboys.api.dto.ReviewResponse;
 import com.helpboys.api.dto.UserResponse;
 import com.helpboys.api.service.ReviewService;
 import com.helpboys.api.service.UserService;
 import com.helpboys.api.util.JwtUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -120,6 +122,26 @@ public class UserController {
         checkAdmin(token);
         userService.rejectStudentId(id);
         return ResponseEntity.ok(ApiResponse.success("학생증 인증이 거절되었습니다.", null));
+    }
+
+    // PATCH /api/users/password - 비밀번호 변경
+    @PatchMapping("/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody PasswordChangeRequest request,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        userService.changePassword(userId, request);
+        return ResponseEntity.ok(ApiResponse.success("비밀번호가 변경되었습니다.", null));
+    }
+
+    // DELETE /api/users/me - 회원 탈퇴
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse<Void>> deleteAccount(
+            @RequestBody Map<String, String> body,
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        userService.deleteAccount(userId, body.get("password"));
+        return ResponseEntity.ok(ApiResponse.success("회원 탈퇴가 완료되었습니다.", null));
     }
 
     private void checkAdmin(String bearerToken) {

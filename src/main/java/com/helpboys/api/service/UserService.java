@@ -3,6 +3,7 @@ package com.helpboys.api.service;
 import com.cloudinary.Cloudinary;
 import com.helpboys.api.dto.LoginRequest;
 import com.helpboys.api.dto.LoginResponse;
+import com.helpboys.api.dto.PasswordChangeRequest;
 import com.helpboys.api.dto.RegisterRequest;
 import com.helpboys.api.dto.UserResponse;
 import com.helpboys.api.entity.Notification;
@@ -236,6 +237,36 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
         user.setFcmToken(fcmToken);
+        userRepository.save(user);
+    }
+
+    // 비밀번호 변경
+    @Transactional
+    public void changePassword(Long userId, PasswordChangeRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BusinessException("현재 비밀번호가 올바르지 않습니다.", HttpStatus.BAD_REQUEST);
+        }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    // 회원 탈퇴 (소프트 삭제 + 개인정보 익명화)
+    @Transactional
+    public void deleteAccount(Long userId, String password) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new BusinessException("비밀번호가 올바르지 않습니다.", HttpStatus.BAD_REQUEST);
+        }
+        user.setDeleted(true);
+        user.setEmail("deleted_" + userId + "@deleted.com");
+        user.setNickname("(알 수 없음)");
+        user.setProfileImage(null);
+        user.setBio(null);
+        user.setFcmToken(null);
+        user.setStudentIdImageUrl(null);
         userRepository.save(user);
     }
 }
