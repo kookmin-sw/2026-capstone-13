@@ -37,11 +37,7 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/api/notices").permitAll()
-                .requestMatchers("/api/notices/crawl").permitAll()
-                .requestMatchers("/api/notices/retranslate").permitAll()
                 .requestMatchers("/api/meals").permitAll()
-                .requestMatchers("/api/meals/crawl").permitAll()
-                .requestMatchers("/api/meals/retranslate").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
