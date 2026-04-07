@@ -196,6 +196,10 @@ public class MealService {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         List<Meal> meals = mealRepository.findByMealDateWithTranslations(today);
         return meals.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        Meal::getId, m -> m, (a, b) -> a, java.util.LinkedHashMap::new
+                ))
+                .values().stream()
                 .map(m -> MealResponse.from(m, langCode))
                 .toList();
     }
@@ -208,6 +212,10 @@ public class MealService {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         List<Meal> meals = mealRepository.findByMealDateBetweenWithTranslations(today, today.plusDays(6));
         return meals.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        Meal::getId, m -> m, (a, b) -> a, java.util.LinkedHashMap::new
+                ))
+                .values().stream()
                 .map(m -> MealResponse.from(m, langCode))
                 .toList();
     }
