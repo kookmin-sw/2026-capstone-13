@@ -160,7 +160,7 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: 
   const flyOut = useCallback((toX: number, onDone: () => void) => {
     Animated.parallel([
       Animated.timing(exitX,    { toValue: toX, duration: 220, useNativeDriver: true }),
-      Animated.timing(progress, { toValue: 1,   duration: 220, useNativeDriver: false }),
+      Animated.timing(progress, { toValue: 1,   duration: 220, useNativeDriver: true }),
     ]).start(() => {
       setTopIdx(prev => prev + 1);
       exitX.setValue(0);
@@ -202,7 +202,7 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: 
         if (card) onSwipeRightRef.current?.(card);
         Animated.parallel([
           Animated.timing(exitX,    { toValue: SCREEN_WIDTH + 200, duration: 220, useNativeDriver: true }),
-          Animated.timing(progress, { toValue: 1, duration: 220, useNativeDriver: false }),
+          Animated.timing(progress, { toValue: 1, duration: 220, useNativeDriver: true }),
         ]).start(() => {
           setTopIdx(prev => prev + 1);
           exitX.setValue(0);
@@ -216,7 +216,7 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: 
         if (card) onSwipeLeftRef.current?.(card);
         Animated.parallel([
           Animated.timing(exitX,    { toValue: -(SCREEN_WIDTH + 200), duration: 220, useNativeDriver: true }),
-          Animated.timing(progress, { toValue: 1, duration: 220, useNativeDriver: false }),
+          Animated.timing(progress, { toValue: 1, duration: 220, useNativeDriver: true }),
         ]).start(() => {
           setTopIdx(prev => prev + 1);
           exitX.setValue(0);
@@ -227,7 +227,7 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: 
         // 임계값 미달 → 원위치
         Animated.parallel([
           Animated.spring(exitX,    { toValue: 0, useNativeDriver: true, tension: 40, friction: 7 }),
-          Animated.spring(progress, { toValue: 0, useNativeDriver: false, tension: 40, friction: 7 }),
+          Animated.spring(progress, { toValue: 0, useNativeDriver: true, tension: 40, friction: 7 }),
         ]).start();
       }
     },

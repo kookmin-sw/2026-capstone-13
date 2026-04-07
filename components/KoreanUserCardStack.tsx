@@ -139,7 +139,7 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
   const flyOut = (toX: number, cb?: () => void) => {
     Animated.parallel([
       Animated.timing(exitX,    { toValue: toX, duration: 220, useNativeDriver: true }),
-      Animated.timing(progress, { toValue: 1,   duration: 220, useNativeDriver: false }),
+      Animated.timing(progress, { toValue: 1,   duration: 220, useNativeDriver: true }),
     ]).start(() => {
       setTopIdx(prev => prev + 1);
       exitX.setValue(0);
@@ -176,7 +176,7 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
       } else {
         Animated.parallel([
           Animated.spring(exitX,    { toValue: 0, useNativeDriver: true, tension: 40, friction: 7 }),
-          Animated.spring(progress, { toValue: 0, useNativeDriver: false, tension: 40, friction: 7 }),
+          Animated.spring(progress, { toValue: 0, useNativeDriver: true, tension: 40, friction: 7 }),
         ]).start();
       }
     },
