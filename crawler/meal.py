@@ -2,6 +2,7 @@
 국민대학교 주간 식단 크롤러
 - https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do 에서 수집
 """
+import re
 import requests
 from bs4 import BeautifulSoup
 
@@ -10,6 +11,28 @@ MEAL_URL = "https://www.kookmin.ac.kr/user/unLvlh/lvlhSpor/todayMenu/index.do"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
 }
+
+# HTML/JSX 아티팩트 패턴 (}" />, /> 등)
+_ARTIFACT_RE = re.compile(r'^[}">\s/|]+$')
+
+
+def _clean_menu_text(text: str) -> str:
+    """크롤링된 메뉴 텍스트에서 HTML/JSX 잔재 및 불필요한 문자를 정리합니다."""
+    cleaned = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        # }" />, />, } 등 HTML/JSX 잔재 줄 제거
+        if _ARTIFACT_RE.match(line):
+            continue
+        # 앞뒤 큰따옴표 제거
+        line = line.strip('"').strip()
+        # <저속노화식단> 형태 → [저속노화식단] (Azure가 HTML 태그로 오인해 번역 스킵하는 것 방지)
+        line = re.sub(r'<([^>]+)>', r'[\1]', line)
+        if line:
+            cleaned.append(line)
+    return "\n".join(cleaned)
 
 
 def crawl_weekly_menu() -> list[dict]:
@@ -61,11 +84,12 @@ def crawl_weekly_menu() -> list[dict]:
                 for hidden in menu_cell.select("input[type=hidden]"):
                     hidden.decompose()
 
-                menu_text = "\n".join(
+                raw_text = "\n".join(
                     line.strip()
                     for line in menu_cell.get_text(separator="\n", strip=True).splitlines()
                     if line.strip()
                 )
+                menu_text = _clean_menu_text(raw_text)
 
                 if not menu_text:
                     continue
