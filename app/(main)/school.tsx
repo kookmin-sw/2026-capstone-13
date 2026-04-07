@@ -74,6 +74,7 @@ export default function SchoolScreen() {
   const [meals, setMeals] = useState<MealData[]>([]);
   const [mealsLoading, setMealsLoading] = useState(false);
   const [selectedCafeteria, setSelectedCafeteria] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
 
   const fetchNotices = async () => {
     setNoticesLoading(true);
@@ -94,10 +95,14 @@ export default function SchoolScreen() {
       const res = await api.get('/meals');
       const data: MealData[] = res.data.data ?? [];
       setMeals(data);
-      if (data.length > 0 && !selectedCafeteria) {
-        const ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)'];
-        const first = ORDER.find((name) => data.some((m) => m.cafeteriaKo === name));
-        setSelectedCafeteria(first ?? data[0].cafeteriaKo);
+      if (data.length > 0) {
+        const dates = [...new Set(data.map((m) => m.mealDate))].sort();
+        if (!selectedDate || !dates.includes(selectedDate)) setSelectedDate(dates[0]);
+        if (!selectedCafeteria) {
+          const ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)'];
+          const first = ORDER.find((name) => data.some((m) => m.cafeteriaKo === name));
+          setSelectedCafeteria(first ?? data[0].cafeteriaKo);
+        }
       }
     } catch (e) {
       // 실패 시 빈 목록 유지
@@ -116,14 +121,25 @@ export default function SchoolScreen() {
     Promise.all([fetchNotices(), fetchMeals()]).finally(() => setRefreshing(false));
   };
 
-  // 식당 목록 (cafeteriaKo 기준, 표시는 번역된 cafeteria 사용)
-  const CAFETERIA_ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)', '청향 한식당(법학관 5층)', '청향 양식당(법학관 5층)', 'K-Bob+'];
-  const cafeteriaList = CAFETERIA_ORDER.filter((name) => meals.some((m) => m.cafeteriaKo === name));
+  // 날짜 목록
+  const dateList = [...new Set(meals.map((m) => m.mealDate))].sort();
 
-  // 선택된 식당의 코너 목록
-  const selectedMeals = meals.filter((m) => m.cafeteriaKo === selectedCafeteria);
+  const formatDateTab = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayName = days[d.getDay()];
+    const label = diff === 0 ? '오늘' : diff === 1 ? '내일' : `${d.getMonth() + 1}/${d.getDate()}`;
+    return { label, dayName };
+  };
 
-  const mealDate = meals.length > 0 ? meals[0].mealDate : '';
+  // 선택 날짜 기준 식당 목록 (K-Bob+ 제외)
+  const CAFETERIA_ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)', '청향 한식당(법학관 5층)', '청향 양식당(법학관 5층)'];
+  const mealsForDate = meals.filter((m) => m.mealDate === selectedDate);
+  const cafeteriaList = CAFETERIA_ORDER.filter((name) => mealsForDate.some((m) => m.cafeteriaKo === name));
+  const selectedMeals = mealsForDate.filter((m) => m.cafeteriaKo === selectedCafeteria);
 
   return (
     <View style={s.container}>
@@ -142,7 +158,7 @@ export default function SchoolScreen() {
               color={activeTab === key ? BLUE : T2}
             />
             <Text style={[s.tabText, activeTab === key && s.tabTextActive]}>
-              {key === 'CAFETERIA' ? '오늘의 학식' : '공지사항'}
+              {key === 'CAFETERIA' ? '학식' : '공지사항'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -162,10 +178,30 @@ export default function SchoolScreen() {
             ) : meals.length === 0 ? (
               <View style={s.empty}>
                 <Text style={s.emptyEmoji}>🍽️</Text>
-                <Text style={s.emptyTitle}>오늘의 식단이 없어요</Text>
+                <Text style={s.emptyTitle}>식단 정보가 없어요</Text>
                 <Text style={s.emptySub}>다음에 다시 확인해보세요</Text>
               </View>
             ) : (
+              <>
+                {/* 날짜 탭 */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.dateTabs}>
+                  {dateList.map((date) => {
+                    const { label, dayName } = formatDateTab(date);
+                    const isSelected = selectedDate === date;
+                    return (
+                      <TouchableOpacity
+                        key={date}
+                        style={[s.dateTab, isSelected && s.dateTabActive]}
+                        onPress={() => { setSelectedDate(date); setSelectedCafeteria(null); }}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[s.dateTabLabel, isSelected && s.dateTabLabelActive]}>{label}</Text>
+                        <Text style={[s.dateTabDay, isSelected && s.dateTabDayActive]}>{dayName}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+
               <View style={s.sectionCard}>
                 {/* 식당 선택 - < 이름 > 방식 */}
                 {cafeteriaList.length > 0 && (() => {
@@ -193,8 +229,8 @@ export default function SchoolScreen() {
                 })()}
 
                 {/* 3. 위치 정보 */}
-                {selectedMeals.length > 0 && selectedMeals[0].cafeteriaKo ? (
-                  <Text style={s.cafeteriaLocation}>{selectedMeals[0].cafeteriaKo}</Text>
+                {selectedMeals.length > 0 && selectedMeals[0].cafeteria ? (
+                  <Text style={s.cafeteriaLocation}>{selectedMeals[0].cafeteria}</Text>
                 ) : null}
 
                 {/* 4. 코너별 메뉴 */}
@@ -210,6 +246,7 @@ export default function SchoolScreen() {
                   </View>
                 ))}
               </View>
+              </>
             )}
           </>
         )}
@@ -321,6 +358,15 @@ const s = StyleSheet.create({
   tabActive:     { borderBottomColor: BLUE },
   tabText:       { fontSize: 14, fontWeight: '700', color: T2 },
   tabTextActive: { color: BLUE },
+
+  // ── 날짜 탭 ──
+  dateTabs:        { paddingHorizontal: 4, gap: 8, paddingBottom: 4 },
+  dateTab:         { alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: '#F4F5F8', minWidth: 52 },
+  dateTabActive:   { backgroundColor: BLUE },
+  dateTabLabel:    { fontSize: 13, fontWeight: '700', color: T1 },
+  dateTabLabelActive: { color: '#fff' },
+  dateTabDay:      { fontSize: 11, color: T2, marginTop: 2 },
+  dateTabDayActive: { color: '#BFCFFF' },
 
   // ── 식당 선택 탭 (| 구분선 스타일) ──
   cafeteriaTabWrap: {
