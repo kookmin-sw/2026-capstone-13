@@ -109,7 +109,7 @@ export default function ChatScreen() {
       if (res.success) {
         setRequests(res.data);
         const total = res.data
-          .filter((r) => !hasLeft(r.id, myId))
+          .filter((r) => !hasLeft(r.id, myId) && r.status !== 'WAITING')
           .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
         setUnreadCount(total);
       }

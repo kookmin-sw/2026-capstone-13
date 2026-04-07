@@ -26,7 +26,7 @@ export default function MainLayout() {
     getChatRooms().then((res) => {
       if (res.success && Array.isArray(res.data)) {
         const total = res.data
-          .filter((r) => !hasLeft(r.id, myId))
+          .filter((r) => !hasLeft(r.id, myId) && r.status !== 'WAITING')
           .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
         setUnreadCount(total);
       }
@@ -72,6 +72,8 @@ export default function MainLayout() {
               if (!mounted) return;
               try {
                 const msg = JSON.parse(frame.body);
+                // SYS 메시지는 뱃지 증가에서 제외
+                if (msg.content?.startsWith('SYS_LEAVE:') || msg.content?.startsWith('SYS_CALL_')) return;
                 // 상대방 메시지이고 현재 그 채팅방 안에 없을 때만 뱃지 증가
                 const { activeChatroomId } = useChatStore.getState();
                 if (msg.senderId !== user.id && activeChatroomId !== roomId) {
