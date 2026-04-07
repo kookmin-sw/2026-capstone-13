@@ -22,4 +22,7 @@ public interface MealRepository extends JpaRepository<Meal, Long> {
     List<Meal> findByMealDateBetweenWithTranslations(@Param("start") LocalDate start, @Param("end") LocalDate end);
 
     List<Meal> findByMealDateBefore(LocalDate date);
+
+    @Query("SELECT m FROM Meal m WHERE m.translations IS EMPTY")
+    List<Meal> findMealsWithNoTranslations();
 }

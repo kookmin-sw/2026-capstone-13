@@ -46,12 +46,21 @@ public class MealController {
     }
 
     /**
-     * POST /api/meals/retranslate - 기존 식단 재번역 (관리자용)
+     * POST /api/meals/retranslate - 기존 식단 전체 재번역 (관리자용)
      */
     @PostMapping("/retranslate")
     public ResponseEntity<ApiResponse<String>> retranslate() {
         new Thread(() -> mealService.retranslateAll()).start();
         return ResponseEntity.ok(ApiResponse.success("재번역 시작됨", "백그라운드에서 처리 중"));
+    }
+
+    /**
+     * POST /api/meals/retranslate-missing - 번역 누락 식단만 재번역 (관리자용)
+     */
+    @PostMapping("/retranslate-missing")
+    public ResponseEntity<ApiResponse<String>> retranslateMissing() {
+        new Thread(() -> mealService.retranslateMissing()).start();
+        return ResponseEntity.ok(ApiResponse.success("누락 재번역 시작됨", "백그라운드에서 처리 중"));
     }
 
     private String resolveLang(String queryLang, String token) {

@@ -133,6 +133,25 @@ public class MealService {
             List.of("en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru");
 
     /**
+     * 번역 누락 식단만 재번역 (크롤 시 번역 실패한 경우 복구용)
+     */
+    public int retranslateMissing() {
+        List<Long> ids = mealRepository.findMealsWithNoTranslations().stream()
+                .map(Meal::getId).toList();
+        int count = 0;
+        for (Long id : ids) {
+            try {
+                retranslateOne(id);
+                count++;
+            } catch (Exception e) {
+                log.warn("[식단 재번역-누락] id={} 실패: {}", id, e.getMessage());
+            }
+        }
+        log.info("[식단 재번역-누락] {}건 완료", count);
+        return count;
+    }
+
+    /**
      * 기존 식단 전체 재번역 — 식단별 별도 트랜잭션으로 처리
      */
     public int retranslateAll() {
