@@ -73,8 +73,28 @@ public class AuthController {
     // POST /api/auth/student-id/upload - 학생증 이미지 업로드 (multipart)
     @PostMapping(value = "/student-id/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<StudentIdUploadResponse>> uploadStudentId(
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest httpRequest) {
+        // IP 기반 rate limiting (분당 5회, 하루 20회)
+        String ip = getClientIp(httpRequest);
+        if (!rateLimiter.isAllowed("student-id:min:" + ip, 5, 60) ||
+            !rateLimiter.isAllowed("student-id:day:" + ip, 20, 86400)) {
+            throw new BusinessException("요청이 너무 많습니다. 잠시 후 다시 시도해주세요.", HttpStatus.TOO_MANY_REQUESTS);
+        }
+        // 이미지 파일 타입 검증
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new BusinessException("이미지 파일만 업로드할 수 있습니다. (jpg, png 등)");
+        }
         String imageUrl = userService.uploadStudentIdImage(file);
         return ResponseEntity.ok(ApiResponse.success("학생증이 업로드되었습니다.", new StudentIdUploadResponse(imageUrl)));
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }
