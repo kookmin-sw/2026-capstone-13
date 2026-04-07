@@ -1,5 +1,8 @@
+import * as SecureStore from 'expo-secure-store';
 import api from './api';
 import type { ApiResponse, PostCategory } from '../types';
+
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api';
 
 export interface CommunityPostDto {
   id: number;
@@ -42,19 +45,27 @@ export interface PagedResponse<T> {
   first: boolean;
 }
 
-// 게시글 이미지 업로드 (Cloudinary)
+// 게시글 이미지 업로드 (Cloudinary) - fetch 사용으로 multipart boundary 자동 처리
 export const uploadCommunityImage = async (uri: string): Promise<string> => {
+  const token = await SecureStore.getItemAsync('accessToken');
+  const rawName = uri.split('/').pop() ?? 'image.jpg';
+  const match = /\.(\w+)$/.exec(rawName);
+  const ext = match ? match[1].toLowerCase() : 'jpg';
+  const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+  const filename = match ? rawName : `image_${Date.now()}.jpg`;
+
   const formData = new FormData();
-  const filename = uri.split('/').pop() ?? 'image.jpg';
-  const match = /\.(\w+)$/.exec(filename);
-  const type = match ? `image/${match[1]}` : 'image/jpeg';
   formData.append('file', { uri, name: filename, type } as unknown as Blob);
-  const response = await api.post<{ success: boolean; data: { url: string } }>(
-    '/community/upload',
-    formData,
-    { headers: { 'Content-Type': undefined }, timeout: 30000 },
-  );
-  return response.data.data.url;
+
+  const response = await fetch(`${BASE_URL}/community/upload`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+
+  if (!response.ok) throw new Error('이미지 업로드 실패');
+  const json = await response.json();
+  return json.data.url;
 };
 
 // 게시글 목록 조회
