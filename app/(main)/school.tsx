@@ -135,8 +135,8 @@ export default function SchoolScreen() {
     return { label, dayName };
   };
 
-  // 선택 날짜 기준 식당 목록
-  const CAFETERIA_ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)', '청향 한식당(법학관 5층)', '청향 양식당(법학관 5층)', 'K-Bob+'];
+  // 선택 날짜 기준 식당 목록 (K-Bob+ 제외)
+  const CAFETERIA_ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)', '청향 한식당(법학관 5층)', '청향 양식당(법학관 5층)'];
   const mealsForDate = meals.filter((m) => m.mealDate === selectedDate);
   const cafeteriaList = CAFETERIA_ORDER.filter((name) => mealsForDate.some((m) => m.cafeteriaKo === name));
   const selectedMeals = mealsForDate.filter((m) => m.cafeteriaKo === selectedCafeteria);
@@ -229,8 +229,8 @@ export default function SchoolScreen() {
                 })()}
 
                 {/* 3. 위치 정보 */}
-                {selectedMeals.length > 0 && selectedMeals[0].cafeteriaKo ? (
-                  <Text style={s.cafeteriaLocation}>{selectedMeals[0].cafeteriaKo}</Text>
+                {selectedMeals.length > 0 && selectedMeals[0].cafeteria ? (
+                  <Text style={s.cafeteriaLocation}>{selectedMeals[0].cafeteria}</Text>
                 ) : null}
 
                 {/* 4. 코너별 메뉴 */}
