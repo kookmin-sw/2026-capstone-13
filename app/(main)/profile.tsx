@@ -269,6 +269,17 @@ export default function ProfileScreen() {
                 </Text>
               ) : null}
             </View>
+            {(() => {
+              const helpCount = isKorean
+                ? helpHistory.filter((h) => h.status === 'COMPLETED').length
+                : myRequests.filter((r) => r.status === 'COMPLETED').length;
+              const lv = getLevel(helpCount);
+              return (
+                <View style={[styles.levelBadge, { backgroundColor: lv.bg, borderColor: lv.color, marginTop: 4, marginLeft: -1 }]}>
+                  <Text style={[styles.levelBadgeText, { color: lv.color }]}>{lv.label}</Text>
+                </View>
+              );
+            })()}
           </View>
         </View>
 
@@ -646,11 +657,13 @@ const styles = StyleSheet.create({
 
   profileInfo: { flex: 1, gap: 0, marginTop: -4 },
   nicknameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
-  nickname: { fontSize: 24, fontWeight: '900', color: T1, letterSpacing: -0.5 },
+  nickname: { fontSize: 20, fontWeight: '900', color: T1, letterSpacing: -0.5 },
   levelBadge: {
-    borderRadius: 10, paddingHorizontal: 9, paddingVertical: 3,
+    borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2,
+    alignSelf: 'flex-start',
+    borderWidth: 1.5,
   },
-  levelBadgeText: { fontSize: 14, fontWeight: '900' },
+  levelBadgeText: { fontSize: 11, fontWeight: '900' },
 
   handleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -2 },
   handleText: { fontSize: 16, color: '#999999', fontWeight: '700' },
