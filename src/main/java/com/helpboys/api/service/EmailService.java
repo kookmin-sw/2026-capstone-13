@@ -10,10 +10,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 
 @Slf4j
 @Service
@@ -34,7 +34,7 @@ public class EmailService {
 
         verificationRepository.deleteByEmail(email);
 
-        String code = String.format("%06d", new Random().nextInt(1000000));
+        String code = String.format("%06d", new SecureRandom().nextInt(1000000));
 
         verificationRepository.save(EmailVerification.builder()
                 .email(email)

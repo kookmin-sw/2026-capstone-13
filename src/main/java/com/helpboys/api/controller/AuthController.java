@@ -60,10 +60,16 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("인증번호가 발송되었습니다.", null));
     }
 
-    // POST /api/auth/verify-code - 인증번호 확인
+    // POST /api/auth/verify-code - 인증번호 확인 (이메일당 분당 10회 제한)
     @PostMapping("/verify-code")
-    public ResponseEntity<ApiResponse<String>> verifyCode(@RequestBody Map<String, String> body) {
-        boolean ok = emailService.verifyCode(body.get("email"), body.get("code"));
+    public ResponseEntity<ApiResponse<String>> verifyCode(
+            @RequestBody Map<String, String> body,
+            HttpServletRequest httpRequest) {
+        String email = body.get("email");
+        if (!rateLimiter.isAllowed("verify:" + email, 10, 60)) {
+            throw new BusinessException("인증번호 확인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.", HttpStatus.TOO_MANY_REQUESTS);
+        }
+        boolean ok = emailService.verifyCode(email, body.get("code"));
         if (!ok) {
             return ResponseEntity.badRequest().body(ApiResponse.error("인증번호가 올바르지 않거나 만료되었습니다."));
         }
