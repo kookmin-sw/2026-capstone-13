@@ -275,12 +275,9 @@ async def crawl_meals():
                     for lang in SUPPORTED_LANGUAGES
                 }
             else:
-                # 재시도 후에도 실패 → 원문 저장, 나중에 retranslate로 재처리
+                # 재시도 후에도 실패 → 빈 translations 저장 (스케줄러가 나중에 retranslate)
                 failed.append(f"{meal['cafeteria']} / {meal['corner']} / {meal['date']}")
-                translations = {
-                    lang: {"cafeteria": meal["cafeteria"], "corner": meal["corner"], "menu": meal["menu"]}
-                    for lang in SUPPORTED_LANGUAGES
-                }
+                translations = {}
             await asyncio.sleep(0.3)
             result.append({
                 "cafeteria_ko": meal["cafeteria"],
