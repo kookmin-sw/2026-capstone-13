@@ -45,14 +45,20 @@ export interface PagedResponse<T> {
 // 게시글 이미지 업로드 (Cloudinary)
 export const uploadCommunityImage = async (uri: string): Promise<string> => {
   const formData = new FormData();
-  const filename = uri.split('/').pop() ?? 'image.jpg';
-  const match = /\.(\w+)$/.exec(filename);
-  const type = match ? `image/${match[1]}` : 'image/jpeg';
+  const rawName = uri.split('/').pop() ?? 'image.jpg';
+  const match = /\.(\w+)$/.exec(rawName);
+  const ext = match ? match[1].toLowerCase() : 'jpg';
+  const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+  const filename = match ? rawName : `image_${Date.now()}.jpg`;
   formData.append('file', { uri, name: filename, type } as unknown as Blob);
   const response = await api.post<{ success: boolean; data: { url: string } }>(
     '/community/upload',
     formData,
-    { headers: { 'Content-Type': undefined }, timeout: 30000 },
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000,
+      transformRequest: (data) => data,
+    },
   );
   return response.data.data.url;
 };
