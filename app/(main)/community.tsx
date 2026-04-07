@@ -290,10 +290,9 @@ export default function CommunityScreen() {
         renderItem={renderPost}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={[s.list, { paddingTop: HEADER_HEIGHT }]}
-        bounces={false}
-        overScrollMode="never"
+        overScrollMode="always"
         ItemSeparatorComponent={() => <View style={s.postDivider} />}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} progressViewOffset={HEADER_HEIGHT} />}
         ListEmptyComponent={
           !isLoading ? (
             <View style={s.empty}>
