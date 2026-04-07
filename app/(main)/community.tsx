@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getCommunityPosts, toggleCommunityLike, type CommunityPostDto } from '../../services/communityService';
+import { getCommunityPosts, toggleCommunityLike, translateCommunityPost, type CommunityPostDto } from '../../services/communityService';
 import type { PostCategory } from '../../types';
 
 // ── Design tokens ──
@@ -84,6 +84,8 @@ function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => vo
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
   const [liked, setLiked] = useState(item.liked);
   const [likeCount, setLikeCount] = useState(item.likes);
+  const [translated, setTranslated] = useState<{ title: string; content: string } | null>(null);
+  const [translating, setTranslating] = useState(false);
   const profileUri = toAbsoluteUrl(item.authorProfileImage);
   const catColor = CATEGORY_COLOR[item.category];
   const catBg    = CATEGORY_BG[item.category];
@@ -130,9 +132,9 @@ function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => vo
 
       {/* ── 본문 ── */}
       <View style={s.feedBody}>
-        <Text style={s.feedTitle} numberOfLines={2}>{item.title}</Text>
-        {item.content ? (
-          <Text style={s.feedContent} numberOfLines={3}>{item.content}</Text>
+        <Text style={s.feedTitle} numberOfLines={2}>{translated ? translated.title : item.title}</Text>
+        {(translated ? translated.content : item.content) ? (
+          <Text style={s.feedContent} numberOfLines={3}>{translated ? translated.content : item.content}</Text>
         ) : null}
       </View>
 
@@ -193,12 +195,26 @@ function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => vo
             <Ionicons name="chatbubble-outline" size={15} color={T2} />
             <Text style={s.reactionCount}>{item.comments}</Text>
           </View>
-        </View>
-        <View style={s.reactionRight}>
-          <TouchableOpacity style={s.iconBtn} activeOpacity={0.7}>
-            <Ionicons name="share-outline" size={16} color={T2} />
+          <TouchableOpacity
+            style={s.iconBtn}
+            activeOpacity={0.7}
+            onPress={async () => {
+              if (translated) { setTranslated(null); return; }
+              setTranslating(true);
+              try {
+                const res = await translateCommunityPost(item.id);
+                if (res.success) setTranslated(res.data);
+              } catch {}
+              finally { setTranslating(false); }
+            }}
+          >
+            {translating
+              ? <ActivityIndicator size="small" color={T2} />
+              : <Ionicons name="language-outline" size={17} color={translated ? BLUE : T2} />
+            }
           </TouchableOpacity>
         </View>
+        <View style={s.reactionRight} />
       </View>
 
     </TouchableOpacity>
