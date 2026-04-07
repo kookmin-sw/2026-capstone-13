@@ -15,7 +15,8 @@ import type { HelpRequest } from '../types';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 90;
 const CARD_HEIGHT = 390;
-const CARD_BG = '#5592E0';
+const CARD_BG = '#FFFFFF';
+const ACCENT  = '#0EA5E9';
 
 // 카드 위치: 0=앞, 1=중간, 2=뒤
 const SLOT_OFFSET = [0, 16, 32];
@@ -37,9 +38,9 @@ const LANG_FLAG: Record<string, string> = {
 
 function getUrgency(createdAt: string): { label: string; color: string } {
   const ms = Date.now() - new Date(createdAt.includes('Z') ? createdAt : createdAt + 'Z').getTime();
-  if (ms > 2 * 60 * 60 * 1000) return { label: '긴급', color: '#FFAAAA' };
-  if (ms < 30 * 60 * 1000)     return { label: '신규', color: '#C8E0FF' };
-  return                               { label: '진행', color: '#C8E0FF' };
+  if (ms > 2 * 60 * 60 * 1000) return { label: '긴급', color: '#F97316' };
+  if (ms < 30 * 60 * 1000)     return { label: '신규', color: '#0EA5E9' };
+  return                               { label: '진행', color: '#0EA5E9' };
 }
 
 function formatTime(iso: string): string {
@@ -62,7 +63,8 @@ function CardContent({ card }: { card: HelpRequest }) {
 
   return (
     <View style={styles.card}>
-      <View style={styles.cardBg}>
+      {/* 상단: 프로필 */}
+      <View style={styles.profileRow}>
         <View style={styles.avatarWrap}>
           {showImage ? (
             <Image
@@ -74,25 +76,31 @@ function CardContent({ card }: { card: HelpRequest }) {
             <Text style={styles.avatarText}>{initial}</Text>
           )}
         </View>
-      </View>
-      <View style={styles.urgencyBadge}>
-        <View style={[styles.urgencyDot, { backgroundColor: urgency.color }]} />
-        <Text style={[styles.urgencyText, { color: urgency.color }]}>{urgency.label}</Text>
-      </View>
-      <View style={styles.timePill}>
-        <Text style={styles.timeText}>{formatTime(card.createdAt)}</Text>
-      </View>
-      <View style={styles.infoLayer}>
-        <View style={styles.nameRow}>
-          <Text style={styles.cardName}>{card.requester.nickname}</Text>
-          {card.requester.preferredLanguage && LANG_FLAG[card.requester.preferredLanguage] && (
-            <Text style={styles.flagText}>{LANG_FLAG[card.requester.preferredLanguage]}</Text>
+        <View style={styles.profileInfo}>
+          <View style={styles.nameRow}>
+            <Text style={styles.cardName}>{card.requester.nickname}</Text>
+            <View style={styles.urgencyBadge}>
+              <View style={[styles.urgencyDot, { backgroundColor: urgency.color }]} />
+              <Text style={[styles.urgencyText, { color: urgency.color }]}>{urgency.label}</Text>
+            </View>
+          </View>
+          {card.requester.major && (
+            <Text style={styles.subText} numberOfLines={1}>{card.requester.major}</Text>
           )}
+          <View style={styles.timeRow}>
+            <Ionicons name="time-outline" size={11} color="#7799BB" />
+            <Text style={styles.timeSmall}>{formatTime(card.createdAt)}</Text>
+          </View>
         </View>
-        <View style={styles.requestBox}>
-          <Text style={styles.requestLabel}>도움 요청</Text>
-          <Text style={styles.requestText} numberOfLines={3}>{card.title}</Text>
-        </View>
+      </View>
+
+      {/* 구분선 */}
+      <View style={styles.divider} />
+
+      {/* 하단: 도움 요청 내용 */}
+      <View style={styles.infoLayer}>
+        <Text style={styles.requestLabel}>도움 요청</Text>
+        <Text style={styles.requestText} numberOfLines={4}>{card.title}</Text>
       </View>
     </View>
   );
@@ -195,105 +203,88 @@ const styles = StyleSheet.create({
     left: 0,
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    borderRadius: 28,
-    shadowColor: '#000',
+    borderRadius: 20,
+    shadowColor: 'rgb(37,99,235)',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
   },
   card: {
     width: '100%',
     height: '100%',
-    borderRadius: 28,
-    overflow: 'hidden',
-  },
-  cardBg: {
-    ...StyleSheet.absoluteFillObject,
+    borderRadius: 20,
     backgroundColor: CARD_BG,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
+    paddingHorizontal: 20,
+    paddingTop: 24,
   },
-  avatarWrap: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.35)',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'absolute',
-    top: 36,
-    left: CARD_WIDTH / 2 - 80,
-  },
-  avatarText: { fontSize: 64, fontWeight: '900', color: 'rgba(255,255,255,0.95)' },
-  avatarImage: { width: '100%', height: '100%', borderRadius: 80 },
-  urgencyBadge: {
-    position: 'absolute',
-    top: 16, left: 16,
+  /* 프로필 영역 */
+  profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
-    borderRadius: 20,
-    paddingHorizontal: 13,
-    paddingVertical: 5,
-    gap: 5,
+    gap: 16,
+    marginBottom: 18,
   },
-  urgencyDot:  { width: 7, height: 7, borderRadius: 4 },
-  urgencyText: { fontSize: 11, fontWeight: '800' },
-  timePill: {
-    position: 'absolute',
-    top: 16, right: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+  avatarWrap: {
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#BAE6FD',
   },
-  timeText: { fontSize: 11, fontWeight: '600', color: '#fff' },
+  avatarText: { fontSize: 52, fontWeight: '900', color: ACCENT },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 65 },
+  profileInfo: { flex: 1, gap: 4 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardName: { fontSize: 21, fontWeight: '800', color: '#0C1C3C', letterSpacing: -0.3 },
+  urgencyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    gap: 4,
+  },
+  urgencyDot:  { width: 6, height: 6, borderRadius: 3 },
+  urgencyText: { fontSize: 11, fontWeight: '700' },
+  subText:  { fontSize: 14, color: '#667799', fontWeight: '600' },
+  timeRow:  { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  timeSmall: { fontSize: 13, color: '#7799BB' },
+  /* 구분선 */
+  divider: {
+    height: 1,
+    backgroundColor: '#D4E4FF',
+    marginBottom: 16,
+  },
+  /* 도움 요청 내용 */
   infoLayer: {
-    position: 'absolute',
-    bottom: 56,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 22,
-    paddingBottom: 16,
-    paddingTop: 12,
+    flex: 1,
   },
-  nameRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  cardName: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: -0.5 },
-  flagText: { fontSize: 22 },
-  requestBox: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-    borderRadius: 14,
-    padding: 14,
-    minHeight: 80,
-  },
-  requestLabel: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 0.8, marginBottom: 6 },
-  requestText:  { fontSize: 14, fontWeight: '700', color: '#fff', lineHeight: 20 },
+  requestLabel: { fontSize: 13, fontWeight: '700', color: ACCENT, letterSpacing: 0.5, marginBottom: 8 },
+  requestText:  { fontSize: 17, fontWeight: '600', color: '#0C1C3C', lineHeight: 26 },
+  /* 버튼 */
   btnRow: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     flexDirection: 'row',
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     overflow: 'hidden',
     zIndex: 10,
   },
   btn: {
     flex: 1,
-    height: 56,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  acceptBtn: { backgroundColor: '#5592E0' },
-  skipBtn:   { backgroundColor: '#5592E0' },
+  skipBtn:   { backgroundColor: '#CBD5E1' },
+  acceptBtn: { backgroundColor: '#0EA5E9' },
 });

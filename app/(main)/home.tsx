@@ -3,21 +3,20 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Linking,
   Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
-import api from '../../services/api';
-import SwipeCardStack from '../../components/SwipeCardStack';
 import KoreanUserCardStack from '../../components/KoreanUserCardStack';
-import { getHelpedRequests, getHelpRequests } from '../../services/helpService';
-import { getCommunityPosts, type CommunityPostDto } from '../../services/communityService';
+import SwipeCardStack from '../../components/SwipeCardStack';
+import api from '../../services/api';
 import { getKoreanUsers } from '../../services/authService';
+import { getCommunityPosts, type CommunityPostDto } from '../../services/communityService';
+import { getHelpedRequests, getHelpRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import type { HelpRequest, User } from '../../types';
@@ -28,8 +27,8 @@ const BLUE_L = '#EEF4FF';
 const ORANGE = '#F97316';
 const T1     = '#0C1C3C';
 const T2     = '#AABBCC';
-const BG     = '#FFFFFF';
-const DIV    = '#F4F5F8';
+const BG     = '#F0F4FA';
+const DIV    = '#D4E4FF';
 
 
 function getLevel(count: number): { label: string; color: string; bg: string } {
@@ -289,6 +288,7 @@ export default function HomeScreen() {
         )}
 
         {/* ── 내 활동 확인하기 ── */}
+        <View style={{ height: 20 }} />
         {user?.userType === 'KOREAN' ? (
           /* 한국인: 별점 + 레벨 + 도움 횟수 */
           <View style={s.sectionCard}>
@@ -870,3 +870,4 @@ const s = StyleSheet.create({
   mealCorner:    { fontSize: 11, fontWeight: '600', color: T2 },
   mealMenu:      { fontSize: 12, color: T1, fontWeight: '500', lineHeight: 18 },
 });
+

@@ -14,7 +14,8 @@ import type { User } from '../types';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 90;
 const CARD_HEIGHT = 390;
-const CARD_BG = '#5592E0';
+const CARD_BG = '#FFFFFF';
+const ACCENT  = '#0EA5E9';
 
 const SLOT_OFFSET = [0, 16, 32];
 const SLOT_OPACITY = [1, 0.8, 0.6];
@@ -43,7 +44,8 @@ function CardContent({ user }: { user: User }) {
 
   return (
     <View style={styles.card}>
-      <View style={styles.cardBg}>
+      {/* 상단: 프로필 */}
+      <View style={styles.profileRow}>
         <View style={styles.avatarWrap}>
           {showImage ? (
             <Image
@@ -55,38 +57,40 @@ function CardContent({ user }: { user: User }) {
             <Text style={styles.avatarText}>{initial}</Text>
           )}
         </View>
-      </View>
-
-      {/* 레벨 뱃지 */}
-      <View style={styles.levelBadge}>
-        <Text style={styles.levelText}>{lv.label}</Text>
-      </View>
-
-      {/* 별점 */}
-      <View style={styles.ratingPill}>
-        <Ionicons name="star" size={11} color="#FBBF24" />
-        <Text style={styles.ratingText}>{user.rating.toFixed(1)}</Text>
-      </View>
-
-      <View style={styles.infoLayer}>
-        <Text style={styles.cardName}>{user.nickname}</Text>
-        {user.university ? (
-          <Text style={styles.cardUniv} numberOfLines={1}>{user.university}</Text>
-        ) : null}
-
-        <View style={styles.detailBox}>
-          {user.bio ? (
-            <Text style={styles.detailText} numberOfLines={3}>{user.bio}</Text>
-          ) : (
-            <Text style={styles.detailPlaceholder}>소개글이 없어요</Text>
-          )}
-        </View>
-
-        {user.helpCount > 0 && (
-          <View style={styles.helpCountRow}>
-            <Ionicons name="heart" size={12} color="rgba(255,255,255,0.85)" />
-            <Text style={styles.helpCountText}>도움 {user.helpCount}회</Text>
+        <View style={styles.profileInfo}>
+          <View style={styles.nameRow}>
+            <Text style={styles.cardName}>{user.nickname}</Text>
+            <View style={[styles.levelBadge, { backgroundColor: lv.color + '18', borderColor: lv.color + '40' }]}>
+              <Text style={[styles.levelText, { color: lv.color }]}>{lv.label}</Text>
+            </View>
           </View>
+          {user.university ? (
+            <Text style={styles.subText} numberOfLines={1}>{user.university}</Text>
+          ) : null}
+          <View style={styles.ratingRow}>
+            <Ionicons name="star" size={12} color="#FBBF24" />
+            <Text style={styles.ratingText}>{user.rating.toFixed(1)}</Text>
+            {user.helpCount > 0 && (
+              <>
+                <Text style={styles.dotSep}>·</Text>
+                <Ionicons name="heart" size={12} color={ACCENT} />
+                <Text style={styles.helpCountText}>도움 {user.helpCount}회</Text>
+              </>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* 구분선 */}
+      <View style={styles.divider} />
+
+      {/* 하단: 소개글 */}
+      <View style={styles.infoLayer}>
+        <Text style={styles.requestLabel}>자기소개</Text>
+        {user.bio ? (
+          <Text style={styles.requestText} numberOfLines={4}>{user.bio}</Text>
+        ) : (
+          <Text style={styles.detailPlaceholder}>소개글이 없어요</Text>
         )}
       </View>
     </View>
@@ -180,108 +184,89 @@ const styles = StyleSheet.create({
     left: 0,
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    borderRadius: 28,
-    shadowColor: '#000',
+    borderRadius: 20,
+    shadowColor: 'rgb(37,99,235)',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 6,
   },
   card: {
     width: '100%',
     height: '100%',
-    borderRadius: 28,
-    overflow: 'hidden',
-  },
-  cardBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: CARD_BG,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarWrap: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.35)',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'absolute',
-    top: 36,
-    left: CARD_WIDTH / 2 - 80,
-  },
-  avatarText: { fontSize: 64, fontWeight: '900', color: 'rgba(255,255,255,0.95)' },
-  avatarImage: { width: '100%', height: '100%', borderRadius: 80 },
-  levelBadge: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.28)',
     borderRadius: 20,
-    paddingHorizontal: 13,
-    paddingVertical: 5,
+    backgroundColor: CARD_BG,
+    overflow: 'hidden',
+    paddingHorizontal: 20,
+    paddingTop: 24,
   },
-  levelText: { fontSize: 11, fontWeight: '800', color: '#fff' },
-  ratingPill: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
+  /* 프로필 영역 */
+  profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    gap: 16,
+    marginBottom: 18,
+  },
+  avatarWrap: {
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#BAE6FD',
+  },
+  avatarText: { fontSize: 52, fontWeight: '900', color: ACCENT },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 65 },
+  profileInfo: { flex: 1, gap: 4 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardName: { fontSize: 21, fontWeight: '800', color: '#0C1C3C', letterSpacing: -0.3 },
+  levelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.25)',
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
-  ratingText: { fontSize: 11, fontWeight: '600', color: '#fff' },
+  levelText: { fontSize: 11, fontWeight: '700' },
+  subText: { fontSize: 14, color: '#667799', fontWeight: '600' },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  ratingText: { fontSize: 13, color: '#7799BB', fontWeight: '600' },
+  dotSep: { fontSize: 13, color: '#AABBCC' },
+  helpCountText: { fontSize: 13, color: '#7799BB', fontWeight: '600' },
+  /* 구분선 */
+  divider: {
+    height: 1,
+    backgroundColor: '#D4E4FF',
+    marginBottom: 16,
+  },
+  /* 소개글 영역 */
   infoLayer: {
-    position: 'absolute',
-    bottom: 56,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 22,
-    paddingBottom: 16,
-    paddingTop: 12,
+    flex: 1,
   },
-  cardName: { fontSize: 22, fontWeight: '900', color: '#fff', letterSpacing: -0.5, marginBottom: 2 },
-  cardUniv: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginBottom: 10 },
-  detailBox: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-    borderRadius: 14,
-    padding: 14,
-    minHeight: 72,
-    marginBottom: 10,
-  },
-  detailText: { fontSize: 14, fontWeight: '600', color: '#fff', lineHeight: 20 },
-  detailPlaceholder: { fontSize: 13, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' },
-  helpCountRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  helpCountText: { fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '600' },
+  requestLabel: { fontSize: 13, fontWeight: '700', color: ACCENT, letterSpacing: 0.5, marginBottom: 8 },
+  requestText: { fontSize: 17, fontWeight: '600', color: '#0C1C3C', lineHeight: 26 },
+  detailPlaceholder: { fontSize: 15, color: '#AABBCC', fontStyle: 'italic' },
+  /* 버튼 */
   btnRow: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     flexDirection: 'row',
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     overflow: 'hidden',
     zIndex: 10,
   },
   btn: {
     flex: 1,
-    height: 56,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  acceptBtn: { backgroundColor: '#5592E0' },
-  skipBtn:   { backgroundColor: '#5592E0' },
+  skipBtn:   { backgroundColor: '#CBD5E1' },
+  acceptBtn: { backgroundColor: '#0EA5E9' },
 });
