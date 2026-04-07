@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { getCommunityPosts, toggleCommunityLike, translateCommunityPost, type CommunityPostDto } from '../../services/communityService';
+import { useCommunityStore } from '../../stores/communityStore';
 import type { PostCategory } from '../../types';
 
 // ── Design tokens ──
@@ -84,8 +85,9 @@ function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => vo
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
   const [liked, setLiked] = useState(item.liked);
   const [likeCount, setLikeCount] = useState(item.likes);
-  const [translated, setTranslated] = useState<{ title: string; content: string } | null>(null);
   const [translating, setTranslating] = useState(false);
+  const { getTranslation, setTranslation } = useCommunityStore();
+  const translated = getTranslation(item.id);
   const profileUri = toAbsoluteUrl(item.authorProfileImage);
   const catColor = CATEGORY_COLOR[item.category];
   const catBg    = CATEGORY_BG[item.category];
@@ -199,11 +201,11 @@ function FeedCard({ item, onPress }: { item: CommunityPostDto; onPress: () => vo
             style={s.iconBtn}
             activeOpacity={0.7}
             onPress={async () => {
-              if (translated) { setTranslated(null); return; }
+              if (translated) { setTranslation(item.id, null); return; }
               setTranslating(true);
               try {
                 const res = await translateCommunityPost(item.id);
-                if (res.success) setTranslated(res.data);
+                if (res.success) setTranslation(item.id, res.data);
               } catch {}
               finally { setTranslating(false); }
             }}

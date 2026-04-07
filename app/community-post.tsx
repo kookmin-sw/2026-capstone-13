@@ -8,6 +8,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { getCommunityPost, addCommunityComment, toggleCommunityLike, updateCommunityPost, deleteCommunityPost, deleteCommunityComment, translateCommunityPost, translateCommunityComment, type CommunityPostDetailDto, type PostCommentDto } from '../services/communityService';
 import { useAuthStore } from '../stores/authStore';
+import { useCommunityStore } from '../stores/communityStore';
 
 const BLUE    = '#3B6FE8';
 const BLUE_BG = '#F5F8FF';
@@ -59,8 +60,9 @@ export default function CommunityPostScreen() {
   const [commentText, setCommentText] = useState('');
   const [kavEnabled, setKavEnabled] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-  const [translation, setTranslation] = useState<{ title: string; content: string } | null>(null);
   const [translating, setTranslating] = useState(false);
+  const { getTranslation, setTranslation: setStoreTranslation } = useCommunityStore();
+  const translation = post ? getTranslation(post.id) : null;
   const [commentTranslations, setCommentTranslations] = useState<Record<number, string>>({});
   const [translatingComments, setTranslatingComments] = useState<Record<number, boolean>>({});
   const scrollRef = useRef<ScrollView>(null);
@@ -163,11 +165,11 @@ export default function CommunityPostScreen() {
   };
 
   const handleTranslate = async () => {
-    if (translation) { setTranslation(null); return; }
+    if (translation) { setStoreTranslation(post!.id, null); return; }
     setTranslating(true);
     try {
       const res = await translateCommunityPost(post!.id);
-      if (res.success && res.data) setTranslation(res.data);
+      if (res.success && res.data) setStoreTranslation(post!.id, res.data);
     } catch {
       // ignore
     } finally {

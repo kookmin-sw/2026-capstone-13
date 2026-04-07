@@ -74,13 +74,21 @@ interface NewPostInput {
   userType: UserType;
 }
 
+interface TranslationCache {
+  title: string;
+  content: string;
+}
+
 interface CommunityState {
   posts: CommunityPost[];
   likedPostIds: Record<number, number[]>; // userId → postId[]
   postComments: Record<number, Comment[]>;
+  translations: Record<number, TranslationCache>; // postId → translated
   addPost: (input: NewPostInput) => void;
   toggleLike: (postId: number, userId: number) => void;
   addComment: (postId: number, content: string, author: string, university: string, userType: UserType) => void;
+  setTranslation: (postId: number, translation: TranslationCache | null) => void;
+  getTranslation: (postId: number) => TranslationCache | null;
 }
 
 let nextPostId = INITIAL_POSTS.length + 1;
@@ -90,6 +98,13 @@ export const useCommunityStore = create<CommunityState>((set, get) => ({
   posts: INITIAL_POSTS,
   likedPostIds: {},
   postComments: INITIAL_COMMENTS,
+  translations: {},
+  setTranslation: (postId, translation) => set((state) => ({
+    translations: translation
+      ? { ...state.translations, [postId]: translation }
+      : Object.fromEntries(Object.entries(state.translations).filter(([k]) => Number(k) !== postId)),
+  })),
+  getTranslation: (postId) => get().translations[postId] ?? null,
 
   addPost: (input: NewPostInput) => {
     const newPost: CommunityPost = {
