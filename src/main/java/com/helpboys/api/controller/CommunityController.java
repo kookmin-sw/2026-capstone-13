@@ -9,6 +9,7 @@ import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.service.CommunityService;
 import com.helpboys.api.util.JwtUtil;
+import com.helpboys.api.util.RateLimiter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,12 +33,22 @@ public class CommunityController {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final Cloudinary cloudinary;
+    private final RateLimiter rateLimiter;
 
     // POST /api/community/upload - 게시글 이미지 Cloudinary 업로드
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadImage(
             @RequestParam("file") MultipartFile file,
             @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        if (!rateLimiter.isAllowed("upload:min:" + userId, 10, 60) ||
+            !rateLimiter.isAllowed("upload:day:" + userId, 50, 86400)) {
+            throw new BusinessException("업로드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new BusinessException("이미지 파일만 업로드할 수 있습니다. (jpg, png, gif 등)");
+        }
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> result = cloudinary.uploader().upload(
