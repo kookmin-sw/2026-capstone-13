@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   getCommunityReplies, addCommunityReply, deleteCommunityComment,
-  type PostCommentDto,
+  translateCommunityComment, type PostCommentDto,
 } from '../services/communityService';
 import { useAuthStore } from '../stores/authStore';
 
@@ -65,6 +65,29 @@ export default function CommentDetailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [kavEnabled, setKavEnabled] = useState(false);
   const inputRef = useRef<TextInput>(null);
+
+  // 번역 캐시: id → 번역된 텍스트
+  const [translatedTexts, setTranslatedTexts] = useState<Record<number, string>>({});
+  // 번역 표시 여부 토글
+  const [showTranslation, setShowTranslation] = useState<Record<number, boolean>>({});
+  const [translating, setTranslating] = useState<Record<number, boolean>>({});
+
+  const handleTranslate = async (id: number) => {
+    // 이미 번역 캐시 있으면 토글만
+    if (translatedTexts[id]) {
+      setShowTranslation((prev) => ({ ...prev, [id]: !prev[id] }));
+      return;
+    }
+    setTranslating((prev) => ({ ...prev, [id]: true }));
+    try {
+      const res = await translateCommunityComment(id);
+      if (res.success) {
+        setTranslatedTexts((prev) => ({ ...prev, [id]: res.data.content }));
+        setShowTranslation((prev) => ({ ...prev, [id]: true }));
+      }
+    } catch {}
+    finally { setTranslating((prev) => ({ ...prev, [id]: false })); }
+  };
 
   useEffect(() => {
     const show = Keyboard.addListener(
@@ -158,7 +181,17 @@ export default function CommentDetailScreen() {
               )}
               <Text style={s.commentTime}>{formatTime(parentComment.createdAt ?? '')}</Text>
             </View>
-            <Text style={s.commentContent}>{parentComment.content}</Text>
+            <Text style={s.commentContent}>
+              {showTranslation[commentId] && translatedTexts[commentId] ? translatedTexts[commentId] : parentComment.content}
+            </Text>
+            <TouchableOpacity style={s.translateBtn} onPress={() => handleTranslate(commentId)}>
+              {translating[commentId]
+                ? <ActivityIndicator size="small" color={T2} />
+                : <Text style={[s.translateText, { color: showTranslation[commentId] ? BLUE : T2 }]}>
+                    {showTranslation[commentId] ? '원문 보기' : '번역 보기'}
+                  </Text>
+              }
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -192,7 +225,17 @@ export default function CommentDetailScreen() {
                           </TouchableOpacity>
                         )}
                       </View>
-                      <Text style={s.commentContent}>{r.content}</Text>
+                      <Text style={s.commentContent}>
+                        {showTranslation[r.id] && translatedTexts[r.id] ? translatedTexts[r.id] : r.content}
+                      </Text>
+                      <TouchableOpacity style={s.translateBtn} onPress={() => handleTranslate(r.id)}>
+                        {translating[r.id]
+                          ? <ActivityIndicator size="small" color={T2} />
+                          : <Text style={[s.translateText, { color: showTranslation[r.id] ? BLUE : T2 }]}>
+                              {showTranslation[r.id] ? '원문 보기' : '번역 보기'}
+                            </Text>
+                        }
+                      </TouchableOpacity>
                     </View>
                   </View>
                 ))
@@ -288,6 +331,9 @@ const s = StyleSheet.create({
 
   deleteBtn: { marginLeft: 'auto' },
   deleteText: { fontSize: 10, color: '#EF4444', fontWeight: '600' },
+
+  translateBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 6 },
+  translateText: { fontSize: 12, fontWeight: '600' },
 
   // 입력 바
   inputBar: {
