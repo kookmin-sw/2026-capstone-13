@@ -199,4 +199,28 @@ public class MealService {
                 .map(m -> MealResponse.from(m, langCode))
                 .toList();
     }
+
+    /**
+     * 오늘~6일치 식단 조회
+     */
+    @Transactional(readOnly = true)
+    public List<MealResponse> getWeeklyMeals(String langCode) {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+        List<Meal> meals = mealRepository.findByMealDateBetweenWithTranslations(today, today.plusDays(6));
+        return meals.stream()
+                .map(m -> MealResponse.from(m, langCode))
+                .toList();
+    }
+
+    /**
+     * 지난 식단 삭제 (어제 이전)
+     */
+    @Transactional
+    public int deleteOldMeals() {
+        LocalDate yesterday = LocalDate.now(ZoneId.of("Asia/Seoul")).minusDays(1);
+        List<Meal> old = mealRepository.findByMealDateBefore(yesterday);
+        mealRepository.deleteAll(old);
+        log.info("[식단 정리] {}건 삭제", old.size());
+        return old.size();
+    }
 }

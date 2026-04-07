@@ -27,13 +27,13 @@ public class MealController {
      * - lang: 번역 언어 (기본값 en), Authorization 헤더의 사용자 언어 우선
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<MealResponse>>> getTodayMeals(
+    public ResponseEntity<ApiResponse<List<MealResponse>>> getWeeklyMeals(
             @RequestParam(required = false) String lang,
             @RequestHeader(value = "Authorization", required = false) String token) {
 
         String langCode = resolveLang(lang, token);
-        List<MealResponse> meals = mealService.getTodayMeals(langCode);
-        return ResponseEntity.ok(ApiResponse.success("오늘의 식단 조회 성공", meals));
+        List<MealResponse> meals = mealService.getWeeklyMeals(langCode);
+        return ResponseEntity.ok(ApiResponse.success("주간 식단 조회 성공", meals));
     }
 
     /**

@@ -17,4 +17,9 @@ public interface MealRepository extends JpaRepository<Meal, Long> {
 
     @Query("SELECT DISTINCT m FROM Meal m LEFT JOIN FETCH m.translations WHERE m.mealDate = :date ORDER BY m.cafeteria, m.id")
     List<Meal> findByMealDateWithTranslations(@Param("date") LocalDate date);
+
+    @Query("SELECT DISTINCT m FROM Meal m LEFT JOIN FETCH m.translations WHERE m.mealDate BETWEEN :start AND :end ORDER BY m.mealDate, m.cafeteria, m.id")
+    List<Meal> findByMealDateBetweenWithTranslations(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    List<Meal> findByMealDateBefore(LocalDate date);
 }

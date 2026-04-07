@@ -22,4 +22,14 @@ public class MealScheduler {
         log.info("[스케줄러] 일간 식단 크롤링 시작");
         mealService.crawlAndSave();
     }
+
+    /**
+     * 매일 자정 지난 식단 자동 삭제
+     */
+    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
+    public void scheduledCleanup() {
+        log.info("[스케줄러] 지난 식단 정리 시작");
+        int deleted = mealService.deleteOldMeals();
+        log.info("[스케줄러] 지난 식단 {}건 삭제 완료", deleted);
+    }
 }
