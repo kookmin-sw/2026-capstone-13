@@ -20,6 +20,8 @@ public class HelpRequestResponse {
     private UserResponse helper;
     private String createdAt;
     private String updatedAt;
+    // 완료된 요청에서 요청자가 리뷰를 작성했는지 여부 (null이면 미제공)
+    private Boolean reviewWritten;
 
     public static HelpRequestResponse from(HelpRequest req) {
         return HelpRequestResponse.builder()
@@ -33,6 +35,22 @@ public class HelpRequestResponse {
                 .helper(req.getHelper() != null ? UserResponse.from(req.getHelper()) : null)
                 .createdAt(req.getCreatedAt().toString())
                 .updatedAt(req.getUpdatedAt().toString())
+                .build();
+    }
+
+    public static HelpRequestResponse from(HelpRequest req, boolean reviewWritten) {
+        return HelpRequestResponse.builder()
+                .id(req.getId())
+                .title(req.getTitle())
+                .description(req.getDescription())
+                .category(req.getCategory().name())
+                .helpMethod(req.getHelpMethod().name())
+                .status(req.getStatus().name())
+                .requester(UserResponse.from(req.getRequester()))
+                .helper(req.getHelper() != null ? UserResponse.from(req.getHelper()) : null)
+                .createdAt(req.getCreatedAt().toString())
+                .updatedAt(req.getUpdatedAt().toString())
+                .reviewWritten(reviewWritten)
                 .build();
     }
 }

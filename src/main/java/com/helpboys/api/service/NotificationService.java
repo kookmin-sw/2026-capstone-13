@@ -71,6 +71,7 @@ public class NotificationService {
                 case COMMENT -> "새 댓글";
                 case LIKE -> "좋아요";
                 case HELP_OFFER -> "도움 제안";
+                case REVIEW_REQUEST -> "리뷰 작성 요청";
             };
             fcmService.sendPush(recipient.getFcmToken(), title, message);
         }

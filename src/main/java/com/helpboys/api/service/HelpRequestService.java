@@ -7,6 +7,7 @@ import com.helpboys.api.entity.Notification;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.HelpRequestRepository;
+import com.helpboys.api.repository.ReviewRepository;
 import com.helpboys.api.repository.UserBlockRepository;
 import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class HelpRequestService {
     private final UserRepository userRepository;
     private final UserBlockRepository userBlockRepository;
     private final NotificationService notificationService;
+    private final ReviewRepository reviewRepository;
 
     // 도움 요청 전체 목록 조회 (최신순, 차단 유저 제외, 페이지네이션)
     @Transactional(readOnly = true)
@@ -64,7 +66,9 @@ public class HelpRequestService {
     @Transactional(readOnly = true)
     public HelpRequestResponse getRequestById(Long id) {
         HelpRequest req = findById(id);
-        return HelpRequestResponse.from(req);
+        boolean reviewWritten = reviewRepository.existsByHelpRequestIdAndReviewerId(
+                req.getId(), req.getRequester().getId());
+        return HelpRequestResponse.from(req, reviewWritten);
     }
 
     // 도움 요청 생성 (유학생만)
@@ -166,13 +170,21 @@ public class HelpRequestService {
             throw new BusinessException("권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
-        // 완료 처리 시 helper의 도움 횟수 증가
+        // 완료 처리 시 helper의 도움 횟수 증가 + 요청자에게 리뷰 안내 알림
         if (newStatus == HelpRequest.RequestStatus.COMPLETED
                 && req.getStatus() != HelpRequest.RequestStatus.COMPLETED
                 && req.getHelper() != null) {
             User helper = req.getHelper();
             helper.setHelpCount(helper.getHelpCount() + 1);
             userRepository.save(helper);
+
+            String message = "'" + truncate(req.getTitle(), 15) + "' 도움이 완료됐어요. " + helper.getNickname() + "님에게 리뷰를 남겨보세요!";
+            notificationService.createNotification(
+                    req.getRequester().getId(),
+                    Notification.NotificationType.REVIEW_REQUEST,
+                    message,
+                    req.getId()
+            );
         }
 
         req.setStatus(newStatus);
