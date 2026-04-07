@@ -3,6 +3,7 @@ package com.helpboys.api.service;
 import com.helpboys.api.dto.HelpRequestRequest;
 import com.helpboys.api.dto.HelpRequestResponse;
 import com.helpboys.api.entity.HelpRequest;
+import com.helpboys.api.entity.Notification;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.HelpRequestRepository;
@@ -25,6 +26,7 @@ public class HelpRequestService {
     private final HelpRequestRepository helpRequestRepository;
     private final UserRepository userRepository;
     private final UserBlockRepository userBlockRepository;
+    private final NotificationService notificationService;
 
     // 도움 요청 전체 목록 조회 (최신순, 차단 유저 제외, 페이지네이션)
     @Transactional(readOnly = true)
@@ -121,7 +123,18 @@ public class HelpRequestService {
 
         req.setHelper(helper);
         req.setStatus(HelpRequest.RequestStatus.MATCHED);
-        return HelpRequestResponse.from(helpRequestRepository.save(req));
+        HelpRequestResponse result = HelpRequestResponse.from(helpRequestRepository.save(req));
+
+        // 요청자(유학생)에게 매칭 알림 발송
+        String message = helper.getNickname() + "님이 '" + truncate(req.getTitle(), 15) + "' 도움 요청을 수락했어요.";
+        notificationService.createNotification(
+                req.getRequester().getId(),
+                Notification.NotificationType.HELP_OFFER,
+                message,
+                req.getId()
+        );
+
+        return result;
     }
 
     // 도움 신청 거절 (외국인 학생이 helper를 거절 → WAITING으로 복귀)
@@ -169,5 +182,9 @@ public class HelpRequestService {
     private HelpRequest findById(Long id) {
         return helpRequestRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("요청을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+    }
+
+    private String truncate(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max) + "...";
     }
 }
