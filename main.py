@@ -24,6 +24,35 @@ app.add_middleware(
 
 SUPPORTED_LANGUAGES = ["en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru"]
 
+
+async def _azure_batch_translate(texts: list[str], retries: int = 3) -> list[dict] | None:
+    """Azure Translator 배치 호출 (실패 시 최대 retries회 재시도)"""
+    import requests as req_lib, uuid
+    headers = {
+        "Ocp-Apim-Subscription-Key": translation_service.azure_key,
+        "Ocp-Apim-Subscription-Region": translation_service.azure_region,
+        "Content-Type": "application/json",
+    }
+    params = {"api-version": "3.0", "from": "ko", "to": SUPPORTED_LANGUAGES}
+    for attempt in range(retries):
+        try:
+            resp = await asyncio.to_thread(
+                lambda: req_lib.post(
+                    "https://api.cognitive.microsofttranslator.com/translate",
+                    headers={**headers, "X-ClientTraceId": str(uuid.uuid4())},
+                    params=params,
+                    json=[{"text": t} for t in texts],
+                    timeout=10,
+                )
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            print(f"[Azure 번역] 시도 {attempt + 1}/{retries} 실패: {e}")
+            if attempt < retries - 1:
+                await asyncio.sleep(1 * (attempt + 1))  # 1s, 2s 대기 후 재시도
+    return None
+
 # 식당 고유명사 교정 매핑 (Azure 번역 오류 수정)
 CAFETERIA_NAME_CORRECTIONS = {
     "en": {
@@ -199,31 +228,17 @@ async def crawl_notices():
 # ── 식단 단건 배치 번역 (retranslate용) ──────────────────
 @app.post("/api/meals/translate-batch")
 async def translate_meal_batch(request: Request):
-    """식당명·코너명·메뉴를 10개 언어로 한 번에 번역"""
+    """식당명·코너명·메뉴를 10개 언어로 한 번에 번역 (재시도 포함)"""
     try:
         data = await request.json()
         cafeteria = data.get("cafeteria", "")
         corner    = data.get("corner", "")
         menu      = data.get("menu", "")
 
-        import requests as req_lib, uuid
-        headers = {
-            "Ocp-Apim-Subscription-Key": translation_service.azure_key,
-            "Ocp-Apim-Subscription-Region": translation_service.azure_region,
-            "Content-Type": "application/json",
-        }
-        params = {"api-version": "3.0", "from": "ko", "to": SUPPORTED_LANGUAGES}
-        resp = await asyncio.to_thread(
-            lambda: req_lib.post(
-                "https://api.cognitive.microsofttranslator.com/translate",
-                headers={**headers, "X-ClientTraceId": str(uuid.uuid4())},
-                params=params,
-                json=[{"text": cafeteria}, {"text": corner}, {"text": menu}],
-                timeout=10,
-            )
-        )
-        resp.raise_for_status()
-        raw = resp.json()
+        raw = await _azure_batch_translate([cafeteria, corner, menu])
+        if raw is None:
+            return JSONResponse(status_code=500, content={"success": False, "message": "Azure 번역 실패", "data": None})
+
         caf_map  = {t["to"]: t["text"] for t in raw[0]["translations"]}
         cor_map  = {t["to"]: t["text"] for t in raw[1]["translations"]}
         menu_map = {t["to"]: t["text"] for t in raw[2]["translations"]}
@@ -246,37 +261,22 @@ async def crawl_meals():
     try:
         raw_meals = crawl_weekly_menu()
         result = []
+        failed = []
         for meal in raw_meals:
-            translations = {}
-            try:
-                import requests as req_lib, uuid
-                headers = {
-                    "Ocp-Apim-Subscription-Key": translation_service.azure_key,
-                    "Ocp-Apim-Subscription-Region": translation_service.azure_region,
-                    "Content-Type": "application/json",
-                }
-                params = {"api-version": "3.0", "from": "ko", "to": SUPPORTED_LANGUAGES}
-                resp = await asyncio.to_thread(
-                    lambda: req_lib.post(
-                        "https://api.cognitive.microsofttranslator.com/translate",
-                        headers={**headers, "X-ClientTraceId": str(uuid.uuid4())},
-                        params=params,
-                        json=[{"text": meal["cafeteria"]}, {"text": meal["corner"]}, {"text": meal["menu"]}],
-                        timeout=10,
-                    )
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                caf_map  = {t["to"]: t["text"] for t in data[0]["translations"]}
-                cor_map  = {t["to"]: t["text"] for t in data[1]["translations"]}
-                menu_map = {t["to"]: t["text"] for t in data[2]["translations"]}
+            raw = await _azure_batch_translate([meal["cafeteria"], meal["corner"], meal["menu"]])
+            if raw is not None:
+                caf_map  = {t["to"]: t["text"] for t in raw[0]["translations"]}
+                cor_map  = {t["to"]: t["text"] for t in raw[1]["translations"]}
+                menu_map = {t["to"]: t["text"] for t in raw[2]["translations"]}
                 translations = {
                     lang: {"cafeteria": _correct_cafeteria_name(caf_map.get(lang, meal["cafeteria"]), lang),
                            "corner":    cor_map.get(lang, meal["corner"]),
                            "menu":      menu_map.get(lang, meal["menu"])}
                     for lang in SUPPORTED_LANGUAGES
                 }
-            except Exception:
+            else:
+                # 재시도 후에도 실패 → 원문 저장, 나중에 retranslate로 재처리
+                failed.append(f"{meal['cafeteria']} / {meal['corner']} / {meal['date']}")
                 translations = {
                     lang: {"cafeteria": meal["cafeteria"], "corner": meal["corner"], "menu": meal["menu"]}
                     for lang in SUPPORTED_LANGUAGES
@@ -289,7 +289,10 @@ async def crawl_meals():
                 "date":         meal["date"],
                 "translations": translations,
             })
-        return {"success": True, "message": f"{len(result)}개 식단 수집 및 번역 완료", "data": result}
+        msg = f"{len(result)}개 식단 수집 및 번역 완료"
+        if failed:
+            msg += f" (번역 실패 {len(failed)}건: {', '.join(failed[:3])}{'...' if len(failed) > 3 else ''})"
+        return {"success": True, "message": msg, "data": result}
     except Exception as e:
         return JSONResponse(status_code=500, content={"success": False, "message": f"식단 수집 실패: {str(e)}", "data": None})
 
