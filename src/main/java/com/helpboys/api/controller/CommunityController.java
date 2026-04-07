@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -131,6 +132,26 @@ public class CommunityController {
         Long userId = extractUserId(token);
         communityService.deletePost(id, userId);
         return ResponseEntity.ok(ApiResponse.success("게시글이 삭제되었습니다.", null));
+    }
+
+    // GET /api/community/comments/{commentId}/replies - 대댓글 조회
+    @GetMapping("/comments/{commentId}/replies")
+    public ResponseEntity<ApiResponse<List<PostCommentResponse>>> getReplies(
+            @PathVariable Long commentId,
+            @RequestHeader("Authorization") String token) {
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", communityService.getReplies(commentId)));
+    }
+
+    // POST /api/community/comments/{commentId}/replies - 대댓글 작성
+    @PostMapping("/comments/{commentId}/replies")
+    public ResponseEntity<ApiResponse<PostCommentResponse>> addReply(
+            @PathVariable Long commentId,
+            @RequestBody Map<String, String> body,
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("답글이 등록되었습니다.",
+                        communityService.addReply(commentId, body.get("content"), userId)));
     }
 
     // DELETE /api/community/comments/{commentId} - 댓글 삭제

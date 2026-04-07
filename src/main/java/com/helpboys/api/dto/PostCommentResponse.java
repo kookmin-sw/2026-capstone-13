@@ -11,20 +11,28 @@ import lombok.Getter;
 public class PostCommentResponse {
 
     private Long id;
+    private Long parentCommentId;
     private String author;
     private String authorProfileImage;
     private String userType;
     private String content;
     private String createdAt;
+    private int replyCount;
 
     public static PostCommentResponse from(PostComment comment) {
+        return from(comment, 0);
+    }
+
+    public static PostCommentResponse from(PostComment comment, int replyCount) {
         return PostCommentResponse.builder()
                 .id(comment.getId())
+                .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getId() : null)
                 .author(comment.getAuthor().getNickname())
                 .authorProfileImage(comment.getAuthor().getProfileImage())
                 .userType(comment.getAuthor().getUserType().name())
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt().toString())
+                .replyCount(replyCount)
                 .build();
     }
 }

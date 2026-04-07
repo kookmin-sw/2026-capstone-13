@@ -31,13 +31,23 @@ public class CommunityPostResponse {
     private boolean liked;
     private String createdAt;
 
-    // 목록용 (최근 댓글 3개 포함)
-    public static CommunityPostResponse fromList(CommunityPost post, boolean liked) {
-        List<PostCommentResponse> recentComments = post.getCommentList().stream()
+    // 최상위 댓글만 필터링 + replyCount 포함
+    private static List<PostCommentResponse> buildTopLevelComments(List<com.helpboys.api.entity.PostComment> all) {
+        java.util.Map<Long, Long> replyCounts = all.stream()
+                .filter(c -> c.getParentComment() != null)
+                .collect(Collectors.groupingBy(c -> c.getParentComment().getId(), Collectors.counting()));
+
+        return all.stream()
+                .filter(c -> c.getParentComment() == null)
                 .sorted(Comparator.comparing(c -> c.getCreatedAt()))
-                .limit(3)
-                .map(PostCommentResponse::from)
+                .map(c -> PostCommentResponse.from(c, replyCounts.getOrDefault(c.getId(), 0L).intValue()))
                 .collect(Collectors.toList());
+    }
+
+    // 목록용 (최근 댓글 없음, 댓글 수만 포함)
+    public static CommunityPostResponse fromList(CommunityPost post, boolean liked) {
+        long topLevelCount = post.getCommentList().stream()
+                .filter(c -> c.getParentComment() == null).count();
 
         return CommunityPostResponse.builder()
                 .id(post.getId())
@@ -50,15 +60,18 @@ public class CommunityPostResponse {
                 .university(post.getAuthor().getUniversity())
                 .userType(post.getAuthor().getUserType().name())
                 .likes(post.getLikes())
-                .comments(post.getCommentList().size())
-                .commentList(recentComments)
+                .comments((int) topLevelCount)
+                .commentList(Collections.emptyList())
                 .liked(liked)
                 .createdAt(post.getCreatedAt().toString())
                 .build();
     }
 
-    // 상세용 (댓글 포함)
+    // 상세용 (최상위 댓글 + replyCount 포함)
     public static CommunityPostResponse fromDetail(CommunityPost post, boolean liked) {
+        long topLevelCount = post.getCommentList().stream()
+                .filter(c -> c.getParentComment() == null).count();
+
         return CommunityPostResponse.builder()
                 .id(post.getId())
                 .category(post.getCategory().name())
@@ -70,10 +83,8 @@ public class CommunityPostResponse {
                 .university(post.getAuthor().getUniversity())
                 .userType(post.getAuthor().getUserType().name())
                 .likes(post.getLikes())
-                .comments(post.getCommentList().size())
-                .commentList(post.getCommentList().stream()
-                        .map(PostCommentResponse::from)
-                        .collect(Collectors.toList()))
+                .comments((int) topLevelCount)
+                .commentList(buildTopLevelComments(post.getCommentList()))
                 .liked(liked)
                 .createdAt(post.getCreatedAt().toString())
                 .build();

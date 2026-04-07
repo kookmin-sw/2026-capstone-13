@@ -181,6 +181,45 @@ public class CommunityService {
         communityPostRepository.delete(post);
     }
 
+    // 대댓글 추가
+    @Transactional
+    public PostCommentResponse addReply(Long parentCommentId, String content, Long userId) {
+        PostComment parent = postCommentRepository.findById(parentCommentId)
+                .orElseThrow(() -> new BusinessException("댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        User author = findUserById(userId);
+
+        PostComment reply = PostComment.builder()
+                .post(parent.getPost())
+                .author(author)
+                .content(content)
+                .parentComment(parent)
+                .build();
+
+        PostComment saved = postCommentRepository.save(reply);
+
+        // 내 댓글이 아닌 경우 원댓글 작성자에게 알림
+        if (!parent.getAuthor().getId().equals(userId)) {
+            String message = author.getNickname() + "님이 회원님의 댓글에 답글을 달았어요.";
+            notificationService.createNotification(
+                    parent.getAuthor().getId(),
+                    Notification.NotificationType.COMMENT,
+                    message,
+                    parent.getPost().getId()
+            );
+        }
+
+        return PostCommentResponse.from(saved);
+    }
+
+    // 대댓글 조회
+    @Transactional(readOnly = true)
+    public List<PostCommentResponse> getReplies(Long parentCommentId) {
+        return postCommentRepository.findByParentCommentIdOrderByCreatedAtAsc(parentCommentId)
+                .stream()
+                .map(PostCommentResponse::from)
+                .collect(Collectors.toList());
+    }
+
     // 댓글 삭제
     @Transactional
     public void deleteComment(Long commentId, Long userId) {
