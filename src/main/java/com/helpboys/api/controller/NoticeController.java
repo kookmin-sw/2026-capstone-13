@@ -43,7 +43,9 @@ public class NoticeController {
      * POST /api/notices/crawl - 수동 크롤링 트리거 (관리자용)
      */
     @PostMapping("/crawl")
-    public ResponseEntity<ApiResponse<String>> triggerCrawl() {
+    public ResponseEntity<ApiResponse<String>> triggerCrawl(
+            @RequestHeader("Authorization") String token) {
+        checkAdmin(token);
         int count = noticeService.crawlAndSave();
         return ResponseEntity.ok(ApiResponse.success("크롤링 완료", count + "건 저장됨"));
     }
@@ -52,9 +54,19 @@ public class NoticeController {
      * POST /api/notices/retranslate - 기존 공지 재번역 (관리자용)
      */
     @PostMapping("/retranslate")
-    public ResponseEntity<ApiResponse<String>> retranslate() {
+    public ResponseEntity<ApiResponse<String>> retranslate(
+            @RequestHeader("Authorization") String token) {
+        checkAdmin(token);
         new Thread(() -> noticeService.retranslateAll()).start();
         return ResponseEntity.ok(ApiResponse.success("재번역 시작됨", "백그라운드에서 처리 중"));
+    }
+
+    private void checkAdmin(String token) {
+        String bearerToken = token.startsWith("Bearer ") ? token.substring(7) : token;
+        Long userId = jwtUtil.extractUserId(bearerToken);
+        userRepository.findById(userId).filter(u -> u.isAdmin())
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "관리자 권한이 필요합니다"));
     }
 
     private String resolveLang(String queryLang, String token) {

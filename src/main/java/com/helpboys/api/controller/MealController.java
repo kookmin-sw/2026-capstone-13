@@ -40,7 +40,9 @@ public class MealController {
      * POST /api/meals/crawl - 수동 크롤링 트리거 (관리자용)
      */
     @PostMapping("/crawl")
-    public ResponseEntity<ApiResponse<String>> triggerCrawl() {
+    public ResponseEntity<ApiResponse<String>> triggerCrawl(
+            @RequestHeader("Authorization") String token) {
+        checkAdmin(token);
         int count = mealService.crawlAndSave();
         return ResponseEntity.ok(ApiResponse.success("크롤링 완료", count + "건 저장됨"));
     }
@@ -49,7 +51,9 @@ public class MealController {
      * POST /api/meals/retranslate - 기존 식단 전체 재번역 (관리자용)
      */
     @PostMapping("/retranslate")
-    public ResponseEntity<ApiResponse<String>> retranslate() {
+    public ResponseEntity<ApiResponse<String>> retranslate(
+            @RequestHeader("Authorization") String token) {
+        checkAdmin(token);
         new Thread(() -> mealService.retranslateAll()).start();
         return ResponseEntity.ok(ApiResponse.success("재번역 시작됨", "백그라운드에서 처리 중"));
     }
@@ -58,9 +62,19 @@ public class MealController {
      * POST /api/meals/retranslate-missing - 번역 누락 식단만 재번역 (관리자용)
      */
     @PostMapping("/retranslate-missing")
-    public ResponseEntity<ApiResponse<String>> retranslateMissing() {
+    public ResponseEntity<ApiResponse<String>> retranslateMissing(
+            @RequestHeader("Authorization") String token) {
+        checkAdmin(token);
         new Thread(() -> mealService.retranslateMissing()).start();
         return ResponseEntity.ok(ApiResponse.success("누락 재번역 시작됨", "백그라운드에서 처리 중"));
+    }
+
+    private void checkAdmin(String token) {
+        String bearerToken = token.startsWith("Bearer ") ? token.substring(7) : token;
+        Long userId = jwtUtil.extractUserId(bearerToken);
+        userRepository.findById(userId).filter(u -> u.isAdmin())
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "관리자 권한이 필요합니다"));
     }
 
     private String resolveLang(String queryLang, String token) {
