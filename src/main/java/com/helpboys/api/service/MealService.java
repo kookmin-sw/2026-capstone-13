@@ -130,7 +130,7 @@ public class MealService {
     }
 
     private static final List<String> SUPPORTED_LANGUAGES =
-            List.of("en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru");
+            List.of("en", "ja", "zh-Hans", "ru", "mn", "vi");
 
     /**
      * 번역 누락 식단만 재번역 (크롤 시 번역 실패한 경우 복구용)

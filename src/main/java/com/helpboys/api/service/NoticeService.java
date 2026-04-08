@@ -108,7 +108,7 @@ public class NoticeService {
     }
 
     private static final List<String> SUPPORTED_LANGUAGES =
-            List.of("en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru");
+            List.of("en", "ja", "zh-Hans", "ru", "mn", "vi");
 
     /**
      * 기존 공지 전체 재번역 — 공지별 별도 트랜잭션으로 처리
