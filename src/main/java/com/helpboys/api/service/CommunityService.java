@@ -33,6 +33,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -61,9 +62,12 @@ public class CommunityService {
     public Page<CommunityPostResponse> getAllPosts(Long userId, int page, int size) {
         List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
         List<Long> excludeIds = blockedIds.isEmpty() ? List.of(-1L) : blockedIds;
-        return communityPostRepository.findAllExcludingBlocked(excludeIds, PageRequest.of(page, size))
-                .map(post -> CommunityPostResponse.fromList(post,
-                        postLikeRepository.existsByPostIdAndUserId(post.getId(), userId)));
+        Page<CommunityPost> posts = communityPostRepository.findAllExcludingBlocked(excludeIds, PageRequest.of(page, size));
+
+        List<Long> postIds = posts.stream().map(CommunityPost::getId).collect(Collectors.toList());
+        Set<Long> likedPostIds = postIds.isEmpty() ? Set.of() : postLikeRepository.findLikedPostIds(postIds, userId);
+
+        return posts.map(post -> CommunityPostResponse.fromList(post, likedPostIds.contains(post.getId())));
     }
 
     // 게시글 상세 조회 (댓글 포함)
@@ -236,9 +240,12 @@ public class CommunityService {
     public Page<CommunityPostResponse> searchPosts(String keyword, Long userId, int page, int size) {
         List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
         List<Long> excludeIds = blockedIds.isEmpty() ? List.of(-1L) : blockedIds;
-        return communityPostRepository.searchByKeywordExcludingBlocked(keyword, excludeIds, PageRequest.of(page, size))
-                .map(post -> CommunityPostResponse.fromList(post,
-                        postLikeRepository.existsByPostIdAndUserId(post.getId(), userId)));
+        Page<CommunityPost> posts = communityPostRepository.searchByKeywordExcludingBlocked(keyword, excludeIds, PageRequest.of(page, size));
+
+        List<Long> postIds = posts.stream().map(CommunityPost::getId).collect(Collectors.toList());
+        Set<Long> likedPostIds = postIds.isEmpty() ? Set.of() : postLikeRepository.findLikedPostIds(postIds, userId);
+
+        return posts.map(post -> CommunityPostResponse.fromList(post, likedPostIds.contains(post.getId())));
     }
 
     // 게시글 번역 (DB 캐시 → 없으면 Gemini 번역 후 저장)

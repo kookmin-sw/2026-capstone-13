@@ -24,6 +24,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -209,17 +210,25 @@ public class ChatService {
                 HelpRequest.RequestStatus.COMPLETED,
                 HelpRequest.RequestStatus.WAITING
         );
-        return helpRequestRepository.findChatRooms(userId, activeStatuses).stream()
+        List<HelpRequest> rooms = helpRequestRepository.findChatRooms(userId, activeStatuses);
+        if (rooms.isEmpty()) return List.of();
+
+        List<Long> roomIds = rooms.stream().map(HelpRequest::getId).collect(Collectors.toList());
+
+        // 배치 쿼리로 마지막 메시지 & 읽지 않은 수 한 번에 조회
+        Map<Long, ChatMessage> lastMessages = chatMessageRepository.findLastMessagesByRoomIds(roomIds)
+                .stream().collect(Collectors.toMap(ChatMessage::getRoomId, m -> m));
+        Map<Long, Long> unreadCounts = chatMessageRepository.countUnreadByRoomIds(roomIds, userId)
+                .stream().collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        return rooms.stream()
                 .map(req -> {
-                    ChatMessage last = chatMessageRepository
-                            .findTopByRoomIdOrderByCreatedAtDesc(req.getId())
-                            .orElse(null);
+                    ChatMessage last = lastMessages.get(req.getId());
                     // WAITING 방은 이전 채팅 이력이 있을 때만 목록에 포함 (누군가 나간 경우)
                     if (req.getStatus() == HelpRequest.RequestStatus.WAITING && last == null) {
                         return null;
                     }
-                    long unreadCount = chatMessageRepository
-                            .countUnreadMessages(req.getId(), userId);
+                    long unreadCount = unreadCounts.getOrDefault(req.getId(), 0L);
                     return ChatRoomResponse.from(
                             req, userId,
                             last != null ? resolveLastMessagePreview(last.getContent()) : null,
@@ -244,16 +253,24 @@ public class ChatService {
                 HelpRequest.RequestStatus.IN_PROGRESS,
                 HelpRequest.RequestStatus.COMPLETED
         );
-        return helpRequestRepository.searchByKeyword(keyword).stream()
+        List<HelpRequest> rooms = helpRequestRepository.searchByKeyword(keyword).stream()
                 .filter(req -> activeStatuses.contains(req.getStatus())
                         && (req.getRequester().getId().equals(userId)
                         || (req.getHelper() != null && req.getHelper().getId().equals(userId))))
+                .collect(Collectors.toList());
+        if (rooms.isEmpty()) return List.of();
+
+        List<Long> roomIds = rooms.stream().map(HelpRequest::getId).collect(Collectors.toList());
+
+        Map<Long, ChatMessage> lastMessages = chatMessageRepository.findLastMessagesByRoomIds(roomIds)
+                .stream().collect(Collectors.toMap(ChatMessage::getRoomId, m -> m));
+        Map<Long, Long> unreadCounts = chatMessageRepository.countUnreadByRoomIds(roomIds, userId)
+                .stream().collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        return rooms.stream()
                 .map(req -> {
-                    ChatMessage last = chatMessageRepository
-                            .findTopByRoomIdOrderByCreatedAtDesc(req.getId())
-                            .orElse(null);
-                    long unreadCount = chatMessageRepository
-                            .countUnreadMessages(req.getId(), userId);
+                    ChatMessage last = lastMessages.get(req.getId());
+                    long unreadCount = unreadCounts.getOrDefault(req.getId(), 0L);
                     return ChatRoomResponse.from(
                             req, userId,
                             last != null ? resolveLastMessagePreview(last.getContent()) : null,
