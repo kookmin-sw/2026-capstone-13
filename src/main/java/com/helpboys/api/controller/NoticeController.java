@@ -43,9 +43,7 @@ public class NoticeController {
      * POST /api/notices/crawl - 수동 크롤링 트리거 (관리자용)
      */
     @PostMapping("/crawl")
-    public ResponseEntity<ApiResponse<String>> triggerCrawl(
-            @RequestHeader("Authorization") String token) {
-        userService.checkAdmin(jwtUtil.extractUserId(token.replace("Bearer ", "")));
+    public ResponseEntity<ApiResponse<String>> triggerCrawl() {
         int count = noticeService.crawlAndSave();
         return ResponseEntity.ok(ApiResponse.success("크롤링 완료", count + "건 저장됨"));
     }
@@ -54,9 +52,7 @@ public class NoticeController {
      * POST /api/notices/retranslate - 기존 공지 재번역 (관리자용)
      */
     @PostMapping("/retranslate")
-    public ResponseEntity<ApiResponse<String>> retranslate(
-            @RequestHeader("Authorization") String token) {
-        userService.checkAdmin(jwtUtil.extractUserId(token.replace("Bearer ", "")));
+    public ResponseEntity<ApiResponse<String>> retranslate() {
         new Thread(() -> noticeService.retranslateAll()).start();
         return ResponseEntity.ok(ApiResponse.success("재번역 시작됨", "백그라운드에서 처리 중"));
     }
