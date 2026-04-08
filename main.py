@@ -22,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SUPPORTED_LANGUAGES = ["en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru"]
+SUPPORTED_LANGUAGES = ["en", "ja", "zh-Hans", "ru", "mn", "vi"]
 
 
 async def _batch_translate(texts: list[str], target_lang: str, retries: int = 3) -> list[str] | None:

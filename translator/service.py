@@ -6,16 +6,14 @@ import uuid
 from typing import Optional
 
 LANG_NAMES = {
-    "en": "English", "ko": "Korean", "zh-Hans": "Simplified Chinese",
-    "zh-Hant": "Traditional Chinese", "ja": "Japanese", "vi": "Vietnamese",
-    "mn": "Mongolian", "fr": "French", "de": "German", "es": "Spanish",
-    "ru": "Russian"
+    "en": "English", "ko": "Korean", "ja": "Japanese",
+    "zh-Hans": "Simplified Chinese", "ru": "Russian",
+    "mn": "Mongolian", "vi": "Vietnamese",
 }
 
 # DeepL 언어코드 매핑 (DeepL은 코드가 다름)
 DEEPL_LANG_MAP = {
-    "en": "EN", "zh-Hans": "ZH-HANS", "zh-Hant": "ZH-HANT",
-    "ja": "JA", "vi": "VI", "ru": "RU", "fr": "FR", "de": "DE", "es": "ES",
+    "en": "EN", "ja": "JA", "zh-Hans": "ZH-HANS", "ru": "RU", "vi": "VI",
 }
 # DeepL이 지원하는 언어 (mn 제외)
 DEEPL_SUPPORTED = set(DEEPL_LANG_MAP.keys())
