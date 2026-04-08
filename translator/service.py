@@ -35,6 +35,7 @@ class TranslationService:
     def __init__(self):
         # DeepL
         self.deepl_key = os.getenv("DEEPL_API_KEY")
+        self.deepl_quota_exceeded = False  # 한도 초과 시 True → Google로 자동 전환
         if self.deepl_key:
             print("✅ DeepL API 연동 완료")
         else:
@@ -134,8 +135,10 @@ Respond ONLY with the explanation or "null". No extra text."""
         """단건 번역: 언어별 최적 엔진 선택"""
         if target_lang == "mn":
             result = await self._google_translate(text, target_lang, source_lang)
-        elif target_lang in DEEPL_SUPPORTED and self.deepl_key:
+        elif target_lang in DEEPL_SUPPORTED and self.deepl_key and not self.deepl_quota_exceeded:
             result = await self._deepl_translate(text, target_lang, source_lang)
+        elif self.google_key:
+            result = await self._google_translate(text, target_lang, source_lang)
         elif self.azure_key:
             result = await self._azure_translate(text, target_lang, source_lang)
         elif self.gemini_client:
@@ -176,11 +179,17 @@ Respond ONLY with the explanation or "null". No extra text."""
                 "original": text, "translated": translated,
                 "source_language": detected, "target_language": target_lang, "mode": "deepl",
             }
+        except requests.HTTPError as e:
+            if e.response is not None and e.response.status_code == 456:
+                # 456 = DeepL 월 한도 초과 → Google로 자동 전환
+                print("[DeepL] ⚠️ 월 사용량 초과 (456) → Google Cloud로 전환")
+                self.deepl_quota_exceeded = True
+                return await self._google_translate(text, target_lang, source_lang)
+            print(f"[DeepL] 번역 실패: {e} — Google 폴백")
+            return await self._google_translate(text, target_lang, source_lang)
         except Exception as e:
-            print(f"[DeepL] 번역 실패: {e} — Azure 폴백 시도")
-            if self.azure_key:
-                return await self._azure_translate(text, target_lang, source_lang)
-            return self._dummy_translate(text, target_lang, source_lang)
+            print(f"[DeepL] 번역 실패: {e} — Google 폴백")
+            return await self._google_translate(text, target_lang, source_lang)
 
     async def _google_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
         """Google Cloud Translation API 번역"""

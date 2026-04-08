@@ -53,8 +53,8 @@ async def _batch_translate(texts: list[str], target_lang: str, retries: int = 3)
                     results.append(resp.json()["data"]["translations"][0]["translatedText"])
                 return results
 
-            # DeepL 지원 언어
-            elif target_lang in DEEPL_SUPPORTED and translation_service.deepl_key:
+            # DeepL 지원 언어 (한도 초과 시 Google로 자동 전환)
+            elif target_lang in DEEPL_SUPPORTED and translation_service.deepl_key and not translation_service.deepl_quota_exceeded:
                 deepl_target = DEEPL_LANG_MAP[target_lang]
                 resp = await asyncio.to_thread(
                     lambda: req_lib.post(
@@ -64,8 +64,29 @@ async def _batch_translate(texts: list[str], target_lang: str, retries: int = 3)
                         timeout=10,
                     )
                 )
+                if resp.status_code == 456:
+                    print("[DeepL] ⚠️ 월 사용량 초과 (456) → Google Cloud로 전환")
+                    translation_service.deepl_quota_exceeded = True
+                    # Google로 재시도 (아래 elif로 넘어가도록 continue 대신 재귀)
+                    return await _batch_translate(texts, target_lang, retries=1)
                 resp.raise_for_status()
                 return [t["text"] for t in resp.json()["translations"]]
+
+            # Google Cloud Translation
+            elif translation_service.google_key:
+                results = []
+                for text in texts:
+                    r = await asyncio.to_thread(
+                        lambda t=text: req_lib.post(
+                            "https://translation.googleapis.com/language/translate/v2",
+                            params={"key": translation_service.google_key},
+                            json={"q": t, "target": target_lang, "source": "ko", "format": "text"},
+                            timeout=10,
+                        )
+                    )
+                    r.raise_for_status()
+                    results.append(r.json()["data"]["translations"][0]["translatedText"])
+                return results
 
             # Azure 폴백
             elif translation_service.azure_key:
