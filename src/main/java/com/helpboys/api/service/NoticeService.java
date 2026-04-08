@@ -157,10 +157,11 @@ public class NoticeService {
             }
         }
 
-        // 3단계: 번역 결과를 한 트랜잭션에서 저장
+        // 3단계: 기존 번역 삭제 후 새 번역 저장 (순서 보장을 위해 flush 분리)
         transactionTemplate.execute(status -> {
             Notice notice = noticeRepository.findById(noticeId).orElseThrow();
             notice.getTranslations().clear();
+            noticeRepository.saveAndFlush(notice); // delete 먼저 DB 반영
             for (Map.Entry<String, String> entry : collected) {
                 notice.getTranslations().add(
                         NoticeTranslation.builder().notice(notice).langCode(entry.getKey()).title(entry.getValue()).build());
