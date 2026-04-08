@@ -13,12 +13,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ import java.util.Map;
 public class NoticeService {
 
     private final NoticeRepository noticeRepository;
+    private final TransactionTemplate transactionTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(java.time.Duration.ofSeconds(5))
@@ -40,7 +43,6 @@ public class NoticeService {
     /**
      * AI 서버에 크롤링 요청 → 결과를 DB에 저장
      */
-    @Transactional
     public int crawlAndSave() {
         log.info("[공지 크롤러] 크롤링 시작...");
         int savedCount = 0;
@@ -129,15 +131,16 @@ public class NoticeService {
         return count;
     }
 
-    @Transactional
     public void retranslateOne(Long noticeId) {
-        Notice notice = noticeRepository.findById(noticeId).orElseThrow();
-        notice.getTranslations().clear();
-        noticeRepository.saveAndFlush(notice);
+        // 1단계: 제목 조회 (트랜잭션 불필요)
+        String titleKo = noticeRepository.findById(noticeId).orElseThrow().getTitleKo();
+
+        // 2단계: AI 번역 (트랜잭션 밖에서 수행)
+        List<Map.Entry<String, String>> collected = new ArrayList<>();
         for (String lang : SUPPORTED_LANGUAGES) {
             try {
                 String body = objectMapper.writeValueAsString(
-                        Map.of("text", notice.getTitleKo(), "target_lang", lang, "source_lang", "ko"));
+                        Map.of("text", titleKo, "target_lang", lang, "source_lang", "ko"));
                 HttpRequest req = HttpRequest.newBuilder()
                         .uri(URI.create(aiServerUrl + "/api/translate"))
                         .header("Content-Type", "application/json")
@@ -146,15 +149,25 @@ public class NoticeService {
                 HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
                 JsonNode result = objectMapper.readTree(resp.body());
                 if (result.path("success").asBoolean()) {
-                    String translated = result.path("data").path("translated").asText(notice.getTitleKo());
-                    notice.getTranslations().add(
-                            NoticeTranslation.builder().notice(notice).langCode(lang).title(translated).build());
+                    String translated = result.path("data").path("translated").asText(titleKo);
+                    collected.add(new AbstractMap.SimpleEntry<>(lang, translated));
                 }
             } catch (Exception e) {
                 log.warn("[공지 재번역] id={} {} 언어 실패: {}", noticeId, lang, e.getMessage());
             }
         }
-        noticeRepository.save(notice);
+
+        // 3단계: 번역 결과를 한 트랜잭션에서 저장
+        transactionTemplate.execute(status -> {
+            Notice notice = noticeRepository.findById(noticeId).orElseThrow();
+            notice.getTranslations().clear();
+            for (Map.Entry<String, String> entry : collected) {
+                notice.getTranslations().add(
+                        NoticeTranslation.builder().notice(notice).langCode(entry.getKey()).title(entry.getValue()).build());
+            }
+            noticeRepository.save(notice);
+            return null;
+        });
     }
 
     /**
