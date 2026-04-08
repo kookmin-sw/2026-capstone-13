@@ -173,11 +173,10 @@ public class MealService {
     @Transactional
     public void retranslateOne(Long mealId) {
         Meal meal = mealRepository.findById(mealId).orElseThrow();
-        meal.getTranslations().clear();
-        mealRepository.saveAndFlush(meal);
 
+        // 1단계: AI 번역 먼저 수행
+        List<MealTranslation> newTranslations = new ArrayList<>();
         try {
-            // 10개 언어 × 3개 텍스트를 한 번에 번역
             String body = objectMapper.writeValueAsString(Map.of(
                     "cafeteria", meal.getCafeteria(),
                     "corner",    meal.getCorner(),
@@ -193,7 +192,7 @@ public class MealService {
 
             translations.fields().forEachRemaining(entry -> {
                 JsonNode t = entry.getValue();
-                meal.getTranslations().add(MealTranslation.builder()
+                newTranslations.add(MealTranslation.builder()
                         .meal(meal).langCode(entry.getKey())
                         .cafeteria(t.path("cafeteria").asText(meal.getCafeteria()))
                         .corner(t.path("corner").asText(meal.getCorner()))
@@ -201,9 +200,19 @@ public class MealService {
                         .build());
             });
         } catch (Exception e) {
-            log.warn("[식단 재번역] id={} 실패: {}", mealId, e.getMessage());
+            log.warn("[식단 재번역] id={} AI 호출 실패 — 기존 번역 유지: {}", mealId, e.getMessage());
+            return;
         }
 
+        if (newTranslations.isEmpty()) {
+            log.warn("[식단 재번역] id={} 번역 결과 없음 — 기존 번역 유지", mealId);
+            return;
+        }
+
+        // 2단계: 번역 성공 확인 후 교체
+        meal.getTranslations().clear();
+        mealRepository.saveAndFlush(meal);
+        meal.getTranslations().addAll(newTranslations);
         mealRepository.save(meal);
     }
 

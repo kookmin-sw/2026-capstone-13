@@ -157,7 +157,12 @@ public class NoticeService {
             }
         }
 
-        // 3단계: 기존 번역 삭제 후 새 번역 저장 (순서 보장을 위해 flush 분리)
+        // 3단계: 번역 결과가 있을 때만 교체 (없으면 기존 번역 유지)
+        if (collected.isEmpty()) {
+            log.warn("[공지 재번역] id={} 번역 결과 없음 — 기존 번역 유지", noticeId);
+            return;
+        }
+
         transactionTemplate.execute(status -> {
             Notice notice = noticeRepository.findById(noticeId).orElseThrow();
             notice.getTranslations().clear();
