@@ -53,15 +53,11 @@ const COLOR_FEMALE = '#DB2777';
 
 const LANGUAGES = [
   { code: 'en',      label: '🇺🇸 English' },
-  { code: 'zh-Hans', label: '🇨🇳 中文(简体)' },
-  { code: 'zh-Hant', label: '🇹🇼 中文(繁體)' },
   { code: 'ja',      label: '🇯🇵 日本語' },
-  { code: 'vi',      label: '🇻🇳 Tiếng Việt' },
-  { code: 'mn',      label: '🇲🇳 Монгол' },
-  { code: 'fr',      label: '🇫🇷 Français' },
-  { code: 'de',      label: '🇩🇪 Deutsch' },
-  { code: 'es',      label: '🇪🇸 Español' },
+  { code: 'zh-Hans', label: '🇨🇳 中文(简体)' },
   { code: 'ru',      label: '🇷🇺 Русский' },
+  { code: 'mn',      label: '🇲🇳 Монгол' },
+  { code: 'vi',      label: '🇻🇳 Tiếng Việt' },
 ];
 
 interface ProfileDetail {

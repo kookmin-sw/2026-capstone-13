@@ -26,15 +26,11 @@ const SLOT_SCALE = [1, 0.97, 0.94];
 
 const LANG_FLAG: Record<string, string> = {
   'en':      '🇺🇸',
-  'zh-Hans': '🇨🇳',
-  'zh-Hant': '🇹🇼',
   'ja':      '🇯🇵',
-  'vi':      '🇻🇳',
-  'mn':      '🇲🇳',
-  'fr':      '🇫🇷',
-  'de':      '🇩🇪',
-  'es':      '🇪🇸',
+  'zh-Hans': '🇨🇳',
   'ru':      '🇷🇺',
+  'mn':      '🇲🇳',
+  'vi':      '🇻🇳',
 };
 
 function getUrgency(createdAt: string): { label: string; color: string } {

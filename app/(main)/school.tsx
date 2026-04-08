@@ -18,9 +18,8 @@ import api from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 
 const LANG_NAMES: Record<string, string> = {
-  en: '영어', 'zh-Hans': '중국어(간체)', 'zh-Hant': '중국어(번체)',
-  ja: '일본어', vi: '베트남어', mn: '몽골어',
-  fr: '프랑스어', de: '독일어', es: '스페인어', ru: '러시아어',
+  en: '영어', ja: '일본어', 'zh-Hans': '중국어(간체)',
+  ru: '러시아어', mn: '몽골어', vi: '베트남어',
 };
 
 // ── Design tokens (홈 화면과 동일) ──
