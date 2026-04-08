@@ -242,7 +242,6 @@ public class CommunityService {
     }
 
     // 게시글 번역 (DB 캐시 → 없으면 Gemini 번역 후 저장)
-    @Transactional
     public Map<String, String> translatePost(Long postId, String langCode) {
         // DB 캐시 확인
         java.util.Optional<PostTranslation> cached =

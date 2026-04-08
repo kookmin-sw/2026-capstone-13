@@ -45,7 +45,6 @@ public class ChatService {
     private String aiServerUrl;
 
     // 채팅 메시지 저장 및 DTO 반환
-    @Transactional
     public ChatMessageDto saveMessage(ChatMessageDto dto) {
         User sender = userRepository.findById(dto.getSenderId())
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
@@ -291,7 +290,6 @@ public class ChatService {
     }
 
     // 음성 메시지 저장: AI 서버로 음성→텍스트 변환 후 채팅 저장
-    @Transactional
     public ChatMessageDto saveVoiceMessage(Long roomId, Long senderId, byte[] audioBytes) {
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
@@ -384,7 +382,6 @@ public class ChatService {
     }
 
     // 채팅 메시지 온디맨드 번역 (translatedContent 없는 경우 Gemini 번역 후 저장)
-    @Transactional
     public ChatMessageDto translateMessage(Long messageId, Long userId) {
         ChatMessage message = chatMessageRepository.findById(messageId)
                 .orElseThrow(() -> new BusinessException("메시지를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
