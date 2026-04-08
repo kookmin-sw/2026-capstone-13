@@ -25,33 +25,87 @@ app.add_middleware(
 SUPPORTED_LANGUAGES = ["en", "zh-Hans", "zh-Hant", "ja", "vi", "mn", "fr", "de", "es", "ru"]
 
 
-async def _azure_batch_translate(texts: list[str], retries: int = 3) -> list[dict] | None:
-    """Azure Translator 배치 호출 (실패 시 최대 retries회 재시도)"""
+async def _batch_translate(texts: list[str], target_lang: str, retries: int = 3) -> list[str] | None:
+    """
+    언어별 최적 엔진으로 배치 번역 (재시도 포함)
+    - mn(몽골어) → Google Cloud Translation
+    - 나머지 → DeepL → Azure 순 폴백
+    반환: 번역된 텍스트 리스트 (texts와 동일 순서), 실패 시 None
+    """
     import requests as req_lib, uuid
-    headers = {
-        "Ocp-Apim-Subscription-Key": translation_service.azure_key,
-        "Ocp-Apim-Subscription-Region": translation_service.azure_region,
-        "Content-Type": "application/json",
-    }
-    params = {"api-version": "3.0", "from": "ko", "to": SUPPORTED_LANGUAGES}
+    from translator.service import DEEPL_LANG_MAP, DEEPL_SUPPORTED, DEEPL_API_URL
+
     for attempt in range(retries):
         try:
-            resp = await asyncio.to_thread(
-                lambda: req_lib.post(
-                    "https://api.cognitive.microsofttranslator.com/translate",
-                    headers={**headers, "X-ClientTraceId": str(uuid.uuid4())},
-                    params=params,
-                    json=[{"text": t} for t in texts],
-                    timeout=10,
+            # 몽골어: Google Cloud Translation
+            if target_lang == "mn" and translation_service.google_key:
+                results = []
+                for text in texts:
+                    resp = await asyncio.to_thread(
+                        lambda t=text: req_lib.post(
+                            "https://translation.googleapis.com/language/translate/v2",
+                            params={"key": translation_service.google_key},
+                            json={"q": t, "target": "mn", "source": "ko", "format": "text"},
+                            timeout=10,
+                        )
+                    )
+                    resp.raise_for_status()
+                    results.append(resp.json()["data"]["translations"][0]["translatedText"])
+                return results
+
+            # DeepL 지원 언어
+            elif target_lang in DEEPL_SUPPORTED and translation_service.deepl_key:
+                deepl_target = DEEPL_LANG_MAP[target_lang]
+                resp = await asyncio.to_thread(
+                    lambda: req_lib.post(
+                        DEEPL_API_URL,
+                        headers={"Authorization": f"DeepL-Auth-Key {translation_service.deepl_key}"},
+                        json={"text": texts, "target_lang": deepl_target, "source_lang": "KO"},
+                        timeout=10,
+                    )
                 )
-            )
-            resp.raise_for_status()
-            return resp.json()
+                resp.raise_for_status()
+                return [t["text"] for t in resp.json()["translations"]]
+
+            # Azure 폴백
+            elif translation_service.azure_key:
+                headers = {
+                    "Ocp-Apim-Subscription-Key": translation_service.azure_key,
+                    "Ocp-Apim-Subscription-Region": translation_service.azure_region,
+                    "Content-Type": "application/json",
+                }
+                resp = await asyncio.to_thread(
+                    lambda: req_lib.post(
+                        "https://api.cognitive.microsofttranslator.com/translate",
+                        headers={**headers, "X-ClientTraceId": str(uuid.uuid4())},
+                        params={"api-version": "3.0", "from": "ko", "to": [target_lang]},
+                        json=[{"text": t} for t in texts],
+                        timeout=10,
+                    )
+                )
+                resp.raise_for_status()
+                return [item["translations"][0]["text"] for item in resp.json()]
+
+            else:
+                return None  # 키 없음
+
         except Exception as e:
-            print(f"[Azure 번역] 시도 {attempt + 1}/{retries} 실패: {e}")
+            print(f"[배치번역:{target_lang}] 시도 {attempt + 1}/{retries} 실패: {e}")
             if attempt < retries - 1:
-                await asyncio.sleep(1 * (attempt + 1))  # 1s, 2s 대기 후 재시도
+                await asyncio.sleep(1 * (attempt + 1))
+
     return None
+
+
+async def _batch_translate_all_langs(texts: list[str], languages: list[str]) -> dict:
+    """
+    여러 언어로 동시 배치 번역
+    반환: {lang: [번역텍스트, ...]}
+    """
+    tasks = {lang: _batch_translate(texts, lang) for lang in languages}
+    results = await asyncio.gather(*tasks.values(), return_exceptions=True)
+    return {lang: (res if not isinstance(res, Exception) else None)
+            for lang, res in zip(tasks.keys(), results)}
 
 # 식당 고유명사 교정 매핑 (Azure 번역 오류 수정)
 CAFETERIA_NAME_CORRECTIONS = {
@@ -228,28 +282,26 @@ async def crawl_notices():
 # ── 식단 단건 배치 번역 (retranslate용) ──────────────────
 @app.post("/api/meals/translate-batch")
 async def translate_meal_batch(request: Request):
-    """식당명·코너명·메뉴를 10개 언어로 한 번에 번역 (재시도 포함)"""
+    """식당명·코너명·메뉴를 전체 언어로 한 번에 번역 (DeepL+Google+Azure 라우팅)"""
     try:
         data = await request.json()
         cafeteria = data.get("cafeteria", "")
         corner    = data.get("corner", "")
         menu      = data.get("menu", "")
 
-        raw = await _azure_batch_translate([cafeteria, corner, menu])
-        if raw is None:
-            return JSONResponse(status_code=500, content={"success": False, "message": "Azure 번역 실패", "data": None})
+        lang_results = await _batch_translate_all_langs([cafeteria, corner, menu], SUPPORTED_LANGUAGES)
 
-        caf_map  = {t["to"]: t["text"] for t in raw[0]["translations"]}
-        cor_map  = {t["to"]: t["text"] for t in raw[1]["translations"]}
-        menu_map = {t["to"]: t["text"] for t in raw[2]["translations"]}
-        translations = {
-            lang: {
-                "cafeteria": _correct_cafeteria_name(caf_map.get(lang, cafeteria), lang),
-                "corner":    cor_map.get(lang, corner),
-                "menu":      menu_map.get(lang, menu),
-            }
-            for lang in SUPPORTED_LANGUAGES
-        }
+        translations = {}
+        for lang, res in lang_results.items():
+            if res:
+                translations[lang] = {
+                    "cafeteria": _correct_cafeteria_name(res[0], lang),
+                    "corner":    res[1],
+                    "menu":      res[2],
+                }
+            else:
+                translations[lang] = {"cafeteria": cafeteria, "corner": corner, "menu": menu}
+
         return {"success": True, "data": translations}
     except Exception as e:
         return JSONResponse(status_code=500, content={"success": False, "message": str(e), "data": None})
@@ -263,22 +315,24 @@ async def crawl_meals():
         result = []
         failed = []
         for meal in raw_meals:
-            raw = await _azure_batch_translate([meal["cafeteria"], meal["corner"], meal["menu"]])
-            if raw is not None:
-                caf_map  = {t["to"]: t["text"] for t in raw[0]["translations"]}
-                cor_map  = {t["to"]: t["text"] for t in raw[1]["translations"]}
-                menu_map = {t["to"]: t["text"] for t in raw[2]["translations"]}
-                translations = {
-                    lang: {"cafeteria": _correct_cafeteria_name(caf_map.get(lang, meal["cafeteria"]), lang),
-                           "corner":    cor_map.get(lang, meal["corner"]),
-                           "menu":      menu_map.get(lang, meal["menu"])}
-                    for lang in SUPPORTED_LANGUAGES
-                }
-            else:
-                # 재시도 후에도 실패 → 빈 translations 저장 (스케줄러가 나중에 retranslate)
+            lang_results = await _batch_translate_all_langs(
+                [meal["cafeteria"], meal["corner"], meal["menu"]], SUPPORTED_LANGUAGES
+            )
+            translations = {}
+            any_failed = False
+            for lang, res in lang_results.items():
+                if res:
+                    translations[lang] = {
+                        "cafeteria": _correct_cafeteria_name(res[0], lang),
+                        "corner":    res[1],
+                        "menu":      res[2],
+                    }
+                else:
+                    any_failed = True
+            # 실패 시 빈 translations 저장 → 8:30 스케줄러가 자동 재번역
+            if any_failed:
                 failed.append(f"{meal['cafeteria']} / {meal['corner']} / {meal['date']}")
-                translations = {}
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(0.1)
             result.append({
                 "cafeteria_ko": meal["cafeteria"],
                 "corner_ko":    meal["corner"],
