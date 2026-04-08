@@ -17,4 +17,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query("UPDATE User u SET u.helpCount = u.helpCount + 1 WHERE u.id = :id")
     void incrementHelpCount(@Param("id") Long id);
+
+    @Modifying
+    @Query("UPDATE User u SET u.rating = (SELECT ROUND(AVG(r.rating) * 10) / 10.0 FROM Review r WHERE r.reviewee.id = :id) WHERE u.id = :id")
+    void updateRatingFromReviews(@Param("id") Long id);
 }
