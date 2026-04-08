@@ -175,8 +175,7 @@ public class HelpRequestService {
                 && req.getStatus() != HelpRequest.RequestStatus.COMPLETED
                 && req.getHelper() != null) {
             User helper = req.getHelper();
-            helper.setHelpCount(helper.getHelpCount() + 1);
-            userRepository.save(helper);
+            userRepository.incrementHelpCount(helper.getId());
 
             String message = "'" + truncate(req.getTitle(), 15) + "' 도움이 완료됐어요. " + helper.getNickname() + "님에게 리뷰를 남겨보세요!";
             notificationService.createNotification(
