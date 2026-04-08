@@ -84,10 +84,6 @@ public class ReviewService {
 
     // reviewee의 평균 평점 갱신
     private void updateRevieweeRating(User reviewee) {
-        Double avg = reviewRepository.findAverageRatingByRevieweeId(reviewee.getId())
-                .orElse(0.0);
-        // 소수점 첫째 자리까지 반올림
-        reviewee.setRating(Math.round(avg * 10.0) / 10.0);
-        userRepository.save(reviewee);
+        userRepository.updateRatingFromReviews(reviewee.getId());
     }
 }
