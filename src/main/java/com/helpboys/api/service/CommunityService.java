@@ -131,17 +131,17 @@ public class CommunityService {
     public Map<String, Object> toggleLike(Long postId, Long userId) {
         CommunityPost post = findPostById(postId);
 
-        boolean alreadyLiked = postLikeRepository.existsByPostIdAndUserId(postId, userId);
+        java.util.Optional<PostLike> existingLike = postLikeRepository.findByPostIdAndUserId(postId, userId);
 
-        if (alreadyLiked) {
-            postLikeRepository.findByPostIdAndUserId(postId, userId)
-                    .ifPresent(postLikeRepository::delete);
-            post.setLikes(post.getLikes() - 1);
+        if (existingLike.isPresent()) {
+            postLikeRepository.delete(existingLike.get());
+            communityPostRepository.decrementLikes(postId);
+            return Map.of("liked", false, "likes", post.getLikes() - 1);
         } else {
             User user = findUserById(userId);
             PostLike like = PostLike.builder().post(post).user(user).build();
             postLikeRepository.save(like);
-            post.setLikes(post.getLikes() + 1);
+            communityPostRepository.incrementLikes(postId);
 
             // 내 글이 아닌 경우 게시글 작성자에게 알림
             if (!post.getAuthor().getId().equals(userId)) {
@@ -154,10 +154,8 @@ public class CommunityService {
                         postId
                 );
             }
+            return Map.of("liked", true, "likes", post.getLikes() + 1);
         }
-
-        communityPostRepository.save(post);
-        return Map.of("liked", !alreadyLiked, "likes", post.getLikes());
     }
 
     // 게시글 수정
