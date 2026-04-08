@@ -35,7 +35,7 @@ class TranslationService:
     def __init__(self):
         # DeepL
         self.deepl_key = os.getenv("DEEPL_API_KEY")
-        self.deepl_quota_exceeded = False  # 한도 초과 시 True → Google로 자동 전환
+        self._deepl_quota_exceeded_at: Optional[float] = None  # 초과 시각 (timestamp)
         if self.deepl_key:
             print("✅ DeepL API 연동 완료")
         else:
@@ -130,6 +130,23 @@ Respond ONLY with the explanation or "null". No extra text."""
         except Exception as e:
             print(f"[Gemini] 뉘앙스 감지 실패: {e}")
             return None
+
+    @property
+    def deepl_quota_exceeded(self) -> bool:
+        if self._deepl_quota_exceeded_at is None:
+            return False
+        import time
+        # 30일(2592000초) 지나면 자동 해제
+        if time.time() - self._deepl_quota_exceeded_at > 2592000:
+            print("[DeepL] 한도 초과 후 30일 경과 → DeepL 자동 복구")
+            self._deepl_quota_exceeded_at = None
+            return False
+        return True
+
+    @deepl_quota_exceeded.setter
+    def deepl_quota_exceeded(self, value: bool):
+        import time
+        self._deepl_quota_exceeded_at = time.time() if value else None
 
     async def translate_text(self, text: str, target_lang: str = "en", source_lang: Optional[str] = None):
         """단건 번역: 언어별 최적 엔진 선택"""
