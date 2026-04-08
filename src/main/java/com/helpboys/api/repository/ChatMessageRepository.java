@@ -21,4 +21,16 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     @Modifying
     @Query("UPDATE ChatMessage m SET m.isRead = true WHERE m.roomId = :roomId AND m.sender.id != :myUserId AND m.isRead = false")
     int markAsRead(@Param("roomId") Long roomId, @Param("myUserId") Long myUserId);
+
+    // 여러 채팅방의 마지막 메시지를 한 번에 조회 (N+1 방지)
+    @Query("SELECT m FROM ChatMessage m WHERE m.id IN " +
+           "(SELECT MAX(m2.id) FROM ChatMessage m2 WHERE m2.roomId IN :roomIds GROUP BY m2.roomId)")
+    List<ChatMessage> findLastMessagesByRoomIds(@Param("roomIds") List<Long> roomIds);
+
+    // 여러 채팅방의 읽지 않은 메시지 수를 한 번에 조회 (N+1 방지)
+    // 반환: [roomId, count]
+    @Query("SELECT m.roomId, COUNT(m) FROM ChatMessage m " +
+           "WHERE m.roomId IN :roomIds AND m.sender.id != :myUserId AND m.isRead = false " +
+           "GROUP BY m.roomId")
+    List<Object[]> countUnreadByRoomIds(@Param("roomIds") List<Long> roomIds, @Param("myUserId") Long myUserId);
 }
