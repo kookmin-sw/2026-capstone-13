@@ -8,11 +8,13 @@ import com.helpboys.api.dto.PostCommentResponse;
 import com.helpboys.api.entity.CommunityPost;
 import com.helpboys.api.entity.Notification;
 import com.helpboys.api.entity.PostComment;
+import com.helpboys.api.entity.CommentTranslation;
 import com.helpboys.api.entity.PostLike;
 import com.helpboys.api.entity.PostTranslation;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.CommunityPostRepository;
+import com.helpboys.api.repository.CommentTranslationRepository;
 import com.helpboys.api.repository.PostCommentRepository;
 import com.helpboys.api.repository.PostLikeRepository;
 import com.helpboys.api.repository.PostTranslationRepository;
@@ -45,6 +47,7 @@ public class CommunityService {
     private final PostCommentRepository postCommentRepository;
     private final PostLikeRepository postLikeRepository;
     private final PostTranslationRepository postTranslationRepository;
+    private final CommentTranslationRepository commentTranslationRepository;
     private final UserRepository userRepository;
     private final UserBlockRepository userBlockRepository;
     private final NotificationService notificationService;
@@ -271,41 +274,36 @@ public class CommunityService {
         return Map.of("title", translatedTitle, "content", translatedContent, "langCode", langCode);
     }
 
-    // 댓글 번역 (게시글 맥락 포함)
-    @Transactional(readOnly = true)
+    // 댓글 번역 (DB 캐시 → 없으면 번역 후 저장)
+    @Transactional
     public Map<String, String> translateComment(Long commentId, String langCode) {
+        // DB 캐시 확인
+        java.util.Optional<CommentTranslation> cached =
+                commentTranslationRepository.findByCommentIdAndLangCode(commentId, langCode);
+        if (cached.isPresent()) {
+            return Map.of("content", cached.get().getContent(), "langCode", langCode);
+        }
+
         PostComment comment = postCommentRepository.findById(commentId)
                 .orElseThrow(() -> new BusinessException("댓글을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-        CommunityPost post = comment.getPost();
-        String context = post.getTitle() + "\n" + post.getContent();
-        String translatedContent = callTranslateWithContext(comment.getContent(), langCode, context);
-        return Map.of("content", translatedContent, "langCode", langCode);
-    }
 
-    private String callTranslateWithContext(String text, String langCode, String context) {
-        try {
-            String body = objectMapper.writeValueAsString(
-                    Map.of("text", text, "target_lang", langCode, "context", context));
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
-                    .header("Content-Type", "application/json")
-                    .timeout(java.time.Duration.ofSeconds(30))
-                    .POST(HttpRequest.BodyPublishers.ofString(body)).build();
-            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-            JsonNode result = objectMapper.readTree(resp.body());
-            return result.path("data").path("translated").asText(text);
-        } catch (Exception e) {
-            log.warn("[번역] 실패: {}", e.getMessage());
-            return text;
-        }
+        String translatedContent = callTranslate(comment.getContent(), langCode);
+
+        commentTranslationRepository.save(CommentTranslation.builder()
+                .comment(comment)
+                .langCode(langCode)
+                .content(translatedContent)
+                .build());
+
+        return Map.of("content", translatedContent, "langCode", langCode);
     }
 
     private String callTranslate(String text, String langCode) {
         try {
             String body = objectMapper.writeValueAsString(
-                    Map.of("text", text, "target_lang", langCode));
+                    Map.of("text", text, "target_lang", langCode, "source_lang", "ko"));
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                    .uri(URI.create(aiServerUrl + "/api/translate"))
                     .header("Content-Type", "application/json")
                     .timeout(java.time.Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
