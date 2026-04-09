@@ -219,8 +219,12 @@ async def gemini_translate(request: Request):
     source_lang = data.get("source_lang")
     context = data.get("context")  # 게시글 맥락 (선택)
 
+    if not translation_service.gemini_client:
+        return {"success": False, "message": "GEMINI_API_KEY가 설정되지 않았습니다", "data": None}
+
     result = await translation_service._gemini_translate(text, target_lang, source_lang, context)
-    return {"success": True, "message": "Gemini 번역 완료", "data": result}
+    success = result.get("mode") == "gemini"
+    return {"success": success, "message": "Gemini 번역 완료" if success else "Gemini 번역 실패", "data": result}
 
 
 # ── 번역 ──────────────────────────────────────────────────

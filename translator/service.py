@@ -276,7 +276,11 @@ Respond ONLY with the explanation or "null". No extra text."""
             return self._dummy_translate(text, target_lang, source_lang)
 
     async def _gemini_translate(self, text: str, target_lang: str, source_lang: Optional[str], context: Optional[str] = None):
-        """Gemini API로 자연스러운 번역"""
+        """Gemini API로 자연스러운 번역 (재시도 3회)"""
+        if not self.gemini_client:
+            print("[Gemini] 클라이언트 없음 — GEMINI_API_KEY 확인 필요")
+            return self._dummy_translate(text, target_lang, source_lang)
+
         lang_name = LANG_NAMES.get(target_lang, target_lang)
         if context:
             prompt = f"""Translate this comment into natural, colloquial {lang_name}.
@@ -293,31 +297,49 @@ If it's a chat message, make it sound like a native speaker's chat.
 Return ONLY the translation.
 
 Text: {text}"""
-        try:
-            from google import genai
-            from google.genai import types
-            response = await asyncio.to_thread(
-                self.gemini_client.models.generate_content,
-                model=self.model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=self.system_instruction,
-                    safety_settings=[
-                        types.SafetySetting(category='HARM_CATEGORY_HARASSMENT', threshold='BLOCK_NONE'),
-                        types.SafetySetting(category='HARM_CATEGORY_HATE_SPEECH', threshold='BLOCK_NONE'),
-                        types.SafetySetting(category='HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold='BLOCK_NONE'),
-                        types.SafetySetting(category='HARM_CATEGORY_DANGEROUS_CONTENT', threshold='BLOCK_NONE'),
-                    ]
+
+        from google import genai
+        from google.genai import types
+
+        last_error = None
+        for attempt in range(3):
+            try:
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        self.gemini_client.models.generate_content,
+                        model=self.model_name,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=self.system_instruction,
+                            safety_settings=[
+                                types.SafetySetting(category='HARM_CATEGORY_HARASSMENT', threshold='BLOCK_NONE'),
+                                types.SafetySetting(category='HARM_CATEGORY_HATE_SPEECH', threshold='BLOCK_NONE'),
+                                types.SafetySetting(category='HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold='BLOCK_NONE'),
+                                types.SafetySetting(category='HARM_CATEGORY_DANGEROUS_CONTENT', threshold='BLOCK_NONE'),
+                            ]
+                        )
+                    ),
+                    timeout=20.0
                 )
-            )
-            return {
-                "original": text, "translated": response.text.strip(),
-                "source_language": source_lang or self._detect_language(text),
-                "target_language": target_lang, "mode": "gemini",
-            }
-        except Exception as e:
-            print(f"[Gemini] 번역 실패: {e}")
-            return self._dummy_translate(text, target_lang, source_lang)
+                translated = response.text.strip() if response.text else None
+                if not translated:
+                    raise ValueError("빈 응답")
+                return {
+                    "original": text, "translated": translated,
+                    "source_language": source_lang or self._detect_language(text),
+                    "target_language": target_lang, "mode": "gemini",
+                }
+            except asyncio.TimeoutError:
+                last_error = "timeout"
+                print(f"[Gemini] 번역 타임아웃 (시도 {attempt+1}/3)")
+            except Exception as e:
+                last_error = str(e)
+                print(f"[Gemini] 번역 실패 (시도 {attempt+1}/3): {e}")
+                if attempt < 2:
+                    await asyncio.sleep(1.5 * (attempt + 1))
+
+        print(f"[Gemini] 3회 재시도 모두 실패: {last_error}")
+        return self._dummy_translate(text, target_lang, source_lang)
 
     def _dummy_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
         return {
