@@ -349,19 +349,6 @@ export default function HomeScreen() {
                 </View>
               ))}
             </View>
-            <View style={s.activityShortcuts}>
-              <TouchableOpacity style={s.shortcut} onPress={() => router.push('/(main)/profile' as never)} activeOpacity={0.8}>
-                <Text style={s.shortcutLabelLg}>프로필</Text>
-              </TouchableOpacity>
-              <View style={s.shortcutDivider} />
-              <TouchableOpacity style={s.shortcut} onPress={() => router.push('/help-list')} activeOpacity={0.8}>
-                <Text style={s.shortcutLabelLg}>내 요청 목록</Text>
-              </TouchableOpacity>
-              <View style={s.shortcutDivider} />
-              <TouchableOpacity style={s.shortcut} onPress={() => router.push('/(main)/write')} activeOpacity={0.8}>
-                <Text style={s.shortcutLabelLg}>도움 요청하기</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         )}
 
