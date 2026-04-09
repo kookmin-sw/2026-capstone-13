@@ -471,9 +471,11 @@ export default function ChatRoomScreen() {
             : m
           )
         );
+      } else {
+        Alert.alert('번역 실패', res.message ?? '번역에 실패했습니다. 잠시 후 다시 시도해주세요.');
       }
     } catch {
-      // ignore
+      Alert.alert('번역 실패', '번역 서버에 연결할 수 없습니다.');
     }
   };
 

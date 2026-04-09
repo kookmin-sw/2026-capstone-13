@@ -169,9 +169,13 @@ export default function CommunityPostScreen() {
     setTranslating(true);
     try {
       const res = await translateCommunityPost(post!.id);
-      if (res.success && res.data) setStoreTranslation(post!.id, res.data);
+      if (res.success && res.data) {
+        setStoreTranslation(post!.id, res.data);
+      } else {
+        Alert.alert('번역 실패', res.message ?? '번역에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      }
     } catch {
-      // ignore
+      Alert.alert('번역 실패', '번역 서버에 연결할 수 없습니다.');
     } finally {
       setTranslating(false);
     }
@@ -199,9 +203,11 @@ export default function CommunityPostScreen() {
       const res = await translateCommunityComment(commentId);
       if (res.success && res.data) {
         setCommentTranslations((prev) => ({ ...prev, [commentId]: res.data.content }));
+      } else {
+        Alert.alert('번역 실패', res.message ?? '번역에 실패했습니다. 잠시 후 다시 시도해주세요.');
       }
-    } catch (e) {
-      Alert.alert('번역 실패', '잠시 후 다시 시도해주세요.');
+    } catch {
+      Alert.alert('번역 실패', '번역 서버에 연결할 수 없습니다.');
     } finally {
       setTranslatingComments((prev) => ({ ...prev, [commentId]: false }));
     }
