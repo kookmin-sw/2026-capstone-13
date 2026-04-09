@@ -30,11 +30,11 @@ const T2       = '#6B7A99';
 const T3       = '#6B9DF0';
 const BG       = '#F4F6FB';
 
-type FilterCategory = 'ALL' | 'HOT' | PostCategory;
+type FilterCategory = 'ALL' | PostCategory;
 
 const CATEGORY_FILTERS: { key: FilterCategory; label: string }[] = [
-  { key: 'ALL',      label: '최신'    },
-  { key: 'HOT',      label: '추천'    },
+  { key: 'ALL',      label: '전체' },
+  { key: 'INFO',     label: '일반' },
   { key: 'QUESTION', label: '로컬' },
   { key: 'CHAT',     label: '모임' },
   { key: 'CULTURE',  label: '장터' },
@@ -275,9 +275,7 @@ export default function CommunityScreen() {
 
   const categoryFiltered = selectedCategory === 'ALL'
     ? posts
-    : selectedCategory === 'HOT'
-      ? posts.filter((p) => p.likes >= 30)
-      : posts.filter((p) => p.category === (selectedCategory as PostCategory));
+    : posts.filter((p) => p.category === selectedCategory);
 
   const filteredPosts = searchQuery.trim()
     ? categoryFiltered.filter((p) => {
@@ -366,7 +364,7 @@ export default function CommunityScreen() {
           </View>
         )}
         <View style={s.filterWrap}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll}>
+          <View style={s.filterScroll}>
             {CATEGORY_FILTERS.map(({ key, label }) => (
               <TouchableOpacity
                 key={key}
@@ -377,7 +375,7 @@ export default function CommunityScreen() {
                 <Text style={[s.chipText, selectedCategory === key && s.chipTextOn]}>{label}</Text>
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
         </View>
         <View style={s.headerDivider} />
         {isLoading ? <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 40 }} /> : null}
@@ -429,12 +427,12 @@ const s = StyleSheet.create({
 
   // ── Filter ──
   filterWrap: {
-    paddingTop: 10, paddingBottom: 10,
+    paddingTop: 6, paddingBottom: 6,
     backgroundColor: '#fff',
   },
-  filterScroll: { paddingHorizontal: 16, gap: 6 },
+  filterScroll: { flexDirection: 'row', justifyContent: 'space-evenly', paddingHorizontal: 8 },
   chip: {
-    paddingHorizontal: 16, paddingVertical: 8,
+    paddingHorizontal: 16, paddingVertical: 5,
     borderRadius: 20, backgroundColor: '#F4F6FB',
     borderWidth: 1, borderColor: BORDER, flexShrink: 0,
   },
