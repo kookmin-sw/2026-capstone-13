@@ -1,14 +1,21 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useRef, memo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  Animated,
   Dimensions,
   Image,
-  TouchableOpacity,
-  PanResponder,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { CategoryLabels, MethodLabels } from '../constants/colors';
 import type { HelpRequest } from '../types';
@@ -19,10 +26,8 @@ const CARD_HEIGHT = 390;
 const CARD_BG = '#FFFFFF';
 const ACCENT  = '#0EA5E9';
 
-// 카드 위치: 0=앞, 1=중간, 2=뒤
-const SLOT_OFFSET = [0, 16, 32];
+const SLOT_OFFSET  = [0, 16, 32];
 const SLOT_OPACITY = [1, 0.8, 0.6];
-const SLOT_SCALE = [1, 0.97, 0.94];
 
 const LANG_FLAG: Record<string, string> = {
   'en':      '🇺🇸',
@@ -51,7 +56,7 @@ function formatTime(iso: string): string {
 }
 
 // ── 카드 한 장 ─────────────────────────────────────────────
-function CardContent({ card }: { card: HelpRequest }) {
+const CardContent = memo(function CardContent({ card }: { card: HelpRequest }) {
   const [imgError, setImgError] = useState(false);
   const profileUri = card.requester.profileImage?.trim();
   const urgency = getUrgency(card.createdAt);
@@ -110,7 +115,7 @@ function CardContent({ card }: { card: HelpRequest }) {
       </View>
     </View>
   );
-}
+});
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────
 interface SwipeCardProps {
@@ -124,21 +129,10 @@ const SWIPE_THRESHOLD = 80;
 
 export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: SwipeCardProps) {
   const [topIdx, setTopIdx] = useState(0);
-  const isSwiping = useRef(false);
 
-  const exitX    = useRef(new Animated.Value(0)).current;
-  const progress = useRef(new Animated.Value(0)).current;
-
-  const midX   = progress.interpolate({ inputRange: [0,1], outputRange: [SLOT_OFFSET[1], SLOT_OFFSET[0]] });
-  const midOp  = progress.interpolate({ inputRange: [0,1], outputRange: [SLOT_OPACITY[1], SLOT_OPACITY[0]] });
-  const backX  = progress.interpolate({ inputRange: [0,1], outputRange: [SLOT_OFFSET[2], SLOT_OFFSET[1]] });
-  const backOp = progress.interpolate({ inputRange: [0,1], outputRange: [SLOT_OPACITY[2], SLOT_OPACITY[1]] });
-
-  // 드래그 시 카드 회전
-  const rotate = exitX.interpolate({
-    inputRange: [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
-    outputRange: ['-12deg', '0deg', '12deg'],
-  });
+  // UI 스레드에서 직접 처리되는 shared values
+  const translateX = useSharedValue(0);
+  const isSwiping  = useSharedValue(false);
 
   const n = requests.length;
   const card0 = n > 0 ? requests[topIdx % n] : null;
@@ -146,122 +140,134 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: 
   const card2 = n > 0 ? requests[(topIdx + 2) % n] : null;
 
   // stale closure 방지용 ref
-  const card0Ref = useRef(card0);
-  card0Ref.current = card0;
   const onSwipeLeftRef  = useRef(onSwipeLeft);
   const onSwipeRightRef = useRef(onSwipeRight);
   onSwipeLeftRef.current  = onSwipeLeft;
   onSwipeRightRef.current = onSwipeRight;
 
-  const flyOut = useCallback((toX: number, onDone: () => void) => {
-    Animated.parallel([
-      Animated.timing(exitX,    { toValue: toX, duration: 220, useNativeDriver: true }),
-      Animated.timing(progress, { toValue: 1,   duration: 220, useNativeDriver: true }),
-    ]).start(() => {
-      setTopIdx(prev => prev + 1);
-      exitX.setValue(0);
-      progress.setValue(0);
-      isSwiping.current = false;
-      onDone();
-    });
-  }, [exitX, progress]);
+  const card0Ref = useRef(card0);
+  card0Ref.current = card0;
 
-  // 버튼용 (오른쪽=X, 왼쪽=O 유지)
-  const triggerSwipe = useCallback((dir: 'left' | 'right') => {
-    if (isSwiping.current || !card0) return;
-    isSwiping.current = true;
-    const toX = dir === 'right' ? SCREEN_WIDTH + 200 : -(SCREEN_WIDTH + 200);
-    // 버튼: 오른쪽(X)=onSwipeLeft, 왼쪽(O)=onSwipeRight
-    if (dir === 'right') onSwipeLeft?.(card0);
-    else onSwipeRight?.(card0);
-    flyOut(toX, () => {});
-  }, [card0, onSwipeLeft, onSwipeRight, flyOut]);
+  const advanceCard = useCallback(() => {
+    setTopIdx(prev => prev + 1);
+  }, []);
 
-  const panResponder = useRef(PanResponder.create({
-    onStartShouldSetPanResponder: () => !isSwiping.current,
-    onMoveShouldSetPanResponder: (_, { dx, dy }) =>
-      !isSwiping.current && Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 8,
-    onPanResponderMove: (_, { dx }) => {
-      if (isSwiping.current) return;
-      exitX.setValue(dx);
-      progress.setValue(Math.min(Math.abs(dx) / SCREEN_WIDTH, 1));
-    },
-    onPanResponderRelease: (_, { dx, vx }) => {
-      if (isSwiping.current) return;
-      const swipedRight = dx > SWIPE_THRESHOLD || vx > 0.8;
-      const swipedLeft  = dx < -SWIPE_THRESHOLD || vx < -0.8;
+  const handleSwipeLeft = useCallback(() => {
+    const card = card0Ref.current;
+    if (card) onSwipeLeftRef.current?.(card);
+    advanceCard();
+  }, [advanceCard]);
+
+  const handleSwipeRight = useCallback(() => {
+    const card = card0Ref.current;
+    if (card) onSwipeRightRef.current?.(card);
+    advanceCard();
+  }, [advanceCard]);
+
+  const pan = Gesture.Pan()
+    .onStart(() => {
+      if (isSwiping.value) return;
+    })
+    .onUpdate((e) => {
+      if (isSwiping.value) return;
+      translateX.value = e.translationX;
+    })
+    .onEnd((e) => {
+      if (isSwiping.value) return;
+
+      const swipedRight = e.translationX > SWIPE_THRESHOLD || e.velocityX > 800;
+      const swipedLeft  = e.translationX < -SWIPE_THRESHOLD || e.velocityX < -800;
 
       if (swipedRight) {
-        // 오른쪽 스와이프 = O
-        isSwiping.current = true;
-        const card = card0Ref.current;
-        if (card) onSwipeRightRef.current?.(card);
-        Animated.parallel([
-          Animated.timing(exitX,    { toValue: SCREEN_WIDTH + 200, duration: 220, useNativeDriver: true }),
-          Animated.timing(progress, { toValue: 1, duration: 220, useNativeDriver: true }),
-        ]).start(() => {
-          setTopIdx(prev => prev + 1);
-          exitX.setValue(0);
-          progress.setValue(0);
-          isSwiping.current = false;
+        isSwiping.value = true;
+        translateX.value = withTiming(SCREEN_WIDTH + 200, { duration: 220 }, () => {
+          runOnJS(handleSwipeRight)();
+          translateX.value = 0;
+          isSwiping.value = false;
         });
       } else if (swipedLeft) {
-        // 왼쪽 스와이프 = X
-        isSwiping.current = true;
-        const card = card0Ref.current;
-        if (card) onSwipeLeftRef.current?.(card);
-        Animated.parallel([
-          Animated.timing(exitX,    { toValue: -(SCREEN_WIDTH + 200), duration: 220, useNativeDriver: true }),
-          Animated.timing(progress, { toValue: 1, duration: 220, useNativeDriver: true }),
-        ]).start(() => {
-          setTopIdx(prev => prev + 1);
-          exitX.setValue(0);
-          progress.setValue(0);
-          isSwiping.current = false;
+        isSwiping.value = true;
+        translateX.value = withTiming(-(SCREEN_WIDTH + 200), { duration: 220 }, () => {
+          runOnJS(handleSwipeLeft)();
+          translateX.value = 0;
+          isSwiping.value = false;
         });
       } else {
-        // 임계값 미달 → 원위치
-        Animated.parallel([
-          Animated.spring(exitX,    { toValue: 0, useNativeDriver: true, tension: 40, friction: 7 }),
-          Animated.spring(progress, { toValue: 0, useNativeDriver: true, tension: 40, friction: 7 }),
-        ]).start();
+        translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
       }
-    },
-  })).current;
+    });
+
+  // 앞 카드 애니메이션 스타일
+  const topCardStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { rotateZ: `${interpolate(translateX.value, [-SCREEN_WIDTH, 0, SCREEN_WIDTH], [-12, 0, 12], Extrapolation.CLAMP)}deg` },
+    ],
+  }));
+
+  // 중간 카드: 앞 카드 드래그 진행도에 따라 앞으로 나옴
+  const midCardStyle = useAnimatedStyle(() => {
+    const progress = Math.min(Math.abs(translateX.value) / SCREEN_WIDTH, 1);
+    return {
+      transform: [{ translateX: interpolate(progress, [0, 1], [SLOT_OFFSET[1], SLOT_OFFSET[0]]) }],
+      opacity: interpolate(progress, [0, 1], [SLOT_OPACITY[1], SLOT_OPACITY[0]]),
+    };
+  });
+
+  // 뒤 카드
+  const backCardStyle = useAnimatedStyle(() => {
+    const progress = Math.min(Math.abs(translateX.value) / SCREEN_WIDTH, 1);
+    return {
+      transform: [{ translateX: interpolate(progress, [0, 1], [SLOT_OFFSET[2], SLOT_OFFSET[1]]) }],
+      opacity: interpolate(progress, [0, 1], [SLOT_OPACITY[2], SLOT_OPACITY[1]]),
+    };
+  });
+
+  // 버튼용 스와이프 트리거
+  const triggerSwipe = useCallback((dir: 'left' | 'right') => {
+    if (isSwiping.value || !card0) return;
+    isSwiping.value = true;
+    const toX = dir === 'right' ? SCREEN_WIDTH + 200 : -(SCREEN_WIDTH + 200);
+    translateX.value = withTiming(toX, { duration: 220 }, () => {
+      if (dir === 'right') runOnJS(handleSwipeLeft)();
+      else runOnJS(handleSwipeRight)();
+      translateX.value = 0;
+      isSwiping.value = false;
+    });
+  }, [card0, handleSwipeLeft, handleSwipeRight, translateX, isSwiping]);
 
   if (n === 0) return null;
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.stack}>
-        {/* 뒤 (2번째) 카드 */}
-        <Animated.View style={[styles.cardSlot, { zIndex: 1, transform: [{ translateX: backX }], opacity: backOp }]}>
-          <CardContent card={card2} />
+        {/* 뒤 (2번째) 카드 - gesture 없음, 정적 렌더 */}
+        <Animated.View style={[styles.cardSlot, { zIndex: 1 }, backCardStyle]}>
+          <CardContent card={card2!} />
         </Animated.View>
 
-        {/* 중간 (1번째) 카드 */}
-        <Animated.View style={[styles.cardSlot, { zIndex: 2, transform: [{ translateX: midX }], opacity: midOp }]}>
-          <CardContent card={card1} />
+        {/* 중간 (1번째) 카드 - gesture 없음, 정적 렌더 */}
+        <Animated.View style={[styles.cardSlot, { zIndex: 2 }, midCardStyle]}>
+          <CardContent card={card1!} />
         </Animated.View>
 
-        {/* 앞 (0번째) 카드 */}
-        <Animated.View
-          style={[styles.cardSlot, { zIndex: 3, transform: [{ translateX: exitX }, { rotate }] }]}
-          {...panResponder.panHandlers}
-        >
-          <CardContent card={card0} />
-          {/* 스와이프 방향 힌트 */}
-          <View style={styles.hintRow} pointerEvents="none">
-            <View style={styles.hintBadgeRed}>
-              <Ionicons name="arrow-back" size={14} color="#EF4444" />
-              <Ionicons name="close" size={20} color="#EF4444" />
+        {/* 앞 (0번째) 카드 - gesture 처리 */}
+        <GestureDetector gesture={pan}>
+          <Animated.View style={[styles.cardSlot, { zIndex: 3 }, topCardStyle]}>
+            <CardContent card={card0!} />
+            {/* 스와이프 방향 힌트 */}
+            <View style={styles.hintRow} pointerEvents="none">
+              <View style={styles.hintBadgeRed}>
+                <Ionicons name="arrow-back" size={14} color="#EF4444" />
+                <Ionicons name="close" size={20} color="#EF4444" />
+              </View>
+              <View style={styles.hintBadgeGreen}>
+                <Ionicons name="checkmark" size={20} color="#22C55E" />
+                <Ionicons name="arrow-forward" size={14} color="#22C55E" />
+              </View>
             </View>
-            <View style={styles.hintBadgeGreen}>
-              <Ionicons name="checkmark" size={20} color="#22C55E" />
-              <Ionicons name="arrow-forward" size={14} color="#22C55E" />
-            </View>
-          </View>
-        </Animated.View>
+          </Animated.View>
+        </GestureDetector>
       </View>
     </View>
   );
