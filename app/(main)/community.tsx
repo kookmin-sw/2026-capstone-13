@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { getCommunityPosts, toggleCommunityLike, translateCommunityPost, type CommunityPostDto } from '../../services/communityService';
 import { useCommunityStore } from '../../stores/communityStore';
+import { useAuthStore } from '../../stores/authStore';
 import type { PostCategory } from '../../types';
 
 // ── Design tokens ──
@@ -229,6 +230,7 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
 // ── 메인 화면 ────────────────────────────────────────────────
 export default function CommunityScreen() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [posts, setPosts] = useState<CommunityPostDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('ALL');
@@ -273,9 +275,13 @@ export default function CommunityScreen() {
     setSearchQuery('');
   };
 
-  const categoryFiltered = selectedCategory === 'ALL'
-    ? posts
-    : posts.filter((p) => p.category === selectedCategory);
+  const categoryFiltered = (() => {
+    const visible = posts.filter(
+      (p) => p.category !== 'QUESTION' || p.userType === user?.userType
+    );
+    if (selectedCategory === 'ALL') return visible;
+    return visible.filter((p) => p.category === selectedCategory);
+  })();
 
   const filteredPosts = searchQuery.trim()
     ? categoryFiltered.filter((p) => {
