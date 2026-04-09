@@ -20,7 +20,7 @@ const T3      = '#6B9DF0';
 const ORANGE  = '#F97316';
 
 const CATEGORY_LABEL: Record<string, string> = {
-  INFO: '정보공유', QUESTION: '질문', CHAT: '잡담', CULTURE: '문화교류',
+  INFO: '일반', QUESTION: '로컬', CHAT: '모임', CULTURE: '장터',
 };
 
 const AVATAR_COLORS = ['#3B6FE8', '#6B9DF0', '#A8C8FA', '#5B8DEF', '#4A7CE0'];

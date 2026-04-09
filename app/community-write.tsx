@@ -17,16 +17,18 @@ const PRIMARY = '#4F46E5';
 const PRIMARY_LIGHT = '#EEF2FF';
 const MAX_IMAGES = 4;
 
-const CATEGORIES: { key: PostCategory; label: string; emoji: string; color: string }[] = [
-  { key: 'INFO',     label: '정보공유', emoji: '📢', color: '#3B82F6' },
-  { key: 'QUESTION', label: '질문',    emoji: '❓', color: '#F59E0B' },
-  { key: 'CHAT',     label: '잡담',    emoji: '💬', color: '#10B981' },
-  { key: 'CULTURE',  label: '문화교류', emoji: '🌏', color: '#8B5CF6' },
-];
-
 export default function CommunityWriteScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+
+  const localEmoji = user?.userType === 'KOREAN' ? '🇰🇷' : user?.userType === 'EXCHANGE' ? '✈️' : '🌍';
+
+  const CATEGORIES: { key: PostCategory; label: string; emoji: string; color: string }[] = [
+    { key: 'INFO',     label: '일반', emoji: '💬',       color: '#3B82F6' },
+    { key: 'QUESTION', label: '로컬', emoji: localEmoji, color: '#F59E0B' },
+    { key: 'CHAT',     label: '모임', emoji: '🤝',       color: '#10B981' },
+    { key: 'CULTURE',  label: '장터', emoji: '🛒',       color: '#8B5CF6' },
+  ];
   const params = useLocalSearchParams<{ id?: string; category?: string; title?: string; content?: string }>();
 
   const editId = params.id ? Number(params.id) : null;

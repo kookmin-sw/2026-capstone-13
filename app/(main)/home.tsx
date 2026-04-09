@@ -370,7 +370,7 @@ export default function HomeScreen() {
             ) : hotPosts.map(post => {
               const catColor: Record<string, string> = { INFO: BLUE, QUESTION: ORANGE, CHAT: '#6B9DF0', CULTURE: '#8B5CF6' };
               const catBg:    Record<string, string> = { INFO: BLUE_L, QUESTION: '#FFF3E8', CHAT: BLUE_L, CULTURE: '#F5F3FF' };
-              const catLabel: Record<string, string> = { INFO: '정보공유', QUESTION: '질문', CHAT: '잡담', CULTURE: '문화교류' };
+              const catLabel: Record<string, string> = { INFO: '일반', QUESTION: '로컬', CHAT: '모임', CULTURE: '장터' };
               const color = catColor[post.category] ?? BLUE;
               const bg    = catBg[post.category]    ?? BLUE_L;
               const AVATAR_COLORS = ['#F0A040', '#F06060', BLUE, '#90C4F0', '#A0A8B0'];

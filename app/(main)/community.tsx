@@ -35,13 +35,13 @@ type FilterCategory = 'ALL' | 'HOT' | PostCategory;
 const CATEGORY_FILTERS: { key: FilterCategory; label: string }[] = [
   { key: 'ALL',      label: '최신'    },
   { key: 'HOT',      label: '추천'    },
-  { key: 'QUESTION', label: '질문'    },
-  { key: 'CHAT',     label: '자유'    },
-  { key: 'CULTURE',  label: '문화교류' },
+  { key: 'QUESTION', label: '로컬' },
+  { key: 'CHAT',     label: '모임' },
+  { key: 'CULTURE',  label: '장터' },
 ];
 
 const CATEGORY_LABEL: Record<PostCategory, string> = {
-  INFO: '정보공유', QUESTION: '질문', CHAT: '잡담', CULTURE: '문화교류',
+  INFO: '일반', QUESTION: '로컬', CHAT: '모임', CULTURE: '장터',
 };
 
 const CATEGORY_COLOR: Record<PostCategory, string> = {
