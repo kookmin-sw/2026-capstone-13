@@ -418,20 +418,23 @@ public class ChatService {
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
                     .header("Content-Type", "application/json")
-                    .timeout(java.time.Duration.ofSeconds(15))
+                    .timeout(java.time.Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             JsonNode result = objectMapper.readTree(resp.body());
-            if (result.path("success").asBoolean()) {
-                message.setTranslatedContent(
-                        result.path("data").path("translated").asText(message.getContent()));
-                if (!result.path("data").path("cultural_note").isNull()) {
-                    message.setCulturalNote(result.path("data").path("cultural_note").asText(null));
-                }
-                chatMessageRepository.save(message);
+            if (!result.path("success").asBoolean()) {
+                throw new BusinessException("번역에 실패했습니다: " + result.path("message").asText("Gemini 오류"), HttpStatus.SERVICE_UNAVAILABLE);
             }
+            message.setTranslatedContent(result.path("data").path("translated").asText());
+            if (!result.path("data").path("cultural_note").isNull()) {
+                message.setCulturalNote(result.path("data").path("cultural_note").asText(null));
+            }
+            chatMessageRepository.save(message);
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            log.warn("[채팅 번역] 실패: {}", e.getMessage());
+            log.error("[채팅 번역] 실패: {}", e.getMessage());
+            throw new BusinessException("번역 서버 연결에 실패했습니다", HttpStatus.SERVICE_UNAVAILABLE);
         }
 
         return buildMessageDto(message);

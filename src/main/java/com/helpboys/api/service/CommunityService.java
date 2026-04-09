@@ -309,10 +309,15 @@ public class CommunityService {
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             JsonNode result = objectMapper.readTree(resp.body());
-            return result.path("data").path("translated").asText(text);
+            if (!result.path("success").asBoolean()) {
+                throw new BusinessException("번역에 실패했습니다: " + result.path("message").asText("Gemini 오류"), HttpStatus.SERVICE_UNAVAILABLE);
+            }
+            return result.path("data").path("translated").asText();
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            log.warn("[번역] 실패: {}", e.getMessage());
-            return text;
+            log.error("[번역] 실패: {}", e.getMessage());
+            throw new BusinessException("번역 서버 연결에 실패했습니다", HttpStatus.SERVICE_UNAVAILABLE);
         }
     }
 
