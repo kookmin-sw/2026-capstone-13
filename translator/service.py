@@ -92,9 +92,6 @@ Your goal is to provide natural, casual, and context-aware translations.
         else:
             print("⚠️  GEMINI_API_KEY 없음")
 
-    @property
-    def dummy_mode(self):
-        return not self.deepl_key and not self.google_key and not self.azure_key and not self.gemini_client
 
     def _detect_language(self, text: str) -> str:
         if any('\uac00' <= c <= '\ud7a3' for c in text):
@@ -159,7 +156,7 @@ Respond ONLY with the explanation or "null". No extra text."""
         elif self.gemini_client:
             result = await self._gemini_translate(text, target_lang, source_lang)
         else:
-            result = self._dummy_translate(text, target_lang, source_lang)
+            raise RuntimeError("사용 가능한 번역 API 키가 없습니다 (DeepL / Google / Azure / Gemini)")
 
         detected_source = result.get("source_language", source_lang or "")
         if detected_source == "ko":
@@ -209,10 +206,9 @@ Respond ONLY with the explanation or "null". No extra text."""
     async def _google_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
         """Google Cloud Translation API 번역"""
         if not self.google_key:
-            # 키 없으면 Azure 폴백
             if self.azure_key:
                 return await self._azure_translate(text, target_lang, source_lang)
-            return self._dummy_translate(text, target_lang, source_lang)
+            raise RuntimeError("GOOGLE_CLOUD_TRANSLATION_KEY 없음")
         def _call():
             resp = requests.post(
                 "https://translation.googleapis.com/language/translate/v2",
@@ -239,7 +235,7 @@ Respond ONLY with the explanation or "null". No extra text."""
             print(f"[Google] 번역 실패: {e} — Azure 폴백 시도")
             if self.azure_key:
                 return await self._azure_translate(text, target_lang, source_lang)
-            return self._dummy_translate(text, target_lang, source_lang)
+            raise RuntimeError(f"Google 번역 실패: {e}")
 
     async def _azure_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
         """Azure Translator REST API 호출"""
@@ -273,13 +269,12 @@ Respond ONLY with the explanation or "null". No extra text."""
             print(f"[Azure] 번역 실패: {e} — Gemini 폴백 시도")
             if self.gemini_client:
                 return await self._gemini_translate(text, target_lang, source_lang)
-            return self._dummy_translate(text, target_lang, source_lang)
+            raise RuntimeError(f"Azure 번역 실패: {e}")
 
     async def _gemini_translate(self, text: str, target_lang: str, source_lang: Optional[str], context: Optional[str] = None):
         """Gemini API로 자연스러운 번역 (재시도 3회)"""
         if not self.gemini_client:
-            print("[Gemini] 클라이언트 없음 — GEMINI_API_KEY 확인 필요")
-            return self._dummy_translate(text, target_lang, source_lang)
+            raise RuntimeError("GEMINI_API_KEY가 설정되지 않았습니다")
 
         lang_name = LANG_NAMES.get(target_lang, target_lang)
         if context:
@@ -338,16 +333,7 @@ Text: {text}"""
                 if attempt < 2:
                     await asyncio.sleep(1.5 * (attempt + 1))
 
-        print(f"[Gemini] 3회 재시도 모두 실패: {last_error}")
-        return self._dummy_translate(text, target_lang, source_lang)
-
-    def _dummy_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
-        return {
-            "original": text,
-            "translated": f"{text} [Translated to {target_lang}]",
-            "source_language": source_lang or self._detect_language(text),
-            "target_language": target_lang, "mode": "dummy",
-        }
+        raise RuntimeError(f"[Gemini] 3회 재시도 모두 실패: {last_error}")
 
     async def azure_translate_text(self, text: str, target_lang: str, source_lang: Optional[str] = None) -> str:
         """Azure Translator로 번역 (식단/공지 크롤링 대량 번역용 — 레거시)"""

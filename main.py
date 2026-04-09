@@ -163,7 +163,7 @@ def health():
         "azure_speech": not speech_service.dummy_mode,
         "azure_translator": translation_service.azure_key is not None,
         "gemini_translator": translation_service.gemini_client is not None,
-        "translation_mode": "azure" if translation_service.azure_key else ("gemini" if translation_service.gemini_client else "dummy"),
+        "translation_mode": "azure" if translation_service.azure_key else ("gemini" if translation_service.gemini_client else "no_key"),
     }
 
 
@@ -187,7 +187,7 @@ async def gemini_test():
             "ok": True,
             "model": translation_service.model_name,
             "response": response.text.strip(),
-            "gemini_client_ready": not translation_service.dummy_mode,
+            "gemini_client_ready": translation_service.gemini_client is not None,
         }
     except Exception as e:
         return {
@@ -222,9 +222,11 @@ async def gemini_translate(request: Request):
     if not translation_service.gemini_client:
         return {"success": False, "message": "GEMINI_API_KEY가 설정되지 않았습니다", "data": None}
 
-    result = await translation_service._gemini_translate(text, target_lang, source_lang, context)
-    success = result.get("mode") == "gemini"
-    return {"success": success, "message": "Gemini 번역 완료" if success else "Gemini 번역 실패", "data": result}
+    try:
+        result = await translation_service._gemini_translate(text, target_lang, source_lang, context)
+        return {"success": True, "message": "Gemini 번역 완료", "data": result}
+    except Exception as e:
+        return {"success": False, "message": str(e), "data": None}
 
 
 # ── 번역 ──────────────────────────────────────────────────
