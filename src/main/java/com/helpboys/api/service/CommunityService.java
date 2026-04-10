@@ -116,15 +116,19 @@ public class CommunityService {
 
         // 내 글이 아닌 경우 게시글 작성자에게 알림
         if (!post.getAuthor().getId().equals(userId)) {
-            String message = author.getNickname() + "님이 '" +
-                    truncate(post.getTitle(), 15) + "' 에 댓글을 달았어요.";
-            notificationService.createNotification(
-                    post.getAuthor().getId(),
-                    Notification.NotificationType.COMMENT,
-                    message,
-                    postId,
-                    Notification.ReferenceType.POST
-            );
+            try {
+                String message = author.getNickname() + "님이 '" +
+                        truncate(post.getTitle(), 15) + "' 에 댓글을 달았어요.";
+                notificationService.createNotification(
+                        post.getAuthor().getId(),
+                        Notification.NotificationType.COMMENT,
+                        message,
+                        postId,
+                        Notification.ReferenceType.POST
+                );
+            } catch (Exception e) {
+                log.warn("[알림 생성 실패] 댓글 알림: {}", e.getMessage());
+            }
         }
 
         return PostCommentResponse.from(saved);
@@ -149,15 +153,19 @@ public class CommunityService {
 
             // 내 글이 아닌 경우 게시글 작성자에게 알림
             if (!post.getAuthor().getId().equals(userId)) {
-                String message = user.getNickname() + "님이 '" +
-                        truncate(post.getTitle(), 15) + "' 글을 좋아해요.";
-                notificationService.createNotification(
-                        post.getAuthor().getId(),
-                        Notification.NotificationType.LIKE,
-                        message,
-                        postId,
-                        Notification.ReferenceType.POST
-                );
+                try {
+                    String message = user.getNickname() + "님이 '" +
+                            truncate(post.getTitle(), 15) + "' 글을 좋아해요.";
+                    notificationService.createNotification(
+                            post.getAuthor().getId(),
+                            Notification.NotificationType.LIKE,
+                            message,
+                            postId,
+                            Notification.ReferenceType.POST
+                    );
+                } catch (Exception e) {
+                    log.warn("[알림 생성 실패] 좋아요 알림: {}", e.getMessage());
+                }
             }
             return Map.of("liked", true, "likes", post.getLikes() + 1);
         }
@@ -206,14 +214,18 @@ public class CommunityService {
 
         // 내 댓글이 아닌 경우 원댓글 작성자에게 알림
         if (!parent.getAuthor().getId().equals(userId)) {
-            String message = author.getNickname() + "님이 회원님의 댓글에 답글을 달았어요.";
-            notificationService.createNotification(
-                    parent.getAuthor().getId(),
-                    Notification.NotificationType.REPLY,
-                    message,
-                    parent.getPost().getId(),
-                    Notification.ReferenceType.POST
-            );
+            try {
+                String message = author.getNickname() + "님이 회원님의 댓글에 답글을 달았어요.";
+                notificationService.createNotification(
+                        parent.getAuthor().getId(),
+                        Notification.NotificationType.REPLY,
+                        message,
+                        parent.getPost().getId(),
+                        Notification.ReferenceType.POST
+                );
+            } catch (Exception e) {
+                log.warn("[알림 생성 실패] 대댓글 알림: {}", e.getMessage());
+            }
         }
 
         return PostCommentResponse.from(saved);
