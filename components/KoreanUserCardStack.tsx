@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Dimensions,
   Image,
+  ImageBackground,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -21,10 +22,9 @@ import { Ionicons } from '@expo/vector-icons';
 import type { User } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH - 90;
-const CARD_HEIGHT = 390;
-const CARD_BG = '#FFFFFF';
-const ACCENT  = '#0EA5E9';
+const CARD_WIDTH  = SCREEN_WIDTH - 90;
+const CARD_HEIGHT = 420;
+const ACCENT      = '#0EA5E9';
 
 const SLOT_OFFSET  = [0, 16, 32];
 const SLOT_OPACITY = [1, 0.85, 0.7];
@@ -44,67 +44,103 @@ function toAbsoluteUrl(url: string | undefined): string | undefined {
   return SERVER_BASE_URL + url;
 }
 
+// hobbies 문자열 → 태그 배열 (최대 4개)
+function parseHobbies(hobbies: string | undefined): string[] {
+  if (!hobbies) return [];
+  return hobbies
+    .split(/[,，、\s]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
 // ── 카드 한 장 ─────────────────────────────────────────────
 const CardContent = memo(
   function CardContent({ user }: { user: User }) {
     const [imgError, setImgError] = useState(false);
     const profileUri = toAbsoluteUrl(user.profileImage?.trim());
-    const showImage = !!profileUri && !imgError;
-    const initial = user.nickname.charAt(0);
-    const lv = getLevel(user.helpCount);
+    const showImage  = !!profileUri && !imgError;
+    const initial    = user.nickname.charAt(0);
+    const lv         = getLevel(user.helpCount);
+    const tags        = parseHobbies(user.hobbies);
+    const isVerified  = user.studentIdVerified || user.studentIdStatus === 'APPROVED';
 
     return (
       <View style={styles.card}>
-        <View style={styles.profileRow}>
-          <View style={styles.avatarWrap}>
-            {showImage ? (
-              <Image
-                source={{ uri: profileUri }}
-                style={styles.avatarImage}
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <Text style={styles.avatarText}>{initial}</Text>
+        {/* 배경 사진 */}
+        {showImage ? (
+          <ImageBackground
+            source={{ uri: profileUri }}
+            style={StyleSheet.absoluteFill}
+            imageStyle={styles.bgImage}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, styles.bgFallback]}>
+            <Text style={styles.bgInitial}>{initial}</Text>
+          </View>
+        )}
+
+        {/* 상단 태그 행 */}
+        {tags.length > 0 && (
+          <View style={styles.topTagRow}>
+            {tags.map((tag, i) => (
+              <View key={i} style={styles.topTag}>
+                <Text style={styles.topTagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* 하단 그라데이션 오버레이 */}
+        <View style={styles.gradient}>
+          {/* 이름 + 뱃지 */}
+          <View style={styles.nameRow}>
+            <Text style={styles.cardName}>{user.nickname}</Text>
+            {user.age ? (
+              <Text style={styles.ageText}>{user.age}</Text>
+            ) : null}
+            {isVerified && (
+              <Ionicons name="shield-checkmark" size={18} color="#22c55e" />
+            )}
+            <View style={[styles.levelBadge, { backgroundColor: lv.color }]}>
+              <Text style={styles.levelText}>{lv.label}</Text>
+            </View>
+          </View>
+
+          {/* 대학교 */}
+          {user.university ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="school-outline" size={13} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.infoText} numberOfLines={1}>{user.university}</Text>
+            </View>
+          ) : null}
+
+          {/* 전공 */}
+          {user.major ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="book-outline" size={13} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.infoText} numberOfLines={1}>{user.major}</Text>
+            </View>
+          ) : null}
+
+          {/* 별점 + 도움 횟수 */}
+          <View style={styles.statsRow}>
+            <Ionicons name="star" size={13} color="#FBBF24" />
+            <Text style={styles.statsText}>{user.rating.toFixed(1)}</Text>
+            {user.helpCount > 0 && (
+              <>
+                <Text style={styles.statsDot}>·</Text>
+                <Ionicons name="heart" size={13} color={ACCENT} />
+                <Text style={styles.statsText}>도움 {user.helpCount}회</Text>
+              </>
             )}
           </View>
-          <View style={styles.profileInfo}>
-            <View style={styles.nameRow}>
-              <Text style={styles.cardName}>{user.nickname}</Text>
-              {(user.studentIdVerified || user.studentIdStatus === 'APPROVED') && (
-                <Ionicons name="shield-checkmark" size={16} color="#22c55e" style={styles.shieldIcon} />
-              )}
-              <View style={[styles.levelBadge, { backgroundColor: lv.color + '18', borderColor: lv.color + '40' }]}>
-                <Text style={[styles.levelText, { color: lv.color }]}>{lv.label}</Text>
-              </View>
-            </View>
-            {user.major ? (
-              <Text style={styles.subText} numberOfLines={1}>{user.major}</Text>
-            ) : user.university ? (
-              <Text style={styles.subText} numberOfLines={1}>{user.university}</Text>
-            ) : null}
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={12} color="#FBBF24" />
-              <Text style={styles.ratingText}>{user.rating.toFixed(1)}</Text>
-              {user.helpCount > 0 && (
-                <>
-                  <Text style={styles.dotSep}>·</Text>
-                  <Ionicons name="heart" size={12} color={ACCENT} />
-                  <Text style={styles.helpCountText}>도움 {user.helpCount}회</Text>
-                </>
-              )}
-            </View>
-          </View>
-        </View>
 
-        <View style={styles.divider} />
-
-        <View style={styles.infoLayer}>
-          <Text style={styles.requestLabel}>자기소개</Text>
+          {/* 자기소개 */}
           {user.bio ? (
-            <Text style={styles.requestText} numberOfLines={4}>{user.bio}</Text>
-          ) : (
-            <Text style={styles.detailPlaceholder}>소개글이 없어요</Text>
-          )}
+            <Text style={styles.bioText} numberOfLines={2}>{user.bio}</Text>
+          ) : null}
         </View>
       </View>
     );
@@ -128,7 +164,7 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
   const backProgress   = useSharedValue(0);
   const topCardOpacity = useSharedValue(1);
 
-  const n = users.length;
+  const n     = users.length;
   const card0 = n > 0 ? users[topIdx % n] : null;
   const card1 = n > 0 ? users[(topIdx + 1) % n] : null;
   const card2 = n > 0 ? users[(topIdx + 2) % n] : null;
@@ -248,69 +284,146 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     borderRadius: 20,
-    shadowColor: 'rgb(37,99,235)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
     shadowRadius: 16,
-    elevation: 6,
+    elevation: 8,
+    overflow: 'hidden',
   },
   topCard:  { zIndex: 3, opacity: SLOT_OPACITY[0] },
   midCard:  { zIndex: 2, opacity: SLOT_OPACITY[1] },
   backCard: { zIndex: 1, opacity: SLOT_OPACITY[2] },
+
+  // 카드 자체
   card: {
     width: '100%',
     height: '100%',
     borderRadius: 20,
-    backgroundColor: CARD_BG,
     overflow: 'hidden',
-    paddingHorizontal: 20,
-    paddingTop: 24,
+    backgroundColor: '#1A2A4A',
   },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 18,
+  bgImage: {
+    borderRadius: 20,
+    resizeMode: 'cover',
   },
-  avatarWrap: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: '#E0F2FE',
+  bgFallback: {
+    backgroundColor: '#1A2A4A',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#BAE6FD',
+    borderRadius: 20,
   },
-  avatarText: { fontSize: 44, fontWeight: '900', color: ACCENT },
-  avatarImage: { width: '100%', height: '100%', borderRadius: 55 },
-  profileInfo: { flex: 1, gap: 6 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardName: { fontSize: 22, fontWeight: '800', color: '#0C1C3C', letterSpacing: -0.3 },
-  shieldIcon: { marginLeft: -4 },
-  levelBadge: {
+  bgInitial: {
+    fontSize: 80,
+    fontWeight: '900',
+    color: 'rgba(255,255,255,0.25)',
+  },
+
+  // 상단 태그 행
+  topTagRow: {
+    position: 'absolute',
+    top: 16,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    zIndex: 10,
+  },
+  topTag: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  topTagText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+
+  // 하단 오버레이 (반투명 검정)
+  gradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 18,
+    paddingBottom: 20,
+    paddingTop: 60,
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
+
+  // 이름 행
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 20,
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  cardName: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  ageText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.85)',
+  },
+  levelBadge: {
+    borderRadius: 10,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 2,
   },
-  levelText: { fontSize: 13, fontWeight: '700' },
-  subText: { fontSize: 16, color: '#667799', fontWeight: '600' },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 0 },
-  ratingText: { fontSize: 15, color: '#7799BB', fontWeight: '600' },
-  dotSep: { fontSize: 15, color: '#AABBCC' },
-  helpCountText: { fontSize: 15, color: '#7799BB', fontWeight: '600' },
-  divider: {
-    height: 1,
-    backgroundColor: '#D4E4FF',
-    marginBottom: 16,
+  levelText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
-  infoLayer: {
+
+  // 정보 행
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  infoText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '500',
     flex: 1,
   },
-  requestLabel: { fontSize: 15, fontWeight: '700', color: ACCENT, letterSpacing: 0.5, marginBottom: 8 },
-  requestText: { fontSize: 19, fontWeight: '600', color: '#0C1C3C', lineHeight: 28 },
-  detailPlaceholder: { fontSize: 17, color: '#AABBCC', fontStyle: 'italic' },
+
+  // 별점 행
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  statsText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '600',
+  },
+  statsDot: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
+  },
+
+  // 자기소개
+  bioText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.75)',
+    lineHeight: 19,
+    marginTop: 4,
+  },
 });
