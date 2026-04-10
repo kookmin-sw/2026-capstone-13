@@ -63,7 +63,7 @@ interface SchoolNotice {
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { hasUnreadForUser } = useNotificationStore();
+  const { hasUnread, fetchHasUnread } = useNotificationStore();
   const isInternational = user?.userType === 'INTERNATIONAL' || user?.userType === 'EXCHANGE';
   const [requests, setRequests]             = useState<HelpRequest[]>([]);
   const [koreanUsers, setKoreanUsers]       = useState<User[]>([]);
@@ -164,6 +164,7 @@ export default function HomeScreen() {
     }
   }, []);
 
+  useEffect(() => { fetchHasUnread(); }, []);
   useFocusEffect(useCallback(() => { fetchRequests(); }, [fetchRequests]));
 
   const onRefresh = () => { setRefreshing(true); fetchRequests(); };
@@ -185,7 +186,7 @@ export default function HomeScreen() {
         <View style={s.navRight}>
           <TouchableOpacity style={s.notifBtn} onPress={() => router.push('/notifications')} activeOpacity={0.8}>
             <Ionicons name="notifications-outline" size={20} color="#444" />
-            {hasUnreadForUser(user?.id ?? 0) && <View style={s.notifDot} />}
+            {hasUnread && <View style={s.notifDot} />}
           </TouchableOpacity>
         </View>
       </View>
