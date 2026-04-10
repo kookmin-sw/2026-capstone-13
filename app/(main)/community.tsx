@@ -198,10 +198,10 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
             <Ionicons name={liked ? 'heart' : 'heart-outline'} size={16} color={liked ? '#EF4444' : T2} />
             <Text style={s.reactionCount}>{likeCount}</Text>
           </TouchableOpacity>
-          <View style={s.reactionItem}>
+          <TouchableOpacity style={s.reactionItem} activeOpacity={0.7} onPress={onPress}>
             <Ionicons name="chatbubble-outline" size={15} color={T2} />
             <Text style={s.reactionCount}>{item.comments}</Text>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity
             style={s.iconBtn}
             activeOpacity={0.7}
