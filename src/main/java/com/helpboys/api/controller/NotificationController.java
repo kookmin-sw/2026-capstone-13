@@ -58,6 +58,15 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.success("모두 읽음 처리 완료", null));
     }
 
+    // DELETE /api/notifications/all - 전체 삭제
+    @DeleteMapping("/all")
+    public ResponseEntity<ApiResponse<Void>> deleteAll(
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        notificationService.deleteAll(userId);
+        return ResponseEntity.ok(ApiResponse.success("전체 삭제 완료", null));
+    }
+
     private Long extractUserId(String bearerToken) {
         return jwtUtil.extractUserId(bearerToken.replace("Bearer ", ""));
     }

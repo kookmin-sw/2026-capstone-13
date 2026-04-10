@@ -91,4 +91,10 @@ public class NotificationService {
     public void markAllAsRead(Long userId) {
         notificationRepository.markAllAsReadByRecipientId(userId);
     }
+
+    // 전체 삭제
+    @Transactional
+    public void deleteAll(Long userId) {
+        notificationRepository.deleteAllByRecipientId(userId);
+    }
 }
