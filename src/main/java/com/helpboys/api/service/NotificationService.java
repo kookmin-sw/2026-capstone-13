@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -49,8 +50,8 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
-    // 알림 생성 (내부용)
-    @Transactional
+    // 알림 생성 (내부용) - REQUIRES_NEW: 호출자 트랜잭션과 분리하여 실패해도 롤백 전파 안 됨
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createNotification(Long recipientId, Notification.NotificationType type,
                                    String message, Long referenceId,
                                    Notification.ReferenceType referenceType) {
