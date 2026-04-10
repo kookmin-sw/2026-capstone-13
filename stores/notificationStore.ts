@@ -5,6 +5,7 @@ import {
   getHasUnread,
   markNotificationRead,
   markAllNotificationsRead,
+  deleteAllNotifications,
 } from '../services/notificationService';
 import type { AppNotification } from '../types';
 
@@ -16,6 +17,7 @@ interface NotificationState {
   fetchHasUnread: () => Promise<void>;
   markAsRead: (id: number) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  deleteAll: () => Promise<void>;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -65,6 +67,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
         hasUnread: false,
       }));
+    } catch {
+      // 실패 시 무시
+    }
+  },
+
+  deleteAll: async () => {
+    try {
+      await deleteAllNotifications();
+      set({ notifications: [], hasUnread: false });
     } catch {
       // 실패 시 무시
     }

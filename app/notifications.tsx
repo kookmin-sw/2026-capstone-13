@@ -45,7 +45,7 @@ function notifIcon(type: AppNotification['type']): { name: React.ComponentProps<
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { notifications, hasUnread, loading, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore();
+  const { notifications, hasUnread, loading, fetchNotifications, markAsRead, markAllAsRead, deleteAll } = useNotificationStore();
 
   useEffect(() => {
     fetchNotifications();
@@ -101,17 +101,19 @@ export default function NotificationsScreen() {
           <TouchableOpacity onPress={markAllAsRead}>
             <Text style={s.allRead}>모두 읽음</Text>
           </TouchableOpacity>
+        ) : notifications.length > 0 ? (
+          <TouchableOpacity onPress={deleteAll}>
+            <Text style={s.deleteAll}>모두 삭제</Text>
+          </TouchableOpacity>
         ) : (
           <View style={{ width: 56 }} />
         )}
       </View>
 
-      {/* 미읽음 뱃지 */}
-      {unreadCount > 0 && (
-        <View style={s.unreadBanner}>
-          <Text style={s.unreadBannerText}>읽지 않은 알림 {unreadCount}개</Text>
-        </View>
-      )}
+      {/* 미읽음 뱃지 - 항상 표시 */}
+      <View style={s.unreadBanner}>
+        <Text style={s.unreadBannerText}>읽지 않은 알림 {unreadCount}개</Text>
+      </View>
 
       {loading ? (
         <ActivityIndicator color={BLUE} style={{ marginTop: 60 }} />
@@ -155,6 +157,7 @@ const s = StyleSheet.create({
   },
   headerTitle: { fontSize: 15, fontWeight: '800', color: T1 },
   allRead: { fontSize: 12, fontWeight: '700', color: BLUE },
+  deleteAll: { fontSize: 12, fontWeight: '700', color: '#EF4444' },
 
   unreadBanner: {
     backgroundColor: BLUE_L,
