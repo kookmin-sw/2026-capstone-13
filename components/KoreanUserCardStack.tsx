@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, memo } from 'react';
+import React, { useRef, useState, useCallback, memo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import Animated, {
   withSpring,
   withTiming,
   runOnJS,
+  runOnUI,
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated';
@@ -26,7 +27,7 @@ const CARD_BG = '#FFFFFF';
 const ACCENT  = '#0EA5E9';
 
 const SLOT_OFFSET  = [0, 16, 32];
-const SLOT_OPACITY = [1, 0.8, 0.6];
+const SLOT_OPACITY = [1, 0.85, 0.7];
 
 function getLevel(count: number): { label: string; color: string } {
   if (count >= 31) return { label: '마스터', color: '#F97316' };
@@ -44,72 +45,72 @@ function toAbsoluteUrl(url: string | undefined): string | undefined {
 }
 
 // ── 카드 한 장 ─────────────────────────────────────────────
-const CardContent = memo(function CardContent({ user }: { user: User }) {
-  const [imgError, setImgError] = useState(false);
-  const profileUri = toAbsoluteUrl(user.profileImage?.trim());
-  const showImage = !!profileUri && !imgError;
-  const initial = user.nickname.charAt(0);
-  const lv = getLevel(user.helpCount);
+const CardContent = memo(
+  function CardContent({ user }: { user: User }) {
+    const [imgError, setImgError] = useState(false);
+    const profileUri = toAbsoluteUrl(user.profileImage?.trim());
+    const showImage = !!profileUri && !imgError;
+    const initial = user.nickname.charAt(0);
+    const lv = getLevel(user.helpCount);
 
-  return (
-    <View style={styles.card}>
-      {/* 상단: 프로필 */}
-      <View style={styles.profileRow}>
-        <View style={styles.avatarWrap}>
-          {showImage ? (
-            <Image
-              source={{ uri: profileUri }}
-              style={styles.avatarImage}
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <Text style={styles.avatarText}>{initial}</Text>
-          )}
-        </View>
-        <View style={styles.profileInfo}>
-          <View style={styles.nameRow}>
-            <Text style={styles.cardName}>{user.nickname}</Text>
-            {(user.studentIdVerified || user.studentIdStatus === 'APPROVED') && (
-              <Ionicons name="shield-checkmark" size={16} color="#22c55e" style={{ marginLeft: -4 }} />
+    return (
+      <View style={styles.card}>
+        <View style={styles.profileRow}>
+          <View style={styles.avatarWrap}>
+            {showImage ? (
+              <Image
+                source={{ uri: profileUri }}
+                style={styles.avatarImage}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <Text style={styles.avatarText}>{initial}</Text>
             )}
-            <View style={[styles.levelBadge, { backgroundColor: lv.color + '18', borderColor: lv.color + '40' }]}>
-              <Text style={[styles.levelText, { color: lv.color }]}>{lv.label}</Text>
+          </View>
+          <View style={styles.profileInfo}>
+            <View style={styles.nameRow}>
+              <Text style={styles.cardName}>{user.nickname}</Text>
+              {(user.studentIdVerified || user.studentIdStatus === 'APPROVED') && (
+                <Ionicons name="shield-checkmark" size={16} color="#22c55e" style={styles.shieldIcon} />
+              )}
+              <View style={[styles.levelBadge, { backgroundColor: lv.color + '18', borderColor: lv.color + '40' }]}>
+                <Text style={[styles.levelText, { color: lv.color }]}>{lv.label}</Text>
+              </View>
+            </View>
+            {user.major ? (
+              <Text style={styles.subText} numberOfLines={1}>{user.major}</Text>
+            ) : user.university ? (
+              <Text style={styles.subText} numberOfLines={1}>{user.university}</Text>
+            ) : null}
+            <View style={styles.ratingRow}>
+              <Ionicons name="star" size={12} color="#FBBF24" />
+              <Text style={styles.ratingText}>{user.rating.toFixed(1)}</Text>
+              {user.helpCount > 0 && (
+                <>
+                  <Text style={styles.dotSep}>·</Text>
+                  <Ionicons name="heart" size={12} color={ACCENT} />
+                  <Text style={styles.helpCountText}>도움 {user.helpCount}회</Text>
+                </>
+              )}
             </View>
           </View>
-          {user.major ? (
-            <Text style={styles.subText} numberOfLines={1}>{user.major}</Text>
-          ) : user.university ? (
-            <Text style={styles.subText} numberOfLines={1}>{user.university}</Text>
-          ) : null}
-          <View style={styles.ratingRow}>
-            <Ionicons name="star" size={12} color="#FBBF24" />
-            <Text style={styles.ratingText}>{user.rating.toFixed(1)}</Text>
-            {user.helpCount > 0 && (
-              <>
-                <Text style={styles.dotSep}>·</Text>
-                <Ionicons name="heart" size={12} color={ACCENT} />
-                <Text style={styles.helpCountText}>도움 {user.helpCount}회</Text>
-              </>
-            )}
-          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.infoLayer}>
+          <Text style={styles.requestLabel}>자기소개</Text>
+          {user.bio ? (
+            <Text style={styles.requestText} numberOfLines={4}>{user.bio}</Text>
+          ) : (
+            <Text style={styles.detailPlaceholder}>소개글이 없어요</Text>
+          )}
         </View>
       </View>
-
-      {/* 구분선 */}
-      <View style={styles.divider} />
-
-      {/* 하단: 소개글 */}
-      <View style={styles.infoLayer}>
-        <Text style={styles.requestLabel}>자기소개</Text>
-        {user.bio ? (
-          <Text style={styles.requestText} numberOfLines={4}>{user.bio}</Text>
-        ) : (
-          <Text style={styles.detailPlaceholder}>소개글이 없어요</Text>
-        )}
-      </View>
-    </View>
-  );
-});
+    );
+  },
+  (prev, next) => prev.user.id === next.user.id,
+);
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────
 interface KoreanUserCardStackProps {
@@ -122,41 +123,46 @@ const SWIPE_THRESHOLD = 80;
 export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardStackProps) {
   const [topIdx, setTopIdx] = useState(0);
 
-  // UI 스레드에서 직접 처리되는 shared values
-  const translateX = useSharedValue(0);
-  const isSwiping  = useSharedValue(false);
+  const translateX     = useSharedValue(0);
+  const isSwiping      = useSharedValue(false);
+  const backProgress   = useSharedValue(0);
+  const topCardOpacity = useSharedValue(1);
 
   const n = users.length;
   const card0 = n > 0 ? users[topIdx % n] : null;
   const card1 = n > 0 ? users[(topIdx + 1) % n] : null;
   const card2 = n > 0 ? users[(topIdx + 2) % n] : null;
 
-  // stale closure 방지용 ref
   const card0Ref   = useRef(card0);
   const onPressRef = useRef(onPress);
   card0Ref.current   = card0;
   onPressRef.current = onPress;
 
-  const advanceCard = useCallback(() => {
+  const notifySwipe = useCallback((dir: 'left' | 'right') => {
+    const card = card0Ref.current;
+    if (dir === 'right' && card) onPressRef.current?.(card);
     setTopIdx(prev => prev + 1);
   }, []);
 
-  const handleSwipeRight = useCallback(() => {
-    // 오른쪽 스와이프 = O (채팅)
-    const card = card0Ref.current;
-    if (card) onPressRef.current?.(card);
-    advanceCard();
-  }, [advanceCard]);
+  const advanceCard = useCallback((dir: 'left' | 'right') => {
+    notifySwipe(dir);
+  }, [notifySwipe]);
 
-  const handleSwipeLeft = useCallback(() => {
-    // 왼쪽 스와이프 = X (건너뛰기)
-    advanceCard();
-  }, [advanceCard]);
+  useEffect(() => {
+    runOnUI(() => {
+      'worklet';
+      translateX.value     = 0;
+      backProgress.value   = 0;
+      isSwiping.value      = false;
+      topCardOpacity.value = 1;
+    })();
+  }, [topIdx, translateX, backProgress, isSwiping, topCardOpacity]);
 
   const pan = Gesture.Pan()
     .onUpdate((e) => {
       if (isSwiping.value) return;
-      translateX.value = e.translationX;
+      translateX.value   = e.translationX;
+      backProgress.value = Math.min(Math.abs(e.translationX) / SCREEN_WIDTH, 1);
     })
     .onEnd((e) => {
       if (isSwiping.value) return;
@@ -165,49 +171,38 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
       const swipedLeft  = e.translationX < -SWIPE_THRESHOLD || e.velocityX < -800;
 
       if (swipedRight) {
-        isSwiping.value = true;
-        translateX.value = withTiming(SCREEN_WIDTH + 200, { duration: 320 }, () => {
-          runOnJS(handleSwipeRight)();
-          translateX.value = 0;
-          isSwiping.value = false;
+        isSwiping.value    = true;
+        backProgress.value = 1;
+        translateX.value   = withTiming(SCREEN_WIDTH + 200, { duration: 320 }, () => {
+          runOnJS(advanceCard)('right');
         });
       } else if (swipedLeft) {
-        isSwiping.value = true;
-        translateX.value = withTiming(-(SCREEN_WIDTH + 200), { duration: 320 }, () => {
-          runOnJS(handleSwipeLeft)();
-          translateX.value = 0;
-          isSwiping.value = false;
+        isSwiping.value    = true;
+        backProgress.value = 1;
+        translateX.value   = withTiming(-(SCREEN_WIDTH + 200), { duration: 320 }, () => {
+          runOnJS(advanceCard)('left');
         });
       } else {
-        translateX.value = withSpring(0, { damping: 25, stiffness: 120 });
+        translateX.value   = withSpring(0, { damping: 25, stiffness: 120 });
+        backProgress.value = withSpring(0, { damping: 25, stiffness: 120 });
       }
     });
 
-  // 앞 카드 애니메이션 스타일
   const topCardStyle = useAnimatedStyle(() => ({
+    opacity: topCardOpacity.value,
     transform: [
       { translateX: translateX.value },
       { rotateZ: `${interpolate(translateX.value, [-SCREEN_WIDTH, 0, SCREEN_WIDTH], [-12, 0, 12], Extrapolation.CLAMP)}deg` },
     ],
   }));
 
-  // 중간 카드
-  const midCardStyle = useAnimatedStyle(() => {
-    const progress = Math.min(Math.abs(translateX.value) / SCREEN_WIDTH, 1);
-    return {
-      transform: [{ translateX: interpolate(progress, [0, 1], [SLOT_OFFSET[1], SLOT_OFFSET[0]]) }],
-      opacity: interpolate(progress, [0, 1], [SLOT_OPACITY[1], SLOT_OPACITY[0]]),
-    };
-  });
+  const midCardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(backProgress.value, [0, 1], [SLOT_OFFSET[1], SLOT_OFFSET[0]]) }],
+  }));
 
-  // 뒤 카드
-  const backCardStyle = useAnimatedStyle(() => {
-    const progress = Math.min(Math.abs(translateX.value) / SCREEN_WIDTH, 1);
-    return {
-      transform: [{ translateX: interpolate(progress, [0, 1], [SLOT_OFFSET[2], SLOT_OFFSET[1]]) }],
-      opacity: interpolate(progress, [0, 1], [SLOT_OPACITY[2], SLOT_OPACITY[1]]),
-    };
-  });
+  const backCardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(backProgress.value, [0, 1], [SLOT_OFFSET[2], SLOT_OFFSET[1]]) }],
+  }));
 
   if (n === 0) return null;
 
@@ -215,30 +210,20 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
     <View style={styles.wrapper}>
       <View style={styles.stack}>
         {n >= 3 && (
-          <Animated.View style={[styles.cardSlot, { zIndex: 1 }, backCardStyle]}>
+          <Animated.View style={[styles.cardSlot, styles.backCard, backCardStyle]}>
             <CardContent user={card2!} />
           </Animated.View>
         )}
 
         {n >= 2 && (
-          <Animated.View style={[styles.cardSlot, { zIndex: 2 }, midCardStyle]}>
+          <Animated.View style={[styles.cardSlot, styles.midCard, midCardStyle]}>
             <CardContent user={card1!} />
           </Animated.View>
         )}
 
         <GestureDetector gesture={pan}>
-          <Animated.View style={[styles.cardSlot, { zIndex: 3 }, topCardStyle]}>
+          <Animated.View style={[styles.cardSlot, styles.topCard, topCardStyle]}>
             <CardContent user={card0!} />
-            <View style={styles.hintRow} pointerEvents="none">
-              <View style={styles.hintBadgeRed}>
-                <Ionicons name="arrow-back" size={14} color="#EF4444" />
-                <Ionicons name="close" size={20} color="#EF4444" />
-              </View>
-              <View style={styles.hintBadgeGreen}>
-                <Ionicons name="chatbubble-outline" size={18} color="#22C55E" />
-                <Ionicons name="arrow-forward" size={14} color="#22C55E" />
-              </View>
-            </View>
           </Animated.View>
         </GestureDetector>
       </View>
@@ -269,6 +254,9 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
   },
+  topCard:  { zIndex: 3, opacity: SLOT_OPACITY[0] },
+  midCard:  { zIndex: 2, opacity: SLOT_OPACITY[1] },
+  backCard: { zIndex: 1, opacity: SLOT_OPACITY[2] },
   card: {
     width: '100%',
     height: '100%',
@@ -278,7 +266,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 24,
   },
-  /* 프로필 영역 */
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -300,6 +287,7 @@ const styles = StyleSheet.create({
   profileInfo: { flex: 1, gap: 6 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardName: { fontSize: 22, fontWeight: '800', color: '#0C1C3C', letterSpacing: -0.3 },
+  shieldIcon: { marginLeft: -4 },
   levelBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -314,37 +302,15 @@ const styles = StyleSheet.create({
   ratingText: { fontSize: 15, color: '#7799BB', fontWeight: '600' },
   dotSep: { fontSize: 15, color: '#AABBCC' },
   helpCountText: { fontSize: 15, color: '#7799BB', fontWeight: '600' },
-  /* 구분선 */
   divider: {
     height: 1,
     backgroundColor: '#D4E4FF',
     marginBottom: 16,
   },
-  /* 소개글 영역 */
   infoLayer: {
     flex: 1,
   },
   requestLabel: { fontSize: 15, fontWeight: '700', color: ACCENT, letterSpacing: 0.5, marginBottom: 8 },
   requestText: { fontSize: 19, fontWeight: '600', color: '#0C1C3C', lineHeight: 28 },
   detailPlaceholder: { fontSize: 17, color: '#AABBCC', fontStyle: 'italic' },
-  /* 스와이프 힌트 */
-  hintRow: {
-    position: 'absolute',
-    bottom: 16, left: 16, right: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  hintBadgeRed: {
-    flexDirection: 'row', alignItems: 'center', gap: 2,
-    backgroundColor: '#FEE2E2', borderRadius: 20,
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderWidth: 1.5, borderColor: '#EF4444',
-  },
-  hintBadgeGreen: {
-    flexDirection: 'row', alignItems: 'center', gap: 2,
-    backgroundColor: '#DCFCE7', borderRadius: 20,
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderWidth: 1.5, borderColor: '#22C55E',
-  },
 });

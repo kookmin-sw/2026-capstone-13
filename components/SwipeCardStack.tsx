@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, memo } from 'react';
+import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import Animated, {
   withSpring,
   withTiming,
   runOnJS,
+  runOnUI,
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated';
@@ -27,7 +28,7 @@ const CARD_BG = '#FFFFFF';
 const ACCENT  = '#0EA5E9';
 
 const SLOT_OFFSET  = [0, 16, 32];
-const SLOT_OPACITY = [1, 0.8, 0.6];
+const SLOT_OPACITY = [1, 0.85, 0.7];
 
 const LANG_FLAG: Record<string, string> = {
   'en':      '🇺🇸',
@@ -56,66 +57,66 @@ function formatTime(iso: string): string {
 }
 
 // ── 카드 한 장 ─────────────────────────────────────────────
-const CardContent = memo(function CardContent({ card }: { card: HelpRequest }) {
-  const [imgError, setImgError] = useState(false);
-  const profileUri = card.requester.profileImage?.trim();
-  const urgency = getUrgency(card.createdAt);
-  const initial = card.requester.nickname.charAt(0);
-  const showImage = !!profileUri && !imgError;
+const CardContent = memo(
+  function CardContent({ card }: { card: HelpRequest }) {
+    const [imgError, setImgError] = useState(false);
+    const profileUri = card.requester.profileImage?.trim();
+    const urgency = getUrgency(card.createdAt);
+    const initial = card.requester.nickname.charAt(0);
+    const showImage = !!profileUri && !imgError;
 
-  return (
-    <View style={styles.card}>
-      {/* 상단: 프로필 */}
-      <View style={styles.profileRow}>
-        <View style={styles.avatarWrap}>
-          {showImage ? (
-            <Image
-              source={{ uri: profileUri }}
-              style={styles.avatarImage}
-              onError={() => setImgError(true)}
-            />
-          ) : (
-            <Text style={styles.avatarText}>{initial}</Text>
-          )}
-        </View>
-        <View style={styles.profileInfo}>
-          <View style={styles.nameRow}>
-            <Text style={styles.cardName}>{card.requester.nickname}</Text>
-            {(card.requester.studentIdVerified || card.requester.studentIdStatus === 'APPROVED') && (
-              <Ionicons name="shield-checkmark" size={16} color="#22c55e" style={{ marginLeft: -4 }} />
+    return (
+      <View style={styles.card}>
+        <View style={styles.profileRow}>
+          <View style={styles.avatarWrap}>
+            {showImage ? (
+              <Image
+                source={{ uri: profileUri }}
+                style={styles.avatarImage}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <Text style={styles.avatarText}>{initial}</Text>
             )}
-            <View style={styles.urgencyBadge}>
-              <View style={[styles.urgencyDot, { backgroundColor: urgency.color }]} />
-              <Text style={[styles.urgencyText, { color: urgency.color }]}>{urgency.label}</Text>
+          </View>
+          <View style={styles.profileInfo}>
+            <View style={styles.nameRow}>
+              <Text style={styles.cardName}>{card.requester.nickname}</Text>
+              {(card.requester.studentIdVerified || card.requester.studentIdStatus === 'APPROVED') && (
+                <Ionicons name="shield-checkmark" size={16} color="#22c55e" style={styles.shieldIcon} />
+              )}
+              <View style={styles.urgencyBadge}>
+                <View style={[styles.urgencyDot, { backgroundColor: urgency.color }]} />
+                <Text style={[styles.urgencyText, { color: urgency.color }]}>{urgency.label}</Text>
+              </View>
+            </View>
+            {card.requester.userType !== 'KOREAN' ? (
+              card.requester.major ? (
+                <Text style={styles.subText} numberOfLines={1}>{card.requester.major}</Text>
+              ) : null
+            ) : (
+              card.requester.university ? (
+                <Text style={styles.subText} numberOfLines={1}>{card.requester.university}</Text>
+              ) : null
+            )}
+            <View style={styles.timeRow}>
+              <Ionicons name="time-outline" size={11} color="#7799BB" />
+              <Text style={styles.timeSmall}>{formatTime(card.createdAt)}</Text>
             </View>
           </View>
-          {card.requester.userType !== 'KOREAN' ? (
-            card.requester.major ? (
-              <Text style={styles.subText} numberOfLines={1}>{card.requester.major}</Text>
-            ) : null
-          ) : (
-            card.requester.university ? (
-              <Text style={styles.subText} numberOfLines={1}>{card.requester.university}</Text>
-            ) : null
-          )}
-          <View style={styles.timeRow}>
-            <Ionicons name="time-outline" size={11} color="#7799BB" />
-            <Text style={styles.timeSmall}>{formatTime(card.createdAt)}</Text>
-          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.infoLayer}>
+          <Text style={styles.requestLabel}>도움 요청</Text>
+          <Text style={styles.requestText} numberOfLines={4}>{card.title}</Text>
         </View>
       </View>
-
-      {/* 구분선 */}
-      <View style={styles.divider} />
-
-      {/* 하단: 도움 요청 내용 */}
-      <View style={styles.infoLayer}>
-        <Text style={styles.requestLabel}>도움 요청</Text>
-        <Text style={styles.requestText} numberOfLines={4}>{card.title}</Text>
-      </View>
-    </View>
-  );
-});
+    );
+  },
+  (prev, next) => prev.card.id === next.card.id,
+);
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────
 interface SwipeCardProps {
@@ -130,16 +131,16 @@ const SWIPE_THRESHOLD = 80;
 export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: SwipeCardProps) {
   const [topIdx, setTopIdx] = useState(0);
 
-  // UI 스레드에서 직접 처리되는 shared values
-  const translateX = useSharedValue(0);
-  const isSwiping  = useSharedValue(false);
+  const translateX      = useSharedValue(0);
+  const isSwiping       = useSharedValue(false);
+  const backProgress    = useSharedValue(0);
+  const topCardOpacity  = useSharedValue(1);
 
   const n = requests.length;
   const card0 = n > 0 ? requests[topIdx % n] : null;
   const card1 = n > 0 ? requests[(topIdx + 1) % n] : null;
   const card2 = n > 0 ? requests[(topIdx + 2) % n] : null;
 
-  // stale closure 방지용 ref
   const onSwipeLeftRef  = useRef(onSwipeLeft);
   const onSwipeRightRef = useRef(onSwipeRight);
   onSwipeLeftRef.current  = onSwipeLeft;
@@ -148,29 +149,35 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: 
   const card0Ref = useRef(card0);
   card0Ref.current = card0;
 
-  const advanceCard = useCallback(() => {
+  const notifySwipe = useCallback((dir: 'left' | 'right') => {
+    const card = card0Ref.current;
+    if (card) {
+      if (dir === 'right') onSwipeRightRef.current?.(card);
+      else onSwipeLeftRef.current?.(card);
+    }
     setTopIdx(prev => prev + 1);
   }, []);
 
-  const handleSwipeLeft = useCallback(() => {
-    const card = card0Ref.current;
-    if (card) onSwipeLeftRef.current?.(card);
-    advanceCard();
-  }, [advanceCard]);
+  const advanceCard = useCallback((dir: 'left' | 'right') => {
+    notifySwipe(dir);
+  }, [notifySwipe]);
 
-  const handleSwipeRight = useCallback(() => {
-    const card = card0Ref.current;
-    if (card) onSwipeRightRef.current?.(card);
-    advanceCard();
-  }, [advanceCard]);
+  // topIdx가 바뀐 뒤(새 카드 렌더 후) shared value 리셋
+  useEffect(() => {
+    runOnUI(() => {
+      'worklet';
+      translateX.value   = 0;
+      backProgress.value = 0;
+      isSwiping.value    = false;
+      topCardOpacity.value = 1;
+    })();
+  }, [topIdx, translateX, backProgress, isSwiping, topCardOpacity]);
 
   const pan = Gesture.Pan()
-    .onStart(() => {
-      if (isSwiping.value) return;
-    })
     .onUpdate((e) => {
       if (isSwiping.value) return;
       translateX.value = e.translationX;
+      backProgress.value = Math.min(Math.abs(e.translationX) / SCREEN_WIDTH, 1);
     })
     .onEnd((e) => {
       if (isSwiping.value) return;
@@ -180,92 +187,57 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: 
 
       if (swipedRight) {
         isSwiping.value = true;
+        // 뒤 카드는 progress=1 상태로 고정 (전진 완료 위치에서 멈춤)
+        backProgress.value = 1;
         translateX.value = withTiming(SCREEN_WIDTH + 200, { duration: 220 }, () => {
-          runOnJS(handleSwipeRight)();
-          translateX.value = 0;
-          isSwiping.value = false;
+          runOnJS(advanceCard)('right');
         });
       } else if (swipedLeft) {
         isSwiping.value = true;
+        backProgress.value = 1;
         translateX.value = withTiming(-(SCREEN_WIDTH + 200), { duration: 220 }, () => {
-          runOnJS(handleSwipeLeft)();
-          translateX.value = 0;
-          isSwiping.value = false;
+          runOnJS(advanceCard)('left');
         });
       } else {
         translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
+        backProgress.value = withSpring(0, { damping: 15, stiffness: 150 });
       }
     });
 
-  // 앞 카드 애니메이션 스타일
   const topCardStyle = useAnimatedStyle(() => ({
+    opacity: topCardOpacity.value,
     transform: [
       { translateX: translateX.value },
       { rotateZ: `${interpolate(translateX.value, [-SCREEN_WIDTH, 0, SCREEN_WIDTH], [-12, 0, 12], Extrapolation.CLAMP)}deg` },
     ],
   }));
 
-  // 중간 카드: 앞 카드 드래그 진행도에 따라 앞으로 나옴
-  const midCardStyle = useAnimatedStyle(() => {
-    const progress = Math.min(Math.abs(translateX.value) / SCREEN_WIDTH, 1);
-    return {
-      transform: [{ translateX: interpolate(progress, [0, 1], [SLOT_OFFSET[1], SLOT_OFFSET[0]]) }],
-      opacity: interpolate(progress, [0, 1], [SLOT_OPACITY[1], SLOT_OPACITY[0]]),
-    };
-  });
+  // 중간 카드: backProgress 기반으로만 움직임, opacity 고정
+  const midCardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(backProgress.value, [0, 1], [SLOT_OFFSET[1], SLOT_OFFSET[0]]) }],
+  }));
 
-  // 뒤 카드
-  const backCardStyle = useAnimatedStyle(() => {
-    const progress = Math.min(Math.abs(translateX.value) / SCREEN_WIDTH, 1);
-    return {
-      transform: [{ translateX: interpolate(progress, [0, 1], [SLOT_OFFSET[2], SLOT_OFFSET[1]]) }],
-      opacity: interpolate(progress, [0, 1], [SLOT_OPACITY[2], SLOT_OPACITY[1]]),
-    };
-  });
-
-  // 버튼용 스와이프 트리거
-  const triggerSwipe = useCallback((dir: 'left' | 'right') => {
-    if (isSwiping.value || !card0) return;
-    isSwiping.value = true;
-    const toX = dir === 'right' ? SCREEN_WIDTH + 200 : -(SCREEN_WIDTH + 200);
-    translateX.value = withTiming(toX, { duration: 220 }, () => {
-      if (dir === 'right') runOnJS(handleSwipeLeft)();
-      else runOnJS(handleSwipeRight)();
-      translateX.value = 0;
-      isSwiping.value = false;
-    });
-  }, [card0, handleSwipeLeft, handleSwipeRight, translateX, isSwiping]);
+  // 뒤 카드: backProgress 기반으로만 움직임, opacity 고정
+  const backCardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(backProgress.value, [0, 1], [SLOT_OFFSET[2], SLOT_OFFSET[1]]) }],
+  }));
 
   if (n === 0) return null;
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.stack}>
-        {/* 뒤 (2번째) 카드 - gesture 없음, 정적 렌더 */}
-        <Animated.View style={[styles.cardSlot, { zIndex: 1 }, backCardStyle]}>
+        <Animated.View style={[styles.cardSlot, styles.backCard, backCardStyle]}>
           <CardContent card={card2!} />
         </Animated.View>
 
-        {/* 중간 (1번째) 카드 - gesture 없음, 정적 렌더 */}
-        <Animated.View style={[styles.cardSlot, { zIndex: 2 }, midCardStyle]}>
+        <Animated.View style={[styles.cardSlot, styles.midCard, midCardStyle]}>
           <CardContent card={card1!} />
         </Animated.View>
 
-        {/* 앞 (0번째) 카드 - gesture 처리 */}
         <GestureDetector gesture={pan}>
-          <Animated.View style={[styles.cardSlot, { zIndex: 3 }, topCardStyle]}>
+          <Animated.View style={[styles.cardSlot, styles.topCard, topCardStyle]}>
             <CardContent card={card0!} />
-            {/* 스와이프 방향 힌트 */}
-            <View style={styles.hintRow} pointerEvents="none">
-              <View style={styles.hintBadgeRed}>
-                <Ionicons name="arrow-back" size={14} color="#EF4444" />
-                <Ionicons name="close" size={20} color="#EF4444" />
-              </View>
-              <View style={styles.hintBadgeGreen}>
-                <Ionicons name="checkmark" size={20} color="#22C55E" />
-                <Ionicons name="arrow-forward" size={14} color="#22C55E" />
-              </View>
-            </View>
           </Animated.View>
         </GestureDetector>
       </View>
@@ -296,6 +268,9 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
   },
+  topCard:  { zIndex: 3, opacity: SLOT_OPACITY[0] },
+  midCard:  { zIndex: 2, opacity: SLOT_OPACITY[1] },
+  backCard: { zIndex: 1, opacity: SLOT_OPACITY[2] },
   card: {
     width: '100%',
     height: '100%',
@@ -305,7 +280,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 24,
   },
-  /* 프로필 영역 */
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -327,6 +301,7 @@ const styles = StyleSheet.create({
   profileInfo: { flex: 1, gap: 0 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   cardName: { fontSize: 19, fontWeight: '800', color: '#0C1C3C', letterSpacing: -0.3 },
+  shieldIcon: { marginLeft: -4 },
   urgencyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -341,48 +316,14 @@ const styles = StyleSheet.create({
   subText:  { fontSize: 14, color: '#667799', fontWeight: '600', marginTop: -2 },
   timeRow:  { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 0 },
   timeSmall: { fontSize: 13, color: '#7799BB' },
-  /* 구분선 */
   divider: {
     height: 1,
     backgroundColor: '#D4E4FF',
     marginBottom: 16,
   },
-  /* 도움 요청 내용 */
   infoLayer: {
     flex: 1,
   },
   requestLabel: { fontSize: 13, fontWeight: '700', color: ACCENT, letterSpacing: 0.5, marginBottom: 8 },
   requestText:  { fontSize: 17, fontWeight: '600', color: '#0C1C3C', lineHeight: 26 },
-  /* 스와이프 힌트 */
-  hintRow: {
-    position: 'absolute',
-    bottom: 16,
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  hintBadgeRed: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: '#FEE2E2',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1.5,
-    borderColor: '#EF4444',
-  },
-  hintBadgeGreen: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: '#DCFCE7',
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1.5,
-    borderColor: '#22C55E',
-  },
 });
