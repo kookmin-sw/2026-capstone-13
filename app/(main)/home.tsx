@@ -3,11 +3,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -19,7 +21,7 @@ import { getCommunityPosts, type CommunityPostDto } from '../../services/communi
 import { getHelpedRequests, getHelpRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
-import type { HelpRequest, User } from '../../types';
+import type { HelpRequest, HelpCategory, User } from '../../types';
 
 // ── Design tokens ──
 const BLUE   = '#3B6FE8';
@@ -88,6 +90,20 @@ export default function HomeScreen() {
       createdAt: new Date().toISOString(),
     },
   ]);
+  const [viewMode, setViewMode]              = useState<'card' | 'list'>('card');
+  const [searchQuery, setSearchQuery]        = useState('');
+  const [statusFilter, setStatusFilter]      = useState<'ALL' | 'WAITING' | 'IN_PROGRESS' | 'COMPLETED'>('ALL');
+  const tabAnim                              = useRef(new Animated.Value(0)).current;
+
+  const switchTab = useCallback((mode: 'card' | 'list') => {
+    setViewMode(mode);
+    Animated.spring(tabAnim, {
+      toValue: mode === 'card' ? 0 : 1,
+      useNativeDriver: false,
+      friction: 7,
+      tension: 60,
+    }).start();
+  }, [tabAnim]);
   const scrollViewRef                        = useRef<ScrollView>(null);
   const [noticeWidth, setNoticeWidth]        = useState(0);
   const noticeRef                            = useRef<ScrollView>(null);
@@ -175,30 +191,29 @@ export default function HomeScreen() {
 
   return (
     <View style={s.container}>
-      {/* ── NAV (고정) ── */}
-      <View style={s.nav}>
-        <View style={s.navLeft}>
-          <Text style={s.navGreeting}>
-            안녕하세요, <Text style={s.navGreetingName}>{user?.nickname ?? ''}님</Text>!
-          </Text>
-        </View>
-        <View style={s.navRight}>
-          <TouchableOpacity style={s.notifBtn} onPress={() => router.push('/notifications')} activeOpacity={0.8}>
-            <Ionicons name="notifications-outline" size={20} color="#444" />
-            {hasUnreadForUser(user?.id ?? 0) && <View style={s.notifDot} />}
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <ScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
-        contentContainerStyle={{ paddingTop: Platform.OS === 'ios' ? 100 : 72, paddingBottom: 16 }}
+        contentContainerStyle={{ paddingTop: Platform.OS === 'ios' ? 56 : 32, paddingBottom: 16 }}
       >
+        {/* ── NAV ── */}
+        <View style={s.nav}>
+          <View style={s.navLeft}>
+            <Text style={s.navGreeting}>
+              안녕하세요, <Text style={s.navGreetingName}>{user?.nickname ?? ''}님</Text>!
+            </Text>
+          </View>
+          <View style={s.navRight}>
+            <TouchableOpacity style={s.notifBtn} onPress={() => router.push('/notifications')} activeOpacity={0.8}>
+              <Ionicons name="notifications-outline" size={20} color="#444" />
+              {hasUnreadForUser(user?.id ?? 0) && <View style={s.notifDot} />}
+            </TouchableOpacity>
+          </View>
+        </View>
 
-        {/* ── 공지사항 슬라이드 ── */}
-        <View style={s.summaryWrapper}>
+        {/* ── 공지사항 슬라이드 (유학생/교환학생만 표시) ── */}
+        {isInternational && <View style={s.summaryWrapper}>
           <View style={s.summaryInner}>
           <ScrollView
             ref={noticeRef}
@@ -242,7 +257,37 @@ export default function HomeScreen() {
             ))}
           </ScrollView>
           </View>
-        </View>
+        </View>}
+
+        {/* ── 연속 도움중 카드 (한국인만 표시) ── */}
+        {!isInternational && (() => {
+          const MONTHLY_GOAL = 20;
+          const progress = Math.min(completedCount / MONTHLY_GOAL, 1);
+          const DOTS = 9;
+          return (
+            <View style={s.streakCard}>
+              <View style={s.streakTopRow}>
+                <View style={s.streakTextWrap}>
+                  <Text style={s.streakTitle}>{completedCount}일 연속 접속중!</Text>
+                </View>
+                <View style={s.streakDots}>
+                  {Array.from({ length: DOTS }).map((_, i) => (
+                    <View key={i} style={[s.streakDot, i < Math.round(progress * DOTS) && s.streakDotOn]} />
+                  ))}
+                </View>
+              </View>
+              <View style={s.streakProgressWrap}>
+                <View style={s.streakProgressLabelRow}>
+                  <Text style={s.streakProgressLabel}>이번달 도움 목표</Text>
+                  <Text style={s.streakProgressCount}>{completedCount} / {MONTHLY_GOAL}</Text>
+                </View>
+                <View style={s.streakProgressTrack}>
+                  <View style={[s.streakProgressFill, { width: `${progress * 100}%` as `${number}%` }]} />
+                </View>
+              </View>
+            </View>
+          );
+        })()}
 
         {/* ── 헤더 & 스와이프 카드 ── */}
         {isInternational ? (
@@ -267,93 +312,163 @@ export default function HomeScreen() {
           </>
         ) : (
           <>
-            <View style={s.helpHeader}>
-              <View style={s.helpHeaderLeft}>
-                <Text style={s.helpHeaderTitle}>지금 도움이 필요해요</Text>
-                <View style={s.helpCountBadge}>
-                  <Text style={s.helpCountText}>{requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS').length}</Text>
-                </View>
+            {/* 카드 보기 / 리스트 보기 탭 */}
+            <View style={s.helpTitleBox}>
+              <Text style={s.helpTitleBoxText}>지금 도움이 필요해요</Text>
+              <View style={s.helpCountBadge}>
+                <Text style={s.helpCountText}>{requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS').length}</Text>
               </View>
-              <TouchableOpacity onPress={() => router.push('/help-list')} activeOpacity={0.7}>
-                <Text style={s.helpHeaderLink}>전체보기 →</Text>
+            </View>
+            <View style={s.viewTabRow}>
+              <Animated.View style={[s.viewTabSlider, {
+                left: tabAnim.interpolate({ inputRange: [0, 1], outputRange: ['2%', '51%'] }),
+                width: '47%',
+              }]} />
+              <TouchableOpacity style={s.viewTab} onPress={() => switchTab('card')} activeOpacity={0.8}>
+                <Ionicons name="layers-outline" size={14} color={viewMode === 'card' ? '#fff' : '#888'} />
+                <Text style={[s.viewTabText, viewMode === 'card' && s.viewTabTextOn]}>카드 보기</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.viewTab} onPress={() => switchTab('list')} activeOpacity={0.8}>
+                <Ionicons name="list-outline" size={14} color={viewMode === 'list' ? '#fff' : '#888'} />
+                <Text style={[s.viewTabText, viewMode === 'list' && s.viewTabTextOn]}>리스트 보기</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ marginLeft: 20, marginBottom: 10 }}>
-              <SwipeCardStack
-                requests={requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS')}
-                onCardPress={(card) => goTo(card)}
-              />
+            {viewMode === 'card' ? (
+              <View style={{ marginLeft: 16, marginBottom: 10 }}>
+                <SwipeCardStack
+                  requests={requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS')}
+                  onCardPress={(card) => goTo(card)}
+                />
+              </View>
+            ) : (
+              <View style={s.listViewWrap}>
+                <View style={s.listFilterRow}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.listFilterScroll} style={{ maxWidth: 260 }}>
+                    {([
+                      { key: 'ALL',         label: '전체' },
+                      { key: 'WAITING',     label: '최신' },
+                      { key: 'IN_PROGRESS', label: '매칭중' },
+                      { key: 'COMPLETED',   label: '완료' },
+                    ] as const).map(({ key, label }) => (
+                      <TouchableOpacity
+                        key={key}
+                        style={[s.listFilterChip, statusFilter === key && s.listFilterChipOn]}
+                        onPress={() => setStatusFilter(key)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[s.listFilterChipText, statusFilter === key && s.listFilterChipTextOn]}>{label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <View style={s.searchBox}>
+                    <Ionicons name="search-outline" size={15} color={T2} />
+                    <TextInput
+                      style={s.searchInput}
+                      placeholder="검색"
+                      placeholderTextColor={T2}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      returnKeyType="search"
+                    />
+                    {searchQuery.length > 0 && (
+                      <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+                        <Ionicons name="close-circle" size={15} color={T2} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+                {(() => {
+                  const CAT_LABEL: Record<HelpCategory, string> = {
+                    BANK: '은행', HOSPITAL: '병원', SCHOOL: '학교', DAILY: '일상', OTHER: '기타',
+                  };
+                  const filtered = requests
+                    .filter(r => statusFilter === 'ALL'
+                      ? (r.status === 'WAITING' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED')
+                      : r.status === statusFilter
+                    )
+                    .filter(r => searchQuery.trim() === '' ||
+                      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      (r.requester?.nickname ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+                    );
+                  if (filtered.length === 0) {
+                    return (
+                      <View style={s.listEmpty}>
+                        <Text style={s.listEmptyText}>현재 도움 요청이 없어요</Text>
+                      </View>
+                    );
+                  }
+                  return filtered.map(item => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={s.listCard}
+                      activeOpacity={0.85}
+                      onPress={() => goTo(item)}
+                    >
+                      <View style={s.listCardHeader}>
+                        <View style={s.listCardLeft}>
+                          <View style={s.listAvatar}>
+                            <Text style={s.listAvatarText}>{item.requester?.nickname?.charAt(0) ?? '?'}</Text>
+                          </View>
+                          <View>
+                            <Text style={s.listCardName}>{item.requester?.nickname ?? ''}</Text>
+                            <Text style={s.listCardTime}>
+                              {Math.floor((Date.now() - new Date(item.createdAt.includes('Z') ? item.createdAt : item.createdAt + 'Z').getTime()) / 60000)}분 전
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={s.listCatBadge}>
+                          <Text style={s.listCatText}>{CAT_LABEL[item.category] ?? item.category}</Text>
+                        </View>
+                      </View>
+                      <Text style={s.listCardTitle} numberOfLines={2}>{item.title}</Text>
+                      {item.requester?.university ? (
+                        <View style={s.listLocationRow}>
+                          <Ionicons name="location-outline" size={12} color={T2} />
+                          <Text style={s.listLocationText}>{item.requester.university}</Text>
+                        </View>
+                      ) : null}
+                      <TouchableOpacity style={s.listHelpBtn} activeOpacity={0.8} onPress={() => goTo(item)}>
+                        <Text style={s.listHelpBtnText}>도와주기 ›</Text>
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  ));
+                })()}
+              </View>
+            )}
+          </>
+        )}
+
+        {/* ── 내 요청 현황 (유학생만 표시) ── */}
+        {isInternational && (
+          <>
+            <View style={{ height: 20 }} />
+            <View style={s.sectionCard}>
+              <View style={s.activityHeader}>
+                <Text style={s.sectionTitle}>내 요청 현황</Text>
+                <TouchableOpacity onPress={() => router.push('/help-list')} activeOpacity={0.8}>
+                  <Text style={s.helpHeaderLink}>전체보기 →</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={s.requestStatRow}>
+                {[
+                  { label: '대기중', status: 'WAITING',     color: ORANGE,    bg: '#FFF3E8' },
+                  { label: '진행중', status: 'IN_PROGRESS', color: BLUE,      bg: BLUE_L   },
+                  { label: '완료',   status: 'COMPLETED',   color: '#22C55E', bg: '#F0FDF4' },
+                ].map(({ label, status, color, bg }) => (
+                  <View key={status} style={[s.requestStatItem, { backgroundColor: bg }]}>
+                    <Text style={[s.requestStatNum, { color }]}>
+                      {requests.filter(r => r.status === status).length}
+                    </Text>
+                    <Text style={[s.requestStatLabel, { color }]}>{label}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </>
         )}
 
-        {/* ── 내 활동 확인하기 ── */}
-        <View style={{ height: 20 }} />
-        {user?.userType === 'KOREAN' ? (
-          /* 한국인: 별점 + 레벨 + 도움 횟수 */
-          <View style={s.sectionCard}>
-            <View style={s.activityHeader}>
-              <Text style={s.sectionTitle}>내 활동 확인하기</Text>
-              {(() => { const lv = getLevel(completedCount); return (
-                <View style={[s.levelBadge, { backgroundColor: lv.bg, borderColor: lv.color }]}>
-                  <Text style={[s.levelBadgeText, { color: lv.color }]}>
-                    {showCount ? `${completedCount}회` : lv.label}
-                  </Text>
-                </View>
-              ); })()}
-            </View>
-            <View style={s.ratingRow}>
-              <Text style={s.ratingNum}>{rating.toFixed(1)}</Text>
-              <View>
-                <View style={s.starsRow}>
-                  {[1, 2, 3, 4, 5].map(i => (
-                    <Ionicons key={i} name="star" size={20} color={i <= Math.round(rating) ? '#FBBF24' : '#E5E7EB'} />
-                  ))}
-                </View>
-              </View>
-            </View>
-            <View style={s.activityShortcuts}>
-              <TouchableOpacity style={s.shortcut} onPress={() => router.push('/(main)/mypage' as never)} activeOpacity={0.8}>
-                <Text style={s.shortcutLabel}>프로필</Text>
-              </TouchableOpacity>
-              <View style={s.shortcutDivider} />
-              <TouchableOpacity style={s.shortcut} activeOpacity={0.8}>
-                <Text style={s.shortcutLabel}>받은 후기</Text>
-              </TouchableOpacity>
-              <View style={s.shortcutDivider} />
-              <TouchableOpacity style={s.shortcut} activeOpacity={0.8}>
-                <Text style={s.shortcutLabel}>도움 내역</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          /* 유학생: 요청 현황 카드 */
-          <View style={s.sectionCard}>
-            <View style={s.activityHeader}>
-              <Text style={s.sectionTitle}>내 요청 현황</Text>
-              <TouchableOpacity onPress={() => router.push('/help-list')} activeOpacity={0.8}>
-                <Text style={s.helpHeaderLink}>전체보기 →</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={s.requestStatRow}>
-              {[
-                { label: '대기중', status: 'WAITING',     color: ORANGE,    bg: '#FFF3E8' },
-                { label: '진행중', status: 'IN_PROGRESS', color: BLUE,      bg: BLUE_L   },
-                { label: '완료',   status: 'COMPLETED',   color: '#22C55E', bg: '#F0FDF4' },
-              ].map(({ label, status, color, bg }) => (
-                <View key={status} style={[s.requestStatItem, { backgroundColor: bg }]}>
-                  <Text style={[s.requestStatNum, { color }]}>
-                    {requests.filter(r => r.status === status).length}
-                  </Text>
-                  <Text style={[s.requestStatLabel, { color }]}>{label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* ── 인기 게시글 ── */}
-        <View style={[s.sectionBox, { marginTop: 24 }]}>
+        {/* ── 인기 게시글 (유학생/교환학생만 표시) ── */}
+        {isInternational && <View style={[s.sectionBox, { marginTop: 24 }]}>
           <View style={s.sectionBoxInner}>
           <View style={s.sectionBoxHeader}>
             <Text style={s.hotHeaderTitle}>인기 게시글</Text>
@@ -409,10 +524,10 @@ export default function HomeScreen() {
             })}
           </ScrollView>
           </View>
-        </View>
+        </View>}
 
-        {/* ── 오늘 학식 ── */}
-        <View style={s.sectionBox}>
+        {/* ── 오늘 학식 (유학생/교환학생만 표시) ── */}
+        {isInternational && <View style={s.sectionBox}>
           <View style={s.sectionBoxInner}>
           <View style={s.sectionBoxHeader}>
             <Text style={s.hotHeaderTitle}>오늘 학식</Text>
@@ -454,7 +569,7 @@ export default function HomeScreen() {
             ))}
           </ScrollView>
           </View>
-        </View>
+        </View>}
 
       </ScrollView>
 
@@ -468,16 +583,12 @@ const s = StyleSheet.create({
 
   // ── NAV ──
   nav: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0,
-    zIndex: 10,
-    paddingTop: Platform.OS === 'ios' ? 56 : 32,
+    paddingTop: 16,
     paddingBottom: 10,
     paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: BG,
   },
   navLeft:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
   navRight:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -761,6 +872,53 @@ const s = StyleSheet.create({
   summaryLabel:    { fontSize: 11, color: T2, fontWeight: '600', marginBottom: 2 },
   summaryValue:    { fontSize: 12, color: T1, fontWeight: '700' },
 
+  // ── 연속 도움중 카드 ──
+  streakCard: {
+    marginHorizontal: 16, marginBottom: 10, marginTop: 8,
+    backgroundColor: '#fff', borderRadius: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 8, elevation: 3,
+  },
+  streakTopRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 14, paddingTop: 14, paddingBottom: 8, gap: 12,
+  },
+  streakTextWrap: { flex: 1 },
+  streakTitle:    { fontSize: 20, fontWeight: '800', color: T1, marginBottom: 2 },
+  streakSub:      { fontSize: 11, color: T2 },
+  streakDots:     { flexDirection: 'row', gap: 4 },
+  streakDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: '#E8EDF5' },
+  streakDotOn:    { backgroundColor: BLUE },
+  streakProgressWrap: { paddingHorizontal: 14, paddingBottom: 10 },
+  streakProgressLabelRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5,
+  },
+  streakProgressLabel: { fontSize: 11, color: T2, fontWeight: '600' },
+  streakProgressCount: { fontSize: 11, color: T2, fontWeight: '700' },
+  streakProgressTrack: {
+    height: 5, borderRadius: 5, backgroundColor: '#F0F2F6', overflow: 'hidden',
+  },
+  streakProgressFill:  { height: '100%', borderRadius: 5, backgroundColor: BLUE },
+  streakHelpHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  streakHelpTitle:     { fontSize: 14, fontWeight: '700', color: T1 },
+  helpTitleBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  helpTitleBoxText: { fontSize: 15, fontWeight: '800', color: T1, flex: 1 },
+
   // ── 지금 도움이 필요해요 헤더 ──
   helpHeader: {
     flexDirection: 'row',
@@ -856,5 +1014,124 @@ const s = StyleSheet.create({
   mealCafeteria: { fontSize: 12, fontWeight: '800', color: BLUE, flex: 1 },
   mealCorner:    { fontSize: 11, fontWeight: '600', color: T2 },
   mealMenu:      { fontSize: 12, color: T1, fontWeight: '500', lineHeight: 18 },
+
+  // ── 카드/리스트 보기 탭 ──
+  viewTabRow: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 12,
+    backgroundColor: '#E8EDF5',
+    borderRadius: 50,
+    padding: 3,
+    position: 'relative',
+  },
+  viewTabSlider: {
+    position: 'absolute',
+    top: 3,
+    bottom: 3,
+    backgroundColor: BLUE,
+    borderRadius: 50,
+  },
+  viewTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 12,
+    borderRadius: 50,
+  },
+  viewTabText:   { fontSize: 13, fontWeight: '700', color: '#888' },
+  viewTabTextOn: { color: '#fff' },
+
+  // ── 리스트 뷰 ──
+  listViewWrap: {
+    paddingHorizontal: 16,
+    gap: 10,
+    marginBottom: 10,
+  },
+  listEmpty: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  listEmptyText: { fontSize: 14, color: T2 },
+  listCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  listCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  listCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  listAvatar: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: BLUE_L,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  listAvatarText:  { fontSize: 13, fontWeight: '700', color: BLUE },
+  listCardName:    { fontSize: 13, fontWeight: '700', color: T1 },
+  listCardTime:    { fontSize: 11, color: T2, marginTop: 1 },
+  listCatBadge: {
+    backgroundColor: BLUE_L,
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  listCatText:    { fontSize: 11, fontWeight: '800', color: BLUE },
+  listCardTitle:  { fontSize: 15, fontWeight: '700', color: T1, lineHeight: 22 },
+  listLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  listLocationText: { fontSize: 12, color: T2 },
+  listHelpBtn: {
+    alignSelf: 'flex-end',
+    backgroundColor: BLUE,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginTop: 2,
+  },
+  listHelpBtnText: { fontSize: 13, fontWeight: '800', color: '#fff' },
+  listFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  listFilterScroll: { gap: 6, alignItems: 'center' },
+  listFilterChip: {
+    width: 58,
+    paddingVertical: 9,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listFilterChipOn:      { backgroundColor: BLUE },
+  listFilterChipText:    { fontSize: 12, fontWeight: '700', color: '#888' },
+  listFilterChipTextOn:  { color: '#fff' },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    flex: 1,
+  },
+  searchInput: { flex: 1, fontSize: 12, color: T1, padding: 0 },
 });
 

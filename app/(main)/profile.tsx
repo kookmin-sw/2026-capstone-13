@@ -285,11 +285,9 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ── 활동 카드 ── */}
-      {(() => {
-        const helpCount = isKorean
-          ? helpHistory.filter((h) => h.status === 'COMPLETED').length
-          : myRequests.filter((r) => r.status === 'COMPLETED').length;
+      {/* ── 활동 카드 (한국인만 표시) ── */}
+      {isKorean ? (() => {
+        const helpCount = helpHistory.filter((h) => h.status === 'COMPLETED').length;
         const MONTHLY_GOAL = 20;
         const progress = Math.min(helpCount / MONTHLY_GOAL, 1);
         const DOTS = 9;
@@ -322,7 +320,7 @@ export default function ProfileScreen() {
             </View>
           </View>
         );
-      })()}
+      })() : null}
 
       {/* ── 인증 + 평점 미니 카드 ── */}
       <View style={styles.miniCardRow}>
