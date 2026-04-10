@@ -15,7 +15,7 @@ public class NotificationResponse {
     private String message;
     private Long referenceId;
     private String referenceType;
-    private boolean isRead;
+    private Boolean isRead;
     private String createdAt;
 
     public static NotificationResponse from(Notification n) {

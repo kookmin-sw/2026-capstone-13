@@ -211,8 +211,8 @@ public class CommunityService {
                     parent.getAuthor().getId(),
                     Notification.NotificationType.REPLY,
                     message,
-                    parent.getId(),
-                    Notification.ReferenceType.COMMENT
+                    parent.getPost().getId(),
+                    Notification.ReferenceType.POST
             );
         }
 
