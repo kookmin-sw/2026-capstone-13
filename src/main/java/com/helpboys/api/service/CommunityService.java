@@ -122,7 +122,8 @@ public class CommunityService {
                     post.getAuthor().getId(),
                     Notification.NotificationType.COMMENT,
                     message,
-                    postId
+                    postId,
+                    Notification.ReferenceType.POST
             );
         }
 
@@ -154,7 +155,8 @@ public class CommunityService {
                         post.getAuthor().getId(),
                         Notification.NotificationType.LIKE,
                         message,
-                        postId
+                        postId,
+                        Notification.ReferenceType.POST
                 );
             }
             return Map.of("liked", true, "likes", post.getLikes() + 1);
@@ -209,7 +211,8 @@ public class CommunityService {
                     parent.getAuthor().getId(),
                     Notification.NotificationType.COMMENT,
                     message,
-                    parent.getPost().getId()
+                    parent.getPost().getId(),
+                    Notification.ReferenceType.POST
             );
         }
 

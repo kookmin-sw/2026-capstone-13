@@ -28,9 +28,14 @@ public class Notification {
     @Column(nullable = false)
     private String message;
 
-    // 커뮤니티 댓글 알림일 경우 해당 게시글 ID
+    // 알림 대상 ID (커뮤니티 게시글 ID 또는 도움 요청 ID)
     @Column(name = "post_id")
-    private Long postId;
+    private Long referenceId;
+
+    // 알림 대상 타입
+    @Column(name = "reference_type")
+    @Enumerated(EnumType.STRING)
+    private ReferenceType referenceType;
 
     @Column(name = "is_read", nullable = false)
     @Builder.Default
@@ -43,5 +48,9 @@ public class Notification {
     public enum NotificationType {
         COMMENT, HELP_OFFER, LIKE, REVIEW_REQUEST, REVIEW_RECEIVED, HELP_COMPLETED,
         STUDENT_ID_APPROVED, STUDENT_ID_REJECTED
+    }
+
+    public enum ReferenceType {
+        POST, HELP_REQUEST, NONE
     }
 }
