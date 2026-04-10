@@ -6,6 +6,7 @@ import {
   Dimensions,
   Image,
   ImageBackground,
+  TouchableOpacity,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -56,7 +57,7 @@ function parseHobbies(hobbies: string | undefined): string[] {
 
 // ── 카드 한 장 ─────────────────────────────────────────────
 const CardContent = memo(
-  function CardContent({ user }: { user: User }) {
+  function CardContent({ user, onPress }: { user: User; onPress?: () => void }) {
     const [imgError, setImgError] = useState(false);
     const profileUri = toAbsoluteUrl(user.profileImage?.trim());
     const showImage  = !!profileUri && !imgError;
@@ -81,16 +82,6 @@ const CardContent = memo(
           </View>
         )}
 
-        {/* 상단 태그 행 */}
-        {tags.length > 0 && (
-          <View style={styles.topTagRow}>
-            {tags.map((tag, i) => (
-              <View key={i} style={styles.topTag}>
-                <Text style={styles.topTagText}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        )}
 
         {/* 하단 그라데이션 오버레이 */}
         <View style={styles.gradient}>
@@ -100,27 +91,19 @@ const CardContent = memo(
             {user.age ? (
               <Text style={styles.ageText}>{user.age}</Text>
             ) : null}
-            {isVerified && (
-              <Ionicons name="shield-checkmark" size={18} color="#22c55e" />
-            )}
             <View style={[styles.levelBadge, { backgroundColor: lv.color }]}>
               <Text style={styles.levelText}>{lv.label}</Text>
             </View>
           </View>
 
-          {/* 대학교 */}
-          {user.university ? (
-            <View style={styles.infoRow}>
-              <Ionicons name="school-outline" size={13} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.infoText} numberOfLines={1}>{user.university}</Text>
-            </View>
-          ) : null}
-
-          {/* 전공 */}
+          {/* 전공 + 인증 뱃지 */}
           {user.major ? (
             <View style={styles.infoRow}>
               <Ionicons name="book-outline" size={13} color="rgba(255,255,255,0.8)" />
               <Text style={styles.infoText} numberOfLines={1}>{user.major}</Text>
+              {isVerified && (
+                <Ionicons name="shield-checkmark" size={14} color="#22c55e" />
+              )}
             </View>
           ) : null}
 
@@ -137,10 +120,15 @@ const CardContent = memo(
             )}
           </View>
 
-          {/* 자기소개 */}
-          {user.bio ? (
-            <Text style={styles.bioText} numberOfLines={2}>{user.bio}</Text>
-          ) : null}
+          {/* 자기소개 + 요청하기 버튼 */}
+          <View style={styles.bottomRow}>
+            {user.bio ? (
+              <Text style={styles.bioText} numberOfLines={2}>{user.bio}</Text>
+            ) : <View style={{ flex: 1 }} />}
+            <TouchableOpacity style={styles.requestBtn} onPress={onPress} activeOpacity={0.85}>
+              <Text style={styles.requestBtnText}>요청하기</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -175,8 +163,6 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
   onPressRef.current = onPress;
 
   const notifySwipe = useCallback((dir: 'left' | 'right') => {
-    const card = card0Ref.current;
-    if (dir === 'right' && card) onPressRef.current?.(card);
     setTopIdx(prev => prev + 1);
   }, []);
 
@@ -197,30 +183,24 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
   const pan = Gesture.Pan()
     .onUpdate((e) => {
       if (isSwiping.value) return;
-      translateX.value   = e.translationX;
+      // 오른쪽은 최대 40px까지만 드래그 허용
+      translateX.value   = e.translationX > 0 ? Math.min(e.translationX, 40) : e.translationX;
       backProgress.value = Math.min(Math.abs(e.translationX) / SCREEN_WIDTH, 1);
     })
     .onEnd((e) => {
       if (isSwiping.value) return;
 
-      const swipedRight = e.translationX > SWIPE_THRESHOLD || e.velocityX > 800;
-      const swipedLeft  = e.translationX < -SWIPE_THRESHOLD || e.velocityX < -800;
+      const swipedLeft = e.translationX < -SWIPE_THRESHOLD || e.velocityX < -800;
 
-      if (swipedRight) {
-        isSwiping.value    = true;
-        backProgress.value = 1;
-        translateX.value   = withTiming(SCREEN_WIDTH + 200, { duration: 320 }, () => {
-          runOnJS(advanceCard)('right');
-        });
-      } else if (swipedLeft) {
+      if (swipedLeft) {
         isSwiping.value    = true;
         backProgress.value = 1;
         translateX.value   = withTiming(-(SCREEN_WIDTH + 200), { duration: 320 }, () => {
           runOnJS(advanceCard)('left');
         });
       } else {
-        translateX.value   = withSpring(0, { damping: 25, stiffness: 120 });
-        backProgress.value = withSpring(0, { damping: 25, stiffness: 120 });
+        translateX.value   = withSpring(0, { damping: 25, stiffness: 150 });
+        backProgress.value = withSpring(0, { damping: 25, stiffness: 150 });
       }
     });
 
@@ -259,7 +239,7 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
 
         <GestureDetector gesture={pan}>
           <Animated.View style={[styles.cardSlot, styles.topCard, topCardStyle]}>
-            <CardContent user={card0!} />
+            <CardContent user={card0!} onPress={onPress ? () => onPress(card0!) : undefined} />
           </Animated.View>
         </GestureDetector>
       </View>
@@ -353,7 +333,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: 18,
     paddingBottom: 20,
-    paddingTop: 60,
+    paddingTop: 15,
     gap: 5,
     backgroundColor: 'rgba(0,0,0,0.55)',
     borderBottomLeftRadius: 20,
@@ -399,7 +379,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: 'rgba(255,255,255,0.85)',
     fontWeight: '500',
-    flex: 1,
   },
 
   // 별점 행
@@ -425,5 +404,24 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.75)',
     lineHeight: 19,
     marginTop: 4,
+    flex: 1,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  requestBtn: {
+    backgroundColor: ACCENT,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    marginLeft: 8,
+  },
+  requestBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

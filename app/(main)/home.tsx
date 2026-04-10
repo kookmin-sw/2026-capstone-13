@@ -281,7 +281,7 @@ export default function HomeScreen() {
             <View style={{ marginLeft: 20, marginBottom: 10 }}>
               <SwipeCardStack
                 requests={requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS')}
-                onSwipeRight={(card) => goTo(card)}
+                onCardPress={(card) => goTo(card)}
               />
             </View>
           </>

@@ -4,7 +4,8 @@ import {
   Text,
   StyleSheet,
   Dimensions,
-  Image,
+  ImageBackground,
+  TouchableOpacity,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -18,13 +19,11 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { CategoryLabels, MethodLabels } from '../constants/colors';
 import type { HelpRequest } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 90;
 const CARD_HEIGHT = 390;
-const CARD_BG = '#FFFFFF';
 const ACCENT  = '#0EA5E9';
 
 const SLOT_OFFSET  = [0, 16, 32];
@@ -58,59 +57,67 @@ function formatTime(iso: string): string {
 
 // ── 카드 한 장 ─────────────────────────────────────────────
 const CardContent = memo(
-  function CardContent({ card }: { card: HelpRequest }) {
+  function CardContent({ card, onPress }: { card: HelpRequest; onPress?: () => void }) {
     const [imgError, setImgError] = useState(false);
     const profileUri = card.requester.profileImage?.trim();
-    const urgency = getUrgency(card.createdAt);
-    const initial = card.requester.nickname.charAt(0);
     const showImage = !!profileUri && !imgError;
+    const initial = card.requester.nickname.charAt(0);
+    const urgency = getUrgency(card.createdAt);
+    const isVerified = card.requester.studentIdVerified || card.requester.studentIdStatus === 'APPROVED';
 
     return (
       <View style={styles.card}>
-        <View style={styles.profileRow}>
-          <View style={styles.avatarWrap}>
-            {showImage ? (
-              <Image
-                source={{ uri: profileUri }}
-                style={styles.avatarImage}
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <Text style={styles.avatarText}>{initial}</Text>
-            )}
+        {/* 배경 사진 */}
+        {showImage ? (
+          <ImageBackground
+            source={{ uri: profileUri }}
+            style={StyleSheet.absoluteFill}
+            imageStyle={styles.bgImage}
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <View style={[StyleSheet.absoluteFill, styles.bgFallback]}>
+            <Text style={styles.bgInitial}>{initial}</Text>
           </View>
-          <View style={styles.profileInfo}>
-            <View style={styles.nameRow}>
-              <Text style={styles.cardName}>{card.requester.nickname}</Text>
-              {(card.requester.studentIdVerified || card.requester.studentIdStatus === 'APPROVED') && (
-                <Ionicons name="shield-checkmark" size={16} color="#22c55e" style={styles.shieldIcon} />
+        )}
+
+        {/* 하단 그라데이션 오버레이 */}
+        <View style={styles.gradient}>
+          {/* 이름 + 긴급 뱃지 */}
+          <View style={styles.nameRow}>
+            <Text style={styles.cardName}>{card.requester.nickname}</Text>
+            <View style={[styles.urgencyBadge, { backgroundColor: urgency.color + '33' }]}>
+              <View style={[styles.urgencyDot, { backgroundColor: urgency.color }]} />
+              <Text style={[styles.urgencyText, { color: urgency.color }]}>{urgency.label}</Text>
+            </View>
+          </View>
+
+          {/* 전공/대학 + 인증 뱃지 */}
+          {(card.requester.major || card.requester.university) ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="book-outline" size={13} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.infoText} numberOfLines={1}>
+                {card.requester.userType !== 'KOREAN' ? card.requester.major : card.requester.university}
+              </Text>
+              {isVerified && (
+                <Ionicons name="shield-checkmark" size={14} color="#22c55e" />
               )}
-              <View style={styles.urgencyBadge}>
-                <View style={[styles.urgencyDot, { backgroundColor: urgency.color }]} />
-                <Text style={[styles.urgencyText, { color: urgency.color }]}>{urgency.label}</Text>
-              </View>
             </View>
-            {card.requester.userType !== 'KOREAN' ? (
-              card.requester.major ? (
-                <Text style={styles.subText} numberOfLines={1}>{card.requester.major}</Text>
-              ) : null
-            ) : (
-              card.requester.university ? (
-                <Text style={styles.subText} numberOfLines={1}>{card.requester.university}</Text>
-              ) : null
-            )}
-            <View style={styles.timeRow}>
-              <Ionicons name="time-outline" size={11} color="#7799BB" />
-              <Text style={styles.timeSmall}>{formatTime(card.createdAt)}</Text>
-            </View>
+          ) : null}
+
+          {/* 시간 */}
+          <View style={styles.timeRow}>
+            <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.timeSmall}>{formatTime(card.createdAt)}</Text>
           </View>
-        </View>
 
-        <View style={styles.divider} />
-
-        <View style={styles.infoLayer}>
-          <Text style={styles.requestLabel}>도움 요청</Text>
-          <Text style={styles.requestText} numberOfLines={4}>{card.title}</Text>
+          {/* 도움 요청 내용 + 상세보기 버튼 */}
+          <View style={styles.bottomRow}>
+            <Text style={styles.requestText} numberOfLines={2}>{card.title}</Text>
+            <TouchableOpacity style={styles.requestBtn} onPress={onPress} activeOpacity={0.85}>
+              <Text style={styles.requestBtnText}>상세보기</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -121,14 +128,12 @@ const CardContent = memo(
 // ── 메인 컴포넌트 ─────────────────────────────────────────
 interface SwipeCardProps {
   requests: HelpRequest[];
-  onSwipeLeft?: (card: HelpRequest) => void;
-  onSwipeRight?: (card: HelpRequest) => void;
-  onSwipeActive?: (active: boolean) => void;
+  onCardPress?: (card: HelpRequest) => void;
 }
 
 const SWIPE_THRESHOLD = 80;
 
-export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: SwipeCardProps) {
+export default function SwipeCardStack({ requests, onCardPress }: SwipeCardProps) {
   const [topIdx, setTopIdx] = useState(0);
 
   const translateX      = useSharedValue(0);
@@ -141,20 +146,13 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: 
   const card1 = n > 0 ? requests[(topIdx + 1) % n] : null;
   const card2 = n > 0 ? requests[(topIdx + 2) % n] : null;
 
-  const onSwipeLeftRef  = useRef(onSwipeLeft);
-  const onSwipeRightRef = useRef(onSwipeRight);
-  onSwipeLeftRef.current  = onSwipeLeft;
-  onSwipeRightRef.current = onSwipeRight;
+  const onCardPressRef = useRef(onCardPress);
+  onCardPressRef.current = onCardPress;
 
   const card0Ref = useRef(card0);
   card0Ref.current = card0;
 
-  const notifySwipe = useCallback((dir: 'left' | 'right') => {
-    const card = card0Ref.current;
-    if (card) {
-      if (dir === 'right') onSwipeRightRef.current?.(card);
-      else onSwipeLeftRef.current?.(card);
-    }
+  const notifySwipe = useCallback((_dir: 'left' | 'right') => {
     setTopIdx(prev => prev + 1);
   }, []);
 
@@ -176,23 +174,16 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: 
   const pan = Gesture.Pan()
     .onUpdate((e) => {
       if (isSwiping.value) return;
-      translateX.value = e.translationX;
+      // 오른쪽은 최대 40px까지만 드래그 허용
+      translateX.value = e.translationX > 0 ? Math.min(e.translationX, 40) : e.translationX;
       backProgress.value = Math.min(Math.abs(e.translationX) / SCREEN_WIDTH, 1);
     })
     .onEnd((e) => {
       if (isSwiping.value) return;
 
-      const swipedRight = e.translationX > SWIPE_THRESHOLD || e.velocityX > 800;
-      const swipedLeft  = e.translationX < -SWIPE_THRESHOLD || e.velocityX < -800;
+      const swipedLeft = e.translationX < -SWIPE_THRESHOLD || e.velocityX < -800;
 
-      if (swipedRight) {
-        isSwiping.value = true;
-        // 뒤 카드는 progress=1 상태로 고정 (전진 완료 위치에서 멈춤)
-        backProgress.value = 1;
-        translateX.value = withTiming(SCREEN_WIDTH + 200, { duration: 220 }, () => {
-          runOnJS(advanceCard)('right');
-        });
-      } else if (swipedLeft) {
+      if (swipedLeft) {
         isSwiping.value = true;
         backProgress.value = 1;
         translateX.value = withTiming(-(SCREEN_WIDTH + 200), { duration: 220 }, () => {
@@ -237,7 +228,7 @@ export default function SwipeCardStack({ requests, onSwipeLeft, onSwipeRight }: 
 
         <GestureDetector gesture={pan}>
           <Animated.View style={[styles.cardSlot, styles.topCard, topCardStyle]}>
-            <CardContent card={card0!} />
+            <CardContent card={card0!} onPress={onCardPressRef.current ? () => onCardPressRef.current!(card0!) : undefined} />
           </Animated.View>
         </GestureDetector>
       </View>
@@ -275,37 +266,41 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 20,
-    backgroundColor: CARD_BG,
     overflow: 'hidden',
-    paddingHorizontal: 20,
-    paddingTop: 24,
   },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 18,
+  bgImage: {
+    borderRadius: 20,
   },
-  avatarWrap: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
+  bgFallback: {
     backgroundColor: '#E0F2FE',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#D0D0D0',
+    borderRadius: 20,
   },
-  avatarText: { fontSize: 31, fontWeight: '900', color: ACCENT },
-  avatarImage: { width: '100%', height: '100%', borderRadius: 39 },
-  profileInfo: { flex: 1, gap: 0 },
+  bgInitial: {
+    fontSize: 80,
+    fontWeight: '900',
+    color: ACCENT,
+    opacity: 0.3,
+  },
+  gradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 18,
+    paddingBottom: 20,
+    paddingTop: 15,
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+  },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardName: { fontSize: 19, fontWeight: '800', color: '#0C1C3C', letterSpacing: -0.3 },
-  shieldIcon: { marginLeft: -4 },
+  cardName: { fontSize: 19, fontWeight: '800', color: '#fff', letterSpacing: -0.3 },
   urgencyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F9FF',
     borderRadius: 20,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -313,17 +308,33 @@ const styles = StyleSheet.create({
   },
   urgencyDot:  { width: 6, height: 6, borderRadius: 3 },
   urgencyText: { fontSize: 11, fontWeight: '700' },
-  subText:  { fontSize: 14, color: '#667799', fontWeight: '600', marginTop: -2 },
-  timeRow:  { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 0 },
-  timeSmall: { fontSize: 13, color: '#7799BB' },
-  divider: {
-    height: 1,
-    backgroundColor: '#D4E4FF',
-    marginBottom: 16,
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  infoText: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: '500' },
+  timeRow:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  timeSmall: { fontSize: 13, color: 'rgba(255,255,255,0.75)' },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: 4,
   },
-  infoLayer: {
+  requestText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+    lineHeight: 20,
     flex: 1,
   },
-  requestLabel: { fontSize: 13, fontWeight: '700', color: ACCENT, letterSpacing: 0.5, marginBottom: 8 },
-  requestText:  { fontSize: 17, fontWeight: '600', color: '#0C1C3C', lineHeight: 26 },
+  requestBtn: {
+    backgroundColor: ACCENT,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    marginLeft: 8,
+  },
+  requestBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
 });
