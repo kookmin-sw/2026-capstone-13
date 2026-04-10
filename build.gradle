@@ -48,6 +48,9 @@ dependencies {
     // Cloudinary (이미지 업로드)
     implementation 'com.cloudinary:cloudinary-http44:1.38.0'
 
+    // Gmail SMTP
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

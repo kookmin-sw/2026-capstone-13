@@ -9,7 +9,6 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-
   # 파일 업로드 크기 제한
   servlet:
     multipart:
@@ -24,6 +23,19 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
+
+  # Gmail SMTP
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 # 서버 설정
 server:
@@ -54,10 +66,6 @@ logging:
     org.springframework.web: WARN
     org.springframework.security: WARN
     org.hibernate: WARN
-
-# Resend 이메일 API
-resend:
-  api-key: ${RESEND_API_KEY}
 
 # Firebase FCM 설정 (서비스 계정 JSON 전체를 환경변수로)
 firebase:
