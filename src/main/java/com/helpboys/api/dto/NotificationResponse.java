@@ -13,7 +13,8 @@ public class NotificationResponse {
     private Long id;
     private String type;
     private String message;
-    private Long postId;
+    private Long referenceId;
+    private String referenceType;
     private boolean isRead;
     private String createdAt;
 
@@ -22,7 +23,8 @@ public class NotificationResponse {
                 .id(n.getId())
                 .type(n.getType().name())
                 .message(n.getMessage())
-                .postId(n.getPostId())
+                .referenceId(n.getReferenceId())
+                .referenceType(n.getReferenceType() != null ? n.getReferenceType().name() : null)
                 .isRead(n.getIsRead())
                 .createdAt(n.getCreatedAt().toString())
                 .build();

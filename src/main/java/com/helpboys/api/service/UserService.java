@@ -157,7 +157,8 @@ public class UserService implements UserDetailsService {
                 userId,
                 Notification.NotificationType.STUDENT_ID_APPROVED,
                 "학생증 인증이 승인되었습니다. 이제 모든 서비스를 이용할 수 있어요!",
-                null
+                null,
+                Notification.ReferenceType.NONE
         );
     }
 
@@ -174,7 +175,8 @@ public class UserService implements UserDetailsService {
                 userId,
                 Notification.NotificationType.STUDENT_ID_REJECTED,
                 "학생증 인증이 거절되었습니다. 학생증 사진을 다시 제출해주세요.",
-                null
+                null,
+                Notification.ReferenceType.NONE
         );
     }
 

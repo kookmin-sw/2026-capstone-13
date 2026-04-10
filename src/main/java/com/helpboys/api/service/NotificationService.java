@@ -52,7 +52,8 @@ public class NotificationService {
     // 알림 생성 (내부용)
     @Transactional
     public void createNotification(Long recipientId, Notification.NotificationType type,
-                                   String message, Long postId) {
+                                   String message, Long referenceId,
+                                   Notification.ReferenceType referenceType) {
         User recipient = userRepository.findById(recipientId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
@@ -60,7 +61,8 @@ public class NotificationService {
                 .recipient(recipient)
                 .type(type)
                 .message(message)
-                .postId(postId)
+                .referenceId(referenceId)
+                .referenceType(referenceType)
                 .build();
 
         notificationRepository.save(notification);

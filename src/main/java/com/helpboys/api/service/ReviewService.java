@@ -80,7 +80,8 @@ public class ReviewService {
                 reviewee.getId(),
                 Notification.NotificationType.REVIEW_RECEIVED,
                 message,
-                helpRequest.getId()
+                helpRequest.getId(),
+                Notification.ReferenceType.HELP_REQUEST
         );
 
         return ReviewResponse.from(review);

@@ -135,7 +135,8 @@ public class HelpRequestService {
                 req.getRequester().getId(),
                 Notification.NotificationType.HELP_OFFER,
                 message,
-                req.getId()
+                req.getId(),
+                Notification.ReferenceType.HELP_REQUEST
         );
 
         return result;
@@ -183,7 +184,8 @@ public class HelpRequestService {
                     req.getRequester().getId(),
                     Notification.NotificationType.REVIEW_REQUEST,
                     reviewMsg,
-                    req.getId()
+                    req.getId(),
+                    Notification.ReferenceType.HELP_REQUEST
             );
 
             // helper에게 도움 완료 알림
@@ -192,7 +194,8 @@ public class HelpRequestService {
                     helper.getId(),
                     Notification.NotificationType.HELP_COMPLETED,
                     completedMsg,
-                    req.getId()
+                    req.getId(),
+                    Notification.ReferenceType.HELP_REQUEST
             );
         }
 
