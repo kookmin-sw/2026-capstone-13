@@ -73,6 +73,8 @@ export default function SchoolScreen() {
   const [noticeSearch, setNoticeSearch] = useState('');
   const [noticeSearchVisible, setNoticeSearchVisible] = useState(false);
   const noticeSearchRef = useRef<TextInput>(null);
+  const [noticeCategory, setNoticeCategory] = useState('전체');
+  const [noticeCategoryOpen, setNoticeCategoryOpen] = useState(false);
   const [noticesLoading, setNoticesLoading] = useState(false);
   const [meals, setMeals] = useState<MealData[]>([]);
   const [mealsLoading, setMealsLoading] = useState(false);
@@ -256,12 +258,34 @@ export default function SchoolScreen() {
 
         {/* ── 공지사항 콘텐츠 ── */}
         {activeTab === 'NOTICE' && (
-          <>
-            {/* 번역 안내 배지 + 검색 버튼 */}
+          <View style={{ zIndex: 10 }}>
+            {/* 카테고리 선택 + 검색 버튼 */}
             <View style={s.noticeTopRow}>
-              <View style={s.translateBadge}>
-                <Ionicons name="language-outline" size={13} color={BLUE} />
-                <Text style={s.translateBadgeText}>공지사항 제목을 {langName}로 번역했어요</Text>
+              <View>
+                <TouchableOpacity
+                  style={s.categoryPickerBtn}
+                  onPress={() => setNoticeCategoryOpen((v) => !v)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={s.categoryPickerText}>{noticeCategory}</Text>
+                  <Ionicons name={noticeCategoryOpen ? 'chevron-up' : 'chevron-down'} size={14} color={BLUE} />
+                </TouchableOpacity>
+                {noticeCategoryOpen && (
+                  <View style={s.categoryDropdown}>
+                    {['전체', '학사', '비자', '장학', '행사/취업', '학생지원', '정부초청'].map((cat) => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={[s.categoryDropdownItem, noticeCategory === cat && s.categoryDropdownItemActive]}
+                        onPress={() => { setNoticeCategory(cat); setNoticeCategoryOpen(false); }}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[s.categoryDropdownText, noticeCategory === cat && s.categoryDropdownTextActive]}>
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
               <TouchableOpacity
                 style={s.searchIconBtn}
@@ -309,6 +333,7 @@ export default function SchoolScreen() {
             ) : (
               notices
                 .filter((n) => {
+                  if (noticeCategory !== '전체' && n.categoryName !== noticeCategory) return false;
                   if (!noticeSearch.trim()) return true;
                   const q = noticeSearch.trim().toLowerCase();
                   return n.titleKo.toLowerCase().includes(q) || n.title.toLowerCase().includes(q);
@@ -374,11 +399,12 @@ export default function SchoolScreen() {
                 </TouchableOpacity>
               ))
             )}
-          </>
+
+            <View style={{ height: 40 }} />
+          </View>
         )}
 
-
-        <View style={{ height: 40 }} />
+        {activeTab === 'CAFETERIA' && <View style={{ height: 40 }} />}
       </ScrollView>
     </View>
   );
@@ -492,18 +518,45 @@ const s = StyleSheet.create({
     fontWeight: '400',
   },
 
-  // ── 번역 배지 ──
+  // ── 카테고리 선택 ──
   noticeTopRow: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
     paddingRight: 4, marginBottom: 2,
+    marginTop: -12,
+    zIndex: 10,
   },
-  translateBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: BLUE_L, paddingHorizontal: 10, paddingVertical: 7,
-    borderRadius: 10, alignSelf: 'flex-start',
+  categoryPickerBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: BLUE_L, paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 10,
   },
-  translateBadgeText: { fontSize: 12, color: BLUE, fontWeight: '600' },
+  categoryPickerText: { fontSize: 13, color: BLUE, fontWeight: '700' },
+  categoryDropdown: {
+    position: 'absolute',
+    top: 40,
+    left: 0,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5EAF5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 8,
+    minWidth: 130,
+    zIndex: 100,
+    overflow: 'hidden',
+  },
+  categoryDropdownItem: {
+    paddingHorizontal: 16, paddingVertical: 11,
+  },
+  categoryDropdownItemActive: {
+    backgroundColor: BLUE_L,
+  },
+  categoryDropdownText: { fontSize: 14, color: T1, fontWeight: '500' },
+  categoryDropdownTextActive: { color: BLUE, fontWeight: '700' },
   searchIconBtn: { padding: 6 },
   noticeSearchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
