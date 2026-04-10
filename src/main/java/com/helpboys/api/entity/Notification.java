@@ -46,11 +46,11 @@ public class Notification {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public enum NotificationType {
-        COMMENT, HELP_OFFER, LIKE, REVIEW_REQUEST, REVIEW_RECEIVED, HELP_COMPLETED,
+        COMMENT, REPLY, HELP_OFFER, LIKE, REVIEW_REQUEST, REVIEW_RECEIVED, HELP_COMPLETED,
         STUDENT_ID_APPROVED, STUDENT_ID_REJECTED
     }
 
     public enum ReferenceType {
-        POST, HELP_REQUEST, NONE
+        POST, COMMENT, HELP_REQUEST, NONE
     }
 }

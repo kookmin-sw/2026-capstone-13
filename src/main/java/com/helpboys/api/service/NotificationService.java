@@ -71,6 +71,7 @@ public class NotificationService {
         if (recipient.getFcmToken() != null) {
             String title = switch (type) {
                 case COMMENT -> "새 댓글";
+                case REPLY -> "새 대댓글";
                 case LIKE -> "좋아요";
                 case HELP_OFFER -> "도움 제안";
                 case REVIEW_REQUEST -> "리뷰 작성 요청";
@@ -81,5 +82,11 @@ public class NotificationService {
             };
             fcmService.sendPush(recipient.getFcmToken(), title, message);
         }
+    }
+
+    // 모두 읽음 처리
+    @Transactional
+    public void markAllAsRead(Long userId) {
+        notificationRepository.markAllAsReadByRecipientId(userId);
     }
 }

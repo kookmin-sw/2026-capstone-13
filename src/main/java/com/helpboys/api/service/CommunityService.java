@@ -209,10 +209,10 @@ public class CommunityService {
             String message = author.getNickname() + "님이 회원님의 댓글에 답글을 달았어요.";
             notificationService.createNotification(
                     parent.getAuthor().getId(),
-                    Notification.NotificationType.COMMENT,
+                    Notification.NotificationType.REPLY,
                     message,
-                    parent.getPost().getId(),
-                    Notification.ReferenceType.POST
+                    parent.getId(),
+                    Notification.ReferenceType.COMMENT
             );
         }
 

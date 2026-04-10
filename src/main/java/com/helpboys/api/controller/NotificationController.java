@@ -49,6 +49,15 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.success("읽음 처리 완료", null));
     }
 
+    // PATCH /api/notifications/read-all - 모두 읽음 처리
+    @PatchMapping("/read-all")
+    public ResponseEntity<ApiResponse<Void>> markAllAsRead(
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        notificationService.markAllAsRead(userId);
+        return ResponseEntity.ok(ApiResponse.success("모두 읽음 처리 완료", null));
+    }
+
     private Long extractUserId(String bearerToken) {
         return jwtUtil.extractUserId(bearerToken.replace("Bearer ", ""));
     }
