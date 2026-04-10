@@ -24,18 +24,6 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
 
-  # Gmail SMTP
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
 
 # 서버 설정
 server:
@@ -67,6 +55,11 @@ logging:
     org.springframework.security: WARN
     org.hibernate: WARN
 
+# SendGrid 이메일 API
+sendgrid:
+  api-key: ${SENDGRID_API_KEY}
+  from-email: ${SENDGRID_FROM_EMAIL}
+
 # Firebase FCM 설정 (서비스 계정 JSON 전체를 환경변수로)
 firebase:
   credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
@@ -86,6 +79,3 @@ management:
   endpoint:
     health:
       show-details: always
-  health:
-    mail:
-      enabled: false

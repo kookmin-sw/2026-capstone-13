@@ -5,13 +5,15 @@ import com.helpboys.api.repository.EmailVerificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -20,9 +22,12 @@ import java.util.Optional;
 public class EmailService {
 
     private final EmailVerificationRepository verificationRepository;
-    private final JavaMailSender mailSender;
+    private final RestTemplate restTemplate;
 
-    @Value("${spring.mail.username}")
+    @Value("${sendgrid.api-key}")
+    private String sendgridApiKey;
+
+    @Value("${sendgrid.from-email}")
     private String fromEmail;
 
     @Transactional
@@ -43,12 +48,26 @@ public class EmailService {
                 .build());
 
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(email);
-            message.setSubject("[도와줘코리안] 이메일 인증번호");
-            message.setText("인증번호: " + code + "\n\n5분 내에 입력해주세요.\n\n도와줘코리안 팀 드림");
-            mailSender.send(message);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(sendgridApiKey);
+
+            Map<String, Object> body = Map.of(
+                    "personalizations", List.of(Map.of("to", List.of(Map.of("email", email)))),
+                    "from", Map.of("email", fromEmail, "name", "도와줘코리안"),
+                    "subject", "[도와줘코리안] 이메일 인증번호",
+                    "content", List.of(Map.of(
+                            "type", "text/plain",
+                            "value", "인증번호: " + code + "\n\n5분 내에 입력해주세요.\n\n도와줘코리안 팀 드림"
+                    ))
+            );
+
+            restTemplate.exchange(
+                    "https://api.sendgrid.com/v3/mail/send",
+                    HttpMethod.POST,
+                    new HttpEntity<>(body, headers),
+                    String.class
+            );
             log.info("[이메일 인증] 발송 완료: {}", email);
         } catch (Exception e) {
             log.error("[이메일 인증] 발송 실패: {}", e.getMessage());
