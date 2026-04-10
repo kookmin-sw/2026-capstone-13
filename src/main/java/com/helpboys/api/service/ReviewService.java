@@ -3,6 +3,7 @@ package com.helpboys.api.service;
 import com.helpboys.api.dto.ReviewRequest;
 import com.helpboys.api.dto.ReviewResponse;
 import com.helpboys.api.entity.HelpRequest;
+import com.helpboys.api.entity.Notification;
 import com.helpboys.api.entity.Review;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
@@ -26,6 +27,7 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final HelpRequestRepository helpRequestRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     // 리뷰 작성 (요청자가 도움 완료 후 helper에게)
     @Transactional
@@ -72,6 +74,15 @@ public class ReviewService {
             updateRevieweeRating(reviewee);
         }
 
+        // reviewee(helper)에게 리뷰 수신 알림 발송
+        String message = reviewer.getNickname() + "님이 '" + truncate(helpRequest.getTitle(), 15) + "'에 대한 리뷰를 남겨주셨어요.";
+        notificationService.createNotification(
+                reviewee.getId(),
+                Notification.NotificationType.REVIEW_RECEIVED,
+                message,
+                helpRequest.getId()
+        );
+
         return ReviewResponse.from(review);
     }
 
@@ -85,5 +96,9 @@ public class ReviewService {
     // reviewee의 평균 평점 갱신
     private void updateRevieweeRating(User reviewee) {
         userRepository.updateRatingFromReviews(reviewee.getId());
+    }
+
+    private String truncate(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max) + "...";
     }
 }

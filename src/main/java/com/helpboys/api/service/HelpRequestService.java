@@ -170,18 +170,28 @@ public class HelpRequestService {
             throw new BusinessException("권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
-        // 완료 처리 시 helper의 도움 횟수 증가 + 요청자에게 리뷰 안내 알림
+        // 완료 처리 시 helper의 도움 횟수 증가 + 알림 발송
         if (newStatus == HelpRequest.RequestStatus.COMPLETED
                 && req.getStatus() != HelpRequest.RequestStatus.COMPLETED
                 && req.getHelper() != null) {
             User helper = req.getHelper();
             userRepository.incrementHelpCount(helper.getId());
 
-            String message = "'" + truncate(req.getTitle(), 15) + "' 도움이 완료됐어요. " + helper.getNickname() + "님에게 리뷰를 남겨보세요!";
+            // 요청자에게 리뷰 안내 알림
+            String reviewMsg = "'" + truncate(req.getTitle(), 15) + "' 도움이 완료됐어요. " + helper.getNickname() + "님에게 리뷰를 남겨보세요!";
             notificationService.createNotification(
                     req.getRequester().getId(),
                     Notification.NotificationType.REVIEW_REQUEST,
-                    message,
+                    reviewMsg,
+                    req.getId()
+            );
+
+            // helper에게 도움 완료 알림
+            String completedMsg = "'" + truncate(req.getTitle(), 15) + "' 도움이 완료됐어요. 수고하셨습니다!";
+            notificationService.createNotification(
+                    helper.getId(),
+                    Notification.NotificationType.HELP_COMPLETED,
+                    completedMsg,
                     req.getId()
             );
         }
