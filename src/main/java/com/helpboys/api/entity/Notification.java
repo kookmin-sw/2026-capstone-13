@@ -41,6 +41,7 @@ public class Notification {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public enum NotificationType {
-        COMMENT, HELP_OFFER, LIKE, REVIEW_REQUEST, STUDENT_ID_APPROVED, STUDENT_ID_REJECTED
+        COMMENT, HELP_OFFER, LIKE, REVIEW_REQUEST, REVIEW_RECEIVED, HELP_COMPLETED,
+        STUDENT_ID_APPROVED, STUDENT_ID_REJECTED
     }
 }

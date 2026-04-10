@@ -72,6 +72,8 @@ public class NotificationService {
                 case LIKE -> "좋아요";
                 case HELP_OFFER -> "도움 제안";
                 case REVIEW_REQUEST -> "리뷰 작성 요청";
+                case REVIEW_RECEIVED -> "새 리뷰";
+                case HELP_COMPLETED -> "도움 완료";
                 case STUDENT_ID_APPROVED -> "학생증 인증 승인";
                 case STUDENT_ID_REJECTED -> "학생증 인증 거절";
             };
