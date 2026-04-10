@@ -1,14 +1,23 @@
 package com.helpboys.api.controller;
 
+import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.CallSignalDto;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.repository.UserRepository;
+import com.helpboys.api.service.ChatService;
+import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * WebRTC 시그널링 컨트롤러
@@ -26,6 +35,8 @@ public class
         CallController {
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
+    private final ChatService chatService;
+    private final JwtUtil jwtUtil;
 
     /**
      * /app/call/signal 로 수신한 모든 WebRTC 시그널을
@@ -63,5 +74,28 @@ public class
                 "/topic/call/" + signal.getToUserId(),
                 signal
         );
+    }
+
+    /**
+     * POST /api/call/subtitle
+     * 통화 중 음성 청크를 받아 STT → 번역 → 상대방에게 자막 이벤트 전송
+     *
+     * @param audioFile  1~2초 단위 음성 청크 (audio/wav)
+     * @param toUserId   자막을 받을 상대방 userId
+     */
+    @PostMapping("/api/call/subtitle")
+    @ResponseBody
+    public ResponseEntity<ApiResponse<Void>> processSubtitle(
+            @RequestParam("audio") MultipartFile audioFile,
+            @RequestParam("toUserId") Long toUserId,
+            @RequestHeader("Authorization") String token) {
+        try {
+            Long fromUserId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+            chatService.processCallSubtitle(audioFile.getBytes(), fromUserId, toUserId);
+            return ResponseEntity.ok(ApiResponse.success("자막 처리 완료", null));
+        } catch (Exception e) {
+            log.warn("[자막] 처리 실패: {}", e.getMessage());
+            return ResponseEntity.ok(ApiResponse.success("자막 처리 실패 (무시)", null));
+        }
     }
 }
