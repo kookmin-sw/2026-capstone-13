@@ -152,26 +152,29 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
 
       {/* ── 이미지 (터치 독립) ── */}
       {validImages.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={s.imageScroll}
-          nestedScrollEnabled={true}
-          directionalLockEnabled={true}
-          decelerationRate="fast"
-          onScrollBeginDrag={onImageScrollStart}
-          onScrollEndDrag={onImageScrollEnd}
-          onMomentumScrollEnd={onImageScrollEnd}
-        >
-          {validImages.map((uri, idx) => (
-            <Image
-              key={idx}
-              source={{ uri }}
-              style={s.feedImage}
-              onError={() => setImgErrors(prev => ({ ...prev, [idx]: true }))}
-            />
-          ))}
-        </ScrollView>
+        <TouchableOpacity activeOpacity={1} onPress={onPress}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={s.imageScroll}
+            nestedScrollEnabled={true}
+            directionalLockEnabled={true}
+            decelerationRate="fast"
+            onScrollBeginDrag={onImageScrollStart}
+            onScrollEndDrag={onImageScrollEnd}
+            onMomentumScrollEnd={onImageScrollEnd}
+          >
+            {validImages.map((uri, idx) => (
+              <TouchableOpacity key={idx} activeOpacity={0.9} onPress={onPress}>
+                <Image
+                  source={{ uri }}
+                  style={s.feedImage}
+                  onError={() => setImgErrors(prev => ({ ...prev, [idx]: true }))}
+                />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </TouchableOpacity>
       )}
 
       {/* ── 반응 바 ── */}
