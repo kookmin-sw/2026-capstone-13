@@ -398,6 +398,81 @@ public class ChatService {
         return dto;
     }
 
+    // 통화 중 실시간 자막 처리: 음성 청크 → STT → 번역 → 상대방에게 WebSocket 전송
+    public void processCallSubtitle(byte[] audioBytes, Long fromUserId, Long toUserId) {
+        User toUser = userRepository.findById(toUserId)
+                .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+        String targetLang = (toUser.getPreferredLanguage() != null && !toUser.getPreferredLanguage().isBlank())
+                ? toUser.getPreferredLanguage() : "en";
+
+        // 1단계: STT
+        String recognizedText = "";
+        String detectedLanguage = "ko";
+        try {
+            HttpRequest speechRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(aiServerUrl + "/api/speech-to-text"))
+                    .header("Content-Type", "audio/wav")
+                    .timeout(java.time.Duration.ofSeconds(10))
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(audioBytes))
+                    .build();
+
+            HttpResponse<String> speechResponse = httpClient.send(speechRequest, HttpResponse.BodyHandlers.ofString());
+            JsonNode speechResult = objectMapper.readTree(speechResponse.body());
+
+            if (speechResult.path("success").asBoolean()) {
+                JsonNode data = speechResult.path("data");
+                recognizedText = data.path("text").asText("");
+                detectedLanguage = data.path("language").asText("ko");
+                if (detectedLanguage.contains("-")) {
+                    detectedLanguage = detectedLanguage.split("-")[0];
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[자막] STT 실패: {}", e.getMessage());
+            return;
+        }
+
+        if (recognizedText.isBlank()) return;
+
+        // 2단계: 번역 (언어가 같으면 스킵)
+        String subtitleText = recognizedText;
+        try {
+            if (!detectedLanguage.equals(targetLang)) {
+                String translateBody = objectMapper.writeValueAsString(
+                        Map.of("text", recognizedText, "target_lang", targetLang, "source_lang", detectedLanguage)
+                );
+                HttpRequest translateRequest = HttpRequest.newBuilder()
+                        .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                        .header("Content-Type", "application/json")
+                        .timeout(java.time.Duration.ofSeconds(10))
+                        .POST(HttpRequest.BodyPublishers.ofString(translateBody))
+                        .build();
+
+                HttpResponse<String> translateResponse = httpClient.send(translateRequest, HttpResponse.BodyHandlers.ofString());
+                JsonNode translateResult = objectMapper.readTree(translateResponse.body());
+
+                if (translateResult.path("success").asBoolean()) {
+                    subtitleText = translateResult.path("data").path("translated").asText(recognizedText);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[자막] 번역 실패, 원문으로 전송: {}", e.getMessage());
+        }
+
+        // 3단계: 기존 /topic/call/{toUserId} 채널로 자막 이벤트 전송
+        messagingTemplate.convertAndSend("/topic/call/" + toUserId,
+                Map.of(
+                        "type", "SUBTITLE",
+                        "fromUserId", fromUserId,
+                        "originalText", recognizedText,
+                        "translatedText", subtitleText,
+                        "language", detectedLanguage
+                ));
+
+        log.info("[자막] from={} to={} text={}", fromUserId, toUserId, subtitleText);
+    }
+
     // 채팅 메시지 온디맨드 번역 (translatedContent 없는 경우 Gemini 번역 후 저장)
     public ChatMessageDto translateMessage(Long messageId, Long userId) {
         ChatMessage message = chatMessageRepository.findById(messageId)
