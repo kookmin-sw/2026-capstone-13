@@ -152,26 +152,29 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
 
       {/* ── 이미지 (터치 독립) ── */}
       {validImages.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={s.imageScroll}
-          nestedScrollEnabled={true}
-          directionalLockEnabled={true}
-          decelerationRate="fast"
-          onScrollBeginDrag={onImageScrollStart}
-          onScrollEndDrag={onImageScrollEnd}
-          onMomentumScrollEnd={onImageScrollEnd}
-        >
-          {validImages.map((uri, idx) => (
-            <Image
-              key={idx}
-              source={{ uri }}
-              style={s.feedImage}
-              onError={() => setImgErrors(prev => ({ ...prev, [idx]: true }))}
-            />
-          ))}
-        </ScrollView>
+        <TouchableOpacity activeOpacity={1} onPress={onPress}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={s.imageScroll}
+            nestedScrollEnabled={true}
+            directionalLockEnabled={true}
+            decelerationRate="fast"
+            onScrollBeginDrag={onImageScrollStart}
+            onScrollEndDrag={onImageScrollEnd}
+            onMomentumScrollEnd={onImageScrollEnd}
+          >
+            {validImages.map((uri, idx) => (
+              <TouchableOpacity key={idx} activeOpacity={0.9} onPress={onPress}>
+                <Image
+                  source={{ uri }}
+                  style={s.feedImage}
+                  onError={() => setImgErrors(prev => ({ ...prev, [idx]: true }))}
+                />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </TouchableOpacity>
       )}
 
       {/* ── 반응 바 ── */}
@@ -198,10 +201,10 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
             <Ionicons name={liked ? 'heart' : 'heart-outline'} size={16} color={liked ? '#EF4444' : T2} />
             <Text style={s.reactionCount}>{likeCount}</Text>
           </TouchableOpacity>
-          <View style={s.reactionItem}>
+          <TouchableOpacity style={s.reactionItem} activeOpacity={0.7} onPress={onPress}>
             <Ionicons name="chatbubble-outline" size={15} color={T2} />
             <Text style={s.reactionCount}>{item.comments}</Text>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity
             style={s.iconBtn}
             activeOpacity={0.7}
