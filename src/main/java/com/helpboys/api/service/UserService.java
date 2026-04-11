@@ -12,6 +12,7 @@ import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
@@ -54,8 +56,8 @@ public class UserService implements UserDetailsService {
     // 회원가입 (이메일 인증 완료 + 학생증 이미지 필요)
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        if (!request.getEmail().contains(".ac.kr")) {
-            throw new BusinessException("학교 이메일(.ac.kr)만 허용됩니다.");
+        if (!request.getEmail().endsWith("@kookmin.ac.kr") && !request.getEmail().endsWith(".kookmin.ac.kr")) {
+            throw new BusinessException("국민대학교 이메일(@kookmin.ac.kr)만 허용됩니다.");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("이미 사용 중인 이메일입니다.");
@@ -154,6 +156,8 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
         user.setStudentIdVerified(true);
         user.setStudentIdStatus(User.StudentIdStatus.APPROVED);
+        deleteCloudinaryImage(user.getStudentIdImageUrl());
+        user.setStudentIdImageUrl(null);
         userRepository.save(user);
 
         notificationService.createNotification(
@@ -172,6 +176,8 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
         user.setStudentIdVerified(false);
         user.setStudentIdStatus(User.StudentIdStatus.REJECTED);
+        deleteCloudinaryImage(user.getStudentIdImageUrl());
+        user.setStudentIdImageUrl(null);
         userRepository.save(user);
 
         notificationService.createNotification(
@@ -181,6 +187,21 @@ public class UserService implements UserDetailsService {
                 null,
                 Notification.ReferenceType.NONE
         );
+    }
+
+    // Cloudinary 이미지 삭제 (URL에서 public_id 추출)
+    private void deleteCloudinaryImage(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) return;
+        try {
+            String publicId = imageUrl.substring(imageUrl.indexOf("/upload/") + 8);
+            if (publicId.matches("v\\d+/.*")) {
+                publicId = publicId.substring(publicId.indexOf('/') + 1);
+            }
+            publicId = publicId.substring(0, publicId.lastIndexOf('.'));
+            cloudinary.uploader().destroy(publicId, Map.of());
+        } catch (Exception e) {
+            log.warn("[Cloudinary] 이미지 삭제 실패: {}", e.getMessage());
+        }
     }
 
     // 어드민 권한 확인
@@ -276,6 +297,8 @@ public class UserService implements UserDetailsService {
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new BusinessException("비밀번호가 올바르지 않습니다.", HttpStatus.BAD_REQUEST);
         }
+        deleteCloudinaryImage(user.getProfileImage());
+        deleteCloudinaryImage(user.getStudentIdImageUrl());
         user.setDeleted(true);
         user.setEmail("deleted_" + userId + "@deleted.com");
         user.setNickname("(알 수 없음)");
