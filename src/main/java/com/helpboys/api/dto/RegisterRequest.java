@@ -4,6 +4,7 @@ import com.helpboys.api.entity.User;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Setter
@@ -30,4 +31,10 @@ public class RegisterRequest {
 
     @NotBlank(message = "학생증 이미지를 업로드해주세요.")
     private String studentIdImageUrl;
+
+    @AssertTrue(message = "이용약관에 동의해주세요.")
+    private boolean termsAgreed;
+
+    @AssertTrue(message = "개인정보처리방침에 동의해주세요.")
+    private boolean privacyAgreed;
 }
