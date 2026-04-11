@@ -55,9 +55,23 @@ class TranslationService:
             self.azure_key = None
             print("⚠️  AZURE_TRANSLATOR_KEY 없음")
 
+        # Groq (LLM 번역)
+        self.groq_client = None
+        self.groq_model = 'llama-3.3-70b-versatile'
+        groq_key = os.getenv("GROQ_API_KEY")
+        if groq_key:
+            try:
+                from groq import Groq
+                self.groq_client = Groq(api_key=groq_key)
+                print("✅ Groq API 연동 완료")
+            except Exception as e:
+                print(f"⚠️  Groq API 초기화 실패: {e}")
+        else:
+            print("⚠️  GROQ_API_KEY 없음")
+
         # Gemini (폴백)
         self.gemini_client = None
-        self.model_name = 'gemini-2.5-flash'
+        self.model_name = 'gemini-2.0-flash'
         self.system_instruction = """
 You are an expert translator for a matching app between Korean students and international students.
 Your goal is to provide natural, casual, and context-aware translations.
@@ -102,29 +116,47 @@ Your goal is to provide natural, casual, and context-aware translations.
             return "en"
 
     async def detect_nuance(self, text: str) -> Optional[str]:
-        """한국어 문화적 뉘앙스 감지 (Gemini 전용)"""
-        if not self.gemini_client:
-            return None
-        try:
-            from google import genai
-            prompt = f"""You are a Korean cultural expert helping foreigners understand Korean social expressions.
+        """한국어 문화적 뉘앙스 감지 (Gemini → Groq 폴백)"""
+        prompt = f"""Korean text: "{text}"
 
-Analyze this Korean text: "{text}"
+Respond "null" UNLESS the text contains very specific Korean slang/internet slang that a foreigner would completely misunderstand even after translation (e.g. 킹받다, 존맛탱, 알잘딱깔센, 내로남불).
 
-If this text contains a Korean cultural nuance, indirect expression, or social phrase that a foreigner might misunderstand, explain it in ONE short sentence in English.
-If the text is straightforward, respond with exactly: null
+Normal sentences, questions, greetings, opinions, complaints = null.
+Only truly untranslatable Korean-specific expressions = one short English explanation.
 
-Respond ONLY with the explanation or "null". No extra text."""
-            response = await asyncio.to_thread(
-                self.gemini_client.models.generate_content,
-                model=self.model_name,
-                contents=prompt,
-            )
-            result = response.text.strip()
-            return None if result.lower() == 'null' else result
-        except Exception as e:
-            print(f"[Gemini] 뉘앙스 감지 실패: {e}")
-            return None
+Reply "null" or one sentence only."""
+
+        # Gemini 시도
+        if self.gemini_client:
+            try:
+                from google import genai
+                response = await asyncio.to_thread(
+                    self.gemini_client.models.generate_content,
+                    model=self.model_name,
+                    contents=prompt,
+                )
+                result = response.text.strip()
+                return None if result.lower() == 'null' else result
+            except Exception as e:
+                print(f"[Gemini] 뉘앙스 감지 실패 → Groq 시도: {e}")
+
+        # Groq 폴백
+        if self.groq_client:
+            try:
+                def _call():
+                    return self.groq_client.chat.completions.create(
+                        model=self.groq_model,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.2,
+                        max_tokens=100,
+                    )
+                response = await asyncio.to_thread(_call)
+                result = response.choices[0].message.content.strip()
+                return None if result.lower() == 'null' else result
+            except Exception as e:
+                print(f"[Groq] 뉘앙스 감지 실패: {e}")
+
+        return None
 
     @property
     def deepl_quota_exceeded(self) -> bool:
@@ -158,12 +190,7 @@ Respond ONLY with the explanation or "null". No extra text."""
         else:
             raise RuntimeError("사용 가능한 번역 API 키가 없습니다 (DeepL / Google / Azure / Gemini)")
 
-        detected_source = result.get("source_language", source_lang or "")
-        if detected_source == "ko":
-            result["cultural_note"] = await self.detect_nuance(text)
-        else:
-            result["cultural_note"] = None
-
+        result["cultural_note"] = None
         return result
 
     async def _deepl_translate(self, text: str, target_lang: str, source_lang: Optional[str]):
@@ -334,6 +361,65 @@ Text: {text}"""
                     await asyncio.sleep(1.5 * (attempt + 1))
 
         raise RuntimeError(f"[Gemini] 3회 재시도 모두 실패: {last_error}")
+
+    async def _groq_translate(self, text: str, target_lang: str, source_lang: Optional[str], context: Optional[str] = None):
+        """Groq API로 자연스러운 번역 (LLM 기반)"""
+        if not self.groq_client:
+            raise RuntimeError("GROQ_API_KEY가 설정되지 않았습니다")
+
+        lang_name = LANG_NAMES.get(target_lang, target_lang)
+        if context:
+            prompt = f"""Translate this Korean comment into natural, colloquial {lang_name}.
+IMPORTANT: This is Korean internet/chat slang. Do NOT translate literally.
+- "개가 뭐래" = "what's their problem" / "what are they on about" (NOT "what does the dog say")
+- "개" as prefix = intensifier meaning "very/super" (NOT "dog")
+- Translate the MEANING and TONE, not the words literally.
+Use the post context to understand nuance.
+Return ONLY the translation.
+
+Post context:
+{context}
+
+Comment to translate: {text}"""
+        else:
+            prompt = f"""Translate this Korean text into natural, colloquial {lang_name}.
+IMPORTANT: This is Korean internet/chat slang. Do NOT translate literally.
+- "개가 뭐래" = "what's their problem" / "what are they on about" (NOT "what does the dog say")
+- "개" as prefix = intensifier meaning "very/super" (NOT "dog")
+- "킹받다" = "so annoying / drives me crazy" (NOT anything about "king")
+- Translate the MEANING and TONE, not the words literally.
+Return ONLY the translation.
+
+Text: {text}"""
+
+        def _call():
+            return self.groq_client.chat.completions.create(
+                model=self.groq_model,
+                messages=[
+                    {"role": "system", "content": self.system_instruction},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.3,
+                max_tokens=1024,
+            )
+
+        try:
+            response = await asyncio.to_thread(_call)
+            translated = response.choices[0].message.content.strip()
+            if not translated:
+                raise ValueError("빈 응답")
+            detected_source = source_lang or self._detect_language(text)
+            cultural_note = None
+            if detected_source == "ko":
+                cultural_note = await self.detect_nuance(text)
+            return {
+                "original": text, "translated": translated,
+                "source_language": detected_source,
+                "target_language": target_lang, "mode": "groq",
+                "cultural_note": cultural_note,
+            }
+        except Exception as e:
+            raise RuntimeError(f"[Groq] 번역 실패: {e}")
 
     async def azure_translate_text(self, text: str, target_lang: str, source_lang: Optional[str] = None) -> str:
         """Azure Translator로 번역 (식단/공지 크롤링 대량 번역용 — 레거시)"""
