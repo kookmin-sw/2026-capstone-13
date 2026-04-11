@@ -5,6 +5,7 @@ import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
   Alert,
@@ -109,12 +110,12 @@ export default function ChatRoomScreen() {
     }
   }, [roomId]);
 
-  // COMPLETED 상태면 리뷰 작성 여부 조회
-  useEffect(() => {
+  // COMPLETED 상태면 포커스 될 때마다 리뷰 작성 여부 재조회 (후기 작성 후 돌아올 때 반영)
+  useFocusEffect(useCallback(() => {
     if (params.requestStatus === 'COMPLETED' || helpStatus === 'COMPLETED') {
       hasReviewed(roomId).then(setAlreadyReviewed).catch(() => {});
     }
-  }, [helpStatus, roomId]);
+  }, [helpStatus, roomId]));
 
   // 채팅방 입장 시 뱃지 초기화 + 활성 채팅방 등록 + leftRooms 초기화(재입장)
   useEffect(() => {
