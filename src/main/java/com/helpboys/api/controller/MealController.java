@@ -43,8 +43,8 @@ public class MealController {
     public ResponseEntity<ApiResponse<String>> triggerCrawl(
             @RequestHeader("Authorization") String token) {
         checkAdmin(token);
-        int count = mealService.crawlAndSave();
-        return ResponseEntity.ok(ApiResponse.success("크롤링 완료", count + "건 저장됨"));
+        new Thread(() -> mealService.crawlAndSave()).start();
+        return ResponseEntity.ok(ApiResponse.success("크롤링 시작됨", "백그라운드에서 처리 중"));
     }
 
     /**
