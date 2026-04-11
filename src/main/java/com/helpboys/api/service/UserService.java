@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -73,6 +74,8 @@ public class UserService implements UserDetailsService {
                 .emailVerified(true)
                 .studentIdImageUrl(request.getStudentIdImageUrl())
                 .studentIdStatus(User.StudentIdStatus.PENDING)
+                .termsAgreedAt(LocalDateTime.now())
+                .privacyAgreedAt(LocalDateTime.now())
                 .build();
 
         UserResponse response = UserResponse.from(userRepository.save(user));

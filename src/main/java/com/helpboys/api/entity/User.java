@@ -91,6 +91,14 @@ public class User {
     @Builder.Default
     private boolean isDeleted = false;
 
+    // 이용약관 동의 시각
+    @Column(name = "terms_agreed_at")
+    private LocalDateTime termsAgreedAt;
+
+    // 개인정보처리방침 동의 시각
+    @Column(name = "privacy_agreed_at")
+    private LocalDateTime privacyAgreedAt;
+
     // FCM 푸시 알림 토큰 (앱 로그인 시 저장)
     @Column(name = "fcm_token", columnDefinition = "TEXT")
     private String fcmToken;
