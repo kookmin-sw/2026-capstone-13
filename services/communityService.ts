@@ -149,6 +149,7 @@ export const translateCommunityComment = async (
   const params = lang ? `?lang=${lang}` : '';
   const response = await api.get<ApiResponse<{ content: string; langCode: string }>>(
     `/community/comments/${commentId}/translate${params}`,
+    { timeout: 35000 },
   );
   return response.data;
 };
@@ -161,6 +162,7 @@ export const translateCommunityPost = async (
   const params = lang ? `?lang=${lang}` : '';
   const response = await api.get<ApiResponse<{ title: string; content: string; langCode: string }>>(
     `/community/${postId}/translate${params}`,
+    { timeout: 35000 },
   );
   return response.data;
 };

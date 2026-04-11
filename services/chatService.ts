@@ -57,6 +57,6 @@ export const sendVoiceMessage = async (roomId: number, audioUri: string): Promis
 
 // 채팅 메시지 온디맨드 번역 (translatedContent 없는 경우)
 export const translateChatMessage = async (messageId: number): Promise<ApiResponse<ChatMessageDto>> => {
-  const response = await api.post<ApiResponse<ChatMessageDto>>(`/chat/messages/${messageId}/translate`);
+  const response = await api.post<ApiResponse<ChatMessageDto>>(`/chat/messages/${messageId}/translate`, undefined, { timeout: 35000 });
   return response.data;
 };

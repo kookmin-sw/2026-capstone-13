@@ -31,6 +31,15 @@ const BG     = '#F0F4FA';
 const DIV    = '#D4E4FF';
 
 
+const CATEGORY_TRANSLATIONS: Record<string, Record<string, string>> = {
+  en: { 장학: 'Scholarship', 학사: 'Academic', 행사: 'Event', 취업: 'Employment', 시설: 'Facilities', '행사/취업': 'Event/Employment', 비자: 'Visa', 학생지원: 'Student Support', 정부초청: 'Gov. Invitation' },
+  ja: { 장학: '奨学金', 학사: '学事', 행사: 'イベント', 취업: '就職', 시설: '施設', '행사/취업': 'イベント/就職', 비자: 'ビザ', 학생지원: '学生支援', 정부초청: '政府招聘' },
+  'zh-Hans': { 장학: '奖学金', 학사: '学业', 행사: '活동', 취업: '就业', 시설: '设施', '행사/취업': '活动/就业', 비자: '签证', 학생지원: '学生支持', 정부초청: '政府邀请' },
+  ru: { 장학: 'Стипендия', 학사: 'Учёба', 행사: 'Мероприятие', 취업: 'Трудоустройство', 시설: 'Объекты', '행사/취업': 'Мероп./Работа', 비자: 'Виза', 학생지원: 'Поддержка', 정부초청: 'Приглашение' },
+  mn: { 장학: 'Тэтгэлэг', 학사: 'Сургалт', 행사: 'Арга хэмжээ', 취업: 'Ажил эрхлэлт', 시설: 'Байгууламж', '행사/취업': 'Арга/Ажил', 비자: 'Виз', 학생지원: 'Дэмжлэг', 정부초청: 'Урилга' },
+  vi: { 장학: 'Học bổng', 학사: 'Học thuật', 행사: 'Sự kiện', 취업: 'Việc làm', 시설: 'Cơ sở', '행사/취업': 'Sự kiện/Việc làm', 비자: 'Visa', 학생지원: 'Hỗ trợ SV', 정부초청: 'Mời chính phủ' },
+};
+
 function getLevel(count: number): { label: string; color: string; bg: string } {
   if (count >= 31) return { label: '마스터', color: '#F97316', bg: '#FFF7ED' };
   if (count >= 16) return { label: '전문가', color: '#8B5CF6', bg: '#F5F3FF' };
@@ -63,6 +72,7 @@ interface SchoolNotice {
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const langCode = user?.preferredLanguage ?? 'en';
   const { hasUnread, fetchHasUnread } = useNotificationStore();
   const isInternational = user?.userType === 'INTERNATIONAL' || user?.userType === 'EXCHANGE';
   const [requests, setRequests]             = useState<HelpRequest[]>([]);
@@ -235,8 +245,8 @@ export default function HomeScreen() {
                   <Ionicons name="megaphone-outline" size={14} color={BLUE} />
                 </View>
                 <View style={s.summaryTextWrap}>
-                  <Text style={s.summaryLabel}>{notice.categoryName || '학교 공지'}</Text>
-                  <Text style={s.summaryValue} numberOfLines={1}>{notice.titleKo}</Text>
+                  <Text style={s.summaryLabel}>{CATEGORY_TRANSLATIONS[langCode]?.[notice.categoryName] ?? notice.categoryName ?? '학교 공지'}</Text>
+                  <Text style={s.summaryValue} numberOfLines={1}>{notice.title || notice.titleKo}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={14} color={T2} />
               </TouchableOpacity>
