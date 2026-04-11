@@ -29,7 +29,7 @@ public class ReviewService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
-    // 리뷰 작성 (요청자가 도움 완료 후 helper에게)
+    // 리뷰 작성 (요청자 ↔ 도우미 양방향)
     @Transactional
     public ReviewResponse createReview(Long helpRequestId, ReviewRequest request, Long reviewerId) {
         HelpRequest helpRequest = helpRequestRepository.findById(helpRequestId)
@@ -40,14 +40,16 @@ public class ReviewService {
             throw new BusinessException("완료된 도움 요청만 리뷰할 수 있습니다.");
         }
 
-        // 요청자만 리뷰 가능
-        if (!helpRequest.getRequester().getId().equals(reviewerId)) {
-            throw new BusinessException("도움을 요청한 본인만 리뷰를 작성할 수 있습니다.", HttpStatus.FORBIDDEN);
-        }
-
-        // helper가 있는지 확인
         if (helpRequest.getHelper() == null) {
             throw new BusinessException("매칭된 도우미가 없습니다.");
+        }
+
+        Long requesterId = helpRequest.getRequester().getId();
+        Long helperId = helpRequest.getHelper().getId();
+
+        // 요청자 또는 도우미만 리뷰 가능
+        if (!reviewerId.equals(requesterId) && !reviewerId.equals(helperId)) {
+            throw new BusinessException("해당 도움 요청의 참여자만 리뷰를 작성할 수 있습니다.", HttpStatus.FORBIDDEN);
         }
 
         // 중복 리뷰 방지
@@ -57,7 +59,10 @@ public class ReviewService {
 
         User reviewer = userRepository.findById(reviewerId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-        User reviewee = helpRequest.getHelper();
+        // 리뷰 대상: 내가 요청자면 도우미에게, 내가 도우미면 요청자에게
+        User reviewee = reviewerId.equals(requesterId)
+                ? helpRequest.getHelper()
+                : helpRequest.getRequester();
 
         Review review = Review.builder()
                 .helpRequest(helpRequest)
@@ -69,12 +74,11 @@ public class ReviewService {
 
         reviewRepository.save(review);
 
-        // 별점이 있을 때만 평균 평점 업데이트
         if (request.getRating() != null) {
             updateRevieweeRating(reviewee);
         }
 
-        // reviewee(helper)에게 리뷰 수신 알림 발송
+        // reviewee에게 리뷰 수신 알림
         String message = reviewer.getNickname() + "님이 '" + truncate(helpRequest.getTitle(), 15) + "'에 대한 리뷰를 남겨주셨어요.";
         notificationService.createNotification(
                 reviewee.getId(),
@@ -85,6 +89,12 @@ public class ReviewService {
         );
 
         return ReviewResponse.from(review);
+    }
+
+    // 리뷰 작성 여부 확인
+    @Transactional(readOnly = true)
+    public boolean hasReviewed(Long helpRequestId, Long reviewerId) {
+        return reviewRepository.existsByHelpRequestIdAndReviewerId(helpRequestId, reviewerId);
     }
 
     // 특정 유저가 받은 리뷰 목록 조회 (페이지네이션)
