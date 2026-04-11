@@ -12,6 +12,7 @@ public class ReviewResponse {
 
     private Long id;
     private Long helpRequestId;
+    private String helpRequestTitle;
     private UserResponse reviewer;
     private UserResponse reviewee;
     private Integer rating;   // null이면 별점 미입력, 1~5 정수
@@ -22,6 +23,7 @@ public class ReviewResponse {
         return ReviewResponse.builder()
                 .id(review.getId())
                 .helpRequestId(review.getHelpRequest().getId())
+                .helpRequestTitle(review.getHelpRequest().getTitle())
                 .reviewer(UserResponse.from(review.getReviewer()))
                 .reviewee(UserResponse.from(review.getReviewee()))
                 .rating(review.getRating())
