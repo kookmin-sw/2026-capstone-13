@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { getChatMessages, sendVoiceMessage, translateChatMessage, type ChatMessageDto } from '../services/chatService';
 import { completeHelpRequest, rejectHelper, startHelpRequest, resetToWaiting } from '../services/helpService';
+import { hasReviewed } from '../services/reviewService';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
 
@@ -83,6 +84,7 @@ export default function ChatRoomScreen() {
   const [isSendingVoice, setIsSendingVoice] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [translateEnabled, setTranslateEnabled] = useState(true);
+  const [alreadyReviewed, setAlreadyReviewed] = useState(false);
   const { unreadCount, setUnreadCount, setActiveChatroom, leaveRoom, rejoinRoom } = useChatStore();
   const clientRef = useRef<Client | null>(null);
   const listRef = useRef<FlatList>(null);
@@ -106,6 +108,13 @@ export default function ChatRoomScreen() {
       setIsLoading(false);
     }
   }, [roomId]);
+
+  // COMPLETED 상태면 리뷰 작성 여부 조회
+  useEffect(() => {
+    if (params.requestStatus === 'COMPLETED' || helpStatus === 'COMPLETED') {
+      hasReviewed(roomId).then(setAlreadyReviewed).catch(() => {});
+    }
+  }, [helpStatus, roomId]);
 
   // 채팅방 입장 시 뱃지 초기화 + 활성 채팅방 등록 + leftRooms 초기화(재입장)
   useEffect(() => {
@@ -442,6 +451,7 @@ export default function ChatRoomScreen() {
               const res = await completeHelpRequest(roomId);
               if (res.success) {
                 setHelpStatus('COMPLETED');
+                setAlreadyReviewed(false);
                 setSystemMessages((prev) => [
                   ...prev,
                   { type: 'system', content: '🎉 매칭이 완료되었습니다!', id: `sys-complete-${Date.now()}` },
@@ -613,7 +623,7 @@ export default function ChatRoomScreen() {
           activeOpacity={1}
         >
           <View style={styles.menuDropdown}>
-            {isRequester && !chatEnded && (
+            {isRequester && !chatEnded && helpStatus !== 'COMPLETED' && (
               <>
                 <TouchableOpacity
                   style={styles.menuItem}
@@ -622,6 +632,38 @@ export default function ChatRoomScreen() {
                   <Ionicons name="checkmark-circle-outline" size={18} color={PRIMARY} />
                   <Text style={styles.menuItemText}>매칭완료하기</Text>
                 </TouchableOpacity>
+                <View style={styles.menuDivider} />
+              </>
+            )}
+            {helpStatus === 'COMPLETED' && !alreadyReviewed && (
+              <>
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    router.push({
+                      pathname: '/write-review',
+                      params: {
+                        helpRequestId: String(roomId),
+                        partnerNickname,
+                        partnerProfileImage: partnerProfileImage ?? '',
+                        requestTitle,
+                      },
+                    });
+                  }}
+                >
+                  <Ionicons name="star-outline" size={18} color="#F97316" />
+                  <Text style={styles.menuItemText}>후기 작성</Text>
+                </TouchableOpacity>
+                <View style={styles.menuDivider} />
+              </>
+            )}
+            {helpStatus === 'COMPLETED' && alreadyReviewed && (
+              <>
+                <View style={styles.menuItem}>
+                  <Ionicons name="star" size={18} color="#F97316" />
+                  <Text style={[styles.menuItemText, { color: '#A8C8FA' }]}>후기 작성 완료</Text>
+                </View>
                 <View style={styles.menuDivider} />
               </>
             )}
