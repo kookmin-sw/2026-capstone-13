@@ -32,8 +32,8 @@ public class EmailService {
 
     @Transactional
     public void sendVerificationCode(String email) {
-        if (!email.contains(".ac.kr")) {
-            throw new IllegalArgumentException("학교 이메일(.ac.kr)만 허용됩니다.");
+        if (!email.endsWith("@kookmin.ac.kr") && !email.endsWith(".kookmin.ac.kr")) {
+            throw new IllegalArgumentException("국민대학교 이메일(@kookmin.ac.kr)만 허용됩니다.");
         }
 
         verificationRepository.deleteByEmail(email);
