@@ -71,7 +71,7 @@ const CardContent = memo(
           </View>
         )}
 
-        {/* 페이크 그라데이션 레이어 */}
+        {/* 페이크 그라데이션 레이어 (100단계) */}
         <View style={styles.gradient1} pointerEvents="none" />
         <View style={styles.gradient2} pointerEvents="none" />
         <View style={styles.gradient3} pointerEvents="none" />
@@ -80,6 +80,98 @@ const CardContent = memo(
         <View style={styles.gradient6} pointerEvents="none" />
         <View style={styles.gradient7} pointerEvents="none" />
         <View style={styles.gradient8} pointerEvents="none" />
+        <View style={styles.gradient9} pointerEvents="none" />
+        <View style={styles.gradient10} pointerEvents="none" />
+        <View style={styles.gradient11} pointerEvents="none" />
+        <View style={styles.gradient12} pointerEvents="none" />
+        <View style={styles.gradient13} pointerEvents="none" />
+        <View style={styles.gradient14} pointerEvents="none" />
+        <View style={styles.gradient15} pointerEvents="none" />
+        <View style={styles.gradient16} pointerEvents="none" />
+        <View style={styles.gradient17} pointerEvents="none" />
+        <View style={styles.gradient18} pointerEvents="none" />
+        <View style={styles.gradient19} pointerEvents="none" />
+        <View style={styles.gradient20} pointerEvents="none" />
+        <View style={styles.gradient21} pointerEvents="none" />
+        <View style={styles.gradient22} pointerEvents="none" />
+        <View style={styles.gradient23} pointerEvents="none" />
+        <View style={styles.gradient24} pointerEvents="none" />
+        <View style={styles.gradient25} pointerEvents="none" />
+        <View style={styles.gradient26} pointerEvents="none" />
+        <View style={styles.gradient27} pointerEvents="none" />
+        <View style={styles.gradient28} pointerEvents="none" />
+        <View style={styles.gradient29} pointerEvents="none" />
+        <View style={styles.gradient30} pointerEvents="none" />
+        <View style={styles.gradient31} pointerEvents="none" />
+        <View style={styles.gradient32} pointerEvents="none" />
+        <View style={styles.gradient33} pointerEvents="none" />
+        <View style={styles.gradient34} pointerEvents="none" />
+        <View style={styles.gradient35} pointerEvents="none" />
+        <View style={styles.gradient36} pointerEvents="none" />
+        <View style={styles.gradient37} pointerEvents="none" />
+        <View style={styles.gradient38} pointerEvents="none" />
+        <View style={styles.gradient39} pointerEvents="none" />
+        <View style={styles.gradient40} pointerEvents="none" />
+        <View style={styles.gradient41} pointerEvents="none" />
+        <View style={styles.gradient42} pointerEvents="none" />
+        <View style={styles.gradient43} pointerEvents="none" />
+        <View style={styles.gradient44} pointerEvents="none" />
+        <View style={styles.gradient45} pointerEvents="none" />
+        <View style={styles.gradient46} pointerEvents="none" />
+        <View style={styles.gradient47} pointerEvents="none" />
+        <View style={styles.gradient48} pointerEvents="none" />
+        <View style={styles.gradient49} pointerEvents="none" />
+        <View style={styles.gradient50} pointerEvents="none" />
+        <View style={styles.gradient51} pointerEvents="none" />
+        <View style={styles.gradient52} pointerEvents="none" />
+        <View style={styles.gradient53} pointerEvents="none" />
+        <View style={styles.gradient54} pointerEvents="none" />
+        <View style={styles.gradient55} pointerEvents="none" />
+        <View style={styles.gradient56} pointerEvents="none" />
+        <View style={styles.gradient57} pointerEvents="none" />
+        <View style={styles.gradient58} pointerEvents="none" />
+        <View style={styles.gradient59} pointerEvents="none" />
+        <View style={styles.gradient60} pointerEvents="none" />
+        <View style={styles.gradient61} pointerEvents="none" />
+        <View style={styles.gradient62} pointerEvents="none" />
+        <View style={styles.gradient63} pointerEvents="none" />
+        <View style={styles.gradient64} pointerEvents="none" />
+        <View style={styles.gradient65} pointerEvents="none" />
+        <View style={styles.gradient66} pointerEvents="none" />
+        <View style={styles.gradient67} pointerEvents="none" />
+        <View style={styles.gradient68} pointerEvents="none" />
+        <View style={styles.gradient69} pointerEvents="none" />
+        <View style={styles.gradient70} pointerEvents="none" />
+        <View style={styles.gradient71} pointerEvents="none" />
+        <View style={styles.gradient72} pointerEvents="none" />
+        <View style={styles.gradient73} pointerEvents="none" />
+        <View style={styles.gradient74} pointerEvents="none" />
+        <View style={styles.gradient75} pointerEvents="none" />
+        <View style={styles.gradient76} pointerEvents="none" />
+        <View style={styles.gradient77} pointerEvents="none" />
+        <View style={styles.gradient78} pointerEvents="none" />
+        <View style={styles.gradient79} pointerEvents="none" />
+        <View style={styles.gradient80} pointerEvents="none" />
+        <View style={styles.gradient81} pointerEvents="none" />
+        <View style={styles.gradient82} pointerEvents="none" />
+        <View style={styles.gradient83} pointerEvents="none" />
+        <View style={styles.gradient84} pointerEvents="none" />
+        <View style={styles.gradient85} pointerEvents="none" />
+        <View style={styles.gradient86} pointerEvents="none" />
+        <View style={styles.gradient87} pointerEvents="none" />
+        <View style={styles.gradient88} pointerEvents="none" />
+        <View style={styles.gradient89} pointerEvents="none" />
+        <View style={styles.gradient90} pointerEvents="none" />
+        <View style={styles.gradient91} pointerEvents="none" />
+        <View style={styles.gradient92} pointerEvents="none" />
+        <View style={styles.gradient93} pointerEvents="none" />
+        <View style={styles.gradient94} pointerEvents="none" />
+        <View style={styles.gradient95} pointerEvents="none" />
+        <View style={styles.gradient96} pointerEvents="none" />
+        <View style={styles.gradient97} pointerEvents="none" />
+        <View style={styles.gradient98} pointerEvents="none" />
+        <View style={styles.gradient99} pointerEvents="none" />
+        <View style={styles.gradient100} pointerEvents="none" />
 
         {/* 콘텐츠 (배경색 없음) */}
         <View style={styles.cardBottom}>
@@ -282,72 +374,106 @@ const styles = StyleSheet.create({
     opacity: 0.25,
   },
 
-  gradient1: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '40%',
-    height: '8%',
-    backgroundColor: 'rgba(0,0,0,0.02)',
-  },
-  gradient2: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '48%',
-    height: '7%',
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  gradient3: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '55%',
-    height: '7%',
-    backgroundColor: 'rgba(0,0,0,0.09)',
-  },
-  gradient4: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '62%',
-    height: '7%',
-    backgroundColor: 'rgba(0,0,0,0.14)',
-  },
-  gradient5: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '69%',
-    height: '7%',
-    backgroundColor: 'rgba(0,0,0,0.20)',
-  },
-  gradient6: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '76%',
-    height: '7%',
-    backgroundColor: 'rgba(0,0,0,0.27)',
-  },
-  gradient7: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '83%',
-    height: '7%',
-    backgroundColor: 'rgba(0,0,0,0.33)',
-  },
-  gradient8: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '90%',
-    height: '10%',
-    backgroundColor: 'rgba(0,0,0,0.38)',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
+  gradient1:   { position: 'absolute', left: 0, right: 0, top: '37.00%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0000)' },
+  gradient2:   { position: 'absolute', left: 0, right: 0, top: '37.63%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0000)' },
+  gradient3:   { position: 'absolute', left: 0, right: 0, top: '38.26%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0002)' },
+  gradient4:   { position: 'absolute', left: 0, right: 0, top: '38.89%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0004)' },
+  gradient5:   { position: 'absolute', left: 0, right: 0, top: '39.52%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0007)' },
+  gradient6:   { position: 'absolute', left: 0, right: 0, top: '40.15%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0011)' },
+  gradient7:   { position: 'absolute', left: 0, right: 0, top: '40.78%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0017)' },
+  gradient8:   { position: 'absolute', left: 0, right: 0, top: '41.41%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0022)' },
+  gradient9:   { position: 'absolute', left: 0, right: 0, top: '42.04%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0029)' },
+  gradient10:  { position: 'absolute', left: 0, right: 0, top: '42.67%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0037)' },
+  gradient11:  { position: 'absolute', left: 0, right: 0, top: '43.30%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0046)' },
+  gradient12:  { position: 'absolute', left: 0, right: 0, top: '43.93%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0056)' },
+  gradient13:  { position: 'absolute', left: 0, right: 0, top: '44.56%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0066)' },
+  gradient14:  { position: 'absolute', left: 0, right: 0, top: '45.19%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0078)' },
+  gradient15:  { position: 'absolute', left: 0, right: 0, top: '45.82%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0090)' },
+  gradient16:  { position: 'absolute', left: 0, right: 0, top: '46.45%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0103)' },
+  gradient17:  { position: 'absolute', left: 0, right: 0, top: '47.08%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0118)' },
+  gradient18:  { position: 'absolute', left: 0, right: 0, top: '47.71%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0133)' },
+  gradient19:  { position: 'absolute', left: 0, right: 0, top: '48.34%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0149)' },
+  gradient20:  { position: 'absolute', left: 0, right: 0, top: '48.97%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0166)' },
+  gradient21:  { position: 'absolute', left: 0, right: 0, top: '49.60%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0184)' },
+  gradient22:  { position: 'absolute', left: 0, right: 0, top: '50.23%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0202)' },
+  gradient23:  { position: 'absolute', left: 0, right: 0, top: '50.86%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0222)' },
+  gradient24:  { position: 'absolute', left: 0, right: 0, top: '51.49%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0243)' },
+  gradient25:  { position: 'absolute', left: 0, right: 0, top: '52.12%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0264)' },
+  gradient26:  { position: 'absolute', left: 0, right: 0, top: '52.75%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0287)' },
+  gradient27:  { position: 'absolute', left: 0, right: 0, top: '53.38%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0310)' },
+  gradient28:  { position: 'absolute', left: 0, right: 0, top: '54.01%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0335)' },
+  gradient29:  { position: 'absolute', left: 0, right: 0, top: '54.64%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0360)' },
+  gradient30:  { position: 'absolute', left: 0, right: 0, top: '55.27%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0386)' },
+  gradient31:  { position: 'absolute', left: 0, right: 0, top: '55.90%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0413)' },
+  gradient32:  { position: 'absolute', left: 0, right: 0, top: '56.53%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0441)' },
+  gradient33:  { position: 'absolute', left: 0, right: 0, top: '57.16%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0470)' },
+  gradient34:  { position: 'absolute', left: 0, right: 0, top: '57.79%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0500)' },
+  gradient35:  { position: 'absolute', left: 0, right: 0, top: '58.42%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0531)' },
+  gradient36:  { position: 'absolute', left: 0, right: 0, top: '59.05%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0562)' },
+  gradient37:  { position: 'absolute', left: 0, right: 0, top: '59.68%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0595)' },
+  gradient38:  { position: 'absolute', left: 0, right: 0, top: '60.31%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0629)' },
+  gradient39:  { position: 'absolute', left: 0, right: 0, top: '60.94%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0663)' },
+  gradient40:  { position: 'absolute', left: 0, right: 0, top: '61.57%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0698)' },
+  gradient41:  { position: 'absolute', left: 0, right: 0, top: '62.20%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0735)' },
+  gradient42:  { position: 'absolute', left: 0, right: 0, top: '62.83%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0772)' },
+  gradient43:  { position: 'absolute', left: 0, right: 0, top: '63.46%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0810)' },
+  gradient44:  { position: 'absolute', left: 0, right: 0, top: '64.09%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0849)' },
+  gradient45:  { position: 'absolute', left: 0, right: 0, top: '64.72%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0889)' },
+  gradient46:  { position: 'absolute', left: 0, right: 0, top: '65.35%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0930)' },
+  gradient47:  { position: 'absolute', left: 0, right: 0, top: '65.98%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.0972)' },
+  gradient48:  { position: 'absolute', left: 0, right: 0, top: '66.61%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1014)' },
+  gradient49:  { position: 'absolute', left: 0, right: 0, top: '67.24%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1058)' },
+  gradient50:  { position: 'absolute', left: 0, right: 0, top: '67.87%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1102)' },
+  gradient51:  { position: 'absolute', left: 0, right: 0, top: '68.50%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1148)' },
+  gradient52:  { position: 'absolute', left: 0, right: 0, top: '69.13%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1194)' },
+  gradient53:  { position: 'absolute', left: 0, right: 0, top: '69.76%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1242)' },
+  gradient54:  { position: 'absolute', left: 0, right: 0, top: '70.39%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1290)' },
+  gradient55:  { position: 'absolute', left: 0, right: 0, top: '71.02%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1339)' },
+  gradient56:  { position: 'absolute', left: 0, right: 0, top: '71.65%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1389)' },
+  gradient57:  { position: 'absolute', left: 0, right: 0, top: '72.28%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1440)' },
+  gradient58:  { position: 'absolute', left: 0, right: 0, top: '72.91%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1492)' },
+  gradient59:  { position: 'absolute', left: 0, right: 0, top: '73.54%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1545)' },
+  gradient60:  { position: 'absolute', left: 0, right: 0, top: '74.17%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1598)' },
+  gradient61:  { position: 'absolute', left: 0, right: 0, top: '74.80%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1653)' },
+  gradient62:  { position: 'absolute', left: 0, right: 0, top: '75.43%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1708)' },
+  gradient63:  { position: 'absolute', left: 0, right: 0, top: '76.06%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1765)' },
+  gradient64:  { position: 'absolute', left: 0, right: 0, top: '76.69%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1822)' },
+  gradient65:  { position: 'absolute', left: 0, right: 0, top: '77.32%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1881)' },
+  gradient66:  { position: 'absolute', left: 0, right: 0, top: '77.95%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.1940)' },
+  gradient67:  { position: 'absolute', left: 0, right: 0, top: '78.58%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2000)' },
+  gradient68:  { position: 'absolute', left: 0, right: 0, top: '79.21%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2061)' },
+  gradient69:  { position: 'absolute', left: 0, right: 0, top: '79.84%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2123)' },
+  gradient70:  { position: 'absolute', left: 0, right: 0, top: '80.47%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2186)' },
+  gradient71:  { position: 'absolute', left: 0, right: 0, top: '81.10%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2250)' },
+  gradient72:  { position: 'absolute', left: 0, right: 0, top: '81.73%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2315)' },
+  gradient73:  { position: 'absolute', left: 0, right: 0, top: '82.36%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2380)' },
+  gradient74:  { position: 'absolute', left: 0, right: 0, top: '82.99%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2447)' },
+  gradient75:  { position: 'absolute', left: 0, right: 0, top: '83.62%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2514)' },
+  gradient76:  { position: 'absolute', left: 0, right: 0, top: '84.25%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2583)' },
+  gradient77:  { position: 'absolute', left: 0, right: 0, top: '84.88%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2652)' },
+  gradient78:  { position: 'absolute', left: 0, right: 0, top: '85.51%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2722)' },
+  gradient79:  { position: 'absolute', left: 0, right: 0, top: '86.14%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2793)' },
+  gradient80:  { position: 'absolute', left: 0, right: 0, top: '86.77%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2865)' },
+  gradient81:  { position: 'absolute', left: 0, right: 0, top: '87.40%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.2938)' },
+  gradient82:  { position: 'absolute', left: 0, right: 0, top: '88.03%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3012)' },
+  gradient83:  { position: 'absolute', left: 0, right: 0, top: '88.66%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3087)' },
+  gradient84:  { position: 'absolute', left: 0, right: 0, top: '89.29%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3163)' },
+  gradient85:  { position: 'absolute', left: 0, right: 0, top: '89.92%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3240)' },
+  gradient86:  { position: 'absolute', left: 0, right: 0, top: '90.55%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3317)' },
+  gradient87:  { position: 'absolute', left: 0, right: 0, top: '91.18%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3396)' },
+  gradient88:  { position: 'absolute', left: 0, right: 0, top: '91.81%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3475)' },
+  gradient89:  { position: 'absolute', left: 0, right: 0, top: '92.44%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3556)' },
+  gradient90:  { position: 'absolute', left: 0, right: 0, top: '93.07%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3637)' },
+  gradient91:  { position: 'absolute', left: 0, right: 0, top: '93.70%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3719)' },
+  gradient92:  { position: 'absolute', left: 0, right: 0, top: '94.33%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3802)' },
+  gradient93:  { position: 'absolute', left: 0, right: 0, top: '94.96%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3886)' },
+  gradient94:  { position: 'absolute', left: 0, right: 0, top: '95.59%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.3971)' },
+  gradient95:  { position: 'absolute', left: 0, right: 0, top: '96.22%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.4057)' },
+  gradient96:  { position: 'absolute', left: 0, right: 0, top: '96.85%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.4144)' },
+  gradient97:  { position: 'absolute', left: 0, right: 0, top: '97.48%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.4231)' },
+  gradient98:  { position: 'absolute', left: 0, right: 0, top: '98.11%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.4320)' },
+  gradient99:  { position: 'absolute', left: 0, right: 0, top: '98.74%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.4410)' },
+  gradient100: { position: 'absolute', left: 0, right: 0, top: '99.37%', height: '0.63%', backgroundColor: 'rgba(0,0,0,0.4500)', borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
 
   // 콘텐츠 컨테이너 (배경색 없음)
   cardBottom: {
