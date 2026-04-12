@@ -518,8 +518,10 @@ export default function ChatRoomScreen() {
     const msg = item as ChatMessageDto;
     const isMine = msg.senderId === user?.id;
 
-    // 이전 메시지와 같은 발신자인지 확인 (아바타 표시 여부)
-    const prevItem = listData[index - 1];
+    // 이전(더 오래된) 메시지와 같은 발신자인지 확인 (아바타 표시 여부)
+    // FlatList는 reversed data + inverted → index는 reversed 배열 기준
+    // reversed[i+1] = listData[listData.length - 2 - index]
+    const prevItem = listData[listData.length - 2 - index];
     const prevMsg = prevItem && !('type' in prevItem) ? prevItem as ChatMessageDto : null;
     const showAvatar = !isMine && (prevMsg === null || prevMsg.senderId !== msg.senderId);
 
