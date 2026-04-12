@@ -1,4 +1,4 @@
-// 도움 요청 상세 화면 (리디자인)
+// 도움 요청 상세 화면 (홈화면 무드 통일 리디자인)
 import { useState, useEffect } from 'react';
 import {
   View,
@@ -18,8 +18,14 @@ import { getHelpRequestById, acceptHelpRequest, cancelHelpRequest } from '../ser
 import { useAuthStore } from '../stores/authStore';
 import type { HelpCategory, HelpMethod, HelpRequest } from '../types';
 
-const PRIMARY = '#4F46E5';
-const PRIMARY_LIGHT = '#EEF2FF';
+// ── Design tokens (홈화면과 통일) ──────────────────────────────
+const BLUE    = '#3B6FE8';
+const BLUE_L  = '#EEF4FF';
+const T1      = '#0C1C3C';
+const T2      = '#AABBCC';
+const BG      = '#F0F4FA';
+const DIV     = 'rgba(59,111,232,0.10)';
+
 const SERVER_BASE_URL = 'https://backend-production-0a6f.up.railway.app';
 
 function toAbsoluteUrl(path?: string): string | null {
@@ -34,6 +40,9 @@ const CATEGORY_EMOJI: Record<HelpCategory, string> = {
 const CATEGORY_BG: Record<HelpCategory, string> = {
   BANK: '#FEF3C7', HOSPITAL: '#FEE2E2', SCHOOL: '#EDE9FE', DAILY: '#D1FAE5', OTHER: '#F3F4F6',
 };
+const CATEGORY_COLOR: Record<HelpCategory, string> = {
+  BANK: '#D97706', HOSPITAL: '#DC2626', SCHOOL: '#7C3AED', DAILY: '#059669', OTHER: '#6B7280',
+};
 
 const METHOD_LABEL: Record<HelpMethod, string> = {
   CHAT: '채팅',
@@ -41,11 +50,10 @@ const METHOD_LABEL: Record<HelpMethod, string> = {
   OFFLINE: '오프라인 대면',
 };
 const METHOD_DOT: Record<HelpMethod, string> = {
-  CHAT: PRIMARY,
+  CHAT: BLUE,
   VIDEO_CALL: '#7C3AED',
   OFFLINE: '#D97706',
 };
-
 
 function parseDescription(raw: string) {
   const parts = raw.split('\n\n[정보]\n');
@@ -70,6 +78,25 @@ function formatTime(createdAt: string): string {
   return `${Math.floor(hours / 24)}일 전`;
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  WAITING:     '모집중',
+  MATCHED:     '대기중',
+  IN_PROGRESS: '진행중',
+  COMPLETED:   '모집완료',
+};
+const STATUS_BG: Record<string, string> = {
+  WAITING:     '#D1FAE5',
+  MATCHED:     BLUE_L,
+  IN_PROGRESS: '#FFF3E8',
+  COMPLETED:   '#F3F4F6',
+};
+const STATUS_COLOR: Record<string, string> = {
+  WAITING:     '#065F46',
+  MATCHED:     '#3730A3',
+  IN_PROGRESS: '#C45A10',
+  COMPLETED:   '#6B7280',
+};
+
 export default function RequestDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -78,6 +105,7 @@ export default function RequestDetailScreen() {
   const [item, setItem] = useState<HelpRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAccepting, setIsAccepting] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
@@ -96,7 +124,7 @@ export default function RequestDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.errorContainer}>
-        <ActivityIndicator size="large" color={PRIMARY} />
+        <ActivityIndicator size="large" color={BLUE} />
       </View>
     );
   }
@@ -116,7 +144,13 @@ export default function RequestDetailScreen() {
   const isMyPost = user?.id === item.requester.id;
   const isHelper = user?.id === item.helper?.id;
   const isInChat = item.status === 'MATCHED' && (isMyPost || isHelper);
-  const canHelp = !isMyPost && item.status === 'WAITING' && user?.userType === 'KOREAN';
+  const canHelp  = !isMyPost && item.status === 'WAITING' && user?.userType === 'KOREAN';
+
+  const profileUri = toAbsoluteUrl(item.requester.profileImage);
+  const showHeroImg = !!profileUri && !imgError;
+  const initial = item.requester.nickname.charAt(0);
+  const isVerified = item.requester.studentIdVerified || item.requester.studentIdStatus === 'APPROVED';
+  const allMethods: HelpMethod[] = ['OFFLINE', 'CHAT', 'VIDEO_CALL'];
 
   const handleDelete = () => {
     Alert.alert('글 삭제', '도움 요청을 삭제하시겠어요?', [
@@ -165,7 +199,9 @@ export default function RequestDetailScreen() {
       params: {
         roomId: item.id,
         requestTitle: item.title,
-        partnerNickname: user?.userType === 'KOREAN' ? item.requester.nickname : (item.helper?.nickname ?? ''),
+        partnerNickname: user?.userType === 'KOREAN'
+          ? item.requester.nickname
+          : (item.helper?.nickname ?? ''),
         requestStatus: item.status,
         requesterId: item.requester.id,
       },
@@ -209,128 +245,136 @@ export default function RequestDetailScreen() {
     );
   };
 
-  const allMethods: HelpMethod[] = ['OFFLINE', 'CHAT', 'VIDEO_CALL'];
-
   return (
     <View style={styles.container}>
-      {/* 상단 네비 */}
-      <View style={styles.topnav}>
-        <TouchableOpacity style={styles.navBtn} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={18} color={PRIMARY} />
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>도움 요청 상세</Text>
-        <TouchableOpacity style={styles.navBtn}>
-          <Ionicons name="share-social-outline" size={17} color={PRIMARY} />
-        </TouchableOpacity>
-      </View>
-
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* 히어로 섹션 */}
-        <View style={styles.hero}>
-          {/* 아이콘 + 태그 */}
-          <View style={styles.heroTop}>
-            <View style={[styles.heroIcon, { backgroundColor: CATEGORY_BG[item.category] }]}>
-              <Text style={styles.heroIconEmoji}>{CATEGORY_EMOJI[item.category]}</Text>
-            </View>
-            <View style={styles.heroMeta}>
-              <View style={styles.heroTags}>
-                <View style={styles.tagCat}>
-                  <Text style={styles.tagCatText}>{CategoryLabels[item.category].replace(/\S+\s/, '')}</Text>
-                </View>
-                <View style={
-                  item.status === 'MATCHED' ? styles.tagMatched :
-                  item.status === 'IN_PROGRESS' ? { backgroundColor: '#FFF3E8', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 } :
-                  item.status === 'COMPLETED' ? { backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 } :
-                  styles.tagOpen
-                }>
-                  <Text style={
-                    item.status === 'MATCHED' ? styles.tagMatchedText :
-                    item.status === 'IN_PROGRESS' ? { fontSize: 11, fontWeight: '600', color: '#C45A10' } :
-                    item.status === 'COMPLETED' ? { fontSize: 11, fontWeight: '600', color: '#6B7280' } :
-                    styles.tagOpenText
-                  }>
-                    {item.status === 'COMPLETED' ? '모집완료' :
-                     item.status === 'IN_PROGRESS' ? '진행중' :
-                     item.status === 'MATCHED' ? '대기중' : '모집중'}
-                  </Text>
-                </View>
+        {/* ── 상단 네비 ── */}
+        <View style={styles.topnav}>
+          <TouchableOpacity style={styles.navBtn} onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={20} color={BLUE} />
+          </TouchableOpacity>
+          <Text style={styles.navTitle}>도움 요청 상세</Text>
+          <TouchableOpacity style={styles.navBtn}>
+            <Ionicons name="share-social-outline" size={18} color={BLUE} />
+          </TouchableOpacity>
+        </View>
+
+        {/* ── 히어로 카드 (원형 프로필 + 우측 정보) ── */}
+        <View style={styles.heroCard}>
+          {/* 원형 프로필 */}
+          <View style={styles.avatarWrap}>
+            {showHeroImg ? (
+              <Image
+                source={{ uri: profileUri! }}
+                style={styles.avatarImg}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitial}>{initial}</Text>
               </View>
-              <Text style={styles.heroSub}>{item.requester.university} · {formatTime(item.createdAt)}</Text>
-            </View>
-          </View>
-
-          {/* 제목 */}
-          <Text style={styles.heroTitle}>{item.title}</Text>
-
-          {/* 작성자 */}
-          <View style={styles.authorRow}>
-            {toAbsoluteUrl(item.requester.profileImage)
-              ? <Image source={{ uri: toAbsoluteUrl(item.requester.profileImage)! }} style={styles.avatar} />
-              : <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{item.requester.nickname.charAt(0)}</Text>
-                </View>
-            }
-            <View style={styles.authorInfo}>
-              <Text style={styles.authorName}>{item.requester.nickname}</Text>
-              <Text style={styles.authorSub}>{item.requester.university}</Text>
-            </View>
-            {item.requester.helpCount === 0 && (
-              <Text style={styles.firstBadge}>첫 요청</Text>
+            )}
+            {isVerified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="shield-checkmark" size={13} color="#22c55e" />
+              </View>
             )}
           </View>
 
-          {/* 본문 */}
-          <Text style={styles.bodyText}>{body}</Text>
+          {/* 우측 정보 */}
+          <View style={styles.heroInfo}>
+            {/* 뱃지 */}
+            <View style={styles.heroTags}>
+              <View style={[styles.heroBadge, { backgroundColor: CATEGORY_BG[item.category] }]}>
+                <Text style={[styles.heroBadgeText, { color: CATEGORY_COLOR[item.category] }]}>
+                  {CATEGORY_EMOJI[item.category]} {CategoryLabels[item.category].replace(/\S+\s/, '')}
+                </Text>
+              </View>
+              <View style={[styles.heroBadge, { backgroundColor: STATUS_BG[item.status] ?? '#F3F4F6' }]}>
+                <Text style={[styles.heroBadgeText, { color: STATUS_COLOR[item.status] ?? '#6B7280' }]}>
+                  {STATUS_LABEL[item.status] ?? item.status}
+                </Text>
+              </View>
+            </View>
+
+            {/* 이름 */}
+            <Text style={styles.heroName}>{item.requester.nickname}</Text>
+
+            {/* 학과 */}
+            {item.requester.major && (
+              <View style={styles.heroMetaItem}>
+                <Ionicons name="school-outline" size={13} color={T2} />
+                <Text style={styles.heroMetaText}>{item.requester.major}</Text>
+              </View>
+            )}
+
+            {/* 시간 */}
+            <View style={styles.heroMetaItem}>
+              <Ionicons name="time-outline" size={13} color={T2} />
+              <Text style={styles.heroMetaText}>{formatTime(item.createdAt)}</Text>
+            </View>
+          </View>
         </View>
 
-        {/* 정보 카드 섹션 */}
-        <View style={styles.infoSection}>
+        {/* 제목 + 본문 */}
+        <View style={styles.section}>
+          <View style={styles.card}>
+            <Text style={styles.titleText}>{item.title}</Text>
+            <Text style={styles.bodyText}>{body}</Text>
+          </View>
+        </View>
 
-          {/* 요청 정보 - 입력한 항목만 표시 */}
-          {(meta['희망일정'] || meta['소요시간'] || meta['장소'] || meta['언어']) && (
-            <View style={styles.infoCard}>
-              <Text style={styles.infoCardTitle}>요청 정보</Text>
+        {/* ── 요청 정보 카드 ── */}
+        {(meta['희망일정'] || meta['소요시간'] || meta['장소'] || meta['언어']) && (
+          <View style={styles.section}>
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>요청 정보</Text>
               {meta['희망일정'] && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}><Text style={styles.infoIcon}>📅</Text> 희망 일정</Text>
+                  <Text style={styles.infoLabel}>📅 희망 일정</Text>
                   <Text style={styles.infoValue}>{meta['희망일정']}</Text>
                 </View>
               )}
               {meta['소요시간'] && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}><Text style={styles.infoIcon}>⏱</Text> 소요 시간</Text>
+                  <Text style={styles.infoLabel}>⏱ 소요 시간</Text>
                   <Text style={styles.infoValue}>{meta['소요시간']}</Text>
                 </View>
               )}
               {meta['장소'] && (
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}><Text style={styles.infoIcon}>📍</Text> 장소</Text>
+                  <Text style={styles.infoLabel}>📍 장소</Text>
                   <Text style={styles.infoValue}>{meta['장소']}</Text>
                 </View>
               )}
               {meta['언어'] && (
-                <View style={[styles.infoRow, styles.infoRowLast]}>
-                  <Text style={styles.infoLabel}><Text style={styles.infoIcon}>🌐</Text> 언어</Text>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>🌐 언어</Text>
                   <Text style={styles.infoValue}>{meta['언어']}</Text>
                 </View>
               )}
             </View>
-          )}
+          </View>
+        )}
 
-          {/* 소통 방식 */}
-          <View style={styles.infoCard}>
-            <Text style={styles.infoCardTitle}>원하는 소통 방식</Text>
+        {/* ── 소통 방식 카드 ── */}
+        <View style={styles.section}>
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>원하는 소통 방식</Text>
             <View style={styles.methodRow}>
               {allMethods.map((m) => {
                 const isSelected = m === item.helpMethod;
                 return (
                   <View
                     key={m}
-                    style={[styles.methodChip, isSelected ? styles.methodChipSelected : styles.methodChipUnselected]}
+                    style={[
+                      styles.methodChip,
+                      isSelected ? styles.methodChipSelected : styles.methodChipUnselected,
+                    ]}
                   >
                     <View style={[styles.methodDot, { backgroundColor: isSelected ? METHOD_DOT[m] : '#D1D5DB' }]} />
-                    <Text style={[styles.methodChipText, isSelected ? styles.methodChipTextSelected : styles.methodChipTextUnselected]}>
+                    <Text style={[styles.methodChipText, isSelected ? styles.methodChipTextOn : styles.methodChipTextOff]}>
                       {METHOD_LABEL[m]}
                     </Text>
                   </View>
@@ -338,7 +382,6 @@ export default function RequestDetailScreen() {
               })}
             </View>
 
-            {/* 지도 플레이스홀더 */}
             {item.helpMethod === 'OFFLINE' && (
               <View style={styles.mapPlaceholder}>
                 <Text style={styles.mapPin}>📍</Text>
@@ -347,38 +390,46 @@ export default function RequestDetailScreen() {
               </View>
             )}
           </View>
+        </View>
 
-          {/* 매칭된 헬퍼 정보 (매칭된 경우에만) */}
-          {item.helper && (
-            <View style={styles.infoCard}>
-              <Text style={styles.infoCardTitle}>도움을 주는 학생</Text>
+        {/* ── 매칭된 헬퍼 ── */}
+        {item.helper && (
+          <View style={styles.section}>
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>도움을 주는 학생</Text>
               <View style={styles.helperItem}>
-                {toAbsoluteUrl(item.helper.profileImage)
-                  ? <Image source={{ uri: toAbsoluteUrl(item.helper.profileImage)! }} style={styles.helperAvatar} />
-                  : <View style={[styles.helperAvatar, styles.helperAvatarGreen]}>
-                      <Text style={styles.helperAvatarText}>{item.helper.nickname.charAt(0)}</Text>
-                    </View>
-                }
+                {toAbsoluteUrl(item.helper.profileImage) ? (
+                  <Image
+                    source={{ uri: toAbsoluteUrl(item.helper.profileImage)! }}
+                    style={styles.helperAvatar}
+                  />
+                ) : (
+                  <View style={[styles.helperAvatar, styles.helperAvatarFallback]}>
+                    <Text style={styles.helperAvatarText}>{item.helper.nickname.charAt(0)}</Text>
+                  </View>
+                )}
                 <View style={styles.helperInfo}>
                   <Text style={styles.helperName}>{item.helper.nickname}</Text>
-                  <Text style={styles.helperDetail}>{item.helper.university} · 도움 {item.helper.helpCount}회</Text>
+                  <Text style={styles.helperDetail}>
+                    {item.helper.university} · 도움 {item.helper.helpCount}회
+                  </Text>
                   <Text style={styles.helperRating}>
-                    {'★★★★★'} <Text style={styles.helperRatingNum}>{item.helper.rating.toFixed(1)}</Text>
+                    {'★★★★★'}{' '}
+                    <Text style={styles.helperRatingNum}>{item.helper.rating.toFixed(1)}</Text>
                   </Text>
                 </View>
               </View>
             </View>
-          )}
-
-        </View>
+          </View>
+        )}
 
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* 하단 CTA */}
+      {/* ── 하단 CTA ── */}
       <View style={styles.cta}>
         <TouchableOpacity style={styles.bookmarkBtn}>
-          <Ionicons name="bookmark-outline" size={20} color={PRIMARY} />
+          <Ionicons name="bookmark-outline" size={20} color={BLUE} />
         </TouchableOpacity>
         {isInChat ? (
           <TouchableOpacity style={styles.helpBtn} onPress={goToChatRoom}>
@@ -407,12 +458,13 @@ export default function RequestDetailScreen() {
             onPress={canHelp && !isAccepting ? handleHelp : undefined}
             activeOpacity={0.88}
           >
-            {isAccepting
-              ? <ActivityIndicator color="#FFFFFF" />
-              : <Text style={styles.helpBtnText}>
-                  {user?.userType !== 'KOREAN' ? '내 요청이에요' : '🤝 도와드릴게요!'}
-                </Text>
-            }
+            {isAccepting ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.helpBtnText}>
+                {user?.userType !== 'KOREAN' ? '내 요청이에요' : '🤝 도와드릴게요!'}
+              </Text>
+            )}
           </TouchableOpacity>
         )}
       </View>
@@ -423,19 +475,21 @@ export default function RequestDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F8',
+    backgroundColor: BG,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#F3F4F8',
+    backgroundColor: BG,
   },
-  errorText: { fontSize: 16, color: '#6B7280' },
-  errorBack: { fontSize: 15, color: PRIMARY, fontWeight: '700' },
+  errorText: { fontSize: 16, color: T2 },
+  errorBack: { fontSize: 15, color: BLUE, fontWeight: '700' },
 
-  // 상단 네비
+  scroll: { flex: 1 },
+
+  // ── 상단 네비 ───────────────────────────────────────────
   topnav: {
     backgroundColor: '#FFFFFF',
     paddingTop: Platform.OS === 'ios' ? 52 : 16,
@@ -445,142 +499,165 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(79,70,229,0.1)',
+    borderBottomColor: DIV,
   },
   navBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: PRIMARY_LIGHT,
+    backgroundColor: BLUE_L,
     justifyContent: 'center',
     alignItems: 'center',
   },
   navTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1E1B4B',
+    color: T1,
     letterSpacing: -0.3,
   },
 
-  scroll: { flex: 1 },
-
-  // 히어로
-  hero: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    marginBottom: 10,
-  },
-  heroTop: {
+  // ── 히어로 카드 ─────────────────────────────────────────
+  heroCard: {
+    marginHorizontal: 18,
+    marginTop: 18,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-    marginBottom: 14,
-  },
-  heroIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    justifyContent: 'center',
     alignItems: 'center',
+    gap: 16,
+  },
+
+  // 원형 프로필
+  avatarWrap: {
+    position: 'relative',
     flexShrink: 0,
   },
-  heroIconEmoji: { fontSize: 30 },
-  heroMeta: { flex: 1 },
+  avatarImg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2.5,
+    borderColor: BLUE_L,
+  },
+  avatarFallback: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#C7DCF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2.5,
+    borderColor: BLUE_L,
+  },
+  avatarInitial: {
+    fontSize: 30,
+    fontWeight: '900',
+    color: BLUE,
+    opacity: 0.7,
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+
+  // 우측 정보
+  heroInfo: {
+    flex: 1,
+    gap: 5,
+  },
   heroTags: {
     flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-    marginBottom: 7,
+    gap: 5,
     flexWrap: 'wrap',
   },
-  tagCat: { backgroundColor: '#EEF4FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  tagCatText: { fontSize: 11, fontWeight: '600', color: '#3B6FE8' },
-  tagUrgent: { backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  tagUrgentText: { fontSize: 11, fontWeight: '600', color: '#991B1B' },
-  tagOpen: { backgroundColor: '#D1FAE5', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  tagOpenText: { fontSize: 11, fontWeight: '600', color: '#065F46' },
-  tagMatched: { backgroundColor: PRIMARY_LIGHT, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  tagMatchedText: { fontSize: 11, fontWeight: '600', color: '#3730A3' },
-  heroSub: { fontSize: 11, color: '#9CA3AF' },
-  heroTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E1B4B',
-    letterSpacing: -0.5,
-    lineHeight: 26,
-    marginBottom: 14,
+  heroBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 7,
   },
-
-  // 작성자
-  authorRow: {
+  heroBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  heroName: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: T1,
+    letterSpacing: -0.3,
+  },
+  heroMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(79,70,229,0.1)',
-    marginBottom: 14,
+    gap: 4,
   },
-  avatar: {
-    width: 36,
-    height: 36,
+  heroMetaText: {
+    fontSize: 13,
+    color: T2,
+    fontWeight: '600',
+  },
+
+  titleText: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: T1,
+    letterSpacing: -0.4,
+    lineHeight: 28,
+  },
+
+  // ── 섹션 / 카드 ──────────────────────────────────────────
+  section: {
+    paddingHorizontal: 14,
+    paddingTop: 10,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    backgroundColor: PRIMARY,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
+    padding: 16,
+    shadowColor: BLUE,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: DIV,
   },
-  avatarText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
-  authorInfo: { flex: 1 },
-  authorName: { fontSize: 13, fontWeight: '700', color: '#1E1B4B' },
-  authorSub: { fontSize: 11, color: '#9CA3AF', marginTop: 1 },
-  firstBadge: { fontSize: 11, color: '#9CA3AF' },
+  cardLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T2,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+  },
 
   // 본문
   bodyText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#374151',
     lineHeight: 24,
   },
 
-  // 정보 섹션
-  infoSection: {
-    padding: 14,
-    gap: 10,
-  },
-  infoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(79,70,229,0.06)',
-  },
-  infoCardTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#9CA3AF',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    marginBottom: 12,
-  },
+  // 요청 정보 행
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 7,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(79,70,229,0.08)',
+    borderTopColor: DIV,
   },
-  infoRowLast: {},
-  infoLabel: { fontSize: 13, color: '#9CA3AF' },
-  infoIcon: { fontSize: 15 },
-  infoValue: { fontSize: 13, fontWeight: '600', color: '#1E1B4B' },
+  infoLabel: { fontSize: 13, color: T2 },
+  infoValue: { fontSize: 13, fontWeight: '600', color: T1 },
 
   // 소통 방식
   methodRow: {
@@ -598,92 +675,69 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   methodChipSelected: {
-    backgroundColor: PRIMARY_LIGHT,
-    borderColor: PRIMARY,
+    backgroundColor: BLUE_L,
+    borderColor: BLUE,
   },
   methodChipUnselected: {
     backgroundColor: '#F3F4F8',
-    borderColor: 'rgba(79,70,229,0.1)',
+    borderColor: DIV,
   },
   methodDot: { width: 7, height: 7, borderRadius: 4 },
   methodChipText: { fontSize: 12, fontWeight: '600' },
-  methodChipTextSelected: { color: PRIMARY },
-  methodChipTextUnselected: { color: '#9CA3AF' },
+  methodChipTextOn:  { color: BLUE },
+  methodChipTextOff: { color: T2 },
 
   // 지도 플레이스홀더
   mapPlaceholder: {
     marginTop: 10,
     borderRadius: 12,
     height: 100,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: BLUE_L,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(79,70,229,0.12)',
+    borderColor: DIV,
   },
   mapPin: { fontSize: 22 },
-  mapLabel: { fontSize: 12, fontWeight: '600', color: PRIMARY },
-  mapSub: { fontSize: 11, color: '#818CF8' },
+  mapLabel: { fontSize: 12, fontWeight: '600', color: BLUE },
+  mapSub: { fontSize: 11, color: T2 },
 
   // 헬퍼
-  helperCount: { color: PRIMARY, fontWeight: '700' },
   helperItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 10,
-  },
-  helperItemBorder: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(79,70,229,0.08)',
+    paddingVertical: 6,
   },
   helperAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    flexShrink: 0,
+  },
+  helperAvatarFallback: {
+    backgroundColor: '#059669',
     justifyContent: 'center',
     alignItems: 'center',
-    flexShrink: 0,
-    position: 'relative',
   },
-  helperAvatarGreen: { backgroundColor: '#059669' },
-  helperAvatarPurple: { backgroundColor: '#6366F1' },
-  helperAvatarText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 1,
-    right: 1,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#10B981',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
+  helperAvatarText: { fontSize: 17, fontWeight: '700', color: '#FFFFFF' },
   helperInfo: { flex: 1 },
-  helperName: { fontSize: 14, fontWeight: '700', color: '#1E1B4B' },
-  helperDetail: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
+  helperName: { fontSize: 14, fontWeight: '700', color: T1 },
+  helperDetail: { fontSize: 11, color: T2, marginTop: 2 },
   helperRating: { fontSize: 12, color: '#F59E0B', marginTop: 2 },
-  helperRatingNum: { color: '#6B7280', fontWeight: '600' },
-  recommendBadge: {
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  recommendBadgeText: { fontSize: 11, fontWeight: '700', color: '#065F46' },
+  helperRatingNum: { color: T2, fontWeight: '600' },
 
   bottomPadding: { height: 20 },
 
-  // CTA
+  // ── 하단 CTA ─────────────────────────────────────────────
   cta: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(79,70,229,0.1)',
+    borderTopColor: DIV,
     flexDirection: 'row',
     gap: 10,
     alignItems: 'center',
@@ -692,7 +746,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: PRIMARY_LIGHT,
+    backgroundColor: BLUE_L,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
@@ -700,11 +754,11 @@ const styles = StyleSheet.create({
   helpBtn: {
     flex: 1,
     height: 48,
-    backgroundColor: PRIMARY,
+    backgroundColor: BLUE,
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: PRIMARY,
+    shadowColor: BLUE,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.32,
     shadowRadius: 20,
@@ -721,13 +775,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.3,
   },
-  myPostNote: {
-    flex: 1,
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  myPostNoteText: { fontSize: 14, color: '#9CA3AF' },
   myPostActions: {
     flex: 1,
     flexDirection: 'row',
@@ -738,14 +785,14 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: PRIMARY,
+    borderColor: BLUE,
     justifyContent: 'center',
     alignItems: 'center',
   },
   editBtnText: {
     fontSize: 15,
     fontWeight: '700',
-    color: PRIMARY,
+    color: BLUE,
   },
   deleteBtn: {
     flex: 1,
@@ -768,5 +815,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  closedBtnText: { fontSize: 14, color: '#9CA3AF', fontWeight: '600' },
+  closedBtnText: { fontSize: 14, color: T2, fontWeight: '600' },
 });

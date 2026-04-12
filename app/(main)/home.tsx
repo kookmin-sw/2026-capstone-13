@@ -372,7 +372,7 @@ export default function HomeScreen() {
                 <Text style={s.helpHeaderLink}>요청하기 →</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ marginLeft: 20, marginBottom: 10 }}>
+            <View style={{ marginLeft: 16, marginBottom: 10 }}>
               <KoreanUserCardStack
                 users={koreanUsers}
                 onPress={() => router.push('/(main)/write')}

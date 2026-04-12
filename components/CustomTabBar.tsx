@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { useEffect, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 
@@ -38,38 +38,48 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
     (r) => r.key === state.routes[state.index]?.key,
   );
 
-  const tabLayouts = useRef<Record<number, { x: number; width: number }>>({});
-  const pillX = useRef(new Animated.Value(0)).current;
-  const focusedIndexRef = useRef(focusedVisibleIndex);
-  focusedIndexRef.current = focusedVisibleIndex;
+  const [tabLayouts, setTabLayouts] = useState<Record<number, { x: number; width: number }>>({});
+  const pillX = useRef(new Animated.Value(13)).current;
+  const pillXRef = useRef(0);
+  const tabCount = visibleRoutes.length;
 
-  // 탭 수가 바뀌면 레이아웃 리셋
-  const prevTabCount = useRef(visibleRoutes.length);
-  if (prevTabCount.current !== visibleRoutes.length) {
-    prevTabCount.current = visibleRoutes.length;
-    tabLayouts.current = {};
-  }
-
-  const movePill = (index: number, animated: boolean) => {
-    const layout = tabLayouts.current[index];
-    if (!layout) return;
-    const toX = layout.x + (layout.width - PILL_WIDTH) / 2;
-    if (animated) {
-      Animated.spring(pillX, {
-        toValue: toX,
-        useNativeDriver: true,
-        friction: 7,
-        tension: 55,
-      }).start();
-    } else {
-      pillX.setValue(toX);
-    }
+  const getPillX = (layouts: Record<number, { x: number; width: number }>, index: number) => {
+    const layout = layouts[index];
+    if (!layout) return null;
+    return layout.x + (layout.width - PILL_WIDTH) / 2;
   };
 
-  useEffect(() => {
-    movePill(focusedVisibleIndex, true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusedVisibleIndex]);
+  const handleLayout = (i: number, x: number, width: number) => {
+    setTabLayouts((prev) => {
+      const next = { ...prev, [i]: { x, width } };
+      if (Object.keys(next).length === tabCount) {
+        const toX = getPillX(next, focusedVisibleIndex);
+        if (toX !== null) {
+          pillX.setValue(toX);
+          pillXRef.current = toX;
+        }
+      }
+      return next;
+    });
+  };
+
+  const onTabPress = (index: number, routeName: string, routeKey: string) => {
+    const isFocused = index === focusedVisibleIndex;
+    const event = navigation.emit({ type: 'tabPress', target: routeKey, canPreventDefault: true });
+    if (!isFocused && !event.defaultPrevented) {
+      const toX = getPillX(tabLayouts, index);
+      if (toX !== null) {
+        Animated.spring(pillX, {
+          toValue: toX,
+          useNativeDriver: true,
+          friction: 7,
+          tension: 55,
+        }).start();
+        pillXRef.current = toX;
+      }
+      navigation.navigate(routeName);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -86,24 +96,15 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
         const options = descriptors[route.key].options;
         const badge = (options as { tabBarBadge?: number }).tabBarBadge;
 
-        const onPress = () => {
-          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-          if (!isFocused && !event.defaultPrevented) navigation.navigate(route.name);
-        };
-
         return (
           <TouchableOpacity
-            key={`${route.key}-${visibleRoutes.length}`}
+            key={route.key}
             style={styles.tab}
-            onPress={onPress}
+            onPress={() => onTabPress(i, route.name, route.key)}
             activeOpacity={0.8}
             onLayout={(e) => {
               const { x, width } = e.nativeEvent.layout;
-              tabLayouts.current[i] = { x, width };
-              const filledCount = Object.keys(tabLayouts.current).length;
-              if (filledCount === visibleRoutes.length) {
-                movePill(focusedIndexRef.current, false);
-              }
+              handleLayout(i, x, width);
             }}
           >
             <View style={styles.iconWrap}>

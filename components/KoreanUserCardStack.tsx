@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Dimensions,
-  Image,
   ImageBackground,
   TouchableOpacity,
 } from 'react-native';
@@ -22,13 +21,43 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import type { User } from '../types';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH  = SCREEN_WIDTH - 90;
-const CARD_HEIGHT = 420;
+const CARD_HEIGHT = Math.round(SCREEN_HEIGHT * 0.53);
 const ACCENT      = '#0EA5E9';
 
 const SLOT_OFFSET  = [0, 16, 32];
 const SLOT_OPACITY = [1, 0.85, 0.7];
+
+// 페이크 그라데이션: 시작 위치(%), 최대 불투명도, 레이어 수
+const GRAD_START   = 0;
+const GRAD_MAX_A   = 0.95;
+const GRAD_STEPS   = 200;
+const GRAD_RANGE   = 100 - GRAD_START;
+const GRAD_H       = GRAD_RANGE / GRAD_STEPS;
+
+const GRADIENT_LAYERS = Array.from({ length: GRAD_STEPS }, (_, i) => {
+  const t        = i / (GRAD_STEPS - 1);
+  const eased    = t * t * t;
+  const alpha    = parseFloat((eased * GRAD_MAX_A).toFixed(4));
+  const top      = parseFloat((GRAD_START + i * GRAD_H).toFixed(4));
+  const isLast   = i === GRAD_STEPS - 1;
+  return (
+    <View
+      key={i}
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: `${top}%`,
+        height: `${GRAD_H}%`,
+        backgroundColor: `rgba(0,0,0,${alpha})`,
+        ...(isLast ? { borderBottomLeftRadius: 20, borderBottomRightRadius: 20 } : {}),
+      }}
+    />
+  );
+});
 
 function getLevel(count: number): { label: string; color: string } {
   if (count >= 31) return { label: '마스터', color: '#F97316' };
@@ -59,11 +88,11 @@ function parseHobbies(hobbies: string | undefined): string[] {
 const CardContent = memo(
   function CardContent({ user, onPress }: { user: User; onPress?: () => void }) {
     const [imgError, setImgError] = useState(false);
+    const [isTruncated, setIsTruncated] = useState(false);
     const profileUri = toAbsoluteUrl(user.profileImage?.trim());
     const showImage  = !!profileUri && !imgError;
     const initial    = user.nickname.charAt(0);
     const lv         = getLevel(user.helpCount);
-    const tags        = parseHobbies(user.hobbies);
     const isVerified  = user.studentIdVerified || user.studentIdStatus === 'APPROVED';
 
     return (
@@ -83,8 +112,11 @@ const CardContent = memo(
         )}
 
 
-        {/* 하단 그라데이션 오버레이 */}
-        <View style={styles.gradient}>
+        {/* 페이크 그라데이션 레이어 */}
+        {GRADIENT_LAYERS}
+
+        {/* 콘텐츠 */}
+        <View style={styles.cardBottom}>
           {/* 이름 + 뱃지 */}
           <View style={styles.nameRow}>
             <Text style={styles.cardName}>{user.nickname}</Text>
@@ -120,14 +152,24 @@ const CardContent = memo(
             )}
           </View>
 
-          {/* 자기소개 + 요청하기 버튼 */}
-          <View style={styles.bottomRow}>
-            {user.bio ? (
-              <Text style={styles.bioText} numberOfLines={2}>{user.bio}</Text>
-            ) : <View style={{ flex: 1 }} />}
-            <TouchableOpacity style={styles.requestBtn} onPress={onPress} activeOpacity={0.85}>
-              <Text style={styles.requestBtnText}>요청하기</Text>
-            </TouchableOpacity>
+          {/* 말풍선 */}
+          <View style={styles.bubbleWrap}>
+            <View style={styles.bubbleTail} />
+            <View style={styles.bubble}>
+              <Text
+                style={styles.bubbleText}
+                numberOfLines={3}
+                onTextLayout={(e) => setIsTruncated(e.nativeEvent.lines.length >= 3)}
+              >
+                {user.bio ?? ''}
+                {isTruncated && <Text style={styles.bubbleMore}>  ...더보기</Text>}
+              </Text>
+              <View style={styles.bubbleFooter}>
+                <TouchableOpacity style={styles.detailBtn} onPress={onPress} activeOpacity={0.75}>
+                  <Text style={styles.detailBtnText}>요청하기</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       </View>
@@ -249,8 +291,7 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
 
 const styles = StyleSheet.create({
   wrapper: {
-    alignItems: 'flex-start',
-    paddingLeft: 16,
+    alignItems: 'center',
   },
   stack: {
     width: CARD_WIDTH + SLOT_OFFSET[2],
@@ -267,9 +308,8 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
-    shadowRadius: 16,
+    shadowRadius: 18,
     elevation: 8,
-    overflow: 'hidden',
   },
   topCard:  { zIndex: 3, opacity: SLOT_OPACITY[0] },
   midCard:  { zIndex: 2, opacity: SLOT_OPACITY[1] },
@@ -325,8 +365,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  // 하단 오버레이 (반투명 검정)
-  gradient: {
+  // 콘텐츠 컨테이너 (배경색 없음)
+  cardBottom: {
     position: 'absolute',
     left: 0,
     right: 0,
@@ -335,9 +375,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingTop: 15,
     gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
   },
 
   // 이름 행
@@ -398,28 +435,53 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.5)',
   },
 
-  // 자기소개
-  bioText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.75)',
-    lineHeight: 19,
-    marginTop: 4,
-    flex: 1,
+  // 말풍선
+  bubbleWrap: {
+    alignSelf: 'stretch',
   },
-  bottomRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    marginTop: 4,
+  bubbleTail: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 0,
+    borderRightWidth: 10,
+    borderBottomWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'rgba(255,255,255,0.8)',
+    marginLeft: 0,
   },
-  requestBtn: {
-    backgroundColor: ACCENT,
-    borderRadius: 14,
+  bubble: {
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    borderRadius: 18,
+    borderTopLeftRadius: 0,
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    marginLeft: 8,
+    paddingVertical: 12,
   },
-  requestBtnText: {
+  bubbleText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111',
+    lineHeight: 22,
+  },
+  bubbleFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+  bubbleMore: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: ACCENT,
+  },
+  detailBtn: {
+    marginLeft: 'auto',
+    backgroundColor: ACCENT,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  detailBtnText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#fff',
