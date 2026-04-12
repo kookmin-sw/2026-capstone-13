@@ -52,6 +52,61 @@ function getLevel(count: number): { label: string; color: string; bg: string } {
 type StatusFilter = 'ALL' | 'WAITING' | 'COMPLETED' | 'URGENT';
 type CatFilter = 'ALL' | HelpCategory;
 
+// ── 연속 접속 / 도움요청 슬라이드 캐러셀 ──
+interface StreakTopCarouselProps {
+  completedCount: number;
+  waitingCount: number;
+  progress: number;
+  DOTS: number;
+}
+
+function StreakTopCarousel({ completedCount, waitingCount, progress, DOTS }: StreakTopCarouselProps) {
+  const [slide, setSlide] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setSlide(prev => (prev + 1) % 2);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [fadeAnim]);
+
+  return (
+    <Animated.View style={[s.streakTopRow, { opacity: fadeAnim }]}>
+      <View style={s.streakTextWrap}>
+        {slide === 0 ? (
+          <Text style={s.streakTitle}>{completedCount}일 연속 접속중!</Text>
+        ) : (
+          <View style={s.streakSlide2Row}>
+            <Text style={s.streakSlide2Text}>지금 도움이 필요해요</Text>
+            <View style={s.streakSlide2Badge}>
+              <Text style={s.streakSlide2BadgeText}>{waitingCount}</Text>
+            </View>
+          </View>
+        )}
+      </View>
+      {slide === 0 && (
+        <View style={s.streakDots}>
+          {Array.from({ length: DOTS }).map((_, i) => (
+            <View key={i} style={[s.streakDot, i < Math.round(progress * DOTS) && s.streakDotOn]} />
+          ))}
+        </View>
+      )}
+    </Animated.View>
+  );
+}
+
 interface MealData {
   id: number;
   mealDate: string;
@@ -276,18 +331,15 @@ export default function HomeScreen() {
           const MONTHLY_GOAL = 20;
           const progress = Math.min(completedCount / MONTHLY_GOAL, 1);
           const DOTS = 9;
+          const waitingCount = requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS').length;
           return (
             <View style={s.streakCard}>
-              <View style={s.streakTopRow}>
-                <View style={s.streakTextWrap}>
-                  <Text style={s.streakTitle}>{completedCount}일 연속 접속중!</Text>
-                </View>
-                <View style={s.streakDots}>
-                  {Array.from({ length: DOTS }).map((_, i) => (
-                    <View key={i} style={[s.streakDot, i < Math.round(progress * DOTS) && s.streakDotOn]} />
-                  ))}
-                </View>
-              </View>
+              <StreakTopCarousel
+                completedCount={completedCount}
+                waitingCount={waitingCount}
+                progress={progress}
+                DOTS={DOTS}
+              />
               <View style={s.streakProgressWrap}>
                 <View style={s.streakProgressLabelRow}>
                   <Text style={s.streakProgressLabel}>이번달 도움 목표</Text>
@@ -325,12 +377,6 @@ export default function HomeScreen() {
         ) : (
           <>
             {/* 카드 보기 / 리스트 보기 탭 */}
-            <View style={s.helpTitleBox}>
-              <Text style={s.helpTitleBoxText}>지금 도움이 필요해요</Text>
-              <View style={s.helpCountBadge}>
-                <Text style={s.helpCountText}>{requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS').length}</Text>
-              </View>
-            </View>
             <View style={s.viewTabRow}>
               <Animated.View style={[s.viewTabSlider, {
                 left: tabAnim.interpolate({ inputRange: [0, 1], outputRange: ['2%', '51%'] }),
@@ -894,13 +940,18 @@ const s = StyleSheet.create({
   streakTopRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 14, paddingTop: 14, paddingBottom: 8, gap: 12,
+    height: 58,
   },
   streakTextWrap: { flex: 1 },
-  streakTitle:    { fontSize: 20, fontWeight: '800', color: T1, marginBottom: 2 },
+  streakTitle:    { fontSize: 19, fontWeight: '800', color: T1 },
   streakSub:      { fontSize: 11, color: T2 },
   streakDots:     { flexDirection: 'row', gap: 4 },
   streakDot:      { width: 6, height: 6, borderRadius: 3, backgroundColor: '#E8EDF5' },
   streakDotOn:    { backgroundColor: BLUE },
+  streakSlide2Row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  streakSlide2Text: { fontSize: 19, fontWeight: '800', color: T1 },
+  streakSlide2Badge: { backgroundColor: BLUE, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2, minWidth: 26, alignItems: 'center' },
+  streakSlide2BadgeText: { fontSize: 14, fontWeight: '800', color: '#fff' },
   streakProgressWrap: { paddingHorizontal: 14, paddingBottom: 10 },
   streakProgressLabelRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5,
@@ -1033,17 +1084,24 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 10,
     marginBottom: 12,
-    backgroundColor: '#E8EDF5',
-    borderRadius: 50,
-    padding: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
+    borderRadius: 40,
+    padding: 4,
     position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 16,
   },
   viewTabSlider: {
     position: 'absolute',
-    top: 3,
-    bottom: 3,
+    top: 4,
+    bottom: 4,
     backgroundColor: BLUE,
-    borderRadius: 50,
+    borderRadius: 36,
   },
   viewTab: {
     flex: 1,
@@ -1051,10 +1109,11 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingVertical: 12,
-    borderRadius: 50,
+    paddingVertical: 11,
+    borderRadius: 36,
+    zIndex: 1,
   },
-  viewTabText:   { fontSize: 13, fontWeight: '700', color: '#888' },
+  viewTabText:   { fontSize: 15, fontWeight: '700', color: '#999' },
   viewTabTextOn: { color: '#fff' },
 
   // ── 리스트 뷰 ──
@@ -1071,8 +1130,9 @@ const s = StyleSheet.create({
   listCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 14,
-    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    gap: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,

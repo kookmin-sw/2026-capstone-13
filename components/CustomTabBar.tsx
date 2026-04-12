@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 
@@ -38,21 +38,19 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
     (r) => r.key === state.routes[state.index]?.key,
   );
 
-  const tabLayouts = useRef<{ x: number; width: number }[]>([]);
-  const layoutCount = useRef(0);
+  const tabLayouts = useRef<Record<number, { x: number; width: number }>>({});
   const pillX = useRef(new Animated.Value(0)).current;
-  const [layoutReady, setLayoutReady] = useState(false);
+  const focusedIndexRef = useRef(focusedVisibleIndex);
+  focusedIndexRef.current = focusedVisibleIndex;
 
-  // 탭 수가 바뀌면 레이아웃 리셋 (한국인↔외국인 전환 시)
+  // 탭 수가 바뀌면 레이아웃 리셋
   const prevTabCount = useRef(visibleRoutes.length);
   if (prevTabCount.current !== visibleRoutes.length) {
     prevTabCount.current = visibleRoutes.length;
-    tabLayouts.current = [];
-    layoutCount.current = 0;
-    setLayoutReady(false);
+    tabLayouts.current = {};
   }
 
-  const animatePill = (index: number, animated: boolean) => {
+  const movePill = (index: number, animated: boolean) => {
     const layout = tabLayouts.current[index];
     if (!layout) return;
     const toX = layout.x + (layout.width - PILL_WIDTH) / 2;
@@ -69,18 +67,16 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
   };
 
   useEffect(() => {
-    if (!layoutReady) return;
-    animatePill(focusedVisibleIndex, true);
-  }, [focusedVisibleIndex, layoutReady]);
+    movePill(focusedVisibleIndex, true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusedVisibleIndex]);
 
   return (
     <View style={styles.container}>
-      {layoutReady && (
-        <Animated.View
-          style={[styles.activePill, { transform: [{ translateX: pillX }] }]}
-          pointerEvents="none"
-        />
-      )}
+      <Animated.View
+        style={[styles.activePill, { transform: [{ translateX: pillX }] }]}
+        pointerEvents="none"
+      />
 
       {visibleRoutes.map((route, i) => {
         const tabCfg = TAB_CONFIG.find((t) => t.name === route.name);
@@ -97,17 +93,16 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 
         return (
           <TouchableOpacity
-            key={route.key}
+            key={`${route.key}-${visibleRoutes.length}`}
             style={styles.tab}
             onPress={onPress}
             activeOpacity={0.8}
             onLayout={(e) => {
               const { x, width } = e.nativeEvent.layout;
               tabLayouts.current[i] = { x, width };
-              layoutCount.current += 1;
-              if (layoutCount.current === visibleRoutes.length) {
-                animatePill(focusedVisibleIndex, false);
-                setLayoutReady(true);
+              const filledCount = Object.keys(tabLayouts.current).length;
+              if (filledCount === visibleRoutes.length) {
+                movePill(focusedIndexRef.current, false);
               }
             }}
           >
