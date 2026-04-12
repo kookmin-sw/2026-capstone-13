@@ -7,6 +7,7 @@ import {
   ImageBackground,
   TouchableOpacity,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -71,8 +72,13 @@ const CardContent = memo(
           </View>
         )}
 
-        {/* 그라데이션 (View 레이어) */}
-        <View style={styles.gradientOverlay} pointerEvents="none" />
+        {/* 그라데이션 */}
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.75)']}
+          locations={[0, 0.4, 0.7, 1]}
+          style={styles.gradientOverlay}
+          pointerEvents="none"
+        />
 
         {/* 콘텐츠 (배경색 없음) */}
         <View style={styles.cardBottom}>
@@ -275,16 +281,13 @@ const styles = StyleSheet.create({
     opacity: 0.25,
   },
 
-  // 하단 오버레이
+  // 그라데이션 오버레이
   gradientOverlay: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: '55%',
-    backgroundColor: 'rgba(0,0,0,0.52)',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    height: '60%',
   },
 
   // 콘텐츠 컨테이너 (배경색 없음)
@@ -317,7 +320,7 @@ const styles = StyleSheet.create({
   bubble: {
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 18,
-    borderTopLeftRadius: 5,
+    borderTopLeftRadius: 6,
     paddingHorizontal: 14,
     paddingVertical: 10,
     maxWidth: CARD_WIDTH - 48,
