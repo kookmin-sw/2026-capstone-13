@@ -40,7 +40,8 @@
       "Bash(railway status:*)",
       "Bash(npm install:*)",
       "Bash(railway whoami:*)",
-      "Bash(railway login:*)"
+      "Bash(railway login:*)",
+      "Bash(python3 -c ':*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\sang0\\.claude"
