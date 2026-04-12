@@ -128,11 +128,13 @@ export interface Comment {
 // 앱 알림
 export interface AppNotification {
   id: number;
-  type: 'COMMENT' | 'LIKE' | 'HELP_OFFER';
+  type: 'COMMENT' | 'REPLY' | 'LIKE' | 'HELP_OFFER' | 'REVIEW_REQUEST' | 'REVIEW_RECEIVED' | 'HELP_COMPLETED' | 'STUDENT_ID_APPROVED' | 'STUDENT_ID_REJECTED';
   message: string;
+  referenceId?: number;
+  referenceType?: 'POST' | 'COMMENT' | 'HELP_REQUEST' | 'NONE';
   isRead: boolean;
   createdAt: string;
-  recipientId: number; // 알림을 받을 유저 ID
+  recipientId: number;
 }
 
 // API 공통 응답 형식

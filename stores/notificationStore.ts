@@ -1,48 +1,83 @@
-// 알림 상태 관리 (Zustand)
+// 알림 상태 관리 (Zustand) - 백엔드 API 연동
 import { create } from 'zustand';
+import {
+  getNotifications,
+  getHasUnread,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteAllNotifications,
+} from '../services/notificationService';
 import type { AppNotification } from '../types';
-
-const INITIAL_NOTIFICATIONS: AppNotification[] = [];
-
-let nextId = 10;
 
 interface NotificationState {
   notifications: AppNotification[];
-  hasUnreadForUser: (userId: number) => boolean;
-  markAsRead: (id: number) => void;
-  markAllAsRead: (userId: number) => void;
-  addNotification: (type: AppNotification['type'], message: string, recipientId: number) => void;
+  hasUnread: boolean;
+  loading: boolean;
+  fetchNotifications: () => Promise<void>;
+  fetchHasUnread: () => Promise<void>;
+  markAsRead: (id: number) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  deleteAll: () => Promise<void>;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
-  notifications: INITIAL_NOTIFICATIONS,
+  notifications: [],
+  hasUnread: false,
+  loading: false,
 
-  hasUnreadForUser: (userId: number) =>
-    get().notifications.some((n) => n.recipientId === userId && !n.isRead),
+  fetchNotifications: async () => {
+    set({ loading: true });
+    try {
+      const data = await getNotifications();
+      set({ notifications: data, hasUnread: data.some((n) => !n.isRead) });
+    } catch {
+      // 실패 시 기존 상태 유지
+    } finally {
+      set({ loading: false });
+    }
+  },
 
-  markAsRead: (id: number) =>
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, isRead: true } : n
-      ),
-    })),
+  fetchHasUnread: async () => {
+    try {
+      const has = await getHasUnread();
+      set({ hasUnread: has });
+    } catch {
+      // 실패 시 무시
+    }
+  },
 
-  markAllAsRead: (userId: number) =>
-    set((state) => ({
-      notifications: state.notifications.map((n) =>
-        n.recipientId === userId ? { ...n, isRead: true } : n
-      ),
-    })),
+  markAsRead: async (id: number) => {
+    try {
+      await markNotificationRead(id);
+      set((state) => ({
+        notifications: state.notifications.map((n) =>
+          n.id === id ? { ...n, isRead: true } : n
+        ),
+        hasUnread: state.notifications.some((n) => n.id !== id && !n.isRead),
+      }));
+    } catch {
+      // 실패 시 무시
+    }
+  },
 
-  addNotification: (type: AppNotification['type'], message: string, recipientId: number) => {
-    const newNotif: AppNotification = {
-      id: nextId++,
-      type,
-      message,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-      recipientId,
-    };
-    set((state) => ({ notifications: [newNotif, ...state.notifications] }));
+  markAllAsRead: async () => {
+    try {
+      await markAllNotificationsRead();
+      set((state) => ({
+        notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
+        hasUnread: false,
+      }));
+    } catch {
+      // 실패 시 무시
+    }
+  },
+
+  deleteAll: async () => {
+    try {
+      await deleteAllNotifications();
+      set({ notifications: [], hasUnread: false });
+    } catch {
+      // 실패 시 무시
+    }
   },
 }));

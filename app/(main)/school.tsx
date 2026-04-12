@@ -52,8 +52,20 @@ interface SchoolNotice {
   pubDate: string | null;
 }
 
+// 괄호 및 그 안의 내용 제거 (예: "Staff Cafeteria (1st floor)" → "Staff Cafeteria")
+const stripParens = (name: string) => name.replace(/\s*\(.*?\)/g, '').trim();
+
 const CATEGORY_COLOR: Record<string, string> = {
   장학: '#10B981', 학사: BLUE, 행사: '#8B5CF6', 취업: '#F59E0B', 시설: '#A8C8FA',
+};
+
+const CATEGORY_TRANSLATIONS: Record<string, Record<string, string>> = {
+  en: { 장학: 'Scholarship', 학사: 'Academic', 행사: 'Event', 취업: 'Employment', 시설: 'Facilities', '행사/취업': 'Event/Employment', 비자: 'Visa', 학생지원: 'Student Support', 정부초청: 'Gov. Invitation' },
+  ja: { 장학: '奨学金', 학사: '学事', 행사: 'イベント', 취업: '就職', 시설: '施設', '행사/취업': 'イベント/就職', 비자: 'ビザ', 학생지원: '学生支援', 정부초청: '政府招聘' },
+  'zh-Hans': { 장학: '奖学金', 학사: '学业', 행사: '活动', 취업: '就业', 시설: '设施', '행사/취업': '活动/就业', 비자: '签证', 학생지원: '学生支持', 정부초청: '政府邀请' },
+  ru: { 장학: 'Стипендия', 학사: 'Учёба', 행사: 'Мероприятие', 취업: 'Трудоустройство', 시설: 'Объекты', '행사/취업': 'Мероп./Работа', 비자: 'Виза', 학생지원: 'Поддержка', 정부초청: 'Приглашение' },
+  mn: { 장학: 'Тэтгэлэг', 학사: 'Сургалт', 행사: 'Арга хэмжээ', 취업: 'Ажил эрхлэлт', 시설: 'Байгууламж', '행사/취업': 'Арга/Ажил', 비자: 'Виз', 학생지원: 'Дэмжлэг', 정부초청: 'Урилга' },
+  vi: { 장학: 'Học bổng', 학사: 'Học thuật', 행사: 'Sự kiện', 취업: 'Việc làm', 시설: 'Cơ sở', '행사/취업': 'Sự kiện/Việc làm', 비자: 'Visa', 학생지원: 'Hỗ trợ SV', 정부초청: 'Mời chính phủ' },
 };
 
 export default function SchoolScreen() {
@@ -211,7 +223,7 @@ export default function SchoolScreen() {
                 {/* 식당 선택 - < 이름 > 방식 */}
                 {cafeteriaList.length > 0 && (() => {
                   const currentIdx = cafeteriaList.indexOf(selectedCafeteria ?? cafeteriaList[0]);
-                  const translatedName = meals.find((m) => m.cafeteriaKo === cafeteriaList[currentIdx])?.cafeteria ?? cafeteriaList[currentIdx];
+                  const translatedName = stripParens(meals.find((m) => m.cafeteriaKo === cafeteriaList[currentIdx])?.cafeteria ?? cafeteriaList[currentIdx]);
                   return (
                     <View style={s.cafeteriaTabWrap}>
                       <TouchableOpacity
@@ -358,7 +370,7 @@ export default function SchoolScreen() {
                           s.noticeCategoryText,
                           { color: CATEGORY_COLOR[notice.categoryName] ?? '#9CA3AF' },
                         ]}>
-                          {notice.categoryName}
+                          {CATEGORY_TRANSLATIONS[langCode]?.[notice.categoryName] ?? notice.categoryName}
                         </Text>
                       </View>
                       <Text style={s.noticeDate}>{notice.pubDate ?? ''}</Text>

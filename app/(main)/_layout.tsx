@@ -1,5 +1,6 @@
 // 메인 탭 네비게이션 레이아웃
 import { useEffect, useRef } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Client } from '@stomp/stompjs';
@@ -7,8 +8,10 @@ import * as SecureStore from 'expo-secure-store';
 import { Colors } from '../../constants/colors';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useBannerStore } from '../../stores/bannerStore';
 import { getMyRequests, getHelpedRequests } from '../../services/helpService';
 import { getChatRooms } from '../../services/chatService';
+import InAppBanner from '../../components/InAppBanner';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api';
 const WS_URL = BASE_URL.replace(/^http/, 'ws').replace(/\/api$/, '') + '/ws-native';
@@ -16,9 +19,12 @@ const WS_URL = BASE_URL.replace(/^http/, 'ws').replace(/\/api$/, '') + '/ws-nati
 export default function MainLayout() {
   const { unreadCount, incrementUnread, setUnreadCount } = useChatStore();
   const { user } = useAuthStore();
+  const { showBanner } = useBannerStore();
   const globalClientRef = useRef<Client | null>(null);
+  // 채팅방별 파트너 정보 캐시 (roomId → room info)
+  const roomCacheRef = useRef<Record<number, { requestTitle: string; partnerNickname: string; partnerProfileImage?: string; requestStatus: string; requesterId: string }>>({});
 
-  // 앱 시작 시 전체 unread 합산 (나간 방 제외)
+  // 앱 시작 시 전체 unread 합산 + 방 정보 캐시 (나간 방 제외)
   useEffect(() => {
     if (!user) return;
     const { hasLeft } = useChatStore.getState();
@@ -29,6 +35,16 @@ export default function MainLayout() {
           .filter((r) => !hasLeft(r.id, myId) && r.status !== 'WAITING')
           .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
         setUnreadCount(total);
+        // 방 정보 캐시 저장
+        res.data.forEach((r) => {
+          roomCacheRef.current[r.id] = {
+            requestTitle: r.title,
+            partnerNickname: r.partnerNickname,
+            partnerProfileImage: r.partnerProfileImage,
+            requestStatus: r.status,
+            requesterId: '',
+          };
+        });
       }
     }).catch(() => {});
   }, [user?.id]);
@@ -78,6 +94,21 @@ export default function MainLayout() {
                 const { activeChatroomId } = useChatStore.getState();
                 if (msg.senderId !== user.id && activeChatroomId !== roomId) {
                   incrementUnread();
+                  // 인앱 배너 표시
+                  const roomInfo = roomCacheRef.current[roomId];
+                  showBanner({
+                    type: 'chat',
+                    title: msg.senderNickname ?? roomInfo?.partnerNickname ?? '새 메시지',
+                    body: msg.content,
+                    roomId,
+                    roomParams: roomInfo ? {
+                      requestTitle: roomInfo.requestTitle,
+                      partnerNickname: roomInfo.partnerNickname,
+                      partnerProfileImage: roomInfo.partnerProfileImage,
+                      requestStatus: roomInfo.requestStatus,
+                      requesterId: roomInfo.requesterId,
+                    } : undefined,
+                  });
                 }
               } catch {}
             });
@@ -99,26 +130,27 @@ export default function MainLayout() {
   }, [user?.id]);
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: true,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textLight,
-        tabBarStyle: {
-          backgroundColor: Colors.surface,
-          borderTopColor: Colors.border,
-          paddingBottom: 8,
-          height: 68,
-        },
-        headerStyle: {
-          backgroundColor: Colors.surface,
-        },
-        headerTitleStyle: {
-          fontWeight: '700',
-          color: Colors.textPrimary,
-        },
-      }}
-    >
+    <View style={styles.root}>
+      <Tabs
+        screenOptions={{
+          headerShown: true,
+          tabBarActiveTintColor: Colors.primary,
+          tabBarInactiveTintColor: Colors.textLight,
+          tabBarStyle: {
+            backgroundColor: Colors.surface,
+            borderTopColor: Colors.border,
+            paddingBottom: 8,
+            height: 68,
+          },
+          headerStyle: {
+            backgroundColor: Colors.surface,
+          },
+          headerTitleStyle: {
+            fontWeight: '700',
+            color: Colors.textPrimary,
+          },
+        }}
+      >
       <Tabs.Screen
         name="home"
         options={{
@@ -182,5 +214,13 @@ export default function MainLayout() {
         options={{ href: null, headerShown: false }}
       />
     </Tabs>
+    <InAppBanner />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});

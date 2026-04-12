@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, Image, Keyboard, ActivityIndicator, Alert, Modal, Pressable,
+  TextInput, KeyboardAvoidingView, Platform, Image, Keyboard, ActivityIndicator, Alert, Modal, Pressable, Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -66,6 +66,7 @@ export default function CommunityPostScreen() {
   const [commentTranslations, setCommentTranslations] = useState<Record<number, string>>({});
   const [translatingComments, setTranslatingComments] = useState<Record<number, boolean>>({});
   const scrollRef = useRef<ScrollView>(null);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   useEffect(() => {
     const show = Keyboard.addListener(
@@ -314,7 +315,9 @@ export default function CommunityPostScreen() {
           {post.images.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.imageScroll}>
               {post.images.map((uri, idx) => (
-                <Image key={idx} source={{ uri }} style={s.image} />
+                <TouchableOpacity key={idx} activeOpacity={0.9} onPress={() => setFullscreenImage(uri)}>
+                  <Image source={{ uri }} style={s.image} />
+                </TouchableOpacity>
               ))}
             </ScrollView>
           )}
@@ -411,6 +414,16 @@ export default function CommunityPostScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* 풀스크린 이미지 뷰어 */}
+      <Modal visible={!!fullscreenImage} transparent animationType="fade" onRequestClose={() => setFullscreenImage(null)}>
+        <View style={s.fsOverlay}>
+          <Image source={{ uri: fullscreenImage ?? '' }} style={s.fsImage} resizeMode="contain" />
+          <TouchableOpacity style={s.fsClose} onPress={() => setFullscreenImage(null)} activeOpacity={0.8}>
+            <Ionicons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
 
       {/* 댓글 입력 바 */}
       <View style={s.inputBar}>
@@ -577,6 +590,22 @@ const s = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   sendBtnDisabled: { backgroundColor: BLUE_L },
+
+  // 풀스크린 이미지
+  fsOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  fsImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+  },
+  fsClose: {
+    position: 'absolute', top: Platform.OS === 'ios' ? 56 : 36, right: 16,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center',
+  },
 
   // 없는 게시글
   notFound: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
