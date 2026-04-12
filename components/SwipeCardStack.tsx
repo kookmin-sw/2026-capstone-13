@@ -7,7 +7,6 @@ import {
   ImageBackground,
   TouchableOpacity,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -72,13 +71,11 @@ const CardContent = memo(
           </View>
         )}
 
-        {/* 그라데이션 */}
-        <LinearGradient
-          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.75)']}
-          locations={[0, 0.4, 0.7, 1]}
-          style={styles.gradientOverlay}
-          pointerEvents="none"
-        />
+        {/* 페이크 그라데이션 레이어 */}
+        <View style={styles.gradient1} pointerEvents="none" />
+        <View style={styles.gradient2} pointerEvents="none" />
+        <View style={styles.gradient3} pointerEvents="none" />
+        <View style={styles.gradient4} pointerEvents="none" />
 
         {/* 콘텐츠 (배경색 없음) */}
         <View style={styles.cardBottom}>
@@ -281,13 +278,39 @@ const styles = StyleSheet.create({
     opacity: 0.25,
   },
 
-  // 그라데이션 오버레이
-  gradientOverlay: {
+  gradient1: {
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0,
-    height: '60%',
+    top: '42%',
+    height: '10%',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  gradient2: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '52%',
+    height: '12%',
+    backgroundColor: 'rgba(0,0,0,0.10)',
+  },
+  gradient3: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '64%',
+    height: '14%',
+    backgroundColor: 'rgba(0,0,0,0.20)',
+  },
+  gradient4: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '78%',
+    height: '22%',
+    backgroundColor: 'rgba(0,0,0,0.36)',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
 
   // 콘텐츠 컨테이너 (배경색 없음)
