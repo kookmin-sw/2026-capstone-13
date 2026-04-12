@@ -76,6 +76,10 @@ const CardContent = memo(
         <View style={styles.gradient2} pointerEvents="none" />
         <View style={styles.gradient3} pointerEvents="none" />
         <View style={styles.gradient4} pointerEvents="none" />
+        <View style={styles.gradient5} pointerEvents="none" />
+        <View style={styles.gradient6} pointerEvents="none" />
+        <View style={styles.gradient7} pointerEvents="none" />
+        <View style={styles.gradient8} pointerEvents="none" />
 
         {/* 콘텐츠 (배경색 없음) */}
         <View style={styles.cardBottom}>
@@ -282,33 +286,65 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    top: '42%',
-    height: '10%',
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    top: '40%',
+    height: '8%',
+    backgroundColor: 'rgba(0,0,0,0.02)',
   },
   gradient2: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: '52%',
-    height: '12%',
-    backgroundColor: 'rgba(0,0,0,0.10)',
+    top: '48%',
+    height: '7%',
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   gradient3: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: '64%',
-    height: '14%',
-    backgroundColor: 'rgba(0,0,0,0.20)',
+    top: '55%',
+    height: '7%',
+    backgroundColor: 'rgba(0,0,0,0.09)',
   },
   gradient4: {
     position: 'absolute',
     left: 0,
     right: 0,
-    top: '78%',
-    height: '22%',
-    backgroundColor: 'rgba(0,0,0,0.36)',
+    top: '62%',
+    height: '7%',
+    backgroundColor: 'rgba(0,0,0,0.14)',
+  },
+  gradient5: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '69%',
+    height: '7%',
+    backgroundColor: 'rgba(0,0,0,0.20)',
+  },
+  gradient6: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '76%',
+    height: '7%',
+    backgroundColor: 'rgba(0,0,0,0.27)',
+  },
+  gradient7: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '83%',
+    height: '7%',
+    backgroundColor: 'rgba(0,0,0,0.33)',
+  },
+  gradient8: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '90%',
+    height: '10%',
+    backgroundColor: 'rgba(0,0,0,0.38)',
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
   },
