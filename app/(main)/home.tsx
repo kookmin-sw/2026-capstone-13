@@ -20,6 +20,7 @@ import { getKoreanUsers } from '../../services/authService';
 import { getCommunityPosts, type CommunityPostDto } from '../../services/communityService';
 import { getHelpedRequests, getHelpRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
+import { updateAndGetStreak } from '../../utils/streak';
 import { useNotificationStore } from '../../stores/notificationStore';
 import type { HelpRequest, HelpCategory, User } from '../../types';
 
@@ -135,6 +136,7 @@ export default function HomeScreen() {
   const [requests, setRequests]             = useState<HelpRequest[]>([]);
   const [koreanUsers, setKoreanUsers]       = useState<User[]>([]);
   const [completedCount, setCompletedCount] = useState(0);
+  const [loginStreak, setLoginStreak]       = useState(1);
   const [showCount, setShowCount]           = useState(false);
   const [refreshing, setRefreshing]         = useState(false);
   const [notices, setNotices]               = useState<SchoolNotice[]>([]);
@@ -247,6 +249,9 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => { fetchHasUnread(); }, []);
+  useEffect(() => {
+    updateAndGetStreak().then(setLoginStreak).catch(() => {});
+  }, []);
   useFocusEffect(useCallback(() => { fetchRequests(); }, [fetchRequests]));
 
   const onRefresh = () => { setRefreshing(true); fetchRequests(); };
@@ -331,11 +336,11 @@ export default function HomeScreen() {
           const MONTHLY_GOAL = 20;
           const progress = Math.min(completedCount / MONTHLY_GOAL, 1);
           const DOTS = 9;
-          const waitingCount = requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS').length;
+          const waitingCount = requests.filter(r => r.status === 'WAITING').length;
           return (
             <View style={s.streakCard}>
               <StreakTopCarousel
-                completedCount={completedCount}
+                completedCount={loginStreak}
                 waitingCount={waitingCount}
                 progress={progress}
                 DOTS={DOTS}

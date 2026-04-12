@@ -36,7 +36,11 @@
       "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://backend-production-0a6f.up.railway.app/actuator/health\")",
       "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://backend-production-0a6f.up.railway.app/api/auth/register\" -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"email\\\\\":\\\\\"debugtest_$\\(date +%s\\)@example.com\\\\\",\\\\\"password\\\\\":\\\\\"test1234\\\\\",\\\\\"nickname\\\\\":\\\\\"디버그유저\\\\\",\\\\\"userType\\\\\":\\\\\"KOREAN\\\\\",\\\\\"university\\\\\":\\\\\"테스트대\\\\\"}\")",
       "Bash(git stash:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(railway status:*)",
+      "Bash(npm install:*)",
+      "Bash(railway whoami:*)",
+      "Bash(railway login:*)"
     ],
     "additionalDirectories": [
       "C:\\Users\\sang0\\.claude"
