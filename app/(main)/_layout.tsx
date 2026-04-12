@@ -12,6 +12,7 @@ import { useBannerStore } from '../../stores/bannerStore';
 import { getMyRequests, getHelpedRequests } from '../../services/helpService';
 import { getChatRooms } from '../../services/chatService';
 import InAppBanner from '../../components/InAppBanner';
+import CustomTabBar from '../../components/CustomTabBar';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api';
 const WS_URL = BASE_URL.replace(/^http/, 'ws').replace(/\/api$/, '') + '/ws-native';
@@ -132,16 +133,9 @@ export default function MainLayout() {
   return (
     <View style={styles.root}>
       <Tabs
+        tabBar={(props) => <CustomTabBar {...props} />}
         screenOptions={{
           headerShown: true,
-          tabBarActiveTintColor: Colors.primary,
-          tabBarInactiveTintColor: Colors.textLight,
-          tabBarStyle: {
-            backgroundColor: Colors.surface,
-            borderTopColor: Colors.border,
-            paddingBottom: 8,
-            height: 68,
-          },
           headerStyle: {
             backgroundColor: Colors.surface,
           },
@@ -149,6 +143,7 @@ export default function MainLayout() {
             fontWeight: '700',
             color: Colors.textPrimary,
           },
+          tabBarStyle: { display: 'none' },
         }}
       >
       <Tabs.Screen
@@ -166,6 +161,7 @@ export default function MainLayout() {
         options={{
           headerShown: false,
           title: '학교생활',
+          href: user?.userType === 'KOREAN' ? null : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="school-outline" size={size} color={color} />
           ),

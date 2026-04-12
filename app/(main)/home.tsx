@@ -98,6 +98,7 @@ export default function HomeScreen() {
       comments: 8,
       liked: false,
       createdAt: new Date().toISOString(),
+      commentList: [],
     },
   ]);
   const [viewMode, setViewMode]              = useState<'card' | 'list'>('card');
@@ -206,7 +207,7 @@ export default function HomeScreen() {
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
-        contentContainerStyle={{ paddingTop: Platform.OS === 'ios' ? 56 : 32, paddingBottom: 16 }}
+        contentContainerStyle={{ paddingTop: Platform.OS === 'ios' ? 56 : 32, paddingBottom: 100 }}
       >
         {/* ── NAV ── */}
         <View style={s.nav}>
@@ -218,7 +219,7 @@ export default function HomeScreen() {
           <View style={s.navRight}>
             <TouchableOpacity style={s.notifBtn} onPress={() => router.push('/notifications')} activeOpacity={0.8}>
               <Ionicons name="notifications-outline" size={20} color="#444" />
-              {hasUnreadForUser(user?.id ?? 0) && <View style={s.notifDot} />}
+              {hasUnread && <View style={s.notifDot} />}
             </TouchableOpacity>
           </View>
         </View>
@@ -345,7 +346,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
             {viewMode === 'card' ? (
-              <View style={{ marginLeft: 16, marginBottom: 10 }}>
+              <View style={{ marginLeft: 16, marginBottom: 24 }}>
                 <SwipeCardStack
                   requests={requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS')}
                   onCardPress={(card) => goTo(card)}

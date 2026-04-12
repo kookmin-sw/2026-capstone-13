@@ -21,9 +21,9 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import type { HelpRequest } from '../types';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 90;
-const CARD_HEIGHT = 390;
+const CARD_HEIGHT = Math.round(SCREEN_HEIGHT * 0.53);
 const ACCENT  = '#0EA5E9';
 
 const SLOT_OFFSET  = [0, 16, 32];
