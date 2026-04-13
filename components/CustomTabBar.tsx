@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/authStore';
 const ACTIVE_BG = '#3B6FE8';
 const INACTIVE_COLOR = '#999999';
 const PILL_WIDTH = 76;
+const PILL_WIDTH_INTERNATIONAL = 62;
 const PILL_HEIGHT = 52;
 
 type TabConfig = {
@@ -38,6 +39,8 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
     (r) => r.key === state.routes[state.index]?.key,
   );
 
+  const pillWidth = isKorean ? PILL_WIDTH : PILL_WIDTH_INTERNATIONAL;
+
   const [tabLayouts, setTabLayouts] = useState<Record<number, { x: number; width: number }>>({});
   const pillX = useRef(new Animated.Value(13)).current;
   const pillXRef = useRef(0);
@@ -46,7 +49,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
   const getPillX = (layouts: Record<number, { x: number; width: number }>, index: number) => {
     const layout = layouts[index];
     if (!layout) return null;
-    return layout.x + (layout.width - PILL_WIDTH) / 2;
+    return layout.x + (layout.width - pillWidth) / 2;
   };
 
   const handleLayout = (i: number, x: number, width: number) => {
@@ -84,7 +87,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
   return (
     <View style={styles.container}>
       <Animated.View
-        style={[styles.activePill, { transform: [{ translateX: pillX }] }]}
+        style={[styles.activePill, { width: pillWidth, transform: [{ translateX: pillX }] }]}
         pointerEvents="none"
       />
 

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Image,
   Platform,
   RefreshControl,
   ScrollView,
@@ -15,12 +16,10 @@ import {
 } from 'react-native';
 import KoreanUserCardStack from '../../components/KoreanUserCardStack';
 import SwipeCardStack from '../../components/SwipeCardStack';
-import api from '../../services/api';
+import WriteForm from '../../components/WriteForm';
 import { getKoreanUsers } from '../../services/authService';
-import { getCommunityPosts, type CommunityPostDto } from '../../services/communityService';
 import { getHelpedRequests, getHelpRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
-import { updateAndGetStreak } from '../../utils/streak';
 import { useNotificationStore } from '../../stores/notificationStore';
 import type { HelpRequest, HelpCategory, User } from '../../types';
 
@@ -34,29 +33,13 @@ const BG     = '#F0F4FA';
 const DIV    = '#D4E4FF';
 
 
-const CATEGORY_TRANSLATIONS: Record<string, Record<string, string>> = {
-  en: { 장학: 'Scholarship', 학사: 'Academic', 행사: 'Event', 취업: 'Employment', 시설: 'Facilities', '행사/취업': 'Event/Employment', 비자: 'Visa', 학생지원: 'Student Support', 정부초청: 'Gov. Invitation' },
-  ja: { 장학: '奨学金', 학사: '学事', 행사: 'イベント', 취업: '就職', 시설: '施設', '행사/취업': 'イベント/就職', 비자: 'ビザ', 학생지원: '学生支援', 정부초청: '政府招聘' },
-  'zh-Hans': { 장학: '奖学金', 학사: '学业', 행사: '活동', 취업: '就业', 시설: '设施', '행사/취업': '活动/就业', 비자: '签证', 학생지원: '学生支持', 정부초청: '政府邀请' },
-  ru: { 장학: 'Стипендия', 학사: 'Учёба', 행사: 'Мероприятие', 취업: 'Трудоустройство', 시설: 'Объекты', '행사/취업': 'Мероп./Работа', 비자: 'Виза', 학생지원: 'Поддержка', 정부초청: 'Приглашение' },
-  mn: { 장학: 'Тэтгэлэг', 학사: 'Сургалт', 행사: 'Арга хэмжээ', 취업: 'Ажил эрхлэлт', 시설: 'Байгууламж', '행사/취업': 'Арга/Ажил', 비자: 'Виз', 학생지원: 'Дэмжлэг', 정부초청: 'Урилга' },
-  vi: { 장학: 'Học bổng', 학사: 'Học thuật', 행사: 'Sự kiện', 취업: 'Việc làm', 시설: 'Cơ sở', '행사/취업': 'Sự kiện/Việc làm', 비자: 'Visa', 학생지원: 'Hỗ trợ SV', 정부초청: 'Mời chính phủ' },
-};
 
-function getLevel(count: number): { label: string; color: string; bg: string } {
-  if (count >= 31) return { label: '마스터', color: '#F97316', bg: '#FFF7ED' };
-  if (count >= 16) return { label: '전문가', color: '#8B5CF6', bg: '#F5F3FF' };
-  if (count >= 6)  return { label: '도우미', color: '#3B6FE8', bg: '#EEF4FF' };
-  return                  { label: '새싹',   color: '#22C55E', bg: '#F0FDF4' };
-}
 
-type StatusFilter = 'ALL' | 'WAITING' | 'COMPLETED' | 'URGENT';
-type CatFilter = 'ALL' | HelpCategory;
-
-// ── 연속 접속 / 도움요청 슬라이드 캐러셀 ──
+// ── 한국인용: ~일 연속 접속중 캐러셀 ──
 interface StreakTopCarouselProps {
   completedCount: number;
   waitingCount: number;
+  inProgressCount: number;
   progress: number;
   DOTS: number;
 }
@@ -79,7 +62,7 @@ function StreakTopCarousel({ completedCount, waitingCount, progress, DOTS }: Str
           useNativeDriver: true,
         }).start();
       });
-    }, 5000);
+    }, 6000);
     return () => clearInterval(interval);
   }, [fadeAnim]);
 
@@ -108,124 +91,101 @@ function StreakTopCarousel({ completedCount, waitingCount, progress, DOTS }: Str
   );
 }
 
-interface MealData {
-  id: number;
-  mealDate: string;
-  cafeteria: string;
-  corner: string;
-  menu: string;
+// ── 외국인용: 통계 + CTA 슬라이드 캐러셀 ──
+interface IntlTopCarouselProps {
+  completedCount: number;
+  waitingCount: number;
+  inProgressCount: number;
 }
 
-interface SchoolNotice {
-  id: number;
-  categoryName: string;
-  titleKo: string;
-  title: string;
-  link: string;
-  pubDate: string | null;
-}
+function IntlTopCarousel({ completedCount, waitingCount, inProgressCount }: IntlTopCarouselProps) {
+  const [slide, setSlide] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setSlide(prev => (prev + 1) % 2);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [fadeAnim]);
+
+  return (
+    <Animated.View style={[s.streakSlideWrap, { opacity: fadeAnim }]}>
+      {slide === 0 ? (
+        <View style={s.streakStatRow}>
+          {[
+            { label: '요청도움', value: waitingCount,    color: ORANGE,    bg: 'rgba(249,115,22,0.10)' },
+            { label: '진행중',   value: inProgressCount, color: BLUE,      bg: 'rgba(59,111,232,0.10)' },
+            { label: '완료',     value: completedCount,  color: '#22C55E', bg: 'rgba(34,197,94,0.10)'  },
+          ].map(({ label, value, color, bg }) => (
+            <View key={label} style={[s.streakStatItem, { backgroundColor: bg }]}>
+              <Text style={[s.streakStatNum, { color }]}>{value}</Text>
+              <Text style={[s.streakStatLabel, { color }]}>{label}</Text>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={s.streakCtaRow}>
+          <View style={s.streakCtaTextWrap}>
+            <Text style={s.streakCtaTitle}>지금 바로 도움을 요청해보세요!</Text>
+            <Text style={s.streakCtaSub}>한국인 헬퍼가 기다리고 있어요</Text>
+          </View>
+        </View>
+      )}
+    </Animated.View>
+  );
+}
 
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const langCode = user?.preferredLanguage ?? 'en';
   const { hasUnread, fetchHasUnread } = useNotificationStore();
   const isInternational = user?.userType === 'INTERNATIONAL' || user?.userType === 'EXCHANGE';
   const [requests, setRequests]             = useState<HelpRequest[]>([]);
   const [koreanUsers, setKoreanUsers]       = useState<User[]>([]);
   const [completedCount, setCompletedCount] = useState(0);
-  const [loginStreak, setLoginStreak]       = useState(1);
-  const [showCount, setShowCount]           = useState(false);
   const [refreshing, setRefreshing]         = useState(false);
-  const [notices, setNotices]               = useState<SchoolNotice[]>([]);
-  const [meals, setMeals]                   = useState<MealData[]>([]);
-  const [hotPosts, setHotPosts]             = useState<CommunityPostDto[]>([
-    {
-      id: 0,
-      category: 'INFO',
-      title: '한국 편의점 200% 활용법',
-      content: '편의점 도시락은 전자레인지에 데워 먹을 수 있어요! 1+1 행사 상품도 자주 있으니 꼭 확인하세요 :)',
-      images: [],
-      author: '도와줘코리안',
-      university: '한국외국어대학교',
-      userType: 'KOREAN',
-      likes: 32,
-      comments: 8,
-      liked: false,
-      createdAt: new Date().toISOString(),
-      commentList: [],
-    },
-  ]);
   const [viewMode, setViewMode]              = useState<'card' | 'list'>('card');
   const [searchQuery, setSearchQuery]        = useState('');
   const [statusFilter, setStatusFilter]      = useState<'ALL' | 'WAITING' | 'IN_PROGRESS' | 'COMPLETED'>('ALL');
+  const [intlTab, setIntlTab]                = useState<'card' | 'write' | 'list'>('card');
   const tabAnim                              = useRef(new Animated.Value(0)).current;
+  const intlTabAnim                          = useRef(new Animated.Value(0)).current;
 
   const switchTab = useCallback((mode: 'card' | 'list') => {
     setViewMode(mode);
     Animated.spring(tabAnim, {
       toValue: mode === 'card' ? 0 : 1,
       useNativeDriver: false,
-      friction: 7,
-      tension: 60,
+      friction: 10,
+      tension: 35,
     }).start();
   }, [tabAnim]);
+
+  const switchIntlTab = useCallback((mode: 'card' | 'write' | 'list') => {
+    setIntlTab(mode);
+    Animated.spring(intlTabAnim, {
+      toValue: mode === 'card' ? 0 : mode === 'write' ? 1 : 2,
+      useNativeDriver: false,
+      friction: 10,
+      tension: 35,
+    }).start();
+  }, [intlTabAnim, setIntlTab]);
   const scrollViewRef                        = useRef<ScrollView>(null);
-  const [noticeWidth, setNoticeWidth]        = useState(0);
-  const noticeRef                            = useRef<ScrollView>(null);
-  const noticeIndexRef                       = useRef(0);
-  const [mealWidth, setMealWidth]            = useState(0);
-  const mealRef                              = useRef<ScrollView>(null);
-  const mealIndexRef                         = useRef(0);
 
   useEffect(() => {
-    const timer = setInterval(() => setShowCount(prev => !prev), 6000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // 공지 무한 자동 슬라이드 (4초마다, 끝에서 애니메이션 없이 처음으로 점프)
-  useEffect(() => {
-    if (!noticeWidth || notices.length === 0) return;
-    const timer = setInterval(() => {
-      const current = noticeIndexRef.current;
-      const next = current + 1;
-      if (next >= notices.length) {
-        // 마지막에서 처음으로 순간이동 후 다시 두 번째로
-        noticeRef.current?.scrollTo({ x: 0, animated: false });
-        noticeIndexRef.current = 0;
-      } else {
-        noticeRef.current?.scrollTo({ x: next * noticeWidth, animated: true });
-        noticeIndexRef.current = next;
-      }
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [noticeWidth, notices.length]);
-
-  // 학식 무한 자동 슬라이드 (4초마다)
-  useEffect(() => {
-    if (!mealWidth || meals.length === 0) return;
-    const timer = setInterval(() => {
-      const next = mealIndexRef.current + 1;
-      if (next >= meals.length) {
-        mealRef.current?.scrollTo({ x: 0, animated: false });
-        mealIndexRef.current = 0;
-      } else {
-        mealRef.current?.scrollTo({ x: next * mealWidth, animated: true });
-        mealIndexRef.current = next;
-      }
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [mealWidth, meals.length]);
-
-  useEffect(() => {
-    api.get('/notices').then(res => {
-      const data = res.data.data?.content ?? res.data.data ?? [];
-      setNotices(Array.isArray(data) ? data : []);
-    }).catch(() => {});
-    api.get('/meals').then(res => setMeals(res.data.data ?? [])).catch(() => {});
-    getCommunityPosts().then(res => { if (res.success) setHotPosts(res.data.content.filter(p => p.likes >= 10).slice(0, 6)); }).catch(() => {});
     if (user?.userType === 'INTERNATIONAL' || user?.userType === 'EXCHANGE') {
       getKoreanUsers().then(res => { if (res.success) setKoreanUsers(res.data); }).catch(() => {});
     }
@@ -249,16 +209,11 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => { fetchHasUnread(); }, []);
-  useEffect(() => {
-    updateAndGetStreak().then(setLoginStreak).catch(() => {});
-  }, []);
   useFocusEffect(useCallback(() => { fetchRequests(); }, [fetchRequests]));
 
   const onRefresh = () => { setRefreshing(true); fetchRequests(); };
 
-  const rating = (user as { rating?: number })?.rating ?? 0;
-
-  const goTo = (item: HelpRequest) =>
+const goTo = (item: HelpRequest) =>
     router.push({ pathname: '/request-detail', params: { id: item.id } });
 
   return (
@@ -284,76 +239,41 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── 공지사항 슬라이드 (유학생/교환학생만 표시) ── */}
-        {isInternational && <View style={s.summaryWrapper}>
-          <View style={s.summaryInner}>
-          <ScrollView
-            ref={noticeRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={16}
-            onLayout={e => setNoticeWidth(e.nativeEvent.layout.width)}
-            onMomentumScrollEnd={e => {
-              const idx = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
-              noticeIndexRef.current = idx;
-            }}
-            style={s.summaryScroll}
-          >
-            {notices.length === 0 ? (
-              <View style={[s.summarySlide, noticeWidth ? { width: noticeWidth } : {}]}>
-                <View style={s.summaryIconWrap}>
-                  <Ionicons name="megaphone-outline" size={14} color={BLUE} />
-                </View>
-                <View style={s.summaryTextWrap}>
-                  <Text style={s.summaryLabel}>학교 공지</Text>
-                  <Text style={s.summaryValue}>불러오는 중...</Text>
-                </View>
-              </View>
-            ) : notices.map((notice) => (
-              <TouchableOpacity
-                key={notice.id}
-                style={[s.summarySlide, noticeWidth ? { width: noticeWidth } : {}]}
-                onPress={() => router.push({ pathname: '/(main)/school', params: { tab: 'NOTICE' } })}
-                activeOpacity={0.85}
-              >
-                <View style={s.summaryIconWrap}>
-                  <Ionicons name="megaphone-outline" size={14} color={BLUE} />
-                </View>
-                <View style={s.summaryTextWrap}>
-                  <Text style={s.summaryLabel}>{CATEGORY_TRANSLATIONS[langCode]?.[notice.categoryName] ?? notice.categoryName ?? '학교 공지'}</Text>
-                  <Text style={s.summaryValue} numberOfLines={1}>{notice.title || notice.titleKo}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={14} color={T2} />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          </View>
-        </View>}
-
-        {/* ── 연속 도움중 카드 (한국인만 표시) ── */}
-        {!isInternational && (() => {
+        {/* ── 연속 도움중 카드 (공통 표시) ── */}
+        {(() => {
           const MONTHLY_GOAL = 20;
           const progress = Math.min(completedCount / MONTHLY_GOAL, 1);
           const DOTS = 9;
           const waitingCount = requests.filter(r => r.status === 'WAITING').length;
+          const inProgressCount = requests.filter(r => r.status === 'IN_PROGRESS').length;
           return (
             <View style={s.streakCard}>
-              <StreakTopCarousel
-                completedCount={loginStreak}
-                waitingCount={waitingCount}
-                progress={progress}
-                DOTS={DOTS}
-              />
-              <View style={s.streakProgressWrap}>
-                <View style={s.streakProgressLabelRow}>
-                  <Text style={s.streakProgressLabel}>이번달 도움 목표</Text>
-                  <Text style={s.streakProgressCount}>{completedCount} / {MONTHLY_GOAL}</Text>
-                </View>
-                <View style={s.streakProgressTrack}>
-                  <View style={[s.streakProgressFill, { width: `${progress * 100}%` as `${number}%` }]} />
-                </View>
-              </View>
+              {isInternational ? (
+                <IntlTopCarousel
+                  completedCount={completedCount}
+                  waitingCount={waitingCount}
+                  inProgressCount={inProgressCount}
+                />
+              ) : (
+                <>
+                  <StreakTopCarousel
+                    completedCount={completedCount}
+                    waitingCount={waitingCount}
+                    inProgressCount={inProgressCount}
+                    progress={progress}
+                    DOTS={DOTS}
+                  />
+                  <View style={s.streakProgressWrap}>
+                    <View style={s.streakProgressLabelRow}>
+                      <Text style={s.streakProgressLabel}>이번달 도움 목표</Text>
+                      <Text style={s.streakProgressCount}>{completedCount} / {MONTHLY_GOAL}</Text>
+                    </View>
+                    <View style={s.streakProgressTrack}>
+                      <View style={[s.streakProgressFill, { width: `${progress * 100}%` as `${number}%` }]} />
+                    </View>
+                  </View>
+                </>
+              )}
             </View>
           );
         })()}
@@ -361,30 +281,142 @@ export default function HomeScreen() {
         {/* ── 헤더 & 스와이프 카드 ── */}
         {isInternational ? (
           <>
-            <View style={s.helpHeader}>
-              <View style={s.helpHeaderLeft}>
-                <Text style={s.helpHeaderTitle}>도움을 요청해보세요</Text>
-                <View style={s.helpCountBadge}>
-                  <Text style={s.helpCountText}>{koreanUsers.length}</Text>
-                </View>
-              </View>
-              <TouchableOpacity onPress={() => router.push('/(main)/write')} activeOpacity={0.7}>
-                <Text style={s.helpHeaderLink}>요청하기 →</Text>
+            {/* 3탭 (유학생) */}
+            <View style={s.viewTabRow}>
+              <Animated.View style={[s.viewTabSlider, {
+                left: intlTabAnim.interpolate({ inputRange: [0, 1, 2], outputRange: ['2%', '35%', '69%'] }),
+                width: '31%',
+              }]} />
+              <TouchableOpacity style={s.viewTab} onPress={() => switchIntlTab('card')} activeOpacity={0.8}>
+                <Ionicons name="layers-outline" size={14} color={intlTab === 'card' ? '#fff' : '#888'} />
+                <Text style={[s.viewTabText, intlTab === 'card' && s.viewTabTextOn]}>헬퍼 보기</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.viewTab} onPress={() => switchIntlTab('write')} activeOpacity={0.8}>
+                <Ionicons name="pencil-outline" size={14} color={intlTab === 'write' ? '#fff' : '#888'} />
+                <Text style={[s.viewTabText, intlTab === 'write' && s.viewTabTextOn]}>도움 요청하기</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.viewTab} onPress={() => switchIntlTab('list')} activeOpacity={0.8}>
+                <Ionicons name="list-outline" size={14} color={intlTab === 'list' ? '#fff' : '#888'} />
+                <Text style={[s.viewTabText, intlTab === 'list' && s.viewTabTextOn]}>목록 보기</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ marginLeft: 16, marginBottom: 10 }}>
-              <KoreanUserCardStack
-                users={koreanUsers}
-                onPress={() => router.push('/(main)/write')}
-              />
-            </View>
+            {intlTab === 'card' ? (
+              <View style={{ marginLeft: 16, marginBottom: 10 }}>
+                <KoreanUserCardStack
+                  users={koreanUsers}
+                  onPress={() => switchIntlTab('write')}
+                />
+              </View>
+            ) : intlTab === 'write' ? (
+              <WriteForm onSuccess={() => switchIntlTab('list')} />
+            ) : (
+              <View style={s.listViewWrap}>
+                <View style={s.listFilterRow}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.listFilterScroll} style={{ maxWidth: 260 }}>
+                    {([
+                      { key: 'ALL',         label: '전체' },
+                      { key: 'WAITING',     label: '최신' },
+                      { key: 'IN_PROGRESS', label: '매칭중' },
+                      { key: 'COMPLETED',   label: '완료' },
+                    ] as const).map(({ key, label }) => (
+                      <TouchableOpacity
+                        key={key}
+                        style={[s.listFilterChip, statusFilter === key && s.listFilterChipOn]}
+                        onPress={() => setStatusFilter(key)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[s.listFilterChipText, statusFilter === key && s.listFilterChipTextOn]}>{label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <View style={s.searchBox}>
+                    <Ionicons name="search-outline" size={15} color={T2} />
+                    <TextInput
+                      style={s.searchInput}
+                      placeholder="검색"
+                      placeholderTextColor={T2}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      returnKeyType="search"
+                    />
+                    {searchQuery.length > 0 && (
+                      <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+                        <Ionicons name="close-circle" size={15} color={T2} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+                {(() => {
+                  const CAT_LABEL: Record<HelpCategory, string> = {
+                    BANK: '은행', HOSPITAL: '병원', SCHOOL: '학교', DAILY: '일상', OTHER: '기타',
+                  };
+                  const filtered = requests
+                    .filter(r => statusFilter === 'ALL'
+                      ? (r.status === 'WAITING' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED')
+                      : r.status === statusFilter
+                    )
+                    .filter(r => searchQuery.trim() === '' ||
+                      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      (r.requester?.nickname ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+                    );
+                  if (filtered.length === 0) {
+                    return (
+                      <View style={s.listEmpty}>
+                        <Text style={s.listEmptyText}>현재 도움 요청이 없어요</Text>
+                      </View>
+                    );
+                  }
+                  return filtered.map(item => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={s.listCard}
+                      activeOpacity={0.85}
+                      onPress={() => goTo(item)}
+                    >
+                      <View style={s.listCardHeader}>
+                        <View style={s.listCardLeft}>
+                          <View style={s.listAvatar}>
+                            {item.requester?.profileImage ? (
+                              <Image source={{ uri: item.requester.profileImage }} style={s.listAvatarImg} />
+                            ) : (
+                              <Text style={s.listAvatarText}>{item.requester?.nickname?.charAt(0) ?? '?'}</Text>
+                            )}
+                          </View>
+                          <View>
+                            <Text style={s.listCardName}>{item.requester?.nickname ?? ''}</Text>
+                            <Text style={s.listCardTime}>
+                              {Math.floor((Date.now() - new Date(item.createdAt.includes('Z') ? item.createdAt : item.createdAt + 'Z').getTime()) / 60000)}분 전
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={s.listCardRight}>
+                          <View style={[s.listMethodBadge, item.helpMethod === 'OFFLINE' ? s.listMethodOffline : s.listMethodOnline]}>
+                            <Text style={[s.listMethodText, item.helpMethod === 'OFFLINE' ? s.listMethodOfflineText : s.listMethodOnlineText]}>
+                              {item.helpMethod === 'OFFLINE' ? '오프라인' : '온라인'}
+                            </Text>
+                          </View>
+                          <View style={s.listCatBadge}>
+                            <Text style={s.listCatText}>{CAT_LABEL[item.category] ?? item.category}</Text>
+                          </View>
+                        </View>
+                      </View>
+                      <Text style={s.listCardTitle} numberOfLines={2}>{item.title}</Text>
+                      <Text style={s.listCardDesc} numberOfLines={3} ellipsizeMode="tail">{item.description}</Text>
+                      <TouchableOpacity style={s.listHelpBtn} activeOpacity={0.8} onPress={() => goTo(item)}>
+                        <Text style={s.listHelpBtnText}>도와주기 ›</Text>
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  ));
+                })()}
+              </View>
+            )}
           </>
         ) : (
           <>
             {/* 카드 보기 / 리스트 보기 탭 */}
             <View style={s.viewTabRow}>
               <Animated.View style={[s.viewTabSlider, {
-                left: tabAnim.interpolate({ inputRange: [0, 1], outputRange: ['2%', '51%'] }),
+                left: tabAnim.interpolate({ inputRange: [0, 1], outputRange: ['2%', '53%'] }),
                 width: '47%',
               }]} />
               <TouchableOpacity style={s.viewTab} onPress={() => switchTab('card')} activeOpacity={0.8}>
@@ -393,7 +425,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={s.viewTab} onPress={() => switchTab('list')} activeOpacity={0.8}>
                 <Ionicons name="list-outline" size={14} color={viewMode === 'list' ? '#fff' : '#888'} />
-                <Text style={[s.viewTabText, viewMode === 'list' && s.viewTabTextOn]}>리스트 보기</Text>
+                <Text style={[s.viewTabText, viewMode === 'list' && s.viewTabTextOn]}>도움 목록 보기</Text>
               </TouchableOpacity>
             </View>
             {viewMode === 'card' ? (
@@ -470,7 +502,11 @@ export default function HomeScreen() {
                       <View style={s.listCardHeader}>
                         <View style={s.listCardLeft}>
                           <View style={s.listAvatar}>
-                            <Text style={s.listAvatarText}>{item.requester?.nickname?.charAt(0) ?? '?'}</Text>
+                            {item.requester?.profileImage ? (
+                              <Image source={{ uri: item.requester.profileImage }} style={s.listAvatarImg} />
+                            ) : (
+                              <Text style={s.listAvatarText}>{item.requester?.nickname?.charAt(0) ?? '?'}</Text>
+                            )}
                           </View>
                           <View>
                             <Text style={s.listCardName}>{item.requester?.nickname ?? ''}</Text>
@@ -479,17 +515,19 @@ export default function HomeScreen() {
                             </Text>
                           </View>
                         </View>
-                        <View style={s.listCatBadge}>
-                          <Text style={s.listCatText}>{CAT_LABEL[item.category] ?? item.category}</Text>
+                        <View style={s.listCardRight}>
+                          <View style={[s.listMethodBadge, item.helpMethod === 'OFFLINE' ? s.listMethodOffline : s.listMethodOnline]}>
+                            <Text style={[s.listMethodText, item.helpMethod === 'OFFLINE' ? s.listMethodOfflineText : s.listMethodOnlineText]}>
+                              {item.helpMethod === 'OFFLINE' ? '오프라인' : '온라인'}
+                            </Text>
+                          </View>
+                          <View style={s.listCatBadge}>
+                            <Text style={s.listCatText}>{CAT_LABEL[item.category] ?? item.category}</Text>
+                          </View>
                         </View>
                       </View>
                       <Text style={s.listCardTitle} numberOfLines={2}>{item.title}</Text>
-                      {item.requester?.university ? (
-                        <View style={s.listLocationRow}>
-                          <Ionicons name="location-outline" size={12} color={T2} />
-                          <Text style={s.listLocationText}>{item.requester.university}</Text>
-                        </View>
-                      ) : null}
+                      <Text style={s.listCardDesc} numberOfLines={3} ellipsizeMode="tail">{item.description}</Text>
                       <TouchableOpacity style={s.listHelpBtn} activeOpacity={0.8} onPress={() => goTo(item)}>
                         <Text style={s.listHelpBtnText}>도와주기 ›</Text>
                       </TouchableOpacity>
@@ -501,138 +539,7 @@ export default function HomeScreen() {
           </>
         )}
 
-        {/* ── 내 요청 현황 (유학생만 표시) ── */}
-        {isInternational && (
-          <>
-            <View style={{ height: 20 }} />
-            <View style={s.sectionCard}>
-              <View style={s.activityHeader}>
-                <Text style={s.sectionTitle}>내 요청 현황</Text>
-                <TouchableOpacity onPress={() => router.push('/help-list')} activeOpacity={0.8}>
-                  <Text style={s.helpHeaderLink}>전체보기 →</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={s.requestStatRow}>
-                {[
-                  { label: '대기중', status: 'WAITING',     color: ORANGE,    bg: '#FFF3E8' },
-                  { label: '진행중', status: 'IN_PROGRESS', color: BLUE,      bg: BLUE_L   },
-                  { label: '완료',   status: 'COMPLETED',   color: '#22C55E', bg: '#F0FDF4' },
-                ].map(({ label, status, color, bg }) => (
-                  <View key={status} style={[s.requestStatItem, { backgroundColor: bg }]}>
-                    <Text style={[s.requestStatNum, { color }]}>
-                      {requests.filter(r => r.status === status).length}
-                    </Text>
-                    <Text style={[s.requestStatLabel, { color }]}>{label}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </>
-        )}
 
-        {/* ── 인기 게시글 (유학생/교환학생만 표시) ── */}
-        {isInternational && <View style={[s.sectionBox, { marginTop: 24 }]}>
-          <View style={s.sectionBoxInner}>
-          <View style={s.sectionBoxHeader}>
-            <Text style={s.hotHeaderTitle}>인기 게시글</Text>
-            <TouchableOpacity onPress={() => router.push('/(main)/community')} activeOpacity={0.7}>
-              <Text style={s.hotMoreText}>더보기 →</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hotScroll}>
-            {hotPosts.length === 0 ? (
-              <View style={s.hotEmpty}>
-                <Text style={s.hotEmptyText}>아직 인기 게시글이 없어요</Text>
-              </View>
-            ) : hotPosts.map(post => {
-              const catColor: Record<string, string> = { INFO: BLUE, QUESTION: ORANGE, CHAT: '#6B9DF0', CULTURE: '#8B5CF6' };
-              const catBg:    Record<string, string> = { INFO: BLUE_L, QUESTION: '#FFF3E8', CHAT: BLUE_L, CULTURE: '#F5F3FF' };
-              const catLabel: Record<string, string> = { INFO: '일반', QUESTION: '로컬', CHAT: '모임', CULTURE: '장터' };
-              const color = catColor[post.category] ?? BLUE;
-              const bg    = catBg[post.category]    ?? BLUE_L;
-              const AVATAR_COLORS = ['#F0A040', '#F06060', BLUE, '#90C4F0', '#A0A8B0'];
-              let h = 0;
-              for (let i = 0; i < post.author.length; i++) h = (h + post.author.charCodeAt(i)) % AVATAR_COLORS.length;
-              const avatarColor = AVATAR_COLORS[h];
-              return (
-                <TouchableOpacity
-                  key={post.id}
-                  style={s.hotCard}
-                  activeOpacity={0.85}
-                  onPress={() => router.push({ pathname: '/community-post', params: { id: post.id } })}
-                >
-                  <View style={s.hotCardTop}>
-                    <View style={[s.hotCatBadge, { backgroundColor: bg }]}>
-                      <Text style={[s.hotCatText, { color }]}>{catLabel[post.category] ?? post.category}</Text>
-                    </View>
-                    {post.likes >= 30 && <Text style={s.hotFire}>🔥</Text>}
-                  </View>
-                  <Text style={s.hotTitle} numberOfLines={2}>{post.title}</Text>
-                  <Text style={s.hotContent} numberOfLines={2}>{post.content}</Text>
-                  <View style={s.hotCardFooter}>
-                    <View style={[s.hotAvatar, { backgroundColor: avatarColor }]}>
-                      <Text style={s.hotAvatarText}>{post.author.charAt(0)}</Text>
-                    </View>
-                    <Text style={s.hotAuthor}>{post.author}</Text>
-                    <View style={s.hotStats}>
-                      <Ionicons name="heart" size={12} color={ORANGE} />
-                      <Text style={s.hotStatText}>{post.likes}</Text>
-                      <Ionicons name="chatbubble-outline" size={12} color={T2} style={{ marginLeft: 6 }} />
-                      <Text style={s.hotStatText}>{post.comments}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-          </View>
-        </View>}
-
-        {/* ── 오늘 학식 (유학생/교환학생만 표시) ── */}
-        {isInternational && <View style={s.sectionBox}>
-          <View style={s.sectionBoxInner}>
-          <View style={s.sectionBoxHeader}>
-            <Text style={s.hotHeaderTitle}>오늘 학식</Text>
-            <TouchableOpacity onPress={() => router.push({ pathname: '/(main)/school', params: { tab: 'CAFETERIA' } })} activeOpacity={0.7}>
-              <Text style={s.hotMoreText}>더보기 →</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView
-            ref={mealRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.mealScroll}
-            onLayout={e => setMealWidth(e.nativeEvent.layout.width)}
-            onMomentumScrollEnd={e => {
-              mealIndexRef.current = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
-            }}
-          >
-            {meals.length === 0 ? (
-              <View style={s.mealEmpty}>
-                <Text style={s.hotEmptyText}>오늘 학식 정보가 없어요</Text>
-              </View>
-            ) : meals.map((meal) => (
-              <TouchableOpacity
-                key={meal.id}
-                style={[s.mealCard, mealWidth ? { width: mealWidth } : {}]}
-                activeOpacity={0.85}
-                onPress={() => router.push({ pathname: '/(main)/school', params: { tab: 'CAFETERIA' } })}
-              >
-                <View style={s.mealCardTop}>
-                  <View style={s.mealIconWrap}>
-                    <Ionicons name="restaurant-outline" size={14} color={BLUE} />
-                  </View>
-                  <Text style={s.mealCafeteria} numberOfLines={1}>{meal.cafeteria}</Text>
-                </View>
-                <Text style={s.mealCorner} numberOfLines={1}>{meal.corner}</Text>
-                <Text style={s.mealMenu} numberOfLines={4}>{meal.menu.split('\n').filter(Boolean).join('\n')}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          </View>
-        </View>}
 
       </ScrollView>
 
@@ -806,6 +713,56 @@ const s = StyleSheet.create({
   requestStatNum:   { fontSize: 28, fontWeight: '900', letterSpacing: -1 },
   requestStatLabel: { fontSize: 12, fontWeight: '700' },
 
+  // ── 유학생 요청 현황 (글라스) ──
+  requestStatGlass: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    borderRadius: 18,
+    padding: 4,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.90)',
+    shadowColor: '#4A90E2',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  requestStatGlassTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: 'rgba(30, 60, 120, 0.85)',
+    paddingLeft: 10,
+    paddingTop: 8,
+    paddingBottom: 2,
+  },
+
+  // ── 유학생 요청 현황 (슬림) ──
+  activityHeaderSlim: {
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  requestStatRowSlim: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingTop: 4,
+    paddingBottom: 10,
+  },
+  requestStatItemSlim: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  requestStatNumSlim:   { fontSize: 20, fontWeight: '900', letterSpacing: -0.5 },
+  requestStatLabelSlim: { fontSize: 12, fontWeight: '700' },
+
   // ── 필터 & 카드 ──
   filterRow: { flexDirection: 'row', gap: 6, padding: 16, paddingBottom: 12 },
   chip: {
@@ -969,6 +926,30 @@ const s = StyleSheet.create({
   streakProgressFill:  { height: '100%', borderRadius: 5, backgroundColor: BLUE },
   streakHelpHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   streakHelpTitle:     { fontSize: 14, fontWeight: '700', color: T1 },
+  streakSlideWrap: {
+    height: 80, justifyContent: 'center',
+  },
+  streakStatRow: {
+    flexDirection: 'row', gap: 8,
+    paddingHorizontal: 14, paddingVertical: 14,
+  },
+  streakStatItem: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    borderRadius: 12, paddingVertical: 10,
+  },
+  streakStatNum:   { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
+  streakStatLabel: { fontSize: 11, fontWeight: '700', marginTop: 2 },
+  streakCtaRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 14, paddingVertical: 14,
+  },
+  streakCtaIconWrap: {
+    width: 38, height: 38, borderRadius: 12,
+    backgroundColor: BLUE_L, alignItems: 'center', justifyContent: 'center',
+  },
+  streakCtaTextWrap: { flex: 1 },
+  streakCtaTitle: { fontSize: 14, fontWeight: '800', color: T1 },
+  streakCtaSub:   { fontSize: 11, color: T2, marginTop: 2 },
   helpTitleBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1155,10 +1136,13 @@ const s = StyleSheet.create({
     gap: 8,
   },
   listAvatar: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 42, height: 42, borderRadius: 21,
     backgroundColor: BLUE_L,
     alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 2, borderColor: '#E0E0E0',
   },
+  listAvatarImg: { width: 42, height: 42, borderRadius: 21 },
   listAvatarText:  { fontSize: 13, fontWeight: '700', color: BLUE },
   listCardName:    { fontSize: 13, fontWeight: '700', color: T1 },
   listCardTime:    { fontSize: 11, color: T2, marginTop: 1 },
@@ -1175,12 +1159,22 @@ const s = StyleSheet.create({
   listHelpBtn: {
     alignSelf: 'flex-end',
     backgroundColor: BLUE,
-    borderRadius: 10,
+    borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    marginTop: 2,
+    marginTop: -20,
+    marginRight: -6,
   },
   listHelpBtnText: { fontSize: 13, fontWeight: '800', color: '#fff' },
+  listCardDesc: { fontSize: 13, color: T2, lineHeight: 19 },
+  listCardRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  listMethodRow: { flexDirection: 'row', alignItems: 'center' },
+  listMethodBadge: { borderRadius: 8, paddingHorizontal: 9, paddingVertical: 3 },
+  listMethodOffline: { backgroundColor: '#FFF3E0' },
+  listMethodOnline:  { backgroundColor: '#EEF4FF' },
+  listMethodText: { fontSize: 11, fontWeight: '700' },
+  listMethodOfflineText: { color: ORANGE },
+  listMethodOnlineText:  { color: BLUE },
   listFilterRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1210,5 +1204,47 @@ const s = StyleSheet.create({
     flex: 1,
   },
   searchInput: { flex: 1, fontSize: 12, color: T1, padding: 0 },
+
+  // ── 유학생 슬라이드 보기 ──
+  intlSlideScroll: { paddingHorizontal: 16, gap: 12, paddingBottom: 4 },
+  intlSlideEmpty:  { paddingVertical: 40, paddingHorizontal: 16, alignItems: 'center' },
+  intlSlideCard: {
+    width: 140,
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 14,
+    alignItems: 'center',
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  intlSlideAvatar: {
+    width: 56, height: 56, borderRadius: 28,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 2,
+  },
+  intlSlideAvatarText: { fontSize: 24, fontWeight: '800', color: '#fff' },
+  intlSlideLvBadge: {
+    borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2,
+  },
+  intlSlideLvText:    { fontSize: 11, fontWeight: '700', color: '#fff' },
+  intlSlideName:      { fontSize: 14, fontWeight: '800', color: T1, textAlign: 'center' },
+  intlSlideMajor:     { fontSize: 11, color: T2, fontWeight: '500', textAlign: 'center' },
+  intlSlideStatsRow:  { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  intlSlideStats:     { fontSize: 11, color: T2, fontWeight: '600' },
+  intlSlideStatsDot:  { fontSize: 11, color: T2 },
+  intlSlideBtn: {
+    marginTop: 4,
+    backgroundColor: BLUE,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+  intlSlideBtnText: { fontSize: 12, fontWeight: '800', color: '#fff' },
 });
 
