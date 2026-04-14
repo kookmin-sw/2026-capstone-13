@@ -157,6 +157,8 @@ export default function RegisterScreen() {
   const [showNationalityModal, setShowNationalityModal] = useState(false);
   const [major, setMajor] = useState<string | null>(null);
   const [showMajorModal, setShowMajorModal] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
 
   // 이메일 인증 상태
   const [codeSent, setCodeSent] = useState(false);
@@ -243,6 +245,8 @@ export default function RegisterScreen() {
       userType,
       university: '국민대학교',
       major: major ?? undefined,
+      termsAgreed: true,
+      privacyAgreed: true,
     });
 
     if (success) {
@@ -551,10 +555,26 @@ export default function RegisterScreen() {
             secureTextEntry
           />
 
+          {/* 약관 동의 */}
+          <View style={styles.agreeSection}>
+            <TouchableOpacity style={styles.agreeRow} onPress={() => setTermsAgreed((v) => !v)} activeOpacity={0.7}>
+              <View style={[styles.checkbox, termsAgreed && styles.checkboxChecked]}>
+                {termsAgreed && <Ionicons name="checkmark" size={14} color="#fff" />}
+              </View>
+              <Text style={styles.agreeText}>이용약관 동의 <Text style={styles.agreeRequired}>(필수)</Text></Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.agreeRow} onPress={() => setPrivacyAgreed((v) => !v)} activeOpacity={0.7}>
+              <View style={[styles.checkbox, privacyAgreed && styles.checkboxChecked]}>
+                {privacyAgreed && <Ionicons name="checkmark" size={14} color="#fff" />}
+              </View>
+              <Text style={styles.agreeText}>개인정보처리방침 동의 <Text style={styles.agreeRequired}>(필수)</Text></Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
-            style={[styles.registerButton, (isLoading || !emailVerified) && styles.disabledButton]}
+            style={[styles.registerButton, (isLoading || !emailVerified || !termsAgreed || !privacyAgreed) && styles.disabledButton]}
             onPress={handleRegister}
-            disabled={isLoading || !emailVerified}
+            disabled={isLoading || !emailVerified || !termsAgreed || !privacyAgreed}
           >
             {isLoading ? (
               <ActivityIndicator color={Colors.textWhite} />
@@ -815,5 +835,36 @@ const styles = StyleSheet.create({
     color: Colors.textWhite,
     fontSize: 18,
     fontWeight: '700',
+  },
+  agreeSection: {
+    marginTop: 20,
+    gap: 12,
+  },
+  agreeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  agreeText: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+  },
+  agreeRequired: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
 });
