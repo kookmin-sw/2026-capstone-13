@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, memo, useEffect } from 'react';
+import React, { useRef, useState, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import Animated, {
   withSpring,
   withTiming,
   runOnJS,
-  runOnUI,
   interpolate,
   Extrapolation,
 } from 'react-native-reanimated';
@@ -29,7 +28,6 @@ const ACCENT      = '#0EA5E9';
 const SLOT_OFFSET  = [0, 16, 32];
 const SLOT_OPACITY = [1, 0.85, 0.7];
 
-// 페이크 그라데이션: 시작 위치(%), 최대 불투명도, 레이어 수
 const GRAD_START   = 0;
 const GRAD_MAX_A   = 0.95;
 const GRAD_STEPS   = 200;
@@ -74,16 +72,6 @@ function toAbsoluteUrl(url: string | undefined): string | undefined {
   return SERVER_BASE_URL + url;
 }
 
-// hobbies 문자열 → 태그 배열 (최대 4개)
-function parseHobbies(hobbies: string | undefined): string[] {
-  if (!hobbies) return [];
-  return hobbies
-    .split(/[,，、\s]+/)
-    .map(s => s.trim())
-    .filter(Boolean)
-    .slice(0, 4);
-}
-
 // ── 카드 한 장 ─────────────────────────────────────────────
 const CardContent = memo(
   function CardContent({ user, onPress }: { user: User; onPress?: () => void }) {
@@ -97,7 +85,6 @@ const CardContent = memo(
 
     return (
       <View style={styles.card}>
-        {/* 배경 사진 */}
         {showImage ? (
           <ImageBackground
             source={{ uri: profileUri }}
@@ -111,13 +98,9 @@ const CardContent = memo(
           </View>
         )}
 
-
-        {/* 페이크 그라데이션 레이어 */}
         {GRADIENT_LAYERS}
 
-        {/* 콘텐츠 */}
         <View style={styles.cardBottom}>
-          {/* 이름 + 뱃지 */}
           <View style={styles.nameRow}>
             <Text style={styles.cardName}>{user.nickname}</Text>
             {user.age ? (
@@ -128,7 +111,6 @@ const CardContent = memo(
             </View>
           </View>
 
-          {/* 전공 + 인증 뱃지 */}
           {user.major ? (
             <View style={styles.infoRow}>
               <Ionicons name="book-outline" size={13} color="rgba(255,255,255,0.8)" />
@@ -139,7 +121,6 @@ const CardContent = memo(
             </View>
           ) : null}
 
-          {/* 별점 + 도움 횟수 */}
           <View style={styles.statsRow}>
             <Ionicons name="star" size={13} color="#FBBF24" />
             <Text style={styles.statsText}>{user.rating.toFixed(1)}</Text>
@@ -152,7 +133,6 @@ const CardContent = memo(
             )}
           </View>
 
-          {/* 말풍선 */}
           <View style={styles.bubbleWrap}>
             <View style={styles.bubbleTail} />
             <View style={styles.bubble}>
@@ -189,56 +169,41 @@ const SWIPE_THRESHOLD = 80;
 export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardStackProps) {
   const [topIdx, setTopIdx] = useState(0);
 
-  const translateX     = useSharedValue(0);
-  const isSwiping      = useSharedValue(false);
-  const backProgress   = useSharedValue(0);
-  const topCardOpacity = useSharedValue(1);
+  const translateX   = useSharedValue(0);
+  const isSwiping    = useSharedValue(false);
+  const backProgress = useSharedValue(0);
 
   const n     = users.length;
   const card0 = n > 0 ? users[topIdx % n] : null;
   const card1 = n > 0 ? users[(topIdx + 1) % n] : null;
   const card2 = n > 0 ? users[(topIdx + 2) % n] : null;
 
-  const card0Ref   = useRef(card0);
   const onPressRef = useRef(onPress);
-  card0Ref.current   = card0;
   onPressRef.current = onPress;
 
-  const notifySwipe = useCallback((dir: 'left' | 'right') => {
+  const advanceCard = useCallback(() => {
     setTopIdx(prev => prev + 1);
-  }, []);
-
-  const advanceCard = useCallback((dir: 'left' | 'right') => {
-    notifySwipe(dir);
-  }, [notifySwipe]);
-
-  useEffect(() => {
-    runOnUI(() => {
-      'worklet';
-      translateX.value     = 0;
-      backProgress.value   = 0;
-      isSwiping.value      = false;
-      topCardOpacity.value = 1;
-    })();
-  }, [topIdx, translateX, backProgress, isSwiping, topCardOpacity]);
+    requestAnimationFrame(() => {
+      translateX.value   = 0;
+      backProgress.value = 0;
+      isSwiping.value    = false;
+    });
+  }, [translateX, backProgress, isSwiping]);
 
   const pan = Gesture.Pan()
     .onUpdate((e) => {
       if (isSwiping.value) return;
-      // 오른쪽은 최대 40px까지만 드래그 허용
       translateX.value   = e.translationX > 0 ? Math.min(e.translationX, 40) : e.translationX;
       backProgress.value = Math.min(Math.abs(e.translationX) / SCREEN_WIDTH, 1);
     })
     .onEnd((e) => {
       if (isSwiping.value) return;
-
       const swipedLeft = e.translationX < -SWIPE_THRESHOLD || e.velocityX < -800;
-
       if (swipedLeft) {
         isSwiping.value    = true;
-        backProgress.value = 1;
-        translateX.value   = withTiming(-(SCREEN_WIDTH + 200), { duration: 320 }, () => {
-          runOnJS(advanceCard)('left');
+        backProgress.value = withTiming(1, { duration: 150 });
+        translateX.value   = withTiming(-(SCREEN_WIDTH + 200), { duration: 380 }, () => {
+          runOnJS(advanceCard)();
         });
       } else {
         translateX.value   = withSpring(0, { damping: 25, stiffness: 150 });
@@ -247,7 +212,6 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
     });
 
   const topCardStyle = useAnimatedStyle(() => ({
-    opacity: topCardOpacity.value,
     transform: [
       { translateX: translateX.value },
       { rotateZ: `${interpolate(translateX.value, [-SCREEN_WIDTH, 0, SCREEN_WIDTH], [-12, 0, 12], Extrapolation.CLAMP)}deg` },
@@ -281,7 +245,7 @@ export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardSt
 
         <GestureDetector gesture={pan}>
           <Animated.View style={[styles.cardSlot, styles.topCard, topCardStyle]}>
-            <CardContent user={card0!} onPress={onPress ? () => onPress(card0!) : undefined} />
+            <CardContent user={card0!} onPress={onPress ? () => onPressRef.current?.(card0!) : undefined} />
           </Animated.View>
         </GestureDetector>
       </View>
@@ -315,7 +279,6 @@ const styles = StyleSheet.create({
   midCard:  { zIndex: 2, opacity: SLOT_OPACITY[1] },
   backCard: { zIndex: 1, opacity: SLOT_OPACITY[2] },
 
-  // 카드 자체
   card: {
     width: '100%',
     height: '100%',
@@ -339,7 +302,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.25)',
   },
 
-  // 상단 태그 행
   topTagRow: {
     position: 'absolute',
     top: 16,
@@ -365,7 +327,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  // 콘텐츠 컨테이너 (배경색 없음)
   cardBottom: {
     position: 'absolute',
     left: 0,
@@ -377,7 +338,6 @@ const styles = StyleSheet.create({
     gap: 5,
   },
 
-  // 이름 행
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -406,7 +366,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  // 정보 행
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -418,7 +377,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // 별점 행
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -435,7 +393,6 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.5)',
   },
 
-  // 말풍선
   bubbleWrap: {
     alignSelf: 'stretch',
   },

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, memo, useEffect } from 'react';
+import React, { useState, useCallback, useRef, memo } from 'react';
 import {
   View,
   Text,
@@ -28,16 +28,15 @@ const ACCENT = '#3B6FE8';
 const SLOT_OFFSET  = [0, 16, 32];
 const SLOT_OPACITY = [1, 0.85, 0.7];
 
-// 페이크 그라데이션: 시작 위치(%), 최대 불투명도, 레이어 수
-const GRAD_START   = 0;    // 그라데이션 시작 위치 (카드 상단 기준 %)
-const GRAD_MAX_A   = 0.95; // 최종 불투명도
-const GRAD_STEPS   = 200;  // 레이어 수
-const GRAD_RANGE   = 100 - GRAD_START; // 그라데이션이 차지하는 % 범위
-const GRAD_H       = GRAD_RANGE / GRAD_STEPS; // 각 레이어 높이(%)
+const GRAD_START   = 0;
+const GRAD_MAX_A   = 0.95;
+const GRAD_STEPS   = 200;
+const GRAD_RANGE   = 100 - GRAD_START;
+const GRAD_H       = GRAD_RANGE / GRAD_STEPS;
 
 const GRADIENT_LAYERS = Array.from({ length: GRAD_STEPS }, (_, i) => {
-  const t        = i / (GRAD_STEPS - 1);           // 0 ~ 1
-  const eased    = t * t * t;                       // easeInCubic
+  const t        = i / (GRAD_STEPS - 1);
+  const eased    = t * t * t;
   const alpha    = parseFloat((eased * GRAD_MAX_A).toFixed(4));
   const top      = parseFloat((GRAD_START + i * GRAD_H).toFixed(4));
   const isLast   = i === GRAD_STEPS - 1;
@@ -82,7 +81,6 @@ const CardContent = memo(
 
     return (
       <View style={styles.card}>
-        {/* 배경 사진 */}
         {showImage ? (
           <ImageBackground
             source={{ uri: profileUri }}
@@ -96,12 +94,9 @@ const CardContent = memo(
           </View>
         )}
 
-        {/* 페이크 그라데이션 레이어 (동적 생성) */}
         {GRADIENT_LAYERS}
 
-        {/* 콘텐츠 (배경색 없음) */}
         <View style={styles.cardBottom}>
-          {/* 이름 */}
           <View style={styles.nameRow}>
             <Text style={styles.cardName}>{card.requester.nickname}</Text>
             {isVerified && (
@@ -109,7 +104,6 @@ const CardContent = memo(
             )}
           </View>
 
-          {/* 학과/대학 */}
           {(card.requester.major || card.requester.university) && (
             <View style={styles.infoRow}>
               <Ionicons name="school-outline" size={17} color="rgba(255,255,255,0.95)" />
@@ -119,13 +113,11 @@ const CardContent = memo(
             </View>
           )}
 
-          {/* 시간 */}
           <View style={styles.timeRow}>
             <Ionicons name="time-outline" size={17} color="rgba(255,255,255,0.95)" />
             <Text style={styles.timeSmall}>{formatTime(card.createdAt)}</Text>
           </View>
 
-          {/* 말풍선 */}
           <View style={styles.bubbleWrap}>
             <View style={styles.bubbleTail} />
             <View style={styles.bubble}>
@@ -163,9 +155,9 @@ const SWIPE_THRESHOLD = 80;
 export default function SwipeCardStack({ requests, onCardPress }: SwipeCardProps) {
   const [currentIdx, setCurrentIdx] = useState(0);
 
-  const translateX     = useSharedValue(0);
-  const isSwiping      = useSharedValue(false);
-  const backProgress   = useSharedValue(0);
+  const translateX    = useSharedValue(0);
+  const isSwiping     = useSharedValue(false);
+  const backProgress  = useSharedValue(0);
   const topCardOpacity = useSharedValue(1);
 
   const n     = requests.length;
@@ -176,23 +168,20 @@ export default function SwipeCardStack({ requests, onCardPress }: SwipeCardProps
   const onCardPressRef = useRef(onCardPress);
   onCardPressRef.current = onCardPress;
 
-  const card0Ref = useRef(card0);
-  card0Ref.current = card0;
-
-  const notifySwipe = useCallback((_dir: 'left' | 'right') => {
+  // 카드가 화면 밖으로 완전히 나간 뒤 호출됨
+  // 1) top 카드를 즉시 투명하게 → 잔상 제거
+  // 2) index 올리기 (새 카드가 슬롯에 마운트됨)
+  // 3) 다음 프레임에서 위치·투명도 초기화 → 새 카드가 제자리에서 나타남
+  const advanceCard = useCallback(() => {
+    topCardOpacity.value = 0;
     setCurrentIdx(prev => prev + 1);
-  }, []);
-
-  const advanceCard = useCallback((dir: 'left' | 'right') => {
-    notifySwipe(dir);
-  }, [notifySwipe]);
-
-  useEffect(() => {
-    translateX.value     = 0;
-    backProgress.value   = 0;
-    isSwiping.value      = false;
-    topCardOpacity.value = 1;
-  }, [currentIdx, translateX, backProgress, isSwiping, topCardOpacity]);
+    requestAnimationFrame(() => {
+      translateX.value     = 0;
+      backProgress.value   = 0;
+      isSwiping.value      = false;
+      topCardOpacity.value = 1;
+    });
+  }, [translateX, backProgress, isSwiping, topCardOpacity]);
 
   const pan = Gesture.Pan()
     .onUpdate((e) => {
@@ -205,17 +194,15 @@ export default function SwipeCardStack({ requests, onCardPress }: SwipeCardProps
       const swipedLeft = e.translationX < -SWIPE_THRESHOLD || e.velocityX < -800;
       if (swipedLeft) {
         isSwiping.value    = true;
-        backProgress.value = 1;
-        translateX.value   = withTiming(-(SCREEN_WIDTH + 200), { duration: 220 }, () => {
-          runOnJS(advanceCard)('left');
+        backProgress.value = withTiming(1, { duration: 150 });
+        translateX.value   = withTiming(-(SCREEN_WIDTH + 200), { duration: 380 }, () => {
+          runOnJS(advanceCard)();
         });
       } else {
         translateX.value   = withSpring(0, { damping: 15, stiffness: 150 });
         backProgress.value = withSpring(0, { damping: 15, stiffness: 150 });
       }
     });
-
-  const gesture = pan;
 
   const topCardStyle = useAnimatedStyle(() => ({
     opacity: topCardOpacity.value,
@@ -239,14 +226,14 @@ export default function SwipeCardStack({ requests, onCardPress }: SwipeCardProps
     <View style={styles.wrapper}>
       <View style={styles.stack}>
         <Animated.View style={[styles.cardSlot, styles.backCard, backCardStyle]}>
-          <CardContent card={card2!} />
+          <CardContent key={card2!.id} card={card2!} />
         </Animated.View>
         <Animated.View style={[styles.cardSlot, styles.midCard, midCardStyle]}>
-          <CardContent card={card1!} />
+          <CardContent key={card1!.id} card={card1!} />
         </Animated.View>
-        <GestureDetector gesture={gesture}>
+        <GestureDetector gesture={pan}>
           <Animated.View style={[styles.cardSlot, styles.topCard, topCardStyle]}>
-            <CardContent card={card0!} onPress={() => onCardPress?.(card0!)} />
+            <CardContent key={card0!.id} card={card0!} onPress={() => onCardPressRef.current?.(card0!)} />
           </Animated.View>
         </GestureDetector>
       </View>
@@ -302,7 +289,6 @@ const styles = StyleSheet.create({
     opacity: 0.25,
   },
 
-  // 콘텐츠 컨테이너 (배경색 없음)
   cardBottom: {
     position: 'absolute',
     left: 0,
@@ -314,7 +300,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 
-  // 말풍선
   bubbleWrap: {
     alignSelf: 'stretch',
   },
@@ -366,7 +351,6 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  // 이름 줄
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -395,7 +379,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // 학과
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   timeSmall: { fontSize: 15, color: 'rgba(255,255,255,0.9)', fontWeight: '700' },
@@ -405,7 +388,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // 상세보기
   requestBtn: {
     backgroundColor: ACCENT,
     borderRadius: 14,
