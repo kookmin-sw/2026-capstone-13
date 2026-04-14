@@ -2,7 +2,6 @@ package com.helpboys.api.controller;
 
 import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.MealResponse;
-import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.service.MealService;
 import com.helpboys.api.service.UserService;
 import com.helpboys.api.util.JwtUtil;
@@ -20,7 +19,6 @@ public class MealController {
     private final MealService mealService;
     private final UserService userService;
     private final JwtUtil jwtUtil;
-    private final UserRepository userRepository;
 
     /**
      * GET /api/meals?lang=en
@@ -70,22 +68,16 @@ public class MealController {
     }
 
     private void checkAdmin(String token) {
-        String bearerToken = token.startsWith("Bearer ") ? token.substring(7) : token;
-        Long userId = jwtUtil.extractUserId(bearerToken);
-        userRepository.findById(userId).filter(u -> u.isAdmin())
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.FORBIDDEN, "관리자 권한이 필요합니다"));
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        userService.checkAdmin(userId);
     }
 
     private String resolveLang(String queryLang, String token) {
         if (queryLang != null && !queryLang.isBlank()) return queryLang;
         if (token != null) {
             try {
-                String bearerToken = token.startsWith("Bearer ") ? token.substring(7) : token;
-                Long userId = jwtUtil.extractUserId(bearerToken);
-                return userRepository.findById(userId)
-                        .map(u -> u.getPreferredLanguage() != null ? u.getPreferredLanguage() : "en")
-                        .orElse("en");
+                Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+                return userService.getUserPreferredLanguage(userId);
             } catch (Exception ignored) {}
         }
         return "en";
