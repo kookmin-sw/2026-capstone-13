@@ -29,7 +29,6 @@ public class RegisterRequest {
 
     private String major;
 
-    @NotBlank(message = "학생증 이미지를 업로드해주세요.")
     private String studentIdImageUrl;
 
     @AssertTrue(message = "이용약관에 동의해주세요.")
