@@ -35,6 +35,18 @@ const DIV    = '#D4E4FF';
 
 
 
+function formatRelativeTime(createdAt: string): string {
+  const date = new Date(createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z');
+  const diffMs = Date.now() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return '방금 전';
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}시간 전`;
+  const diffDay = Math.floor(diffHour / 24);
+  return `${diffDay}일 전`;
+}
+
 // ── 한국인용: ~일 연속 접속중 캐러셀 ──
 interface StreakTopCarouselProps {
   completedCount: number;
@@ -385,7 +397,7 @@ const goTo = (item: HelpRequest) =>
                           <View>
                             <Text style={s.listCardName}>{item.requester?.nickname ?? ''}</Text>
                             <Text style={s.listCardTime}>
-                              {Math.floor((Date.now() - new Date(item.createdAt.includes('Z') ? item.createdAt : item.createdAt + 'Z').getTime()) / 60000)}분 전
+                              {formatRelativeTime(item.createdAt)}
                             </Text>
                           </View>
                         </View>
@@ -511,7 +523,7 @@ const goTo = (item: HelpRequest) =>
                           <View>
                             <Text style={s.listCardName}>{item.requester?.nickname ?? ''}</Text>
                             <Text style={s.listCardTime}>
-                              {Math.floor((Date.now() - new Date(item.createdAt.includes('Z') ? item.createdAt : item.createdAt + 'Z').getTime()) / 60000)}분 전
+                              {formatRelativeTime(item.createdAt)}
                             </Text>
                           </View>
                         </View>
