@@ -72,6 +72,11 @@ export const uploadStudentId = async (imageUrl: string): Promise<ApiResponse<nul
   return response.data;
 };
 
+// 회원 탈퇴
+export const deleteAccount = async (password: string): Promise<void> => {
+  await api.delete('/users/me', { data: { password } });
+};
+
 // 프로필 이미지 업로드
 export const uploadProfileImage = async (imageUri: string): Promise<ApiResponse<User>> => {
   const formData = new FormData();
