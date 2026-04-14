@@ -49,6 +49,8 @@ export interface RegisterRequest {
   userType: UserType;
   university: string;
   major?: string;
+  termsAgreed: boolean;
+  privacyAgreed: boolean;
 }
 
 // 도움 요청 게시글

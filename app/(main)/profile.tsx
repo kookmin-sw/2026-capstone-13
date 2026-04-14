@@ -231,7 +231,7 @@ export default function ProfileScreen() {
       ? { icon: 'heart-outline' as const, label: '내 도움 내역', route: '/my-help-history' }
       : { icon: 'document-text-outline' as const, label: '내 도움 내역', route: '/my-requests' },
     { icon: 'star-outline' as const, label: '후기 관리', route: '/my-reviews' },
-    { icon: 'settings-outline' as const, label: '계정 설정', route: null },
+    { icon: 'settings-outline' as const, label: '계정 설정', route: '/account-settings' },
     { icon: 'notifications-outline' as const, label: '알림 설정', route: '/notifications' as const },
   ];
 
