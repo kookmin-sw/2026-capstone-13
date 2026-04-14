@@ -443,7 +443,7 @@ const goTo = (item: HelpRequest) =>
             {viewMode === 'card' ? (
               <View style={{ marginLeft: 16, marginBottom: 24 }}>
                 <SwipeCardStack
-                  requests={requests.filter(r => r.status === 'WAITING' || r.status === 'IN_PROGRESS')}
+                  requests={requests.filter(r => r.status === 'WAITING')}
                   onCardPress={(card) => goTo(card)}
                 />
               </View>
