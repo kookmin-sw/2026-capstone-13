@@ -69,7 +69,8 @@ function parseDescription(raw: string) {
 }
 
 function formatTime(createdAt: string): string {
-  const diff = Date.now() - new Date(createdAt).getTime();
+  const date = new Date(createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z');
+  const diff = Date.now() - date.getTime();
   const minutes = Math.floor(diff / 60000);
   if (minutes < 1) return '방금 전';
   if (minutes < 60) return `${minutes}분 전`;
