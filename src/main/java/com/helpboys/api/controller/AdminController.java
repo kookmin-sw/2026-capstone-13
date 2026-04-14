@@ -2,11 +2,8 @@ package com.helpboys.api.controller;
 
 import com.helpboys.api.dto.ApiResponse;
 import com.helpboys.api.dto.UserResponse;
-import com.helpboys.api.entity.User;
-import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -50,9 +47,6 @@ public class AdminController {
     }
 
     private void checkAdmin(UserDetails userDetails) {
-        User user = userService.getUserByEmail(userDetails.getUsername());
-        if (!user.isAdmin()) {
-            throw new BusinessException("관리자 권한이 없습니다.", HttpStatus.FORBIDDEN);
-        }
+        userService.checkAdminByEmail(userDetails.getUsername());
     }
 }

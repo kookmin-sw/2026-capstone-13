@@ -219,6 +219,21 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
     }
 
+    // 이메일로 관리자 권한 확인
+    public void checkAdminByEmail(String email) {
+        User user = getUserByEmail(email);
+        if (!user.isAdmin()) {
+            throw new BusinessException("관리자 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+    }
+
+    // 사용자 선호 언어 조회 (없으면 "en" 반환)
+    public String getUserPreferredLanguage(Long userId) {
+        return userRepository.findById(userId)
+                .map(u -> u.getPreferredLanguage() != null ? u.getPreferredLanguage() : "en")
+                .orElse("en");
+    }
+
     // 사용자 공개 프로필 조회 (이메일 제외)
     public UserResponse getUserById(Long id) {
         User user = userRepository.findById(id)
