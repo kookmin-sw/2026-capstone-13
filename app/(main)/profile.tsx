@@ -378,11 +378,18 @@ export default function ProfileScreen() {
           <View style={styles.bottomSheet}>
             <View style={styles.bottomSheetHandle} />
 
+            <TouchableOpacity style={styles.bottomSheetItem} onPress={() => handlePickImage('camera')} activeOpacity={0.7}>
+              <View style={styles.bottomSheetIconWrap}>
+                <Ionicons name="camera-outline" size={20} color={BLUE} />
+              </View>
+              <Text style={styles.bottomSheetItemText}>카메라로 촬영</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.bottomSheetItem} onPress={() => handlePickImage('gallery')} activeOpacity={0.7}>
               <View style={styles.bottomSheetIconWrap}>
                 <Ionicons name="image-outline" size={20} color={BLUE} />
               </View>
-              <Text style={styles.bottomSheetItemText}>변경하기</Text>
+              <Text style={styles.bottomSheetItemText}>갤러리에서 선택</Text>
             </TouchableOpacity>
 
             {hasCustomPhoto && (
@@ -636,36 +643,6 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             )}
 
-            {imageMenuVisible && (
-              <TouchableOpacity style={styles.inlineOverlay} activeOpacity={1} onPress={() => setImageMenuVisible(false)}>
-                <View style={styles.inlineSheet}>
-                  <View style={styles.bottomSheetHandle} />
-                  <TouchableOpacity style={styles.bottomSheetItem} onPress={() => handlePickImage('camera')} activeOpacity={0.7}>
-                    <View style={styles.bottomSheetIconWrap}>
-                      <Ionicons name="camera-outline" size={20} color={BLUE} />
-                    </View>
-                    <Text style={styles.bottomSheetItemText}>카메라로 촬영</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.bottomSheetItem} onPress={() => handlePickImage('gallery')} activeOpacity={0.7}>
-                    <View style={styles.bottomSheetIconWrap}>
-                      <Ionicons name="image-outline" size={20} color={BLUE} />
-                    </View>
-                    <Text style={styles.bottomSheetItemText}>갤러리에서 선택</Text>
-                  </TouchableOpacity>
-                  {hasCustomPhoto && (
-                    <TouchableOpacity style={styles.bottomSheetItem} onPress={handleDeleteImage} activeOpacity={0.7}>
-                      <View style={[styles.bottomSheetIconWrap, { backgroundColor: '#FEF2F2' }]}>
-                        <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                      </View>
-                      <Text style={[styles.bottomSheetItemText, { color: '#EF4444' }]}>삭제하기</Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity style={styles.bottomSheetCancel} onPress={() => setImageMenuVisible(false)} activeOpacity={0.7}>
-                    <Text style={styles.bottomSheetCancelText}>취소</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            )}
 
           </View>
         </KeyboardAvoidingView>
