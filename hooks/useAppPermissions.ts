@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
-import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
 import { Alert, PermissionsAndroid, Platform } from 'react-native';
 
@@ -14,20 +13,13 @@ async function showExplanation(title: string, message: string): Promise<void> {
 }
 
 async function requestAllPermissions() {
-  // 1. 알림 권한
-  const needsNotif =
-    Platform.OS === 'ios' ||
-    (Platform.OS === 'android' && Number(Platform.Version) >= 33);
-  if (needsNotif) {
+  // 1. 알림 권한 (Android 13+)
+  if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
     await showExplanation(
       '알림 권한',
       '채팅 메시지, 도움 요청 수락/거절 등 중요한 알림을 받으려면 알림 권한이 필요합니다.',
     );
-    if (Platform.OS === 'ios') {
-      await Notifications.requestPermissionsAsync();
-    } else {
-      await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
-    }
+    await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
   }
 
   // 2. 카메라 권한
