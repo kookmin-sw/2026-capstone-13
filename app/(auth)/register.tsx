@@ -159,6 +159,8 @@ export default function RegisterScreen() {
   const [showMajorModal, setShowMajorModal] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   // 이메일 인증 상태
   const [codeSent, setCodeSent] = useState(false);
@@ -557,18 +559,30 @@ export default function RegisterScreen() {
 
           {/* 약관 동의 */}
           <View style={styles.agreeSection}>
-            <TouchableOpacity style={styles.agreeRow} onPress={() => setTermsAgreed((v) => !v)} activeOpacity={0.7}>
-              <View style={[styles.checkbox, termsAgreed && styles.checkboxChecked]}>
-                {termsAgreed && <Ionicons name="checkmark" size={14} color="#fff" />}
-              </View>
-              <Text style={styles.agreeText}>이용약관 동의 <Text style={styles.agreeRequired}>(필수)</Text></Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.agreeRow} onPress={() => setPrivacyAgreed((v) => !v)} activeOpacity={0.7}>
-              <View style={[styles.checkbox, privacyAgreed && styles.checkboxChecked]}>
-                {privacyAgreed && <Ionicons name="checkmark" size={14} color="#fff" />}
-              </View>
-              <Text style={styles.agreeText}>개인정보처리방침 동의 <Text style={styles.agreeRequired}>(필수)</Text></Text>
-            </TouchableOpacity>
+            <View style={styles.agreeRow}>
+              <TouchableOpacity onPress={() => setTermsAgreed((v) => !v)} activeOpacity={0.7}>
+                <View style={[styles.checkbox, termsAgreed && styles.checkboxChecked]}>
+                  {termsAgreed && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowTermsModal(true)} activeOpacity={0.7}>
+                <Text style={styles.agreeText}>
+                  <Text style={styles.agreeLinkText}>이용약관</Text> 동의 <Text style={styles.agreeRequired}>(필수)</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.agreeRow}>
+              <TouchableOpacity onPress={() => setPrivacyAgreed((v) => !v)} activeOpacity={0.7}>
+                <View style={[styles.checkbox, privacyAgreed && styles.checkboxChecked]}>
+                  {privacyAgreed && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowPrivacyModal(true)} activeOpacity={0.7}>
+                <Text style={styles.agreeText}>
+                  <Text style={styles.agreeLinkText}>개인정보처리방침</Text> 동의 <Text style={styles.agreeRequired}>(필수)</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -584,6 +598,90 @@ export default function RegisterScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* 이용약관 모달 */}
+      <Modal visible={showTermsModal} animationType="slide" transparent onRequestClose={() => setShowTermsModal(false)}>
+        <View style={styles.docModalOverlay}>
+          <View style={styles.docModalSheet}>
+            <View style={styles.docModalHeader}>
+              <Text style={styles.docModalTitle}>이용약관</Text>
+              <TouchableOpacity onPress={() => setShowTermsModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.docModalBody} showsVerticalScrollIndicator={false}>
+              <Text style={styles.docSection}>제1조 (목적)</Text>
+              <Text style={styles.docText}>본 약관은 도와줘코리안(이하 "서비스")이 제공하는 외국인 유학생 도우미 서비스의 이용에 관한 조건 및 절차, 회사와 이용자의 권리·의무 및 책임사항을 규정함을 목적으로 합니다.</Text>
+
+              <Text style={styles.docSection}>제2조 (정의)</Text>
+              <Text style={styles.docText}>① "서비스"란 회사가 제공하는 도와줘코리안 앱 및 관련 제반 서비스를 의미합니다.{'\n'}② "이용자"란 본 약관에 동의하고 서비스를 이용하는 회원을 말합니다.{'\n'}③ "한국인 회원"이란 외국인 유학생을 돕는 역할로 가입한 이용자를 말합니다.{'\n'}④ "외국인 회원"이란 도움을 요청하는 외국인 유학생 이용자를 말합니다.</Text>
+
+              <Text style={styles.docSection}>제3조 (회원가입)</Text>
+              <Text style={styles.docText}>① 이용자는 회사가 정한 양식에 따라 정보를 기입하고 본 약관에 동의함으로써 회원가입을 신청합니다.{'\n'}② 회원가입은 재학 중인 대학교의 학교 이메일(@ac.kr)을 통한 인증을 필요로 합니다.{'\n'}③ 만 14세 미만의 아동은 회원가입을 할 수 없습니다.</Text>
+
+              <Text style={styles.docSection}>제4조 (서비스 이용)</Text>
+              <Text style={styles.docText}>① 서비스는 교내 생활, 행정 처리, 언어 소통 등 외국인 유학생의 일상 도움을 목적으로 합니다.{'\n'}② 이용자는 서비스를 이용함에 있어 관련 법령을 준수하여야 합니다.{'\n'}③ 금전적 거래, 불법 행위, 타인 비방 등의 행위는 금지됩니다.</Text>
+
+              <Text style={styles.docSection}>제5조 (개인정보 보호)</Text>
+              <Text style={styles.docText}>회사는 관련 법령이 정하는 바에 따라 이용자의 개인정보를 보호하며, 개인정보처리방침을 준수합니다.</Text>
+
+              <Text style={styles.docSection}>제6조 (서비스 중단)</Text>
+              <Text style={styles.docText}>회사는 시스템 점검, 장애, 천재지변 등의 사유로 서비스 제공을 일시적으로 중단할 수 있습니다.</Text>
+
+              <Text style={styles.docSection}>제7조 (면책)</Text>
+              <Text style={styles.docText}>회사는 이용자 간의 거래 또는 분쟁에 대해 개입하지 않으며, 이로 인한 손해에 대해 책임을 지지 않습니다.</Text>
+
+            </ScrollView>
+            <TouchableOpacity style={styles.docAgreeBtn} onPress={() => { setTermsAgreed(true); setShowTermsModal(false); }} activeOpacity={0.8}>
+              <Text style={styles.docAgreeBtnText}>동의하고 닫기</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 개인정보처리방침 모달 */}
+      <Modal visible={showPrivacyModal} animationType="slide" transparent onRequestClose={() => setShowPrivacyModal(false)}>
+        <View style={styles.docModalOverlay}>
+          <View style={styles.docModalSheet}>
+            <View style={styles.docModalHeader}>
+              <Text style={styles.docModalTitle}>개인정보처리방침</Text>
+              <TouchableOpacity onPress={() => setShowPrivacyModal(false)}>
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.docModalBody} showsVerticalScrollIndicator={false}>
+              <Text style={styles.docSection}>1. 수집하는 개인정보 항목</Text>
+              <Text style={styles.docText}>회사는 회원가입 및 서비스 이용을 위해 아래와 같은 개인정보를 수집합니다.{'\n'}• 필수: 이메일 주소, 비밀번호, 닉네임, 사용자 유형, 대학교명{'\n'}• 선택: 전공학과, 국적, 프로필 사진, 자기소개, 성별, 나이, MBTI, 취미</Text>
+
+              <Text style={styles.docSection}>2. 개인정보 수집 방법</Text>
+              <Text style={styles.docText}>앱 회원가입 및 서비스 이용 과정에서 이용자가 직접 입력하는 방식으로 수집합니다.</Text>
+
+              <Text style={styles.docSection}>3. 개인정보 이용 목적</Text>
+              <Text style={styles.docText}>• 회원 식별 및 서비스 제공{'\n'}• 도움 요청 매칭 서비스 운영{'\n'}• 채팅 및 영상통화 기능 제공{'\n'}• 커뮤니티 게시판 운영{'\n'}• 서비스 품질 개선 및 통계 분석</Text>
+
+              <Text style={styles.docSection}>4. 개인정보 보유 및 이용 기간</Text>
+              <Text style={styles.docText}>회원 탈퇴 시까지 보유합니다. 단, 관련 법령에 의해 보존이 필요한 경우 해당 기간 동안 보관합니다.{'\n'}• 계약 또는 청약철회 기록: 5년{'\n'}• 소비자 불만 및 분쟁 처리 기록: 3년</Text>
+
+              <Text style={styles.docSection}>5. 개인정보 제3자 제공</Text>
+              <Text style={styles.docText}>회사는 이용자의 동의 없이 개인정보를 제3자에게 제공하지 않습니다. 단, 법령에 의한 요청이 있는 경우는 예외로 합니다.</Text>
+
+              <Text style={styles.docSection}>6. 개인정보 처리 위탁</Text>
+              <Text style={styles.docText}>서비스 운영을 위해 아래와 같이 개인정보 처리를 위탁합니다.{'\n'}• Agora: 영상/음성통화 서비스 제공{'\n'}• AWS: 서버 및 데이터 저장</Text>
+
+              <Text style={styles.docSection}>7. 이용자의 권리</Text>
+              <Text style={styles.docText}>이용자는 언제든지 자신의 개인정보를 조회, 수정, 삭제할 수 있으며, 회원 탈퇴를 통해 개인정보 처리 정지를 요청할 수 있습니다.</Text>
+
+              <Text style={styles.docSection}>8. 개인정보 보호책임자</Text>
+              <Text style={styles.docText}>개인정보 처리에 관한 문의사항은 앱 내 문의하기 기능을 이용해주세요.</Text>
+
+            </ScrollView>
+            <TouchableOpacity style={styles.docAgreeBtn} onPress={() => { setPrivacyAgreed(true); setShowPrivacyModal(false); }} activeOpacity={0.8}>
+              <Text style={styles.docAgreeBtnText}>동의하고 닫기</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </KeyboardAvoidingView>
   );
 }
@@ -866,5 +964,65 @@ const styles = StyleSheet.create({
   agreeRequired: {
     color: Colors.primary,
     fontWeight: '600',
+  },
+  agreeLinkText: {
+    color: Colors.primary,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  docModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  docModalSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: '80%',
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+  },
+  docModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  docModalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  docModalBody: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  docSection: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginTop: 20,
+    marginBottom: 6,
+  },
+  docText: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+  },
+  docAgreeBtn: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  docAgreeBtnText: {
+    color: Colors.textWhite,
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
