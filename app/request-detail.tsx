@@ -1,5 +1,6 @@
 // 도움 요청 상세 화면 (홈화면 무드 통일 리디자인)
 import { useState, useEffect } from 'react';
+import { getInitial } from '../utils/getInitial';
 import {
   View,
   Text,
@@ -149,7 +150,7 @@ export default function RequestDetailScreen() {
 
   const profileUri = toAbsoluteUrl(item.requester.profileImage);
   const showHeroImg = !!profileUri && !imgError;
-  const initial = item.requester.nickname.charAt(0);
+  const initial = getInitial(item.requester.nickname);
   const isVerified = item.requester.studentIdVerified || item.requester.studentIdStatus === 'APPROVED';
   const allMethods: HelpMethod[] = ['OFFLINE', 'CHAT', 'VIDEO_CALL'];
 
@@ -406,7 +407,7 @@ export default function RequestDetailScreen() {
                   />
                 ) : (
                   <View style={[styles.helperAvatar, styles.helperAvatarFallback]}>
-                    <Text style={styles.helperAvatarText}>{item.helper.nickname.charAt(0)}</Text>
+                    <Text style={styles.helperAvatarText}>{getInitial(item.helper.nickname)}</Text>
                   </View>
                 )}
                 <View style={styles.helperInfo}>

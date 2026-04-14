@@ -1,5 +1,6 @@
 // 후기 작성 화면
 import { useState } from 'react';
+import { getInitial } from '../utils/getInitial';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   Platform, Alert, ActivityIndicator, Image,
@@ -78,7 +79,7 @@ export default function WriteReviewScreen() {
           {partnerProfileImage && !imgError
             ? <Image source={{ uri: partnerProfileImage }} style={s.avatar} onError={() => setImgError(true)} />
             : <View style={[s.avatar, { backgroundColor: avatarColor(partnerNickname) }]}>
-                <Text style={s.avatarText}>{partnerNickname.charAt(0)}</Text>
+                <Text style={s.avatarText}>{getInitial(partnerNickname)}</Text>
               </View>
           }
           <View style={s.partnerInfo}>

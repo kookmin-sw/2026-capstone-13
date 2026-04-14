@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
+import { getInitial } from '../utils/getInitial';
 import {
   ActivityIndicator,
   Alert,
@@ -124,7 +125,7 @@ export default function HelpListScreen() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const renderCard = (item: HelpRequest) => {
-    const initial  = item.requester.nickname.charAt(0);
+    const initial  = getInitial(item.requester.nickname);
     const avatarBg = CAT_AVATAR_COLOR[item.category];
     const profileImageUrl = toAbsoluteUrl(item.requester.profileImage);
     return (

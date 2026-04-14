@@ -1,5 +1,6 @@
 // 내가 받은 후기 목록 화면
 import { useEffect, useState } from 'react';
+import { getInitial } from '../utils/getInitial';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   Platform, ActivityIndicator, Image,
@@ -68,7 +69,7 @@ function ReviewCard({ item }: { item: ReviewResponse }) {
         {profileUri && !imgError
           ? <Image source={{ uri: profileUri }} style={s.avatar} onError={() => setImgError(true)} />
           : <View style={[s.avatar, { backgroundColor: avatarColor(item.reviewer.nickname) }]}>
-              <Text style={s.avatarText}>{item.reviewer.nickname.charAt(0)}</Text>
+              <Text style={s.avatarText}>{getInitial(item.reviewer.nickname)}</Text>
             </View>
         }
         <View style={s.reviewerInfo}>

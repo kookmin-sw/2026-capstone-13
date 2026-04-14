@@ -1,5 +1,6 @@
 // 댓글 상세 + 대댓글 화면
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { getInitial } from '../utils/getInitial';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform, Image, Keyboard, ActivityIndicator, Alert,
@@ -168,7 +169,7 @@ export default function CommentDetailScreen() {
           {profileUri
             ? <Image source={{ uri: profileUri }} style={s.avatar} />
             : <View style={[s.avatar, { backgroundColor: avatarColor(parentComment.author ?? '') }]}>
-                <Text style={s.avatarText}>{(parentComment.author ?? '?').charAt(0)}</Text>
+                <Text style={s.avatarText}>{getInitial(parentComment.author ?? '')}</Text>
               </View>
           }
           <View style={s.commentBody}>
@@ -207,7 +208,7 @@ export default function CommentDetailScreen() {
                     {toAbsoluteUrl(r.authorProfileImage)
                       ? <Image source={{ uri: toAbsoluteUrl(r.authorProfileImage)! }} style={s.replyAvatar} />
                       : <View style={[s.replyAvatar, { backgroundColor: avatarColor(r.author) }]}>
-                          <Text style={s.replyAvatarText}>{r.author.charAt(0)}</Text>
+                          <Text style={s.replyAvatarText}>{getInitial(r.author)}</Text>
                         </View>
                     }
                     <View style={s.commentBody}>

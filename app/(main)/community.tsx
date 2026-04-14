@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { getInitial } from '../../utils/getInitial';
 import {
   ActivityIndicator,
   FlatList,
@@ -113,7 +114,7 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
               <Image source={{ uri: profileUri }} style={s.feedAvatar} />
             ) : (
               <View style={[s.feedAvatar, { backgroundColor: avatarColor(item.author), justifyContent: 'center', alignItems: 'center' }]}>
-                <Text style={s.feedAvatarText}>{item.author.charAt(0)}</Text>
+                <Text style={s.feedAvatarText}>{getInitial(item.author)}</Text>
               </View>
             )}
           </View>

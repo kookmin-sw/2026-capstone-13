@@ -1,5 +1,6 @@
 // 커뮤니티 글 상세 화면
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { getInitial } from '../utils/getInitial';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform, Image, Keyboard, ActivityIndicator, Alert, Modal, Pressable, Dimensions,
@@ -299,7 +300,7 @@ export default function CommunityPostScreen() {
             {toAbsoluteUrl(post.authorProfileImage)
               ? <Image source={{ uri: toAbsoluteUrl(post.authorProfileImage)! }} style={s.avatar} />
               : <View style={[s.avatar, { backgroundColor: avatarColor(post.author) }]}>
-                  <Text style={s.avatarText}>{post.author.charAt(0)}</Text>
+                  <Text style={s.avatarText}>{getInitial(post.author)}</Text>
                 </View>
             }
             <View>
@@ -369,7 +370,7 @@ export default function CommunityPostScreen() {
                   {toAbsoluteUrl(c.authorProfileImage)
                     ? <Image source={{ uri: toAbsoluteUrl(c.authorProfileImage)! }} style={s.commentAvatar} />
                     : <View style={[s.commentAvatar, { backgroundColor: avatarColor(c.author) }]}>
-                        <Text style={s.commentAvatarText}>{c.author.charAt(0)}</Text>
+                        <Text style={s.commentAvatarText}>{getInitial(c.author)}</Text>
                       </View>
                   }
                   <View style={s.commentBody}>

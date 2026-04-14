@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback, memo } from 'react';
+import { getInitial } from '../utils/getInitial';
 import {
   View,
   Text,
@@ -79,7 +80,7 @@ const CardContent = memo(
     const [isTruncated, setIsTruncated] = useState(false);
     const profileUri = toAbsoluteUrl(user.profileImage?.trim());
     const showImage  = !!profileUri && !imgError;
-    const initial    = user.nickname.charAt(0);
+    const initial    = getInitial(user.nickname);
     const lv         = getLevel(user.helpCount);
     const isVerified  = user.studentIdVerified || user.studentIdStatus === 'APPROVED';
 

@@ -1,5 +1,6 @@
 // 채팅 탭: 도움 신청 수락/거절 + 채팅방 목록
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getInitial } from '../../utils/getInitial';
 import {
   View,
   Text,
@@ -70,7 +71,7 @@ function PartnerAvatar({ profileUrl, name }: { profileUrl?: string; name: string
   }
   return (
     <View style={[pa.fallback, { backgroundColor: avatarColor(name) }]}>
-      <Text style={pa.text}>{name.charAt(0)}</Text>
+      <Text style={pa.text}>{getInitial(name)}</Text>
     </View>
   );
 }

@@ -1,5 +1,6 @@
 // 채팅방 화면 (WebSocket STOMP 실시간 채팅)
 import { Ionicons } from '@expo/vector-icons';
+import { getInitial } from '../utils/getInitial';
 import { Client } from '@stomp/stompjs';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -536,7 +537,7 @@ export default function ChatRoomScreen() {
                     onError={() => setPartnerImgError(true)}
                   />
                 : <View style={styles.msgAvatar}>
-                    <Text style={styles.msgAvatarText}>{msg.senderNickname.charAt(0)}</Text>
+                    <Text style={styles.msgAvatarText}>{getInitial(msg.senderNickname)}</Text>
                   </View>
               )
             : <View style={styles.msgAvatarSpacer} />
