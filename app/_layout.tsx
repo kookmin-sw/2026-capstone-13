@@ -11,9 +11,11 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthStore } from '../stores/authStore';
+import { useAppPermissions } from '../hooks/useAppPermissions';
 
 export default function RootLayout() {
   const { user, isLoading, loadUser } = useAuthStore();
+  useAppPermissions();
   const segments = useSegments();
   const router = useRouter();
   const firstSegment = segments[0];

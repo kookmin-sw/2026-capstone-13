@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.helpboys.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "음성/영상 통화를 위해 마이크 권한이 필요합니다.",
-        "NSCameraUsageDescription": "영상 통화를 위해 카메라 권한이 필요합니다.",
+        "NSCameraUsageDescription": "영상통화 및 프로필·커뮤니티 사진 촬영을 위해 카메라 권한이 필요합니다.",
+        "NSPhotoLibraryUsageDescription": "프로필 사진이나 커뮤니티 게시글에 사진을 업로드하려면 갤러리 접근 권한이 필요합니다.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -21,7 +22,9 @@
       "package": "com.helpboys.app",
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.READ_MEDIA_IMAGES"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#4A90D9",
