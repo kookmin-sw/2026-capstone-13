@@ -120,6 +120,15 @@ public class HelpRequestController {
                 helpRequestService.updateStatus(id, HelpRequest.RequestStatus.COMPLETED, userId)));
     }
 
+    // POST /api/requests/{id}/leave - 채팅방 나가기 (WAITING 복귀)
+    @PostMapping("/{id}/leave")
+    public ResponseEntity<ApiResponse<HelpRequestResponse>> leaveRequest(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        return ResponseEntity.ok(ApiResponse.success("채팅방을 나갔습니다.", helpRequestService.leaveRequest(id, userId)));
+    }
+
     // PATCH /api/requests/{id}/status - 상태 변경
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<HelpRequestResponse>> updateStatus(

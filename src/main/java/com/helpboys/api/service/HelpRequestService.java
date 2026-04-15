@@ -203,6 +203,23 @@ public class HelpRequestService {
         return HelpRequestResponse.from(helpRequestRepository.save(req));
     }
 
+    // 채팅방 나가기 (WAITING 복귀, helper 유지 - 상대방이 방을 볼 수 있도록)
+    @Transactional
+    public HelpRequestResponse leaveRequest(Long requestId, Long userId) {
+        HelpRequest req = findById(requestId);
+
+        boolean isRequester = req.getRequester().getId().equals(userId);
+        boolean isHelper = req.getHelper() != null && req.getHelper().getId().equals(userId);
+
+        if (!isRequester && !isHelper) {
+            throw new BusinessException("권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        req.setStatus(HelpRequest.RequestStatus.WAITING);
+        // helper는 유지 → 상대방(비퇴장자)이 findChatRooms 쿼리에서 여전히 방을 볼 수 있음
+        return HelpRequestResponse.from(helpRequestRepository.save(req));
+    }
+
     private HelpRequest findById(Long id) {
         return helpRequestRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("요청을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
