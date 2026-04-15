@@ -1,4 +1,4 @@
-import React, { useState, useRef, memo } from 'react';
+import React, { useState, useRef, memo, useCallback } from 'react';
 import { getInitial } from '../utils/getInitial';
 import {
   View,
@@ -25,6 +25,13 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH  = SCREEN_WIDTH - 90;
 const CARD_HEIGHT = Math.round(SCREEN_HEIGHT * 0.53);
 const ACCENT = '#3B6FE8';
+
+// 슬롯별 scale / 오른쪽 peek offset (슬롯 0 = 앞, 1 = 중간, 2 = 뒤)
+const SLOT_SCALE:  [number, number, number] = [1,    1,    1];
+const SLOT_PEEK_X: [number, number, number] = [0,    28,   52];
+const SLOT_PEEK_Y: [number, number, number] = [0,    0,    0];
+
+const SWIPE_THRESHOLD = 80;
 
 const GRAD_START = 0;
 const GRAD_MAX_A = 0.95;
@@ -64,10 +71,13 @@ function formatTime(iso: string): string {
   return `${Math.floor(h / 24)}일 전`;
 }
 
+// card.id → 말줄임 여부 캐시 (컴포넌트 외부에서 측정 결과 보존)
+const truncatedCache = new Map<string | number, boolean>();
+
 const CardContent = memo(
   function CardContent({ card, onPress }: { card: HelpRequest; onPress?: () => void }) {
     const [imgError, setImgError] = useState(false);
-    const [isTruncated, setIsTruncated] = useState(false);
+    const [isTruncated, setIsTruncated] = useState(() => truncatedCache.get(card.id) ?? false);
     const profileUri = card.requester.profileImage?.trim();
     const showImage  = !!profileUri && !imgError;
     const initial    = getInitial(card.requester.nickname);
@@ -116,7 +126,11 @@ const CardContent = memo(
               <Text
                 style={styles.bubbleText}
                 numberOfLines={3}
-                onTextLayout={(e) => setIsTruncated(e.nativeEvent.lines.length >= 3)}
+                onTextLayout={(e) => {
+                  const result = e.nativeEvent.lines.length >= 3;
+                  truncatedCache.set(card.id, result);
+                  setIsTruncated(result);
+                }}
               >
                 {card.description}
                 {isTruncated && <Text style={styles.bubbleMore}>  ...더보기</Text>}
@@ -135,19 +149,64 @@ const CardContent = memo(
   (prev, next) => prev.card.id === next.card.id,
 );
 
-// ── 스와이프 카드 (key가 바뀌면 훅 초기값 0으로 새로 시작 → 깜빡임 없음) ──
-interface SwipeableCardProps {
-  card: HelpRequest;
-  nextCard: HelpRequest;
-  onPress?: () => void;
-  onSwiped: () => void;
+// ── 메인 컴포넌트 ──────────────────────────────────────────
+interface SwipeCardProps {
+  requests: HelpRequest[];
+  onCardPress?: (card: HelpRequest) => void;
 }
 
-function SwipeableCard({ card, nextCard, onPress, onSwiped }: SwipeableCardProps) {
-  const translateX = useSharedValue(0);
-  const isSwiping  = useSharedValue(false);
+export default function KoreanAccountCardStack({ requests, onCardPress }: SwipeCardProps) {
+  const n = requests.length;
 
-  const topStyle = useAnimatedStyle(() => ({
+  const [order, setOrder] = useState<[number, number, number]>([0, 1, 2]);
+
+  const translateX    = useSharedValue(0);
+  const swipeProgress = useSharedValue(0);
+  const isSwiping     = useSharedValue(false);
+
+  const onCardPressRef = useRef(onCardPress);
+  onCardPressRef.current = onCardPress;
+
+  const advanceOrderFn = useCallback(() => {
+    setOrder(([a, b, c]) => {
+      const nextBack = (a + 3) % n;
+      return [b, c, nextBack] as [number, number, number];
+    });
+    translateX.value    = 0;
+    swipeProgress.value = 0;
+    isSwiping.value     = false;
+  }, [n, translateX, swipeProgress, isSwiping]);
+
+  const advanceOrderRef = useRef(advanceOrderFn);
+  advanceOrderRef.current = advanceOrderFn;
+  const stableAdvance = useCallback(() => advanceOrderRef.current(), []);
+
+  const pan = Gesture.Pan()
+    .onUpdate((e) => {
+      if (isSwiping.value) return;
+      translateX.value = e.translationX > 0
+        ? Math.min(e.translationX, 40)
+        : e.translationX;
+      swipeProgress.value = Math.min(Math.abs(e.translationX) / SCREEN_WIDTH, 1);
+    })
+    .onEnd((e) => {
+      if (isSwiping.value) return;
+      const swipedLeft = e.translationX < -SWIPE_THRESHOLD || e.velocityX < -800;
+      if (swipedLeft) {
+        isSwiping.value     = true;
+        swipeProgress.value = withTiming(1, { duration: 200 });
+        translateX.value    = withTiming(-(SCREEN_WIDTH + 200), { duration: 350 }, () => {
+          runOnJS(stableAdvance)();
+        });
+      } else {
+        translateX.value    = withSpring(0, { damping: 25, stiffness: 150 });
+        swipeProgress.value = withSpring(0, { damping: 25, stiffness: 150 });
+      }
+    });
+
+  // slot 0 (앞): 스와이프 대상
+  const slot0Style = useAnimatedStyle(() => ({
+    zIndex: 3,
     transform: [
       { translateX: translateX.value },
       {
@@ -161,70 +220,56 @@ function SwipeableCard({ card, nextCard, onPress, onSwiped }: SwipeableCardProps
     ],
   }));
 
-  const behindStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(translateX.value, [-20, -80], [0, 1], Extrapolation.CLAMP),
-    transform: [{ scale: interpolate(translateX.value, [0, -SCREEN_WIDTH], [0.96, 1], Extrapolation.CLAMP) }],
+  // slot 1 (중간): 스와이프할수록 앞 위치로 이동
+  const slot1Style = useAnimatedStyle(() => ({
+    zIndex: 2,
+    transform: [
+      { translateX: interpolate(swipeProgress.value, [0, 1], [SLOT_PEEK_X[1], SLOT_PEEK_X[0]]) },
+      { translateY: interpolate(swipeProgress.value, [0, 1], [SLOT_PEEK_Y[1], SLOT_PEEK_Y[0]]) },
+      { scale:      interpolate(swipeProgress.value, [0, 1], [SLOT_SCALE[1],  SLOT_SCALE[0]]) },
+    ],
   }));
 
-  const pan = Gesture.Pan()
-    .onUpdate((e) => {
-      if (isSwiping.value) return;
-      translateX.value = e.translationX > 0
-        ? Math.min(e.translationX, 40)
-        : e.translationX;
-    })
-    .onEnd((e) => {
-      if (isSwiping.value) return;
-      const swipedLeft = e.translationX < -80 || e.velocityX < -800;
-      if (swipedLeft) {
-        isSwiping.value  = true;
-        translateX.value = withTiming(-(SCREEN_WIDTH + 200), { duration: 320 }, (finished) => {
-          if (finished) runOnJS(onSwiped)();
-        });
-      } else {
-        translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
-      }
-    });
+  // slot 2 (뒤): 스와이프할수록 중간 위치로 이동
+  const slot2Style = useAnimatedStyle(() => ({
+    zIndex: 1,
+    transform: [
+      { translateX: interpolate(swipeProgress.value, [0, 1], [SLOT_PEEK_X[2], SLOT_PEEK_X[1]]) },
+      { translateY: interpolate(swipeProgress.value, [0, 1], [SLOT_PEEK_Y[2], SLOT_PEEK_Y[1]]) },
+      { scale:      interpolate(swipeProgress.value, [0, 1], [SLOT_SCALE[2],  SLOT_SCALE[1]]) },
+    ],
+  }));
+
+  if (n === 0) return null;
+
+  const card0 = requests[order[0] % n];
+  const card1 = n > 1 ? requests[order[1] % n] : requests[0];
+  const card2 = n > 2 ? requests[order[2] % n] : requests[0];
 
   return (
     <View style={styles.wrapper}>
-      <Animated.View style={[styles.cardSlot, styles.behindCard, behindStyle]}>
-        <CardContent card={nextCard} />
-      </Animated.View>
-      <GestureDetector gesture={pan}>
-        <Animated.View style={[styles.cardSlot, styles.topCard, topStyle]}>
-          <CardContent card={card} onPress={onPress} />
+      <View style={styles.stack}>
+        {/* slot 2: 가장 뒤 */}
+        <Animated.View style={[styles.cardSlot, slot2Style]}>
+          <CardContent card={card2} />
         </Animated.View>
-      </GestureDetector>
+
+        {/* slot 1: 중간 */}
+        <Animated.View style={[styles.cardSlot, slot1Style]}>
+          <CardContent card={card1} />
+        </Animated.View>
+
+        {/* slot 0: 앞, 스와이프 가능 */}
+        <GestureDetector gesture={pan}>
+          <Animated.View style={[styles.cardSlot, slot0Style]}>
+            <CardContent
+              card={card0}
+              onPress={() => onCardPressRef.current?.(card0)}
+            />
+          </Animated.View>
+        </GestureDetector>
+      </View>
     </View>
-  );
-}
-
-// ── 메인 컴포넌트 ──────────────────────────────────────────
-interface SwipeCardProps {
-  requests: HelpRequest[];
-  onCardPress?: (card: HelpRequest) => void;
-}
-
-export default function SwipeCardStack({ requests, onCardPress }: SwipeCardProps) {
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const onCardPressRef = useRef(onCardPress);
-  onCardPressRef.current = onCardPress;
-
-  const n = requests.length;
-  if (n === 0) return null;
-
-  const card     = requests[currentIdx % n];
-  const nextCard = requests[(currentIdx + 1) % n];
-
-  return (
-    <SwipeableCard
-      key={currentIdx}
-      card={card}
-      nextCard={nextCard}
-      onPress={() => onCardPressRef.current?.(card)}
-      onSwiped={() => setCurrentIdx(prev => prev + 1)}
-    />
   );
 }
 
@@ -232,13 +277,15 @@ const styles = StyleSheet.create({
   wrapper: {
     alignItems: 'center',
   },
-  behindCard: {
-    position: 'absolute',
-  },
-  topCard: {
+  stack: {
+    width: CARD_WIDTH + SLOT_PEEK_X[2],
+    height: CARD_HEIGHT + SLOT_PEEK_Y[2],
     position: 'relative',
   },
   cardSlot: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     borderRadius: 20,

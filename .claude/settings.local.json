@@ -41,7 +41,9 @@
       "Bash(npm install:*)",
       "Bash(railway whoami:*)",
       "Bash(railway login:*)",
-      "Bash(python3 -c ':*)"
+      "Bash(python3 -c ':*)",
+      "Bash(mv \"components/SwipeCardStack.tsx\" \"components/KoreanAccountCardStack.tsx\")",
+      "Bash(mv \"components/KoreanUserCardStack.tsx\" \"components/ForeignAccountCardStack.tsx\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\sang0\\.claude"

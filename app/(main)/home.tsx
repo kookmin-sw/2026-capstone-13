@@ -14,8 +14,8 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import KoreanUserCardStack from '../../components/KoreanUserCardStack';
-import SwipeCardStack from '../../components/SwipeCardStack';
+import ForeignAccountCardStack from '../../components/ForeignAccountCardStack';
+import KoreanAccountCardStack from '../../components/KoreanAccountCardStack';
 import WriteForm from '../../components/WriteForm';
 import { getKoreanUsers } from '../../services/authService';
 import { getHelpedRequests, getHelpRequests } from '../../services/helpService';
@@ -315,8 +315,8 @@ const goTo = (item: HelpRequest) =>
               </TouchableOpacity>
             </View>
             {intlTab === 'card' ? (
-              <View style={{ marginLeft: 16, marginBottom: 10 }}>
-                <KoreanUserCardStack
+              <View style={{ marginLeft: 6, marginBottom: 10 }}>
+                <ForeignAccountCardStack
                   users={koreanUsers}
                   onPress={() => switchIntlTab('write')}
                 />
@@ -443,8 +443,8 @@ const goTo = (item: HelpRequest) =>
               </TouchableOpacity>
             </View>
             {viewMode === 'card' ? (
-              <View style={{ marginLeft: 16, marginBottom: 24 }}>
-                <SwipeCardStack
+              <View style={{ marginLeft: 6, marginBottom: 24 }}>
+                <KoreanAccountCardStack
                   requests={requests.filter(r => r.status === 'WAITING')}
                   onCardPress={(card) => goTo(card)}
                 />
@@ -881,8 +881,6 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 5,
-    paddingBottom: 8,
   },
   summaryDot: {
     width: 5,

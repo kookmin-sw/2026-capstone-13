@@ -26,21 +26,23 @@ const CARD_WIDTH  = SCREEN_WIDTH - 90;
 const CARD_HEIGHT = Math.round(SCREEN_HEIGHT * 0.53);
 const ACCENT      = '#0EA5E9';
 
-const SLOT_OFFSET  = [0, 16, 32];
-const SLOT_OPACITY = [1, 0.85, 0.7];
+// 슬롯별 scale / 오른쪽 peek offset (슬롯 0 = 앞, 1 = 중간, 2 = 뒤)
+const SLOT_SCALE:    [number, number, number] = [1,    1,    1];
+const SLOT_PEEK_X:   [number, number, number] = [0,    28,   52];
+const SLOT_PEEK_Y:   [number, number, number] = [0,    0,    0];
 
-const GRAD_START   = 0;
-const GRAD_MAX_A   = 0.95;
-const GRAD_STEPS   = 200;
-const GRAD_RANGE   = 100 - GRAD_START;
-const GRAD_H       = GRAD_RANGE / GRAD_STEPS;
+const GRAD_START = 0;
+const GRAD_MAX_A = 0.95;
+const GRAD_STEPS = 200;
+const GRAD_RANGE = 100 - GRAD_START;
+const GRAD_H     = GRAD_RANGE / GRAD_STEPS;
 
 const GRADIENT_LAYERS = Array.from({ length: GRAD_STEPS }, (_, i) => {
-  const t        = i / (GRAD_STEPS - 1);
-  const eased    = t * t * t;
-  const alpha    = parseFloat((eased * GRAD_MAX_A).toFixed(4));
-  const top      = parseFloat((GRAD_START + i * GRAD_H).toFixed(4));
-  const isLast   = i === GRAD_STEPS - 1;
+  const t      = i / (GRAD_STEPS - 1);
+  const eased  = t * t * t;
+  const alpha  = parseFloat((eased * GRAD_MAX_A).toFixed(4));
+  const top    = parseFloat((GRAD_START + i * GRAD_H).toFixed(4));
+  const isLast = i === GRAD_STEPS - 1;
   return (
     <View
       key={i}
@@ -73,16 +75,20 @@ function toAbsoluteUrl(url: string | undefined): string | undefined {
   return SERVER_BASE_URL + url;
 }
 
+// user.id → 말줄임 여부 캐시 (컴포넌트 외부에서 측정 결과 보존)
+const truncatedCache = new Map<string | number, boolean>();
+
 // ── 카드 한 장 ─────────────────────────────────────────────
 const CardContent = memo(
   function CardContent({ user, onPress }: { user: User; onPress?: () => void }) {
     const [imgError, setImgError] = useState(false);
-    const [isTruncated, setIsTruncated] = useState(false);
+    // 캐시에 이미 측정값이 있으면 초기값으로 사용 → 리마운트 시 깜빡임 방지
+    const [isTruncated, setIsTruncated] = useState(() => truncatedCache.get(user.id) ?? false);
     const profileUri = toAbsoluteUrl(user.profileImage?.trim());
     const showImage  = !!profileUri && !imgError;
     const initial    = getInitial(user.nickname);
     const lv         = getLevel(user.helpCount);
-    const isVerified  = user.studentIdVerified || user.studentIdStatus === 'APPROVED';
+    const isVerified = user.studentIdVerified || user.studentIdStatus === 'APPROVED';
 
     return (
       <View style={styles.card}>
@@ -140,7 +146,11 @@ const CardContent = memo(
               <Text
                 style={styles.bubbleText}
                 numberOfLines={3}
-                onTextLayout={(e) => setIsTruncated(e.nativeEvent.lines.length >= 3)}
+                onTextLayout={(e) => {
+                  const result = e.nativeEvent.lines.length >= 3;
+                  truncatedCache.set(user.id, result);
+                  setIsTruncated(result);
+                }}
               >
                 {user.bio ?? ''}
                 {isTruncated && <Text style={styles.bubbleMore}>  ...더보기</Text>}
@@ -160,93 +170,139 @@ const CardContent = memo(
 );
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────
-interface KoreanUserCardStackProps {
+interface ForeignAccountCardStackProps {
   users: User[];
   onPress?: (user: User) => void;
 }
 
 const SWIPE_THRESHOLD = 80;
 
-export default function KoreanUserCardStack({ users, onPress }: KoreanUserCardStackProps) {
-  const [topIdx, setTopIdx] = useState(0);
+/**
+ * 3장 고정 슬롯 순환 카드 스택
+ *
+ * 슬롯 zIndex:  front(2) > mid(1) > back(0)
+ * 데이터 인덱스: order[0]=앞, order[1]=중간, order[2]=뒤
+ *
+ * 스와이프 완료 시 JS side에서 order를 순환시키고
+ * 동시에 UI는 애니메이션이 끝난 후 즉시 리셋되므로 깜빡임 없음.
+ */
+export default function ForeignAccountCardStack({ users, onPress }: ForeignAccountCardStackProps) {
+  const n = users.length;
 
-  const translateX   = useSharedValue(0);
-  const isSwiping    = useSharedValue(false);
-  const backProgress = useSharedValue(0);
+  // order[slot] = users 배열 인덱스
+  // 초기: slot0=앞, slot1=중간, slot2=뒤
+  const [order, setOrder] = useState<[number, number, number]>([0, 1, 2]);
 
-  const n     = users.length;
-  const card0 = n > 0 ? users[topIdx % n] : null;
-  const card1 = n > 0 ? users[(topIdx + 1) % n] : null;
-  const card2 = n > 0 ? users[(topIdx + 2) % n] : null;
+  // 앞 카드 애니메이션
+  const translateX = useSharedValue(0);
+  const swipeProgress = useSharedValue(0); // 0~1
+
+  const isSwiping = useSharedValue(false);
 
   const onPressRef = useRef(onPress);
   onPressRef.current = onPress;
 
-  const advanceCard = useCallback(() => {
-    setTopIdx(prev => prev + 1);
-    requestAnimationFrame(() => {
-      translateX.value   = 0;
-      backProgress.value = 0;
-      isSwiping.value    = false;
+  const advanceOrderFn = useCallback(() => {
+    setOrder(([a, b, c]) => {
+      const nextBack = (a + 3) % n;
+      return [b, c, nextBack] as [number, number, number];
     });
-  }, [translateX, backProgress, isSwiping]);
+    translateX.value = 0;
+    swipeProgress.value = 0;
+    isSwiping.value = false;
+  }, [n, translateX, swipeProgress, isSwiping]);
+
+  const advanceOrderRef = useRef(advanceOrderFn);
+  advanceOrderRef.current = advanceOrderFn;
+  const stableAdvance = useCallback(() => advanceOrderRef.current(), []);
 
   const pan = Gesture.Pan()
     .onUpdate((e) => {
       if (isSwiping.value) return;
-      translateX.value   = e.translationX > 0 ? Math.min(e.translationX, 40) : e.translationX;
-      backProgress.value = Math.min(Math.abs(e.translationX) / SCREEN_WIDTH, 1);
+      translateX.value = e.translationX > 0
+        ? Math.min(e.translationX, 40)
+        : e.translationX;
+      swipeProgress.value = Math.min(Math.abs(e.translationX) / SCREEN_WIDTH, 1);
     })
     .onEnd((e) => {
       if (isSwiping.value) return;
       const swipedLeft = e.translationX < -SWIPE_THRESHOLD || e.velocityX < -800;
       if (swipedLeft) {
-        isSwiping.value    = true;
-        backProgress.value = withTiming(1, { duration: 150 });
-        translateX.value   = withTiming(-(SCREEN_WIDTH + 200), { duration: 380 }, () => {
-          runOnJS(advanceCard)();
+        isSwiping.value = true;
+        swipeProgress.value = withTiming(1, { duration: 200 });
+        translateX.value = withTiming(-(SCREEN_WIDTH + 200), { duration: 350 }, () => {
+          runOnJS(stableAdvance)();
         });
       } else {
-        translateX.value   = withSpring(0, { damping: 25, stiffness: 150 });
-        backProgress.value = withSpring(0, { damping: 25, stiffness: 150 });
+        translateX.value = withSpring(0, { damping: 25, stiffness: 150 });
+        swipeProgress.value = withSpring(0, { damping: 25, stiffness: 150 });
       }
     });
 
-  const topCardStyle = useAnimatedStyle(() => ({
+  // ── 슬롯별 animated style ──────────────────────────────
+
+  // slot 0 (앞): 스와이프 대상
+  const slot0Style = useAnimatedStyle(() => ({
+    zIndex: 3,
     transform: [
       { translateX: translateX.value },
-      { rotateZ: `${interpolate(translateX.value, [-SCREEN_WIDTH, 0, SCREEN_WIDTH], [-12, 0, 12], Extrapolation.CLAMP)}deg` },
+      {
+        rotateZ: `${interpolate(
+          translateX.value,
+          [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+          [-12, 0, 12],
+          Extrapolation.CLAMP,
+        )}deg`,
+      },
     ],
   }));
 
-  const midCardStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(backProgress.value, [0, 1], [SLOT_OFFSET[1], SLOT_OFFSET[0]]) }],
+  // slot 1 (중간): 스와이프할수록 앞 위치로 이동
+  const slot1Style = useAnimatedStyle(() => ({
+    zIndex: 2,
+    transform: [
+      { translateX: interpolate(swipeProgress.value, [0, 1], [SLOT_PEEK_X[1], SLOT_PEEK_X[0]]) },
+      { translateY: interpolate(swipeProgress.value, [0, 1], [SLOT_PEEK_Y[1], SLOT_PEEK_Y[0]]) },
+      { scale:      interpolate(swipeProgress.value, [0, 1], [SLOT_SCALE[1],  SLOT_SCALE[0]]) },
+    ],
   }));
 
-  const backCardStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(backProgress.value, [0, 1], [SLOT_OFFSET[2], SLOT_OFFSET[1]]) }],
+  // slot 2 (뒤): 스와이프할수록 중간 위치로 이동
+  const slot2Style = useAnimatedStyle(() => ({
+    zIndex: 1,
+    transform: [
+      { translateX: interpolate(swipeProgress.value, [0, 1], [SLOT_PEEK_X[2], SLOT_PEEK_X[1]]) },
+      { translateY: interpolate(swipeProgress.value, [0, 1], [SLOT_PEEK_Y[2], SLOT_PEEK_Y[1]]) },
+      { scale:      interpolate(swipeProgress.value, [0, 1], [SLOT_SCALE[2],  SLOT_SCALE[1]]) },
+    ],
   }));
 
   if (n === 0) return null;
 
+  const user0 = users[order[0] % n];
+  const user1 = n > 1 ? users[order[1] % n] : users[0];
+  const user2 = n > 2 ? users[order[2] % n] : users[0];
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.stack}>
-        {n >= 3 && (
-          <Animated.View style={[styles.cardSlot, styles.backCard, backCardStyle]}>
-            <CardContent user={card2!} />
-          </Animated.View>
-        )}
+        {/* slot 2: 가장 뒤 */}
+        <Animated.View style={[styles.cardSlot, slot2Style]}>
+          <CardContent user={user2} />
+        </Animated.View>
 
-        {n >= 2 && (
-          <Animated.View style={[styles.cardSlot, styles.midCard, midCardStyle]}>
-            <CardContent user={card1!} />
-          </Animated.View>
-        )}
+        {/* slot 1: 중간 */}
+        <Animated.View style={[styles.cardSlot, slot1Style]}>
+          <CardContent user={user1} />
+        </Animated.View>
 
+        {/* slot 0: 앞, 스와이프 가능 */}
         <GestureDetector gesture={pan}>
-          <Animated.View style={[styles.cardSlot, styles.topCard, topCardStyle]}>
-            <CardContent user={card0!} onPress={onPress ? () => onPressRef.current?.(card0!) : undefined} />
+          <Animated.View style={[styles.cardSlot, slot0Style]}>
+            <CardContent
+              user={user0}
+              onPress={onPress ? () => onPressRef.current?.(user0) : undefined}
+            />
           </Animated.View>
         </GestureDetector>
       </View>
@@ -259,8 +315,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   stack: {
-    width: CARD_WIDTH + SLOT_OFFSET[2],
-    height: CARD_HEIGHT,
+    width: CARD_WIDTH + SLOT_PEEK_X[2],
+    height: CARD_HEIGHT + SLOT_PEEK_Y[2],
     position: 'relative',
   },
   cardSlot: {
@@ -276,9 +332,6 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 8,
   },
-  topCard:  { zIndex: 3, opacity: SLOT_OPACITY[0] },
-  midCard:  { zIndex: 2, opacity: SLOT_OPACITY[1] },
-  backCard: { zIndex: 1, opacity: SLOT_OPACITY[2] },
 
   card: {
     width: '100%',
@@ -301,31 +354,6 @@ const styles = StyleSheet.create({
     fontSize: 80,
     fontWeight: '900',
     color: 'rgba(255,255,255,0.25)',
-  },
-
-  topTagRow: {
-    position: 'absolute',
-    top: 16,
-    left: 12,
-    right: 12,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    zIndex: 10,
-  },
-  topTag: {
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-  },
-  topTagText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
   },
 
   cardBottom: {
@@ -434,7 +462,7 @@ const styles = StyleSheet.create({
   },
   detailBtn: {
     marginLeft: 'auto',
-    backgroundColor: ACCENT,
+    backgroundColor: '#3B6FE8',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 9,
