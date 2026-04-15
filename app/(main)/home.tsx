@@ -199,7 +199,9 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (user?.userType === 'INTERNATIONAL' || user?.userType === 'EXCHANGE') {
-      getKoreanUsers().then(res => { if (res.success) setKoreanUsers(res.data); }).catch(() => {});
+      getKoreanUsers().then(res => {
+        if (res.success) setKoreanUsers(res.data.filter((u: User) => u.nickname !== '(알 수 없음)'));
+      }).catch(() => {});
     }
   }, [user]);
 
