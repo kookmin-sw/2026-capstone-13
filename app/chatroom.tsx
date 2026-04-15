@@ -22,7 +22,7 @@ import {
   View,
 } from 'react-native';
 import { getChatMessages, sendVoiceMessage, translateChatMessage, type ChatMessageDto } from '../services/chatService';
-import { completeHelpRequest, rejectHelper, startHelpRequest, resetToWaiting } from '../services/helpService';
+import { leaveHelpRequest, completeHelpRequest, rejectHelper, startHelpRequest } from '../services/helpService';
 import { hasReviewed } from '../services/reviewService';
 import { useAuthStore } from '../stores/authStore';
 import { useChatStore } from '../stores/chatStore';
@@ -100,7 +100,10 @@ export default function ChatRoomScreen() {
         const sysLeaveFromPartner = res.data.find(
           (m) => m.content?.startsWith(SYS_LEAVE) && m.senderId !== user?.id
         );
-        if (sysLeaveFromPartner) setChatEnded(true);
+        // MATCHED/IN_PROGRESS는 재매칭된 상태 → 이전 SYS_LEAVE 이력 무시
+        const currentStatus = params.requestStatus ?? '';
+        const isActiveMatch = currentStatus === 'MATCHED' || currentStatus === 'IN_PROGRESS';
+        if (sysLeaveFromPartner && !isActiveMatch) setChatEnded(true);
         const normalMsgs = res.data.filter((m) => !m.content?.startsWith(SYS_LEAVE));
         setMessages(normalMsgs);
       }
@@ -277,8 +280,8 @@ export default function ChatRoomScreen() {
         text: '나가기',
         style: 'destructive',
         onPress: () => {
-          // DB 상태를 COMPLETED로 변경 (채팅 목록에서 완료로 표시)
-          completeHelpRequest(Number(roomId)).catch(() => {});
+          // 채팅방 나가기 → 상태 WAITING 복귀 (다시 모집 가능)
+          leaveHelpRequest(Number(roomId)).catch(() => {});
           const client = clientRef.current;
           if (client?.connected && user) {
             client.publish({

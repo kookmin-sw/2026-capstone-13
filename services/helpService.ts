@@ -86,11 +86,9 @@ export const startHelpRequest = async (id: number): Promise<ApiResponse<HelpRequ
   return response.data;
 };
 
-// 채팅방 나가기 - 상태를 WAITING으로 리셋 (기존 배포 엔드포인트 사용)
-export const resetToWaiting = async (id: number): Promise<ApiResponse<HelpRequest>> => {
-  const response = await api.patch<ApiResponse<HelpRequest>>(`/requests/${id}/status`, null, {
-    params: { status: 'WAITING' },
-  });
+// 채팅방 나가기 - WAITING 복귀 (helper 유지, helpCount 미증가)
+export const leaveHelpRequest = async (id: number): Promise<ApiResponse<HelpRequest>> => {
+  const response = await api.post<ApiResponse<HelpRequest>>(`/requests/${id}/leave`);
   return response.data;
 };
 

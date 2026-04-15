@@ -96,19 +96,23 @@ export default function ChatScreen() {
   const [searchQuery, setSearchQuery]     = useState('');
   const searchInputRef = useRef<TextInput>(null);
 
-  const { setUnreadCount, hasLeft } = useChatStore();
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-    }, [fetchData]) // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const { setUnreadCount, hasLeft, rejoinRoom } = useChatStore();
+  const myId = Number(user?.id);
 
   const fetchData = useCallback(async () => {
     try {
       const res = await getChatRooms();
       if (res.success) {
         setRequests(res.data);
+        // 조건 4: 외국인(requester)이 이전에 나갔다가 상대가 재신청해서 MATCHED가 된 경우
+        // → leftRooms에서 자동으로 제거해 수락/거절 UI가 다시 보이게 함
+        if (isInternational) {
+          res.data.forEach((r) => {
+            if (r.status === 'MATCHED' && hasLeft(r.id, myId)) {
+              rejoinRoom(r.id, myId);
+            }
+          });
+        }
         const total = res.data
           .filter((r) => !hasLeft(r.id, myId) && r.status !== 'WAITING')
           .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
@@ -120,7 +124,13 @@ export default function ChatScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [setUnreadCount, hasLeft, myId]);
+  }, [setUnreadCount, hasLeft, rejoinRoom, isInternational, myId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
 
   useEffect(() => { fetchData(); }, [fetchData]);
   const onRefresh = () => { setRefreshing(true); fetchData(); };
@@ -137,6 +147,8 @@ export default function ChatScreen() {
             requestTitle: room.title,
             partnerNickname: room.partnerNickname,
             partnerProfileImage: toAbsoluteUrl(room.partnerProfileImage) ?? '',
+            requestStatus: 'IN_PROGRESS',
+            requesterId: String(myId),
             roomUnreadCount: String(room.unreadCount ?? 0),
           },
         });
@@ -199,12 +211,10 @@ export default function ChatScreen() {
   };
   const closeSearch = () => { setSearchVisible(false); setSearchQuery(''); };
 
-  const myId = Number(user?.id);
-
   const visibleItems = requests
     .filter((r) => {
       if (hasLeft(r.id, myId)) return false;
-      if (filter === 'ALL')         return r.status === 'MATCHED' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED';
+      if (filter === 'ALL')         return r.status === 'MATCHED' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED' || r.status === 'WAITING';
       if (filter === 'IN_PROGRESS') return r.status === 'IN_PROGRESS';
       if (filter === 'COMPLETED')   return r.status === 'COMPLETED';
       return false;
@@ -226,6 +236,7 @@ export default function ChatScreen() {
     if (filter !== 'ALL') return visibleItems;
     const inProgress = visibleItems.filter(r => r.status === 'IN_PROGRESS' || r.status === 'MATCHED');
     const completed  = visibleItems.filter(r => r.status === 'COMPLETED');
+    const waiting    = visibleItems.filter(r => r.status === 'WAITING');
     const result: ListData[] = [];
     if (inProgress.length > 0) {
       result.push({ type: 'sectionHeader', label: `진행중 ${inProgress.length}`, id: 'sec-progress' });
@@ -234,6 +245,10 @@ export default function ChatScreen() {
     if (completed.length > 0) {
       result.push({ type: 'sectionHeader', label: `완료 ${completed.length}`, id: 'sec-done' });
       result.push(...completed);
+    }
+    if (waiting.length > 0) {
+      result.push({ type: 'sectionHeader', label: `종료됨 ${waiting.length}`, id: 'sec-waiting' });
+      result.push(...waiting);
     }
     return result;
   })();
@@ -294,11 +309,12 @@ export default function ChatScreen() {
     const isActioning    = actioningId === room.id;
     const isOnline       = room.status === 'IN_PROGRESS' || room.status === 'MATCHED';
     const isCompleted    = room.status === 'COMPLETED';
+    const isWaiting      = room.status === 'WAITING';
     const isMatchPending = room.status === 'MATCHED';
 
-    const statusLabel = isCompleted ? '완료' : '진행중';
-    const statusBg    = isCompleted ? '#F0F4F8' : BLUE_L;
-    const statusColor = isCompleted ? T3 : BLUE;
+    const statusLabel = isCompleted ? '완료' : isWaiting ? '나감' : '진행중';
+    const statusBg    = isCompleted ? '#F0F4F8' : isWaiting ? '#FEF3C7' : BLUE_L;
+    const statusColor = isCompleted ? T3 : isWaiting ? '#D97706' : BLUE;
 
     return (
       <Swipeable
