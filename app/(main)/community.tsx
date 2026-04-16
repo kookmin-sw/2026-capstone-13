@@ -1,7 +1,8 @@
-// 커뮤니티 화면 - HelloTalk 피드 스타일
+// 커뮤니티 화면 - 카테고리 홈 + 피드
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getInitial } from '../../utils/getInitial';
 import {
@@ -34,14 +35,6 @@ const BG       = '#F4F6FB';
 
 type FilterCategory = 'ALL' | PostCategory;
 
-const CATEGORY_FILTERS: { key: FilterCategory; label: string }[] = [
-  { key: 'ALL',      label: '전체' },
-  { key: 'INFO',     label: '일반' },
-  { key: 'QUESTION', label: '로컬' },
-  { key: 'CHAT',     label: '모임' },
-  { key: 'CULTURE',  label: '장터' },
-];
-
 const CATEGORY_LABEL: Record<PostCategory, string> = {
   INFO: '일반', QUESTION: '로컬', CHAT: '모임', CULTURE: '장터',
 };
@@ -53,6 +46,22 @@ const CATEGORY_COLOR: Record<PostCategory, string> = {
 const CATEGORY_BG: Record<PostCategory, string> = {
   INFO: BLUE_L, QUESTION: '#FFF3E8', CHAT: '#EEF4FF', CULTURE: '#F5F3FF',
 };
+
+// 카테고리 홈 메뉴 정의
+const CATEGORY_MENU: {
+  key: PostCategory | 'ALL';
+  label: string;
+  desc: string;
+  icon: string;
+  color: string;
+  bg: string;
+}[] = [
+  { key: 'ALL',      label: '전체 게시판', desc: '모든 글 모아보기',           icon: 'apps-outline',         color: T1,       bg: BG },
+  { key: 'INFO',     label: '일반',        desc: '자유롭게 이야기해요',         icon: 'chatbubbles-outline',  color: BLUE,     bg: BLUE_L },
+  { key: 'QUESTION', label: '로컬',        desc: '우리 지역 이야기',            icon: 'location-outline',     color: ORANGE,   bg: '#FFF3E8' },
+  { key: 'CHAT',     label: '모임',        desc: '같이 만나요',                icon: 'people-outline',       color: T3,       bg: '#EEF4FF' },
+  { key: 'CULTURE',  label: '장터',        desc: '사고 팔고 나눠요',            icon: 'storefront-outline',   color: '#8B5CF6', bg: '#F5F3FF' },
+];
 
 const AVATAR_COLORS = ['#F0A040', '#F06060', BLUE, '#90C4F0', '#A0A8B0'];
 const SERVER_BASE_URL = 'https://backend-production-0a6f.up.railway.app';
@@ -82,6 +91,47 @@ function formatTime(createdAt: string): string {
 
 type SearchMode = 'title' | 'title+content';
 
+// ── 카테고리 홈 화면 ──────────────────────────────────────────
+function CategoryHomeScreen({ onSelect }: { onSelect: (cat: FilterCategory) => void }) {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  return (
+    <View style={[cs.container, { paddingTop: insets.top + 10 }]}>
+      {/* 헤더 */}
+      <View style={cs.header}>
+        <Text style={cs.headerTitle}>커뮤니티</Text>
+        <TouchableOpacity style={cs.writeBtn} onPress={() => router.push('/community-write')} activeOpacity={0.75}>
+          <Ionicons name="create-outline" size={24} color={T1} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={cs.scroll}>
+        {/* 카테고리 목록 */}
+        <View style={cs.section}>
+          {CATEGORY_MENU.map((item, idx) => (
+            <TouchableOpacity
+              key={item.key}
+              style={[cs.menuItem, idx < CATEGORY_MENU.length - 1 && cs.menuItemBorder]}
+              onPress={() => onSelect(item.key as FilterCategory)}
+              activeOpacity={0.7}
+            >
+              <View style={[cs.iconWrap, { backgroundColor: item.bg }]}>
+                <Ionicons name={item.icon as never} size={22} color={item.color} />
+              </View>
+              <View style={cs.menuText}>
+                <Text style={cs.menuLabel}>{item.label}</Text>
+                <Text style={cs.menuDesc}>{item.desc}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={T2} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
 // ── 피드 카드 컴포넌트 ──────────────────────────────────────
 function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd }: {
   item: CommunityPostDto;
@@ -106,7 +156,6 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
 
   return (
     <View style={s.feedCard}>
-      {/* ── 유저 헤더 + 본문 (터치 가능) ── */}
       <TouchableOpacity activeOpacity={0.95} onPress={onPress}>
         <View style={s.feedHeader}>
           <View style={s.feedAvatarWrap}>
@@ -142,7 +191,6 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
           </View>
         </View>
 
-        {/* ── 본문 ── */}
         <View style={s.feedBody}>
           <Text style={s.feedTitle} numberOfLines={2}>{translated ? translated.title : item.title}</Text>
           {(translated ? translated.content : item.content) ? (
@@ -151,7 +199,6 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
         </View>
       </TouchableOpacity>
 
-      {/* ── 이미지 (터치 독립) ── */}
       {validImages.length > 0 && (
         <TouchableOpacity activeOpacity={1} onPress={onPress}>
           <ScrollView
@@ -178,7 +225,6 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
         </TouchableOpacity>
       )}
 
-      {/* ── 반응 바 ── */}
       <View style={s.feedFooter}>
         <View style={s.reactionLeft}>
           <TouchableOpacity
@@ -231,20 +277,20 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
   );
 }
 
-// ── 메인 화면 ────────────────────────────────────────────────
-export default function CommunityScreen() {
+// ── 피드 화면 ────────────────────────────────────────────────
+function FeedScreen({ category, onBack }: { category: FilterCategory; onBack: () => void }) {
   const router = useRouter();
   const { user } = useAuthStore();
+  const insets = useSafeAreaInsets();
   const [posts, setPosts] = useState<CommunityPostDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('ALL');
   const [refreshing, setRefreshing] = useState(false);
   const [flatListScrollEnabled, setFlatListScrollEnabled] = useState(true);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<SearchMode>('title');
   const searchInputRef = useRef<TextInput>(null);
-  const HEADER_HEIGHT = 134;
+  const HEADER_HEIGHT = insets.top + 120;
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -269,22 +315,12 @@ export default function CommunityScreen() {
   const handleImageScrollStart = useCallback(() => setFlatListScrollEnabled(false), []);
   const handleImageScrollEnd = useCallback(() => setFlatListScrollEnabled(true), []);
 
-  const openSearch = () => {
-    setSearchVisible(true);
-    setTimeout(() => searchInputRef.current?.focus(), 100);
-  };
-
-  const closeSearch = () => {
-    setSearchVisible(false);
-    setSearchQuery('');
-  };
-
   const categoryFiltered = (() => {
     const visible = posts.filter(
       (p) => p.category !== 'QUESTION' || p.userType === user?.userType
     );
-    if (selectedCategory === 'ALL') return visible;
-    return visible.filter((p) => p.category === selectedCategory);
+    if (category === 'ALL') return visible;
+    return visible.filter((p) => p.category === category);
   })();
 
   const filteredPosts = searchQuery.trim()
@@ -294,6 +330,10 @@ export default function CommunityScreen() {
         return p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q);
       })
     : categoryFiltered;
+
+  const menuItem = CATEGORY_MENU.find((m) => m.key === category);
+  const headerTitle = menuItem?.label ?? '게시판';
+  const headerColor = menuItem?.color ?? T1;
 
   const renderPost = useCallback(({ item }: { item: CommunityPostDto }) => (
     <FeedCard
@@ -328,14 +368,19 @@ export default function CommunityScreen() {
       />
 
       {/* 고정 헤더 */}
-      <View style={s.stickyHeader}>
+      <View style={[s.stickyHeader, { paddingTop: insets.top + 10 }]}>
         <View style={s.header}>
+          {/* 뒤로가기 */}
+          <TouchableOpacity style={s.backBtn} onPress={onBack} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={20} color={T1} />
+          </TouchableOpacity>
+          {/* 검색바 */}
           <View style={s.headerSearchBar}>
             <Ionicons name="search-outline" size={16} color={T2} />
             <TextInput
               ref={searchInputRef}
               style={s.headerSearchInput}
-              placeholder="검색"
+              placeholder={`${headerTitle} 검색`}
               placeholderTextColor={T2}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -354,7 +399,7 @@ export default function CommunityScreen() {
             onPress={() => router.push('/community-write')}
             activeOpacity={0.75}
           >
-            <Ionicons name="create-outline" size={26} color={T1} />
+            <Ionicons name="create-outline" size={24} color={T1} />
           </TouchableOpacity>
         </View>
         {searchVisible && (
@@ -373,19 +418,9 @@ export default function CommunityScreen() {
             </TouchableOpacity>
           </View>
         )}
-        <View style={s.filterWrap}>
-          <View style={s.filterScroll}>
-            {CATEGORY_FILTERS.map(({ key, label }) => (
-              <TouchableOpacity
-                key={key}
-                style={[s.chip, selectedCategory === key && s.chipOn]}
-                onPress={() => setSelectedCategory(key)}
-                activeOpacity={0.8}
-              >
-                <Text style={[s.chipText, selectedCategory === key && s.chipTextOn]}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+        {/* 카테고리 타이틀 바 */}
+        <View style={[s.catTitleBar, { borderLeftColor: headerColor }]}>
+          <Text style={[s.catTitleText, { color: headerColor }]}>{headerTitle}</Text>
         </View>
         <View style={s.headerDivider} />
         {isLoading ? <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 40 }} /> : null}
@@ -394,13 +429,64 @@ export default function CommunityScreen() {
   );
 }
 
+// ── 메인 화면 (라우팅 허브) ──────────────────────────────────
+export default function CommunityScreen() {
+  const [activeCategory, setActiveCategory] = useState<FilterCategory | null>(null);
+
+  if (activeCategory !== null) {
+    return (
+      <FeedScreen
+        category={activeCategory}
+        onBack={() => setActiveCategory(null)}
+      />
+    );
+  }
+
+  return <CategoryHomeScreen onSelect={(cat) => setActiveCategory(cat)} />;
+}
+
+// ── 카테고리 홈 스타일 ────────────────────────────────────────
+const cs = StyleSheet.create({
+  container: { flex: 1, backgroundColor: BG },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 12,
+  },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: T1 },
+  writeBtn: { padding: 4 },
+
+  scroll: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40 },
+
+  section: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  menuItem: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 16, gap: 14,
+  },
+  menuItemBorder: {
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  iconWrap: {
+    width: 42, height: 42, borderRadius: 12,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  menuText: { flex: 1 },
+  menuLabel: { fontSize: 15, fontWeight: '700', color: T1 },
+  menuDesc: { fontSize: 12, color: T2, marginTop: 2 },
+});
+
+// ── 피드 스타일 ───────────────────────────────────────────────
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
-  listHeader: { backgroundColor: '#fff', paddingTop: 60 },
   stickyHeader: {
     position: 'absolute', top: 0, left: 0, right: 0,
     zIndex: 10, backgroundColor: '#fff',
-    paddingTop: 24,
   },
 
   // ── Header ──
@@ -411,6 +497,11 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: '#fff',
     gap: 10,
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: BG,
+    justifyContent: 'center', alignItems: 'center',
   },
   headerSearchBar: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -428,27 +519,19 @@ const s = StyleSheet.create({
   },
   modeChip: {
     paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: 16, backgroundColor: '#F4F6FB',
+    borderRadius: 16, backgroundColor: BG,
     borderWidth: 1, borderColor: BORDER,
   },
   modeChipOn: { backgroundColor: BLUE, borderColor: BLUE },
   modeChipText: { fontSize: 13, fontWeight: '700', color: BLUE_MID },
   modeChipTextOn: { color: '#fff' },
 
-  // ── Filter ──
-  filterWrap: {
-    paddingTop: 6, paddingBottom: 6,
-    backgroundColor: '#fff',
+  // ── Category title bar ──
+  catTitleBar: {
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderLeftWidth: 3, marginHorizontal: 16, marginBottom: 4,
   },
-  filterScroll: { flexDirection: 'row', justifyContent: 'space-evenly', paddingHorizontal: 8 },
-  chip: {
-    paddingHorizontal: 16, paddingVertical: 5,
-    borderRadius: 20, backgroundColor: '#F4F6FB',
-    borderWidth: 1, borderColor: BORDER, flexShrink: 0,
-  },
-  chipOn:     { backgroundColor: BLUE, borderColor: BLUE },
-  chipText:   { fontSize: 14, fontWeight: '600', color: T2 },
-  chipTextOn: { color: '#fff', fontWeight: '700' },
+  catTitleText: { fontSize: 14, fontWeight: '800' },
 
   headerDivider: { height: 1, backgroundColor: BORDER },
 
@@ -464,7 +547,6 @@ const s = StyleSheet.create({
     paddingBottom: 4,
   },
 
-  // 유저 헤더
   feedHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -472,17 +554,10 @@ const s = StyleSheet.create({
     gap: 10,
   },
   feedAvatarWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-    flexShrink: 0,
+    width: 44, height: 44, borderRadius: 22,
+    overflow: 'hidden', flexShrink: 0,
   },
-  feedAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
+  feedAvatar: { width: 44, height: 44, borderRadius: 22 },
   feedAvatarText: { fontSize: 18, fontWeight: '700', color: '#fff' },
   feedAuthorInfo: { flex: 1, gap: 4 },
   feedNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -492,43 +567,25 @@ const s = StyleSheet.create({
   feedUniv: { fontSize: 12, color: T2, flex: 1 },
   moreBtn: { padding: 4 },
 
-  // 카테고리 배지
   catBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   catBadgeText: { fontSize: 11, fontWeight: '700' },
 
-  // 인기 배지
-  hotBadge: {
-    backgroundColor: '#FFF3E8',
-    borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
+  hotBadge: { backgroundColor: '#FFF3E8', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
   hotBadgeText: { fontSize: 11, fontWeight: '700', color: ORANGE },
 
-  // 본문
   feedBody: { marginBottom: 10 },
   feedTitle: { fontSize: 15, fontWeight: '700', color: T1, lineHeight: 22, marginBottom: 4 },
   feedContent: { fontSize: 14, color: T2, lineHeight: 20 },
 
-  // 이미지
   imageScroll: { marginBottom: 10 },
   feedImage: {
-    width: 200,
-    height: 200,
-    borderRadius: 12,
-    marginRight: 8,
-    backgroundColor: '#E8EDF5',
+    width: 200, height: 200, borderRadius: 12,
+    marginRight: 8, backgroundColor: '#E8EDF5',
   },
 
-  // 반응 바
   feedFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F3F8',
-    marginTop: 6,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#F0F3F8', marginTop: 6,
   },
   reactionLeft: { flexDirection: 'row', gap: 16 },
   reactionRight: { flexDirection: 'row', gap: 12 },
@@ -536,36 +593,8 @@ const s = StyleSheet.create({
   reactionCount: { fontSize: 13, color: T2, fontWeight: '600' },
   iconBtn: { padding: 4 },
 
-  // ── 댓글 미리보기 ──
-  commentPreview: {
-    paddingHorizontal: 0,
-    paddingBottom: 12,
-    gap: 4,
-  },
-  commentPreviewItem: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  commentPreviewAuthor: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: T1,
-  },
-  commentPreviewContent: {
-    fontSize: 13,
-    color: T2,
-    flex: 1,
-  },
-  commentPreviewMore: {
-    fontSize: 13,
-    color: T2,
-    marginTop: 2,
-  },
-
-  // ── Empty ──
-  empty:      { alignItems: 'center', paddingVertical: 60, gap: 8 },
+  empty: { alignItems: 'center', paddingVertical: 60, gap: 8 },
   emptyEmoji: { fontSize: 44, marginBottom: 4 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: T1 },
-  emptySub:   { fontSize: 16, color: BLUE_MID },
-
+  emptySub: { fontSize: 16, color: BLUE_MID },
 });
