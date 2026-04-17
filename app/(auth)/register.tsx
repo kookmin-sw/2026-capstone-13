@@ -247,6 +247,7 @@ export default function RegisterScreen() {
       userType,
       university: '국민대학교',
       major: major ?? undefined,
+      nationality: nationality ?? undefined,
       termsAgreed: true,
       privacyAgreed: true,
     });

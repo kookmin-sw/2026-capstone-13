@@ -26,6 +26,7 @@ export interface User {
   major?: string;
   mbti?: string;
   hobbies?: string;
+  nationality?: string;
   rating: number;
   helpCount: number;
   createdAt: string;
@@ -49,6 +50,7 @@ export interface RegisterRequest {
   userType: UserType;
   university: string;
   major?: string;
+  nationality?: string;
   termsAgreed: boolean;
   privacyAgreed: boolean;
 }

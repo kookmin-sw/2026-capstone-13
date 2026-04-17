@@ -14,6 +14,7 @@ export interface CommunityPostDto {
   authorProfileImage?: string;
   university: string;
   userType: string;
+  authorNationality?: string;
   likes: number;
   comments: number;
   commentList: PostCommentDto[];

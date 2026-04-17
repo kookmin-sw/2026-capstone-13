@@ -316,9 +316,15 @@ function FeedScreen({ category, onBack }: { category: FilterCategory; onBack: ()
   const handleImageScrollEnd = useCallback(() => setFlatListScrollEnabled(true), []);
 
   const categoryFiltered = (() => {
-    const visible = posts.filter(
-      (p) => p.category !== 'QUESTION' || p.userType === user?.userType
-    );
+    const visible = posts.filter((p) => {
+      if (p.category !== 'QUESTION') return true;
+      // 로컬 탭: 같은 국적끼리만
+      // 한국인(nationality 없음)은 한국인끼리, 외국인은 nationality 코드가 같은 사람끼리
+      const myNationality = user?.nationality ?? null;
+      const postNationality = p.authorNationality ?? null;
+      if (myNationality === null && postNationality === null) return true; // 둘 다 한국인
+      return myNationality !== null && myNationality === postNationality;
+    });
     if (category === 'ALL') return visible;
     return visible.filter((p) => p.category === category);
   })();
