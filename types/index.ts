@@ -28,6 +28,7 @@ export interface User {
   hobbies?: string;
   nationality?: string;
   rating: number;
+  ratingCount?: number;
   helpCount: number;
   createdAt: string;
   preferredLanguage?: string;

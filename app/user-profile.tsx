@@ -4,7 +4,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -26,7 +28,7 @@ const T2      = '#6B7A99';
 const SERVER_BASE_URL = 'https://backend-production-0a6f.up.railway.app';
 
 const NATIONALITY_MAP: Record<string, { flag: string; name: string }> = {
-  KR: { flag: '🇰🇷', name: '한국' },
+  KR: { flag: '🇰🇷', name: '대한민국' },
   CN: { flag: '🇨🇳', name: '중국' },
   JP: { flag: '🇯🇵', name: '일본' },
   MN: { flag: '🇲🇳', name: '몽골' },
@@ -76,6 +78,7 @@ export default function UserProfileScreen() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imgFullscreen, setImgFullscreen] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -128,32 +131,55 @@ export default function UserProfileScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
-        {/* 프로필 이미지 */}
+        {/* 프로필 상단 */}
         <View style={s.avatarSection}>
-          {profileUri ? (
-            <Image source={{ uri: profileUri }} style={s.avatar} />
-          ) : (
-            <View style={[s.avatar, { backgroundColor: avatarColor(user.nickname) }]}>
-              <Text style={s.avatarInitial}>{getInitial(user.nickname)}</Text>
+          <TouchableOpacity
+            activeOpacity={profileUri ? 0.8 : 1}
+            onPress={() => { if (profileUri) setImgFullscreen(true); }}
+          >
+            {profileUri ? (
+              <Image source={{ uri: profileUri }} style={s.avatar} />
+            ) : (
+              <View style={[s.avatar, { backgroundColor: avatarColor(user.nickname) }]}>
+                <Text style={s.avatarInitial}>{getInitial(user.nickname)}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <View style={s.avatarInfo}>
+            {/* 이름 + 나이 */}
+            <Text style={s.nameText}>
+              {user.nickname}
+              {user.age ? <Text style={s.ageText}> ({user.age})</Text> : null}
+            </Text>
+            {/* 별점 */}
+            <View style={s.ratingRow}>
+              <Ionicons name="star" size={14} color="#F59E0B" />
+              <Text style={s.ratingText}>{Number(user.rating ?? 0).toFixed(1)} <Text style={s.ratingCount}>({user.ratingCount ?? 0})</Text></Text>
             </View>
-          )}
-          {/* 이름 + 나이 */}
-          <Text style={s.nameText}>
-            {user.nickname}
-            {user.age ? <Text style={s.ageText}> ({user.age})</Text> : null}
-          </Text>
-          {/* 유저 타입 배지 */}
-          <View style={s.typeBadge}>
-            <Text style={s.typeBadgeText}>{USER_TYPE_LABEL[user.userType] ?? user.userType}</Text>
+            {/* 국가 */}
+            {(nationality || user.userType === 'KOREAN') ? (
+              <View style={s.schoolRow}>
+                <Ionicons name="flag-outline" size={14} color={T2} />
+                <Text style={s.schoolText}>
+                  {nationality ? nationality.name : '대한민국'}
+                </Text>
+              </View>
+            ) : null}
+            {/* 학교(학과) */}
+            {user.university ? (
+              <View style={s.schoolRow}>
+                <Ionicons name="school-outline" size={14} color={T2} />
+                <Text style={s.schoolText}>
+                  {user.university}{user.major ? `(${user.major})` : ''}
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
 
         {/* 자기소개 */}
         {user.bio ? (
-          <View style={s.card}>
-            <Text style={s.cardLabel}>자기소개</Text>
-            <Text style={s.bioText}>{user.bio}</Text>
-          </View>
+          <Text style={s.bioText}>{user.bio}</Text>
         ) : null}
 
         {/* 국적 / 학교 / 학과 */}
@@ -222,6 +248,18 @@ export default function UserProfileScreen() {
         ) : null}
       </ScrollView>
 
+      {/* 프로필 사진 풀스크린 */}
+      {profileUri ? (
+        <Modal visible={imgFullscreen} transparent animationType="fade" onRequestClose={() => setImgFullscreen(false)}>
+          <View style={s.fsOverlay}>
+            <Image source={{ uri: profileUri }} style={s.fsImage} resizeMode="contain" />
+            <TouchableOpacity style={s.fsClose} onPress={() => setImgFullscreen(false)} activeOpacity={0.8}>
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      ) : null}
+
       {/* 하단 버튼 바 */}
       <View style={s.bottomBar}>
         <TouchableOpacity style={s.chatBtn} activeOpacity={0.8}>
@@ -259,20 +297,25 @@ const s = StyleSheet.create({
 
   scroll: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 120, gap: 12 },
 
-  avatarSection: { alignItems: 'center', marginBottom: 4 },
+  avatarSection: {
+    flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 4,
+  },
+  avatarInfo: { flex: 1, gap: 4 },
   avatar: {
-    width: 96, height: 96, borderRadius: 48,
+    width: 88, height: 88, borderRadius: 44,
     justifyContent: 'center', alignItems: 'center',
-    marginBottom: 14,
+    flexShrink: 0,
   },
-  avatarInitial: { fontSize: 38, fontWeight: '800', color: '#fff' },
-  nameText: { fontSize: 22, fontWeight: '800', color: T1, marginBottom: 8 },
-  ageText: { fontSize: 18, fontWeight: '600', color: T2 },
-  typeBadge: {
-    paddingHorizontal: 14, paddingVertical: 4,
-    backgroundColor: BLUE_L, borderRadius: 20,
-  },
-  typeBadgeText: { fontSize: 13, fontWeight: '700', color: BLUE },
+  avatarInitial: { fontSize: 34, fontWeight: '800', color: '#fff' },
+  nameText: { fontSize: 22, fontWeight: '800', color: T1 },
+  ageText: { fontSize: 22, fontWeight: '800', color: T1 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  ratingText: { fontSize: 14, fontWeight: '700', color: '#F59E0B' },
+  ratingCount: { fontSize: 14, fontWeight: '700', color: '#F59E0B' },
+  typeBadge: {},
+  typeBadgeText: { fontSize: 13, fontWeight: '600', color: T2 },
+  schoolRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  schoolText: { fontSize: 13, fontWeight: '500', color: T2, flexShrink: 1 },
 
   card: {
     backgroundColor: '#fff',
@@ -282,7 +325,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   cardLabel: { fontSize: 12, fontWeight: '700', color: T2, marginTop: 14, marginBottom: 6 },
-  bioText: { fontSize: 14, color: T1, lineHeight: 22, marginBottom: 16 },
+  bioText: { fontSize: 15, color: T1, lineHeight: 23, marginTop: -4 },
 
   infoRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
@@ -306,6 +349,21 @@ const s = StyleSheet.create({
     backgroundColor: BLUE_L, borderRadius: 20,
   },
   hobbyText: { fontSize: 12, fontWeight: '600', color: BLUE },
+
+  fsOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  fsImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').width,
+  },
+  fsClose: {
+    position: 'absolute', top: Platform.OS === 'ios' ? 56 : 36, right: 16,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center',
+  },
 
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
