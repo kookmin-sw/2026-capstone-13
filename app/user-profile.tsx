@@ -131,121 +131,105 @@ export default function UserProfileScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
-        {/* 프로필 상단 */}
-        <View style={s.avatarSection}>
-          <TouchableOpacity
-            activeOpacity={profileUri ? 0.8 : 1}
-            onPress={() => { if (profileUri) setImgFullscreen(true); }}
-          >
-            {profileUri ? (
-              <Image source={{ uri: profileUri }} style={s.avatar} />
-            ) : (
-              <View style={[s.avatar, { backgroundColor: avatarColor(user.nickname) }]}>
-                <Text style={s.avatarInitial}>{getInitial(user.nickname)}</Text>
+        {/* 상단 흰색 섹션 */}
+        <View style={s.topSection}>
+          {/* 프로필 상단 */}
+          <View style={s.avatarSection}>
+            <TouchableOpacity
+              activeOpacity={profileUri ? 0.8 : 1}
+              onPress={() => { if (profileUri) setImgFullscreen(true); }}
+            >
+              {profileUri ? (
+                <Image source={{ uri: profileUri }} style={s.avatar} />
+              ) : (
+                <View style={[s.avatar, { backgroundColor: avatarColor(user.nickname) }]}>
+                  <Text style={s.avatarInitial}>{getInitial(user.nickname)}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <View style={s.avatarInfo}>
+              {/* 이름 + 나이 */}
+              <Text style={s.nameText}>
+                {user.nickname}
+                {user.age ? <Text style={s.ageText}> ({user.age})</Text> : null}
+              </Text>
+              {/* 국가 */}
+              {(nationality || user.userType === 'KOREAN') ? (
+                <View style={s.schoolRow}>
+                  <Ionicons name="flag-outline" size={14} color={T2} />
+                  <Text style={s.schoolText}>
+                    {nationality ? nationality.name : '대한민국'}
+                  </Text>
+                </View>
+              ) : null}
+              {/* 학교(학과) */}
+              {user.university ? (
+                <View style={s.schoolRow}>
+                  <Ionicons name="school-outline" size={14} color={T2} />
+                  <Text style={s.schoolText}>
+                    {user.university}{user.major ? `(${user.major})` : ''}
+                  </Text>
+                </View>
+              ) : null}
+              {/* 별점 */}
+              <View style={s.ratingRow}>
+                <Ionicons name="star" size={14} color="#F59E0B" />
+                <Text style={s.ratingText}>{Number(user.rating ?? 0).toFixed(1)} <Text style={s.ratingCount}>({user.ratingCount ?? 0})</Text></Text>
               </View>
-            )}
-          </TouchableOpacity>
-          <View style={s.avatarInfo}>
-            {/* 이름 + 나이 */}
-            <Text style={s.nameText}>
-              {user.nickname}
-              {user.age ? <Text style={s.ageText}> ({user.age})</Text> : null}
-            </Text>
-            {/* 별점 */}
-            <View style={s.ratingRow}>
-              <Ionicons name="star" size={14} color="#F59E0B" />
-              <Text style={s.ratingText}>{Number(user.rating ?? 0).toFixed(1)} <Text style={s.ratingCount}>({user.ratingCount ?? 0})</Text></Text>
             </View>
-            {/* 국가 */}
-            {(nationality || user.userType === 'KOREAN') ? (
-              <View style={s.schoolRow}>
-                <Ionicons name="flag-outline" size={14} color={T2} />
-                <Text style={s.schoolText}>
-                  {nationality ? nationality.name : '대한민국'}
-                </Text>
-              </View>
-            ) : null}
-            {/* 학교(학과) */}
-            {user.university ? (
-              <View style={s.schoolRow}>
-                <Ionicons name="school-outline" size={14} color={T2} />
-                <Text style={s.schoolText}>
-                  {user.university}{user.major ? `(${user.major})` : ''}
-                </Text>
-              </View>
-            ) : null}
           </View>
-        </View>
 
-        {/* 자기소개 */}
-        {user.bio ? (
-          <Text style={s.bioText}>{user.bio}</Text>
-        ) : null}
-
-        {/* 국적 / 학교 / 학과 */}
-        <View style={s.card}>
-          {nationality ? (
-            <View style={s.infoRow}>
-              <View style={s.infoIcon}>
-                <Ionicons name="flag-outline" size={16} color={BLUE} />
-              </View>
-              <View>
-                <Text style={s.infoLabel}>국적</Text>
-                <Text style={s.infoValue}>{nationality.flag} {nationality.name}</Text>
-              </View>
-            </View>
+          {/* 자기소개 */}
+          {user.bio ? (
+            <Text style={s.bioText}>{user.bio}</Text>
           ) : null}
 
-          {user.university ? (
-            <View style={[s.infoRow, (nationality) && s.infoRowBorder]}>
-              <View style={s.infoIcon}>
-                <Ionicons name="school-outline" size={16} color={BLUE} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.infoLabel}>학교</Text>
-                <Text style={s.infoValue}>
-                  {user.university}
-                  {user.major ? <Text style={s.majorText}>  {user.major}</Text> : null}
-                </Text>
-              </View>
-            </View>
-          ) : null}
-        </View>
-
-        {/* MBTI / 취미 */}
-        {(user.mbti || hobbies.length > 0) ? (
-          <View style={s.card}>
-            {user.mbti ? (
-              <View style={s.infoRow}>
-                <View style={s.infoIcon}>
-                  <Ionicons name="person-outline" size={16} color={BLUE} />
-                </View>
-                <View>
-                  <Text style={s.infoLabel}>MBTI</Text>
-                  <Text style={s.mbtiText}>{user.mbti.toUpperCase()}</Text>
-                </View>
-              </View>
-            ) : null}
-
-            {hobbies.length > 0 ? (
-              <View style={[s.infoRow, user.mbti && s.infoRowBorder]}>
-                <View style={s.infoIcon}>
-                  <Ionicons name="heart-outline" size={16} color={BLUE} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.infoLabel}>취미</Text>
-                  <View style={s.hobbyWrap}>
-                    {hobbies.map((h, idx) => (
-                      <View key={idx} style={s.hobbyChip}>
-                        <Text style={s.hobbyText}>{h}</Text>
-                      </View>
-                    ))}
+          {/* MBTI / 취미 */}
+          {(user.mbti || hobbies.length > 0) ? (
+            <View style={s.mbtiHobbyRow}>
+              {user.mbti ? (
+                <View style={s.mbtiCol}>
+                  <View style={s.infoIcon}>
+                    <Ionicons name="person-outline" size={16} color={BLUE} />
+                  </View>
+                  <View style={s.infoTextBlock}>
+                    <Text style={s.mbtiText}>{user.mbti.toUpperCase()}</Text>
                   </View>
                 </View>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
+              ) : null}
+
+              {hobbies.length > 0 ? (
+                <View style={s.hobbyCol}>
+                  <View style={s.infoIcon}>
+                    <Ionicons name="heart-outline" size={16} color={BLUE} />
+                  </View>
+                  <View style={s.infoTextBlock}>
+                    <View style={s.hobbyWrap}>
+                      {hobbies.map((h, idx) => (
+                        <View key={idx} style={s.hobbyChip}>
+                          <Text style={s.hobbyText}>{h}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+
+        {/* 구분선 */}
+        <View style={s.sectionDivider} />
+
+        {/* 도움 내역 / 작성한 글 버튼 */}
+        <View style={s.tabBtnRow}>
+          <TouchableOpacity style={[s.tabBtn, s.tabBtnLeft]} activeOpacity={0.8}>
+            <Text style={s.tabBtnText}>도움내역</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.tabBtn} activeOpacity={0.8}>
+            <Text style={s.tabBtnText}>커뮤니티</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* 프로필 사진 풀스크린 */}
@@ -295,20 +279,26 @@ const s = StyleSheet.create({
   },
   headerTitle: { fontSize: 15, fontWeight: '800', color: T1 },
 
-  scroll: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 120, gap: 12 },
+  scroll: { paddingBottom: 120 },
+  topSection: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 24, paddingBottom: 6, gap: 12 },
+  sectionDivider: { height: 1, backgroundColor: BORDER },
+  tabBtnRow: { flexDirection: 'row', backgroundColor: '#fff' },
+  tabBtn: { width: '50%', paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
+  tabBtnLeft: { borderRightWidth: 1, borderRightColor: BORDER },
+  tabBtnText: { fontSize: 14, fontWeight: '700', color: T2 },
 
   avatarSection: {
     flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 4,
   },
-  avatarInfo: { flex: 1, gap: 4 },
+  avatarInfo: { flex: 1, gap: 2 },
   avatar: {
     width: 88, height: 88, borderRadius: 44,
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
   avatarInitial: { fontSize: 34, fontWeight: '800', color: '#fff' },
-  nameText: { fontSize: 22, fontWeight: '800', color: T1 },
-  ageText: { fontSize: 22, fontWeight: '800', color: T1 },
+  nameText: { fontSize: 22, fontWeight: '800', color: T1, lineHeight: 26 },
+  ageText: { fontSize: 22, fontWeight: '800', color: T1, lineHeight: 26 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ratingText: { fontSize: 14, fontWeight: '700', color: '#F59E0B' },
   ratingCount: { fontSize: 14, fontWeight: '700', color: '#F59E0B' },
@@ -325,7 +315,7 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   cardLabel: { fontSize: 12, fontWeight: '700', color: T2, marginTop: 14, marginBottom: 6 },
-  bioText: { fontSize: 15, color: T1, lineHeight: 23, marginTop: -4 },
+  bioText: { fontSize: 15, color: T1, lineHeight: 23, marginTop: -10 },
 
   infoRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
@@ -341,14 +331,20 @@ const s = StyleSheet.create({
   infoLabel: { fontSize: 11, fontWeight: '600', color: T2, marginBottom: 3 },
   infoValue: { fontSize: 14, fontWeight: '700', color: T1 },
   majorText: { fontSize: 13, fontWeight: '500', color: T2 },
-  mbtiText: { fontSize: 16, fontWeight: '800', color: BLUE },
+  mbtiText: { fontSize: 11, fontWeight: '600', color: BLUE, flexShrink: 0 },
+
+  mbtiHobbyRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: -14 },
+  mbtiCol: { width: 75, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
+  hobbyCol: { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
+  hobbyColBorder: {},
+  infoTextBlock: { flex: 1, gap: 3 },
 
   hobbyWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
   hobbyChip: {
     paddingHorizontal: 10, paddingVertical: 4,
     backgroundColor: BLUE_L, borderRadius: 20,
   },
-  hobbyText: { fontSize: 12, fontWeight: '600', color: BLUE },
+  hobbyText: { fontSize: 11, fontWeight: '600', color: BLUE },
 
   fsOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
