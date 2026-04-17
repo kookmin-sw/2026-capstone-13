@@ -65,6 +65,26 @@ public class HelpRequestController {
         return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getHelpedRequests(userId, page, size)));
     }
 
+    // GET /api/requests/user/{userId}/helped - 특정 유저의 도움 내역 (한국인: 도우미로 완료)
+    @GetMapping("/user/{userId}/helped")
+    public ResponseEntity<ApiResponse<Page<HelpRequestResponse>>> getUserHelpHistory(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestHeader("Authorization") String token) {
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getUserHelpHistory(userId, page, size)));
+    }
+
+    // GET /api/requests/user/{userId}/requested - 특정 유저의 도움 요청 내역 (외국인: 요청자로 완료)
+    @GetMapping("/user/{userId}/requested")
+    public ResponseEntity<ApiResponse<Page<HelpRequestResponse>>> getUserRequestHistory(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestHeader("Authorization") String token) {
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", helpRequestService.getUserRequestHistory(userId, page, size)));
+    }
+
     // GET /api/requests/{id} - 단건 조회
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<HelpRequestResponse>> getRequestById(@PathVariable Long id) {

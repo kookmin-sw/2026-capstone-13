@@ -27,6 +27,10 @@ public interface HelpRequestRepository extends JpaRepository<HelpRequest, Long> 
 
     Page<HelpRequest> findByHelperIdOrderByCreatedAtDesc(Long helperId, Pageable pageable);
 
+    Page<HelpRequest> findByHelperIdAndStatusOrderByCreatedAtDesc(Long helperId, HelpRequest.RequestStatus status, Pageable pageable);
+
+    Page<HelpRequest> findByRequesterIdAndStatusOrderByCreatedAtDesc(Long requesterId, HelpRequest.RequestStatus status, Pageable pageable);
+
     // 내가 참여한 채팅방 목록 (요청자 or 도우미이고 매칭 이후 상태인 것)
     @Query("SELECT h FROM HelpRequest h WHERE (h.requester.id = :userId OR h.helper.id = :userId) AND h.status IN :statuses ORDER BY h.updatedAt DESC")
     List<HelpRequest> findChatRooms(@Param("userId") Long userId, @Param("statuses") List<HelpRequest.RequestStatus> statuses);

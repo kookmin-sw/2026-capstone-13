@@ -74,6 +74,16 @@ public class CommunityController {
         return ResponseEntity.ok(ApiResponse.success("조회 성공", communityService.getAllPosts(userId, page, size)));
     }
 
+    // GET /api/community/user/{userId} - 특정 유저의 게시글 목록
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<ApiResponse<Page<CommunityPostResponse>>> getUserPosts(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestHeader("Authorization") String token) {
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", communityService.getUserPosts(userId, page, size)));
+    }
+
     // GET /api/community/{id} - 게시글 상세 (댓글 포함)
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CommunityPostResponse>> getPostById(

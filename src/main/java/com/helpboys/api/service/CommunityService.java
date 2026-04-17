@@ -81,6 +81,13 @@ public class CommunityService {
         return CommunityPostResponse.fromDetail(post, liked);
     }
 
+    // 특정 유저의 게시글 목록 조회 (프로필 조회용)
+    @Transactional(readOnly = true)
+    public Page<CommunityPostResponse> getUserPosts(Long targetUserId, int page, int size) {
+        Page<CommunityPost> posts = communityPostRepository.findByAuthorIdOrderByCreatedAtDesc(targetUserId, PageRequest.of(page, size));
+        return posts.map(post -> CommunityPostResponse.fromList(post, false));
+    }
+
     // 게시글 작성
     @Transactional
     public CommunityPostResponse createPost(CommunityPostRequest request, Long userId) {

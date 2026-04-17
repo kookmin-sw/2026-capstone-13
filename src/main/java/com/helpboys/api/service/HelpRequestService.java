@@ -62,6 +62,22 @@ public class HelpRequestService {
                 .map(HelpRequestResponse::from);
     }
 
+    // 특정 유저의 도움 내역 조회 - 한국인: 도우미로 완료한 내역
+    @Transactional(readOnly = true)
+    public Page<HelpRequestResponse> getUserHelpHistory(Long targetUserId, int page, int size) {
+        return helpRequestRepository.findByHelperIdAndStatusOrderByCreatedAtDesc(
+                targetUserId, HelpRequest.RequestStatus.COMPLETED, PageRequest.of(page, size))
+                .map(HelpRequestResponse::from);
+    }
+
+    // 특정 유저의 도움 요청 내역 조회 - 외국인: 요청자로 완료된 내역
+    @Transactional(readOnly = true)
+    public Page<HelpRequestResponse> getUserRequestHistory(Long targetUserId, int page, int size) {
+        return helpRequestRepository.findByRequesterIdAndStatusOrderByCreatedAtDesc(
+                targetUserId, HelpRequest.RequestStatus.COMPLETED, PageRequest.of(page, size))
+                .map(HelpRequestResponse::from);
+    }
+
     // 도움 요청 단건 조회
     @Transactional(readOnly = true)
     public HelpRequestResponse getRequestById(Long id) {

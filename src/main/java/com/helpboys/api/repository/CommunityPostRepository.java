@@ -27,6 +27,8 @@ public interface CommunityPostRepository extends JpaRepository<CommunityPost, Lo
     @Query("SELECT p FROM CommunityPost p WHERE (p.title LIKE %:keyword% OR p.content LIKE %:keyword%) AND p.author.id NOT IN :blockedIds ORDER BY p.createdAt DESC")
     Page<CommunityPost> searchByKeywordExcludingBlocked(@Param("keyword") String keyword, @Param("blockedIds") List<Long> blockedIds, Pageable pageable);
 
+    Page<CommunityPost> findByAuthorIdOrderByCreatedAtDesc(Long authorId, Pageable pageable);
+
     @Modifying
     @Query("UPDATE CommunityPost p SET p.likes = p.likes + 1 WHERE p.id = :id")
     void incrementLikes(@Param("id") Long id);
