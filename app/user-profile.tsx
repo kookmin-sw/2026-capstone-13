@@ -121,7 +121,10 @@ export default function UserProfileScreen() {
           <Ionicons name="arrow-back" size={20} color={T1} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>프로필</Text>
-        <View style={{ width: 36 }} />
+        <TouchableOpacity style={s.blockHeaderBtn} activeOpacity={0.8}>
+          <Ionicons name="ban-outline" size={14} color="#EF4444" />
+          <Text style={s.blockHeaderText}>차단하기</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
@@ -218,6 +221,14 @@ export default function UserProfileScreen() {
           </View>
         ) : null}
       </ScrollView>
+
+      {/* 하단 버튼 바 */}
+      <View style={s.bottomBar}>
+        <TouchableOpacity style={s.chatBtn} activeOpacity={0.8}>
+          <Ionicons name="chatbubble-outline" size={18} color="#fff" />
+          <Text style={s.chatBtnText}>채팅하기</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -246,7 +257,7 @@ const s = StyleSheet.create({
   },
   headerTitle: { fontSize: 15, fontWeight: '800', color: T1 },
 
-  scroll: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 60, gap: 12 },
+  scroll: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 120, gap: 12 },
 
   avatarSection: { alignItems: 'center', marginBottom: 4 },
   avatar: {
@@ -295,4 +306,27 @@ const s = StyleSheet.create({
     backgroundColor: BLUE_L, borderRadius: 20,
   },
   hobbyText: { fontSize: 12, fontWeight: '600', color: BLUE },
+
+  bottomBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    backgroundColor: '#fff',
+    borderTopWidth: 1, borderTopColor: BORDER,
+  },
+  blockHeaderBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 20, backgroundColor: '#FFF5F5',
+    borderWidth: 1, borderColor: '#FECACA',
+  },
+  blockHeaderText: { fontSize: 12, fontWeight: '700', color: '#EF4444' },
+  chatBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: BLUE, borderRadius: 14,
+    paddingVertical: 14,
+  },
+  chatBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
 });
