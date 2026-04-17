@@ -26,6 +26,7 @@ public class UserResponse {
     private Integer helpCount;
     private String createdAt;
     private String preferredLanguage;
+    private String nationality;
     private boolean emailVerified;
     private boolean studentIdVerified;
     private String studentIdStatus;
@@ -48,6 +49,7 @@ public class UserResponse {
                 .helpCount(user.getHelpCount())
                 .createdAt(user.getCreatedAt().toString())
                 .preferredLanguage(user.getPreferredLanguage())
+                .nationality(user.getNationality())
                 .studentIdVerified(user.isStudentIdVerified())
                 .studentIdStatus(user.getStudentIdStatus().name())
                 .build();
@@ -71,6 +73,7 @@ public class UserResponse {
                 .helpCount(user.getHelpCount())
                 .createdAt(user.getCreatedAt().toString())
                 .preferredLanguage(user.getPreferredLanguage())
+                .nationality(user.getNationality())
                 .emailVerified(user.isEmailVerified())
                 .studentIdVerified(user.isStudentIdVerified())
                 .studentIdStatus(user.getStudentIdStatus().name())
