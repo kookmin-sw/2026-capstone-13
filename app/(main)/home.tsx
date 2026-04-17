@@ -447,6 +447,7 @@ const goTo = (item: HelpRequest) =>
                 <KoreanAccountCardStack
                   requests={requests.filter(r => r.status === 'WAITING')}
                   onCardPress={(card) => goTo(card)}
+                  onAccept={(card) => goTo(card)}
                 />
               </View>
             ) : (

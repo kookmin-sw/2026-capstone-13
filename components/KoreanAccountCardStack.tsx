@@ -8,11 +8,9 @@ import {
   ImageBackground,
   TouchableOpacity,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
   runOnJS,
   interpolate,
@@ -75,7 +73,7 @@ function formatTime(iso: string): string {
 const truncatedCache = new Map<string | number, boolean>();
 
 const CardContent = memo(
-  function CardContent({ card, onPress }: { card: HelpRequest; onPress?: () => void }) {
+  function CardContent({ card, onSkip, onAccept }: { card: HelpRequest; onSkip?: () => void; onAccept?: () => void }) {
     const [imgError, setImgError] = useState(false);
     const [isTruncated, setIsTruncated] = useState(() => truncatedCache.get(card.id) ?? false);
     const profileUri = card.requester.profileImage?.trim();
@@ -135,13 +133,19 @@ const CardContent = memo(
                 {card.description}
                 {isTruncated && <Text style={styles.bubbleMore}>  ...더보기</Text>}
               </Text>
-              <View style={styles.bubbleFooter}>
-                <TouchableOpacity style={styles.detailBtn} onPress={onPress} activeOpacity={0.75}>
-                  <Text style={styles.detailBtnText}>상세보기</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
+
+        </View>
+
+        {/* 카드 하단 반반 버튼 */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.skipBtn} onPress={onSkip} activeOpacity={0.75}>
+            <Ionicons name="close" size={28} color="#ef4444" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.acceptBtn} onPress={onAccept} activeOpacity={0.75}>
+            <Ionicons name="checkmark" size={28} color="#22c55e" />
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -153,9 +157,10 @@ const CardContent = memo(
 interface SwipeCardProps {
   requests: HelpRequest[];
   onCardPress?: (card: HelpRequest) => void;
+  onAccept?: (card: HelpRequest) => void;
 }
 
-export default function KoreanAccountCardStack({ requests, onCardPress }: SwipeCardProps) {
+export default function KoreanAccountCardStack({ requests, onCardPress, onAccept }: SwipeCardProps) {
   const n = requests.length;
 
   const [order, setOrder] = useState<[number, number, number]>([0, 1, 2]);
@@ -172,53 +177,62 @@ export default function KoreanAccountCardStack({ requests, onCardPress }: SwipeC
       const nextBack = (a + 3) % n;
       return [b, c, nextBack] as [number, number, number];
     });
-    translateX.value    = 0;
-    swipeProgress.value = 0;
-    isSwiping.value     = false;
+    // state 업데이트가 커밋된 뒤 리셋해야 깜빡임이 없음
+    requestAnimationFrame(() => {
+      translateX.value    = 0;
+      swipeProgress.value = 0;
+      isSwiping.value     = false;
+    });
   }, [n, translateX, swipeProgress, isSwiping]);
 
   const advanceOrderRef = useRef(advanceOrderFn);
   advanceOrderRef.current = advanceOrderFn;
   const stableAdvance = useCallback(() => advanceOrderRef.current(), []);
 
-  const pan = Gesture.Pan()
-    .onUpdate((e) => {
-      if (isSwiping.value) return;
-      translateX.value = e.translationX > 0
-        ? Math.min(e.translationX, 40)
-        : e.translationX;
-      swipeProgress.value = Math.min(Math.abs(e.translationX) / SCREEN_WIDTH, 1);
-    })
-    .onEnd((e) => {
-      if (isSwiping.value) return;
-      const swipedLeft = e.translationX < -SWIPE_THRESHOLD || e.velocityX < -800;
-      if (swipedLeft) {
-        isSwiping.value     = true;
-        swipeProgress.value = withTiming(1, { duration: 200 });
-        translateX.value    = withTiming(-(SCREEN_WIDTH + 200), { duration: 350 }, () => {
-          runOnJS(stableAdvance)();
-        });
-      } else {
-        translateX.value    = withSpring(0, { damping: 25, stiffness: 150 });
-        swipeProgress.value = withSpring(0, { damping: 25, stiffness: 150 });
-      }
-    });
+  const onAcceptRef = useRef(onAccept);
+  onAcceptRef.current = onAccept;
 
-  // slot 0 (앞): 스와이프 대상
-  const slot0Style = useAnimatedStyle(() => ({
-    zIndex: 3,
-    transform: [
-      { translateX: translateX.value },
-      {
-        rotateZ: `${interpolate(
-          translateX.value,
-          [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
-          [-12, 0, 12],
-          Extrapolation.CLAMP,
-        )}deg`,
-      },
-    ],
-  }));
+  const handleSkip = useCallback(() => {
+    if (isSwiping.value) return;
+    isSwiping.value     = true;
+    swipeProgress.value = withTiming(1, { duration: 200 });
+    translateX.value    = withTiming(-(SCREEN_WIDTH + 200), { duration: 350 }, () => {
+      runOnJS(stableAdvance)();
+    });
+  }, [isSwiping, swipeProgress, translateX, stableAdvance]);
+
+  const handleAccept = useCallback(() => {
+    if (isSwiping.value) return;
+    const currentCard = requests[order[0] % requests.length];
+    onAcceptRef.current?.(currentCard);
+    isSwiping.value     = true;
+    swipeProgress.value = withTiming(1, { duration: 200 });
+    translateX.value    = withTiming(-(SCREEN_WIDTH + 200), { duration: 350 }, () => {
+      runOnJS(stableAdvance)();
+    });
+  }, [isSwiping, swipeProgress, translateX, stableAdvance, requests, order]);
+
+
+  // slot 0 (앞)
+  const slot0Style = useAnimatedStyle(() => {
+    // 화면 밖으로 나간 상태면 회전 없이 숨겨진 채로 유지
+    const isOffscreen = translateX.value < -(SCREEN_WIDTH * 0.9);
+    return {
+      zIndex: 3,
+      opacity: isOffscreen ? 0 : 1,
+      transform: [
+        { translateX: translateX.value },
+        {
+          rotateZ: `${interpolate(
+            translateX.value,
+            [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+            [-12, 0, 12],
+            Extrapolation.CLAMP,
+          )}deg`,
+        },
+      ],
+    };
+  });
 
   // slot 1 (중간): 스와이프할수록 앞 위치로 이동
   const slot1Style = useAnimatedStyle(() => ({
@@ -249,25 +263,13 @@ export default function KoreanAccountCardStack({ requests, onCardPress }: SwipeC
   return (
     <View style={styles.wrapper}>
       <View style={styles.stack}>
-        {/* slot 2: 가장 뒤 */}
-        <Animated.View style={[styles.cardSlot, slot2Style]}>
-          <CardContent card={card2} />
+        <Animated.View style={[styles.cardSlot, slot0Style]}>
+          <CardContent
+            card={card0}
+            onSkip={handleSkip}
+            onAccept={handleAccept}
+          />
         </Animated.View>
-
-        {/* slot 1: 중간 */}
-        <Animated.View style={[styles.cardSlot, slot1Style]}>
-          <CardContent card={card1} />
-        </Animated.View>
-
-        {/* slot 0: 앞, 스와이프 가능 */}
-        <GestureDetector gesture={pan}>
-          <Animated.View style={[styles.cardSlot, slot0Style]}>
-            <CardContent
-              card={card0}
-              onPress={() => onCardPressRef.current?.(card0)}
-            />
-          </Animated.View>
-        </GestureDetector>
       </View>
     </View>
   );
@@ -300,6 +302,10 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 20,
     overflow: 'hidden',
+    flexDirection: 'column',
+  },
+  cardPhoto: {
+    flex: 1,
   },
   bgImage: {
     borderRadius: 20,
@@ -308,7 +314,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#C7DCF5',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
   },
   bgInitial: {
     fontSize: 80,
@@ -318,11 +323,19 @@ const styles = StyleSheet.create({
   },
   cardBottom: {
     position: 'absolute',
-    left: 0, right: 0, bottom: 0,
+    left: 0, right: 0, bottom: 56,
     paddingHorizontal: 18,
-    paddingBottom: 24,
+    paddingBottom: 16,
     paddingTop: 16,
     gap: 6,
+  },
+  actionRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    height: 56,
   },
   bubbleWrap: {
     alignSelf: 'stretch',
@@ -351,28 +364,10 @@ const styles = StyleSheet.create({
     color: '#111',
     lineHeight: 22,
   },
-  bubbleFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 6,
-  },
   bubbleMore: {
     fontSize: 13,
     fontWeight: '700',
     color: ACCENT,
-  },
-  detailBtn: {
-    marginLeft: 'auto',
-    backgroundColor: ACCENT,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  detailBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#fff',
   },
   nameRow: {
     flexDirection: 'row',
@@ -409,17 +404,16 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
     fontWeight: '700',
   },
-  requestBtn: {
-    backgroundColor: ACCENT,
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    alignSelf: 'flex-end',
-    marginTop: 2,
+  skipBtn: {
+    flex: 1,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  requestBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#fff',
+  acceptBtn: {
+    flex: 1,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
