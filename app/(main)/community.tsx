@@ -141,6 +141,7 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
   onImageScrollStart?: () => void;
   onImageScrollEnd?: () => void;
 }) {
+  const router = useRouter();
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
   const [liked, setLiked] = useState(item.liked);
   const [likeCount, setLikeCount] = useState(item.likes);
@@ -159,7 +160,11 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
     <View style={s.feedCard}>
       <TouchableOpacity activeOpacity={0.95} onPress={onPress}>
         <View style={s.feedHeader}>
-          <View style={s.feedAvatarWrap}>
+          <TouchableOpacity
+            style={s.feedAvatarWrap}
+            activeOpacity={0.8}
+            onPress={() => item.authorId && router.push({ pathname: '/user-profile', params: { id: item.authorId } })}
+          >
             {profileUri ? (
               <Image source={{ uri: profileUri }} style={s.feedAvatar} />
             ) : (
@@ -167,10 +172,15 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
                 <Text style={s.feedAvatarText}>{getInitial(item.author)}</Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
           <View style={s.feedAuthorInfo}>
             <View style={s.feedNameRow}>
-              <Text style={s.feedAuthorName}>{item.author}</Text>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => item.authorId && router.push({ pathname: '/user-profile', params: { id: item.authorId } })}
+              >
+                <Text style={s.feedAuthorName}>{item.author}</Text>
+              </TouchableOpacity>
               {isHot && (
                 <View style={s.hotBadge}>
                   <Text style={s.hotBadgeText}>🔥 인기</Text>

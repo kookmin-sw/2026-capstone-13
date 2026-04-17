@@ -296,7 +296,11 @@ export default function CommunityPostScreen() {
           <Text style={s.postTitle}>{translation ? translation.title : post.title}</Text>
 
           {/* 작성자 정보 */}
-          <View style={s.authorRow}>
+          <TouchableOpacity
+            style={s.authorRow}
+            activeOpacity={0.8}
+            onPress={() => post.authorId && router.push({ pathname: '/user-profile', params: { id: post.authorId } })}
+          >
             {toAbsoluteUrl(post.authorProfileImage)
               ? <Image source={{ uri: toAbsoluteUrl(post.authorProfileImage)! }} style={s.avatar} />
               : <View style={[s.avatar, { backgroundColor: avatarColor(post.author) }]}>
@@ -307,7 +311,7 @@ export default function CommunityPostScreen() {
               <Text style={s.authorName}>{post.author}</Text>
               <Text style={s.authorSub}>{post.university} · {formatTime(post.createdAt)}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           {/* 본문 */}
           <Text style={s.postContent}>{translation ? translation.content : post.content}</Text>
@@ -365,17 +369,27 @@ export default function CommunityPostScreen() {
                   key={c.id}
                   style={s.commentItem}
                   activeOpacity={0.85}
-                  onPress={() => router.push({ pathname: '/comment-detail', params: { commentId: c.id, postId: post!.id, authorName: c.author, authorProfileImage: c.authorProfileImage ?? '', content: c.content, createdAt: c.createdAt, userType: c.userType } })}
+                  onPress={() => router.push({ pathname: '/comment-detail', params: { commentId: c.id, postId: post!.id, authorId: c.authorId ?? '', authorName: c.author, authorProfileImage: c.authorProfileImage ?? '', content: c.content, createdAt: c.createdAt, userType: c.userType } })}
                 >
-                  {toAbsoluteUrl(c.authorProfileImage)
-                    ? <Image source={{ uri: toAbsoluteUrl(c.authorProfileImage)! }} style={s.commentAvatar} />
-                    : <View style={[s.commentAvatar, { backgroundColor: avatarColor(c.author) }]}>
-                        <Text style={s.commentAvatarText}>{getInitial(c.author)}</Text>
-                      </View>
-                  }
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => c.authorId && router.push({ pathname: '/user-profile', params: { id: c.authorId } })}
+                  >
+                    {toAbsoluteUrl(c.authorProfileImage)
+                      ? <Image source={{ uri: toAbsoluteUrl(c.authorProfileImage)! }} style={s.commentAvatar} />
+                      : <View style={[s.commentAvatar, { backgroundColor: avatarColor(c.author) }]}>
+                          <Text style={s.commentAvatarText}>{getInitial(c.author)}</Text>
+                        </View>
+                    }
+                  </TouchableOpacity>
                   <View style={s.commentBody}>
                     <View style={s.commentMeta}>
-                      <Text style={s.commentAuthor}>{c.author}</Text>
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => c.authorId && router.push({ pathname: '/user-profile', params: { id: c.authorId } })}
+                      >
+                        <Text style={s.commentAuthor}>{c.author}</Text>
+                      </TouchableOpacity>
                       {c.userType !== 'KOREAN' && (
                         <View style={s.commentIntlBadge}>
                           <Text style={s.commentIntlBadgeText}>{c.userType === 'EXCHANGE' ? '교환학생' : '유학생'}</Text>

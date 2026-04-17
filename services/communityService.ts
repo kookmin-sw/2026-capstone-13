@@ -10,6 +10,7 @@ export interface CommunityPostDto {
   title: string;
   content: string;
   images: string[];
+  authorId?: number;
   author: string;
   authorProfileImage?: string;
   university: string;
@@ -26,6 +27,7 @@ export interface PostCommentDto {
   id: number;
   postId: number;
   parentCommentId?: number;
+  authorId?: number;
   author: string;
   authorProfileImage?: string;
   university: string;

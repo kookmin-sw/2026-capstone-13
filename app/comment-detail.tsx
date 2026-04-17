@@ -45,7 +45,7 @@ function formatTime(createdAt: string): string {
 
 export default function CommentDetailScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ commentId: string; postId: string; authorName: string; authorProfileImage: string; content: string; createdAt: string; userType: string }>();
+  const params = useLocalSearchParams<{ commentId: string; postId: string; authorId: string; authorName: string; authorProfileImage: string; content: string; createdAt: string; userType: string }>();
   const { user } = useAuthStore();
 
   const commentId = Number(params.commentId);
@@ -53,6 +53,7 @@ export default function CommentDetailScreen() {
   // 원댓글 정보 (params로 전달)
   const parentComment: Partial<PostCommentDto> = {
     id: commentId,
+    authorId: params.authorId ? Number(params.authorId) : undefined,
     author: params.authorName,
     authorProfileImage: params.authorProfileImage,
     content: params.content,
@@ -166,15 +167,25 @@ export default function CommentDetailScreen() {
       <ScrollView style={s.flex} contentContainerStyle={s.scrollContent}>
         {/* 원댓글 */}
         <View style={s.parentComment}>
-          {profileUri
-            ? <Image source={{ uri: profileUri }} style={s.avatar} />
-            : <View style={[s.avatar, { backgroundColor: avatarColor(parentComment.author ?? '') }]}>
-                <Text style={s.avatarText}>{getInitial(parentComment.author ?? '')}</Text>
-              </View>
-          }
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => parentComment.authorId && router.push({ pathname: '/user-profile', params: { id: parentComment.authorId } })}
+          >
+            {profileUri
+              ? <Image source={{ uri: profileUri }} style={s.avatar} />
+              : <View style={[s.avatar, { backgroundColor: avatarColor(parentComment.author ?? '') }]}>
+                  <Text style={s.avatarText}>{getInitial(parentComment.author ?? '')}</Text>
+                </View>
+            }
+          </TouchableOpacity>
           <View style={s.commentBody}>
             <View style={s.commentMeta}>
-              <Text style={s.authorName}>{parentComment.author}</Text>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => parentComment.authorId && router.push({ pathname: '/user-profile', params: { id: parentComment.authorId } })}
+              >
+                <Text style={s.authorName}>{parentComment.author}</Text>
+              </TouchableOpacity>
               {parentComment.userType !== 'KOREAN' && (
                 <View style={s.intlBadge}>
                   <Text style={s.intlBadgeText}>{parentComment.userType === 'EXCHANGE' ? '교환학생' : '유학생'}</Text>
@@ -205,15 +216,25 @@ export default function CommentDetailScreen() {
               ? <Text style={s.emptyText}>첫 답글을 달아보세요!</Text>
               : replies.map((r) => (
                   <View key={r.id} style={s.replyItem}>
-                    {toAbsoluteUrl(r.authorProfileImage)
-                      ? <Image source={{ uri: toAbsoluteUrl(r.authorProfileImage)! }} style={s.replyAvatar} />
-                      : <View style={[s.replyAvatar, { backgroundColor: avatarColor(r.author) }]}>
-                          <Text style={s.replyAvatarText}>{getInitial(r.author)}</Text>
-                        </View>
-                    }
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => r.authorId && router.push({ pathname: '/user-profile', params: { id: r.authorId } })}
+                    >
+                      {toAbsoluteUrl(r.authorProfileImage)
+                        ? <Image source={{ uri: toAbsoluteUrl(r.authorProfileImage)! }} style={s.replyAvatar} />
+                        : <View style={[s.replyAvatar, { backgroundColor: avatarColor(r.author) }]}>
+                            <Text style={s.replyAvatarText}>{getInitial(r.author)}</Text>
+                          </View>
+                      }
+                    </TouchableOpacity>
                     <View style={s.commentBody}>
                       <View style={s.commentMeta}>
-                        <Text style={s.authorName}>{r.author}</Text>
+                        <TouchableOpacity
+                          activeOpacity={0.8}
+                          onPress={() => r.authorId && router.push({ pathname: '/user-profile', params: { id: r.authorId } })}
+                        >
+                          <Text style={s.authorName}>{r.author}</Text>
+                        </TouchableOpacity>
                         {r.userType !== 'KOREAN' && (
                           <View style={s.intlBadge}>
                             <Text style={s.intlBadgeText}>{r.userType === 'EXCHANGE' ? '교환학생' : '유학생'}</Text>

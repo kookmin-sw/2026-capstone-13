@@ -48,6 +48,12 @@ export const deleteProfileImage = async (): Promise<ApiResponse<User>> => {
   return response.data;
 };
 
+// 타인 공개 프로필 조회
+export const getPublicUserProfile = async (id: number): Promise<ApiResponse<User>> => {
+  const response = await api.get<ApiResponse<User>>(`/users/${id}`);
+  return response.data;
+};
+
 // 한국인 유저 목록 조회 (외국인/교환학생 홈에서 사용)
 export const getKoreanUsers = async (): Promise<ApiResponse<User[]>> => {
   const response = await api.get<ApiResponse<User[]>>('/users/list/koreans');
