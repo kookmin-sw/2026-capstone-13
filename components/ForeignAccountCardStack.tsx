@@ -25,10 +25,11 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH  = SCREEN_WIDTH - 90;
 const CARD_HEIGHT = Math.round(SCREEN_HEIGHT * 0.53);
 const ACCENT      = '#0EA5E9';
+const BLUE        = '#3B6FE8';
 
 // 슬롯별 scale / 오른쪽 peek offset (슬롯 0 = 앞, 1 = 중간, 2 = 뒤)
 const SLOT_SCALE:    [number, number, number] = [1,    1,    1];
-const SLOT_PEEK_X:   [number, number, number] = [0,    28,   52];
+const SLOT_PEEK_X:   [number, number, number] = [0,    18,   32];
 const SLOT_PEEK_Y:   [number, number, number] = [0,    0,    0];
 
 const GRAD_START = 0;
@@ -54,7 +55,7 @@ const GRADIENT_LAYERS = Array.from({ length: GRAD_STEPS }, (_, i) => {
         top: `${top}%`,
         height: `${GRAD_H}%`,
         backgroundColor: `rgba(0,0,0,${alpha})`,
-        ...(isLast ? { borderBottomLeftRadius: 20, borderBottomRightRadius: 20 } : {}),
+        ...(isLast ? { borderBottomLeftRadius: 32, borderBottomRightRadius: 32 } : {}),
       }}
     />
   );
@@ -80,9 +81,8 @@ const truncatedCache = new Map<string | number, boolean>();
 
 // ── 카드 한 장 ─────────────────────────────────────────────
 const CardContent = memo(
-  function CardContent({ user, onPress }: { user: User; onPress?: () => void }) {
+  function CardContent({ user, onPress, onSkip }: { user: User; onPress?: () => void; onSkip?: () => void }) {
     const [imgError, setImgError] = useState(false);
-    // 캐시에 이미 측정값이 있으면 초기값으로 사용 → 리마운트 시 깜빡임 방지
     const [isTruncated, setIsTruncated] = useState(() => truncatedCache.get(user.id) ?? false);
     const profileUri = toAbsoluteUrl(user.profileImage?.trim());
     const showImage  = !!profileUri && !imgError;
@@ -107,20 +107,18 @@ const CardContent = memo(
 
         {GRADIENT_LAYERS}
 
+        {/* 좌상단 넘기기 버튼 */}
+        <TouchableOpacity style={styles.arrowBtn} onPress={onSkip} activeOpacity={0.75}>
+          <Ionicons name="arrow-back-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+
         <View style={styles.cardBottom}>
           <View style={styles.nameRow}>
             <Text style={styles.cardName}>{user.nickname}</Text>
-            {user.age ? (
-              <Text style={styles.ageText}>{user.age}</Text>
-            ) : null}
-            <View style={[styles.levelBadge, { backgroundColor: lv.color }]}>
-              <Text style={styles.levelText}>{lv.label}</Text>
-            </View>
           </View>
 
           {user.major ? (
             <View style={styles.infoRow}>
-              <Ionicons name="book-outline" size={13} color="rgba(255,255,255,0.8)" />
               <Text style={styles.infoText} numberOfLines={1}>{user.major}</Text>
               {isVerified && (
                 <Ionicons name="shield-checkmark" size={14} color="#22c55e" />
@@ -145,9 +143,9 @@ const CardContent = memo(
             <View style={styles.bubble}>
               <Text
                 style={styles.bubbleText}
-                numberOfLines={3}
+                numberOfLines={5}
                 onTextLayout={(e) => {
-                  const result = e.nativeEvent.lines.length >= 3;
+                  const result = e.nativeEvent.lines.length >= 5;
                   truncatedCache.set(user.id, result);
                   setIsTruncated(result);
                 }}
@@ -155,13 +153,17 @@ const CardContent = memo(
                 {user.bio ?? ''}
                 {isTruncated && <Text style={styles.bubbleMore}>  ...더보기</Text>}
               </Text>
-              <View style={styles.bubbleFooter}>
-                <TouchableOpacity style={styles.detailBtn} onPress={onPress} activeOpacity={0.75}>
-                  <Text style={styles.detailBtnText}>요청하기</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
+        </View>
+
+        {/* 카드 하단 버튼 */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.acceptBtn} onPress={onPress} activeOpacity={0.75}>
+            <View style={styles.pillBtn}>
+              <Text style={styles.btnLabel}>요청하기</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -177,27 +179,14 @@ interface ForeignAccountCardStackProps {
 
 const SWIPE_THRESHOLD = 80;
 
-/**
- * 3장 고정 슬롯 순환 카드 스택
- *
- * 슬롯 zIndex:  front(2) > mid(1) > back(0)
- * 데이터 인덱스: order[0]=앞, order[1]=중간, order[2]=뒤
- *
- * 스와이프 완료 시 JS side에서 order를 순환시키고
- * 동시에 UI는 애니메이션이 끝난 후 즉시 리셋되므로 깜빡임 없음.
- */
 export default function ForeignAccountCardStack({ users, onPress }: ForeignAccountCardStackProps) {
   const n = users.length;
 
-  // order[slot] = users 배열 인덱스
-  // 초기: slot0=앞, slot1=중간, slot2=뒤
   const [order, setOrder] = useState<[number, number, number]>([0, 1, 2]);
 
-  // 앞 카드 애니메이션
-  const translateX = useSharedValue(0);
-  const swipeProgress = useSharedValue(0); // 0~1
-
-  const isSwiping = useSharedValue(false);
+  const translateX    = useSharedValue(0);
+  const swipeProgress = useSharedValue(0);
+  const isSwiping     = useSharedValue(false);
 
   const onPressRef = useRef(onPress);
   onPressRef.current = onPress;
@@ -207,14 +196,25 @@ export default function ForeignAccountCardStack({ users, onPress }: ForeignAccou
       const nextBack = (a + 3) % n;
       return [b, c, nextBack] as [number, number, number];
     });
-    translateX.value = 0;
-    swipeProgress.value = 0;
-    isSwiping.value = false;
+    requestAnimationFrame(() => {
+      translateX.value    = 0;
+      swipeProgress.value = 0;
+      isSwiping.value     = false;
+    });
   }, [n, translateX, swipeProgress, isSwiping]);
 
   const advanceOrderRef = useRef(advanceOrderFn);
   advanceOrderRef.current = advanceOrderFn;
   const stableAdvance = useCallback(() => advanceOrderRef.current(), []);
+
+  const handleSkip = useCallback(() => {
+    if (isSwiping.value) return;
+    isSwiping.value     = true;
+    swipeProgress.value = withTiming(1, { duration: 200 });
+    translateX.value    = withTiming(-(SCREEN_WIDTH + 200), { duration: 350 }, () => {
+      runOnJS(stableAdvance)();
+    });
+  }, [isSwiping, swipeProgress, translateX, stableAdvance]);
 
   const pan = Gesture.Pan()
     .onUpdate((e) => {
@@ -234,14 +234,11 @@ export default function ForeignAccountCardStack({ users, onPress }: ForeignAccou
           runOnJS(stableAdvance)();
         });
       } else {
-        translateX.value = withSpring(0, { damping: 25, stiffness: 150 });
+        translateX.value    = withSpring(0, { damping: 25, stiffness: 150 });
         swipeProgress.value = withSpring(0, { damping: 25, stiffness: 150 });
       }
     });
 
-  // ── 슬롯별 animated style ──────────────────────────────
-
-  // slot 0 (앞): 스와이프 대상
   const slot0Style = useAnimatedStyle(() => ({
     zIndex: 3,
     transform: [
@@ -257,7 +254,6 @@ export default function ForeignAccountCardStack({ users, onPress }: ForeignAccou
     ],
   }));
 
-  // slot 1 (중간): 스와이프할수록 앞 위치로 이동
   const slot1Style = useAnimatedStyle(() => ({
     zIndex: 2,
     transform: [
@@ -267,7 +263,6 @@ export default function ForeignAccountCardStack({ users, onPress }: ForeignAccou
     ],
   }));
 
-  // slot 2 (뒤): 스와이프할수록 중간 위치로 이동
   const slot2Style = useAnimatedStyle(() => ({
     zIndex: 1,
     transform: [
@@ -286,22 +281,18 @@ export default function ForeignAccountCardStack({ users, onPress }: ForeignAccou
   return (
     <View style={styles.wrapper}>
       <View style={styles.stack}>
-        {/* slot 2: 가장 뒤 */}
         <Animated.View style={[styles.cardSlot, slot2Style]}>
           <CardContent user={user2} />
         </Animated.View>
-
-        {/* slot 1: 중간 */}
         <Animated.View style={[styles.cardSlot, slot1Style]}>
           <CardContent user={user1} />
         </Animated.View>
-
-        {/* slot 0: 앞, 스와이프 가능 */}
         <GestureDetector gesture={pan}>
           <Animated.View style={[styles.cardSlot, slot0Style]}>
             <CardContent
               user={user0}
               onPress={onPress ? () => onPressRef.current?.(user0) : undefined}
+              onSkip={handleSkip}
             />
           </Animated.View>
         </GestureDetector>
@@ -313,6 +304,7 @@ export default function ForeignAccountCardStack({ users, onPress }: ForeignAccou
 const styles = StyleSheet.create({
   wrapper: {
     alignItems: 'center',
+    marginTop: 16,
   },
   stack: {
     width: CARD_WIDTH + SLOT_PEEK_X[2],
@@ -325,48 +317,67 @@ const styles = StyleSheet.create({
     left: 0,
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    borderRadius: 20,
+    borderRadius: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
     shadowRadius: 18,
     elevation: 8,
   },
-
   card: {
     width: '100%',
     height: '100%',
-    borderRadius: 20,
+    borderRadius: 32,
     overflow: 'hidden',
     backgroundColor: '#1A2A4A',
   },
   bgImage: {
-    borderRadius: 20,
+    borderRadius: 32,
     resizeMode: 'cover',
   },
   bgFallback: {
     backgroundColor: '#1A2A4A',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
+    borderRadius: 32,
   },
   bgInitial: {
     fontSize: 80,
     fontWeight: '900',
     color: 'rgba(255,255,255,0.25)',
   },
-
+  arrowBtn: {
+    position: 'absolute',
+    left: 14,
+    top: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: BLUE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
   cardBottom: {
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: 0,
+    bottom: 56,
     paddingHorizontal: 18,
-    paddingBottom: 20,
-    paddingTop: 15,
+    paddingBottom: 16,
+    paddingTop: 16,
     gap: 5,
+    marginBottom: 5,
   },
-
+  actionRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 8,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -394,18 +405,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
   },
   infoText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
-    fontWeight: '500',
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.95)',
+    fontWeight: '800',
   },
-
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -413,15 +422,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statsText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
-    fontWeight: '600',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.95)',
+    fontWeight: '800',
   },
   statsDot: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.5)',
   },
-
   bubbleWrap: {
     alignSelf: 'stretch',
   },
@@ -441,7 +449,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderTopLeftRadius: 0,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 16,
+    paddingBottom: 30,
   },
   bubbleText: {
     fontSize: 15,
@@ -449,27 +458,27 @@ const styles = StyleSheet.create({
     color: '#111',
     lineHeight: 22,
   },
-  bubbleFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 6,
-  },
   bubbleMore: {
     fontSize: 13,
     fontWeight: '700',
     color: ACCENT,
   },
-  detailBtn: {
-    marginLeft: 'auto',
-    backgroundColor: '#3B6FE8',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+  pillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: BLUE,
+    paddingHorizontal: 44,
+    paddingVertical: 13,
+    borderRadius: 999,
   },
-  detailBtnText: {
-    fontSize: 13,
+  btnLabel: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#fff',
+  },
+  acceptBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

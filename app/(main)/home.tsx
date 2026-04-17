@@ -176,6 +176,7 @@ export default function HomeScreen() {
   const tabAnim                              = useRef(new Animated.Value(0)).current;
   const intlTabAnim                          = useRef(new Animated.Value(0)).current;
 
+  const koreanCardY = useRef(0);
   const switchTab = useCallback((mode: 'card' | 'list') => {
     setViewMode(mode);
     Animated.spring(tabAnim, {
@@ -184,8 +185,13 @@ export default function HomeScreen() {
       friction: 10,
       tension: 35,
     }).start();
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: koreanCardY.current - 60, animated: true });
+    }, 50);
   }, [tabAnim]);
 
+  const intlCardY = useRef(0);
+  const currentScrollY = useRef(0);
   const switchIntlTab = useCallback((mode: 'card' | 'write' | 'list') => {
     setIntlTab(mode);
     Animated.spring(intlTabAnim, {
@@ -194,7 +200,10 @@ export default function HomeScreen() {
       friction: 10,
       tension: 35,
     }).start();
-  }, [intlTabAnim, setIntlTab]);
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: intlCardY.current - 60, animated: true });
+    }, 50);
+  }, [intlTabAnim]);
   const scrollViewRef                        = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -235,6 +244,8 @@ const goTo = (item: HelpRequest) =>
       <ScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onScroll={e => { currentScrollY.current = e.nativeEvent.contentOffset.y; }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
         contentContainerStyle={{ paddingTop: Platform.OS === 'ios' ? 56 : 32, paddingBottom: 100 }}
       >
@@ -296,9 +307,12 @@ const goTo = (item: HelpRequest) =>
         {isInternational ? (
           <>
             {/* 3탭 (유학생) */}
-            <View style={s.viewTabRow}>
+            <View
+              style={s.viewTabRow}
+              onLayout={e => { intlCardY.current = e.nativeEvent.layout.y; }}
+            >
               <Animated.View style={[s.viewTabSlider, {
-                left: intlTabAnim.interpolate({ inputRange: [0, 1, 2], outputRange: ['2%', '35%', '69%'] }),
+                left: intlTabAnim.interpolate({ inputRange: [0, 1, 2], outputRange: ['2%', '36%', '69%'] }),
                 width: '31%',
               }]} />
               <TouchableOpacity style={s.viewTab} onPress={() => switchIntlTab('card')} activeOpacity={0.8}>
@@ -314,16 +328,16 @@ const goTo = (item: HelpRequest) =>
                 <Text style={[s.viewTabText, intlTab === 'list' && s.viewTabTextOn]}>목록 보기</Text>
               </TouchableOpacity>
             </View>
-            {intlTab === 'card' ? (
-              <View style={{ marginLeft: 6, marginBottom: 10 }}>
-                <ForeignAccountCardStack
-                  users={koreanUsers}
-                  onPress={() => switchIntlTab('write')}
-                />
-              </View>
-            ) : intlTab === 'write' ? (
+            <View style={{ display: intlTab === 'card' ? 'flex' : 'none', marginLeft: 6, marginBottom: 10 }}>
+              <ForeignAccountCardStack
+                users={koreanUsers}
+                onPress={() => switchIntlTab('write')}
+              />
+            </View>
+            <View style={{ display: intlTab === 'write' ? 'flex' : 'none' }}>
               <WriteForm onSuccess={() => switchIntlTab('list')} />
-            ) : (
+            </View>
+            <View style={{ display: intlTab === 'list' ? 'flex' : 'none' }}>
               <View style={s.listViewWrap}>
                 <View style={s.listFilterRow}>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.listFilterScroll} style={{ maxWidth: 260 }}>
@@ -423,12 +437,15 @@ const goTo = (item: HelpRequest) =>
                   ));
                 })()}
               </View>
-            )}
+            </View>
           </>
         ) : (
           <>
             {/* 카드 보기 / 리스트 보기 탭 */}
-            <View style={s.viewTabRow}>
+            <View
+              style={s.viewTabRow}
+              onLayout={e => { koreanCardY.current = e.nativeEvent.layout.y; }}
+            >
               <Animated.View style={[s.viewTabSlider, {
                 left: tabAnim.interpolate({ inputRange: [0, 1], outputRange: ['2%', '53%'] }),
                 width: '47%',
@@ -442,15 +459,14 @@ const goTo = (item: HelpRequest) =>
                 <Text style={[s.viewTabText, viewMode === 'list' && s.viewTabTextOn]}>도움 목록 보기</Text>
               </TouchableOpacity>
             </View>
-            {viewMode === 'card' ? (
-              <View style={{ marginLeft: 6, marginBottom: 24 }}>
-                <KoreanAccountCardStack
-                  requests={requests.filter(r => r.status === 'WAITING')}
-                  onCardPress={(card) => goTo(card)}
-                  onAccept={(card) => goTo(card)}
-                />
-              </View>
-            ) : (
+            <View style={{ display: viewMode === 'card' ? 'flex' : 'none', marginLeft: 6, marginBottom: 24 }}>
+              <KoreanAccountCardStack
+                requests={requests.filter(r => r.status === 'WAITING')}
+                onCardPress={(card) => goTo(card)}
+                onAccept={(card) => goTo(card)}
+              />
+            </View>
+            <View style={{ display: viewMode === 'list' ? 'flex' : 'none' }}>
               <View style={s.listViewWrap}>
                 <View style={s.listFilterRow}>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.listFilterScroll} style={{ maxWidth: 260 }}>
@@ -550,7 +566,7 @@ const goTo = (item: HelpRequest) =>
                   ));
                 })()}
               </View>
-            )}
+            </View>
           </>
         )}
 
@@ -1097,10 +1113,10 @@ const s = StyleSheet.create({
   },
   viewTabSlider: {
     position: 'absolute',
-    top: 4,
-    bottom: 4,
+    top: 3,
+    bottom: 3,
     backgroundColor: BLUE,
-    borderRadius: 36,
+    borderRadius: 999,
   },
   viewTab: {
     flex: 1,

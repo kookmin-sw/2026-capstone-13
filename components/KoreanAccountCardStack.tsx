@@ -26,7 +26,7 @@ const ACCENT = '#3B6FE8';
 
 // 슬롯별 scale / 오른쪽 peek offset (슬롯 0 = 앞, 1 = 중간, 2 = 뒤)
 const SLOT_SCALE:  [number, number, number] = [1,    1,    1];
-const SLOT_PEEK_X: [number, number, number] = [0,    28,   52];
+const SLOT_PEEK_X: [number, number, number] = [0,    18,   32];
 const SLOT_PEEK_Y: [number, number, number] = [0,    0,    0];
 
 const SWIPE_THRESHOLD = 80;
@@ -138,13 +138,17 @@ const CardContent = memo(
 
         </View>
 
-        {/* 카드 하단 반반 버튼 */}
+        {/* 좌상단 넘기기 버튼 */}
+        <TouchableOpacity style={styles.arrowBtn} onPress={onSkip} activeOpacity={0.75}>
+          <Ionicons name="arrow-back-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+
+        {/* 카드 하단 버튼 */}
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.skipBtn} onPress={onSkip} activeOpacity={0.75}>
-            <Ionicons name="close" size={28} color="#ef4444" />
-          </TouchableOpacity>
           <TouchableOpacity style={styles.acceptBtn} onPress={onAccept} activeOpacity={0.75}>
-            <Ionicons name="checkmark" size={28} color="#22c55e" />
+            <View style={styles.pillBtn}>
+              <Text style={styles.btnLabel}>도와주기</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -254,6 +258,7 @@ export default function KoreanAccountCardStack({ requests, onCardPress, onAccept
     ],
   }));
 
+
   if (n === 0) return null;
 
   const card0 = requests[order[0] % n];
@@ -263,6 +268,12 @@ export default function KoreanAccountCardStack({ requests, onCardPress, onAccept
   return (
     <View style={styles.wrapper}>
       <View style={styles.stack}>
+        <Animated.View style={[styles.cardSlot, slot2Style]}>
+          <CardContent card={card2} />
+        </Animated.View>
+        <Animated.View style={[styles.cardSlot, slot1Style]}>
+          <CardContent card={card1} />
+        </Animated.View>
         <Animated.View style={[styles.cardSlot, slot0Style]}>
           <CardContent
             card={card0}
@@ -278,6 +289,7 @@ export default function KoreanAccountCardStack({ requests, onCardPress, onAccept
 const styles = StyleSheet.create({
   wrapper: {
     alignItems: 'center',
+    marginTop: 16,
   },
   stack: {
     width: CARD_WIDTH + SLOT_PEEK_X[2],
@@ -290,7 +302,7 @@ const styles = StyleSheet.create({
     left: 0,
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    borderRadius: 20,
+    borderRadius: 32,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
@@ -300,7 +312,7 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     height: '100%',
-    borderRadius: 20,
+    borderRadius: 32,
     overflow: 'hidden',
     flexDirection: 'column',
   },
@@ -308,7 +320,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bgImage: {
-    borderRadius: 20,
+    borderRadius: 32,
   },
   bgFallback: {
     backgroundColor: '#C7DCF5',
@@ -392,7 +404,7 @@ const styles = StyleSheet.create({
   urgencyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20,
+    borderRadius: 32,
     paddingHorizontal: 7,
     paddingVertical: 2,
     gap: 3,
@@ -404,9 +416,15 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
     fontWeight: '700',
   },
-  skipBtn: {
-    flex: 1,
+
+  arrowBtn: {
+    position: 'absolute',
+    left: 14,
+    top: 14,
+    width: 48,
     height: 48,
+    borderRadius: 24,
+    backgroundColor: ACCENT,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -415,5 +433,19 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: ACCENT,
+    paddingHorizontal: 44,
+    paddingVertical: 13,
+    borderRadius: 999,
+  },
+  btnLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
   },
 });
