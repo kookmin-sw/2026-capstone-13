@@ -80,6 +80,13 @@ export const getCommunityPosts = async (): Promise<ApiResponse<PagedResponse<Com
   return response.data;
 };
 
+// 특정 유저의 커뮤니티 게시글 목록
+export const getUserCommunityPosts = async (userId: number): Promise<ApiResponse<CommunityPostDto[]>> => {
+  const response = await api.get<ApiResponse<CommunityPostDto[]>>(`/community/user/${userId}`);
+  const content: CommunityPostDto[] = response.data.data?.content ?? response.data.data ?? [];
+  return { ...response.data, data: content };
+};
+
 // 게시글 상세 조회 (댓글 포함)
 export const getCommunityPost = async (id: number): Promise<ApiResponse<CommunityPostDetailDto>> => {
   const response = await api.get<ApiResponse<CommunityPostDetailDto>>(`/community/${id}`);
