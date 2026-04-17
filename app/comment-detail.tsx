@@ -169,7 +169,7 @@ export default function CommentDetailScreen() {
         <View style={s.parentComment}>
           <TouchableOpacity
             activeOpacity={parentComment.authorId === user?.id ? 1 : 0.8}
-            onPress={() => parentComment.authorId !== user?.id && parentComment.authorId && router.push({ pathname: '/user-profile', params: { id: parentComment.authorId } })}
+            onPress={() => parentComment.authorId !== user?.id && parentComment.authorId && parentComment.author !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: parentComment.authorId } })}
           >
             {profileUri
               ? <Image source={{ uri: profileUri }} style={s.avatar} />
@@ -182,7 +182,7 @@ export default function CommentDetailScreen() {
             <View style={s.commentMeta}>
               <TouchableOpacity
                 activeOpacity={parentComment.authorId === user?.id ? 1 : 0.8}
-                onPress={() => parentComment.authorId !== user?.id && parentComment.authorId && router.push({ pathname: '/user-profile', params: { id: parentComment.authorId } })}
+                onPress={() => parentComment.authorId !== user?.id && parentComment.authorId && parentComment.author !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: parentComment.authorId } })}
               >
                 <Text style={s.authorName}>{parentComment.author}</Text>
               </TouchableOpacity>
@@ -218,7 +218,7 @@ export default function CommentDetailScreen() {
                   <View key={r.id} style={s.replyItem}>
                     <TouchableOpacity
                       activeOpacity={r.authorId === user?.id ? 1 : 0.8}
-                      onPress={() => r.authorId !== user?.id && r.authorId && router.push({ pathname: '/user-profile', params: { id: r.authorId } })}
+                      onPress={() => r.authorId !== user?.id && r.authorId && r.author !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: r.authorId } })}
                     >
                       {toAbsoluteUrl(r.authorProfileImage)
                         ? <Image source={{ uri: toAbsoluteUrl(r.authorProfileImage)! }} style={s.replyAvatar} />
@@ -231,7 +231,7 @@ export default function CommentDetailScreen() {
                       <View style={s.commentMeta}>
                         <TouchableOpacity
                           activeOpacity={r.authorId === user?.id ? 1 : 0.8}
-                          onPress={() => r.authorId !== user?.id && r.authorId && router.push({ pathname: '/user-profile', params: { id: r.authorId } })}
+                          onPress={() => r.authorId !== user?.id && r.authorId && r.author !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: r.authorId } })}
                         >
                           <Text style={s.authorName}>{r.author}</Text>
                         </TouchableOpacity>

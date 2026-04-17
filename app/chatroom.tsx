@@ -537,7 +537,7 @@ export default function ChatRoomScreen() {
                 <TouchableOpacity
                   activeOpacity={0.8}
                   style={{ alignSelf: 'flex-start' }}
-                  onPress={() => router.push({ pathname: '/user-profile', params: { id: msg.senderId } })}
+                  onPress={() => msg.senderId !== user?.id && msg.senderNickname !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: msg.senderId } })}
                 >
                   {partnerProfileImage && !partnerImgError
                     ? <Image
@@ -557,7 +557,7 @@ export default function ChatRoomScreen() {
           {showAvatar && (
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => router.push({ pathname: '/user-profile', params: { id: msg.senderId } })}
+              onPress={() => msg.senderId !== user?.id && msg.senderNickname !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: msg.senderId } })}
             >
               <Text style={[styles.senderName, { marginTop: -2 }]}>{msg.senderNickname}</Text>
             </TouchableOpacity>

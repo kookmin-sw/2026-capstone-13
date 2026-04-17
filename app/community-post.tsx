@@ -299,7 +299,7 @@ export default function CommunityPostScreen() {
           <TouchableOpacity
             style={s.authorRow}
             activeOpacity={post.authorId === user?.id ? 1 : 0.8}
-            onPress={() => post.authorId !== user?.id && post.authorId && router.push({ pathname: '/user-profile', params: { id: post.authorId } })}
+            onPress={() => post.authorId !== user?.id && post.authorId && post.author !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: post.authorId } })}
           >
             {toAbsoluteUrl(post.authorProfileImage)
               ? <Image source={{ uri: toAbsoluteUrl(post.authorProfileImage)! }} style={s.avatar} />
@@ -373,7 +373,7 @@ export default function CommunityPostScreen() {
                 >
                   <TouchableOpacity
                     activeOpacity={c.authorId === user?.id ? 1 : 0.8}
-                    onPress={() => c.authorId !== user?.id && c.authorId && router.push({ pathname: '/user-profile', params: { id: c.authorId } })}
+                    onPress={() => c.authorId !== user?.id && c.authorId && c.author !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: c.authorId } })}
                   >
                     {toAbsoluteUrl(c.authorProfileImage)
                       ? <Image source={{ uri: toAbsoluteUrl(c.authorProfileImage)! }} style={s.commentAvatar} />
@@ -386,7 +386,7 @@ export default function CommunityPostScreen() {
                     <View style={s.commentMeta}>
                       <TouchableOpacity
                         activeOpacity={c.authorId === user?.id ? 1 : 0.8}
-                        onPress={() => c.authorId !== user?.id && c.authorId && router.push({ pathname: '/user-profile', params: { id: c.authorId } })}
+                        onPress={() => c.authorId !== user?.id && c.authorId && c.author !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: c.authorId } })}
                       >
                         <Text style={s.commentAuthor}>{c.author}</Text>
                       </TouchableOpacity>

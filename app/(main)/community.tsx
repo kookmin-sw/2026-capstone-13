@@ -165,7 +165,7 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
           <TouchableOpacity
             style={s.feedAvatarWrap}
             activeOpacity={isMyPost ? 1 : 0.8}
-            onPress={() => !isMyPost && item.authorId && router.push({ pathname: '/user-profile', params: { id: item.authorId } })}
+            onPress={() => !isMyPost && item.authorId && item.author !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: item.authorId } })}
           >
             {profileUri ? (
               <Image source={{ uri: profileUri }} style={s.feedAvatar} />
@@ -179,7 +179,7 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
             <View style={s.feedNameRow}>
               <TouchableOpacity
                 activeOpacity={isMyPost ? 1 : 0.8}
-                onPress={() => !isMyPost && item.authorId && router.push({ pathname: '/user-profile', params: { id: item.authorId } })}
+                onPress={() => !isMyPost && item.authorId && item.author !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: item.authorId } })}
               >
                 <Text style={s.feedAuthorName}>{item.author}</Text>
               </TouchableOpacity>
