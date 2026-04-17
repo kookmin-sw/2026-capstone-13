@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -56,7 +57,7 @@ const CATEGORY_MENU: {
   color: string;
   bg: string;
 }[] = [
-  { key: 'ALL',      label: '전체 게시판', desc: '모든 글 모아보기',           icon: 'apps-outline',         color: T1,       bg: BG },
+  { key: 'ALL',      label: '전체', desc: '모든 글 모아보기',           icon: 'apps-outline',         color: T1,       bg: BG },
   { key: 'INFO',     label: '일반',        desc: '자유롭게 이야기해요',         icon: 'chatbubbles-outline',  color: BLUE,     bg: BLUE_L },
   { key: 'QUESTION', label: '로컬',        desc: '우리 지역 이야기',            icon: 'location-outline',     color: ORANGE,   bg: '#FFF3E8' },
   { key: 'CHAT',     label: '모임',        desc: '같이 만나요',                icon: 'people-outline',       color: T3,       bg: '#EEF4FF' },
@@ -278,7 +279,7 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
 }
 
 // ── 피드 화면 ────────────────────────────────────────────────
-function FeedScreen({ category, onBack }: { category: FilterCategory; onBack: () => void }) {
+function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; onCategoryChange: (cat: FilterCategory) => void }) {
   const router = useRouter();
   const { user } = useAuthStore();
   const insets = useSafeAreaInsets();
@@ -289,8 +290,9 @@ function FeedScreen({ category, onBack }: { category: FilterCategory; onBack: ()
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<SearchMode>('title');
+  const [dropdownVisible, setDropdownVisible] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
-  const HEADER_HEIGHT = insets.top + 120;
+  const HEADER_HEIGHT = insets.top + 76;
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -376,9 +378,13 @@ function FeedScreen({ category, onBack }: { category: FilterCategory; onBack: ()
       {/* 고정 헤더 */}
       <View style={[s.stickyHeader, { paddingTop: insets.top + 10 }]}>
         <View style={s.header}>
-          {/* 뒤로가기 */}
-          <TouchableOpacity style={s.backBtn} onPress={onBack} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={20} color={T1} />
+          {/* 카테고리 선택 버튼 */}
+          <TouchableOpacity style={s.catSelectorBtn} onPress={() => setDropdownVisible(true)} activeOpacity={0.8}>
+            <View style={[s.catSelectorIcon, { backgroundColor: menuItem?.bg ?? BG }]}>
+              <Ionicons name={(menuItem?.icon ?? 'apps-outline') as never} size={16} color={menuItem?.color ?? T1} />
+            </View>
+            <Text style={[s.catSelectorLabel, { color: menuItem?.color ?? T1 }]}>{headerTitle}</Text>
+            <Ionicons name="chevron-down" size={14} color={T2} />
           </TouchableOpacity>
           {/* 검색바 */}
           <View style={s.headerSearchBar}>
@@ -424,31 +430,48 @@ function FeedScreen({ category, onBack }: { category: FilterCategory; onBack: ()
             </TouchableOpacity>
           </View>
         )}
-        {/* 카테고리 타이틀 바 */}
-        <View style={[s.catTitleBar, { borderLeftColor: headerColor }]}>
-          <Text style={[s.catTitleText, { color: headerColor }]}>{headerTitle}</Text>
-        </View>
         <View style={s.headerDivider} />
         {isLoading ? <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 40 }} /> : null}
       </View>
+
+      {/* 카테고리 드롭다운 모달 */}
+      <Modal visible={dropdownVisible} transparent animationType="fade" onRequestClose={() => setDropdownVisible(false)}>
+        <TouchableOpacity style={s.dropdownBackdrop} activeOpacity={1} onPress={() => setDropdownVisible(false)}>
+          <View style={[s.dropdownPanel, { top: insets.top + 56 }]}>
+            {CATEGORY_MENU.map((item, idx) => {
+              const isActive = item.key === category;
+              return (
+                <TouchableOpacity
+                  key={item.key}
+                  style={[s.dropdownItem, idx < CATEGORY_MENU.length - 1 && s.dropdownItemBorder]}
+                  onPress={() => { onCategoryChange(item.key as FilterCategory); setDropdownVisible(false); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[s.dropdownIcon, { backgroundColor: item.bg }]}>
+                    <Ionicons name={item.icon as never} size={18} color={item.color} />
+                  </View>
+                  <Text style={[s.dropdownLabel, isActive && { color: item.color, fontWeight: '800' }]}>{item.label}</Text>
+                  {isActive && <Ionicons name="checkmark" size={16} color={item.color} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
 
 // ── 메인 화면 (라우팅 허브) ──────────────────────────────────
 export default function CommunityScreen() {
-  const [activeCategory, setActiveCategory] = useState<FilterCategory | null>(null);
+  const [activeCategory, setActiveCategory] = useState<FilterCategory>('ALL');
 
-  if (activeCategory !== null) {
-    return (
-      <FeedScreen
-        category={activeCategory}
-        onBack={() => setActiveCategory(null)}
-      />
-    );
-  }
-
-  return <CategoryHomeScreen onSelect={(cat) => setActiveCategory(cat)} />;
+  return (
+    <FeedScreen
+      category={activeCategory}
+      onCategoryChange={(cat) => setActiveCategory(cat)}
+    />
+  );
 }
 
 // ── 카테고리 홈 스타일 ────────────────────────────────────────
@@ -504,11 +527,42 @@ const s = StyleSheet.create({
     backgroundColor: '#fff',
     gap: 10,
   },
-  backBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: BG,
+  catSelectorBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 10, paddingVertical: 8,
+    borderRadius: 22, backgroundColor: BG,
+    flexShrink: 0,
+  },
+  catSelectorIcon: {
+    width: 28, height: 28, borderRadius: 8,
     justifyContent: 'center', alignItems: 'center',
   },
+  catSelectorLabel: { fontSize: 14, fontWeight: '800' },
+
+  dropdownBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  dropdownPanel: {
+    position: 'absolute', left: 12,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1, borderColor: BORDER,
+    minWidth: 200,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 12,
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  dropdownItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 14, paddingVertical: 13,
+  },
+  dropdownItemBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
+  dropdownIcon: {
+    width: 34, height: 34, borderRadius: 10,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  dropdownLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: T1 },
   headerSearchBar: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: BG, borderRadius: 22,
