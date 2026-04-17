@@ -533,20 +533,35 @@ export default function ChatRoomScreen() {
       <View style={[styles.msgRow, isMine ? styles.msgRowMine : styles.msgRowOther]}>
         {!isMine && (
           showAvatar
-            ? (partnerProfileImage && !partnerImgError
-                ? <Image
-                    source={{ uri: partnerProfileImage }}
-                    style={styles.msgAvatar}
-                    onError={() => setPartnerImgError(true)}
-                  />
-                : <View style={styles.msgAvatar}>
-                    <Text style={styles.msgAvatarText}>{getInitial(msg.senderNickname)}</Text>
-                  </View>
+            ? (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={{ alignSelf: 'flex-start' }}
+                  onPress={() => router.push({ pathname: '/user-profile', params: { id: msg.senderId } })}
+                >
+                  {partnerProfileImage && !partnerImgError
+                    ? <Image
+                        source={{ uri: partnerProfileImage }}
+                        style={styles.msgAvatar}
+                        onError={() => setPartnerImgError(true)}
+                      />
+                    : <View style={styles.msgAvatar}>
+                        <Text style={styles.msgAvatarText}>{getInitial(msg.senderNickname)}</Text>
+                      </View>
+                  }
+                </TouchableOpacity>
               )
             : <View style={styles.msgAvatarSpacer} />
         )}
         <View style={[styles.msgGroup, isMine && styles.msgGroupMine]}>
-          {showAvatar && <Text style={[styles.senderName, { marginTop: -2 }]}>{msg.senderNickname}</Text>}
+          {showAvatar && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => router.push({ pathname: '/user-profile', params: { id: msg.senderId } })}
+            >
+              <Text style={[styles.senderName, { marginTop: -2 }]}>{msg.senderNickname}</Text>
+            </TouchableOpacity>
+          )}
           <View style={[styles.bubbleRow, isMine && styles.bubbleRowMine]}>
             <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}>
               <Text style={[styles.bubbleText, isMine && styles.bubbleTextMine]}>
