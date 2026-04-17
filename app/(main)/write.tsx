@@ -19,6 +19,7 @@ import { createHelpRequest, updateHelpRequest } from '../../services/helpService
 import { useAuthStore } from '../../stores/authStore';
 import { useHelpRequestStore } from '../../stores/helpRequestStore';
 import type { HelpCategory, HelpMethod } from '../../types';
+import { s } from '../../utils/scale';
 
 const CATEGORIES: HelpCategory[] = ['BANK', 'HOSPITAL', 'SCHOOL', 'DAILY', 'OTHER'];
 const METHODS: HelpMethod[] = ['CHAT', 'VIDEO_CALL', 'OFFLINE'];
@@ -332,19 +333,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 56 : 16,
-    paddingBottom: 12,
+    paddingHorizontal: s(16),
+    paddingTop: Platform.OS === 'ios' ? s(56) : s(16),
+    paddingBottom: s(12),
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
     backgroundColor: Colors.surface,
   },
   headerBtn: {
-    width: 40,
+    width: s(40),
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: s(17),
     fontWeight: '700',
     color: Colors.textPrimary,
   },
@@ -353,17 +354,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   section: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingHorizontal: s(16),
+    paddingVertical: s(20),
   },
   label: {
-    fontSize: 15,
+    fontSize: s(15),
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginBottom: 12,
+    marginBottom: s(12),
   },
   divider: {
-    height: 8,
+    height: s(8),
     backgroundColor: Colors.background,
   },
 
@@ -371,15 +372,15 @@ const styles = StyleSheet.create({
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: s(10),
   },
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
+    gap: s(6),
+    paddingHorizontal: s(14),
+    paddingVertical: s(10),
+    borderRadius: s(10),
     borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
@@ -389,10 +390,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#EBF4FF',
   },
   categoryChipEmoji: {
-    fontSize: 16,
+    fontSize: s(16),
   },
   categoryChipText: {
-    fontSize: 14,
+    fontSize: s(14),
     fontWeight: '600',
     color: Colors.textSecondary,
   },
@@ -402,58 +403,58 @@ const styles = StyleSheet.create({
 
   // 입력
   input: {
-    fontSize: 16,
+    fontSize: s(16),
     color: Colors.textPrimary,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: s(12),
+    paddingHorizontal: s(14),
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 10,
+    borderRadius: s(10),
     backgroundColor: Colors.background,
   },
   textarea: {
-    fontSize: 15,
+    fontSize: s(15),
     color: Colors.textPrimary,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    paddingVertical: s(14),
+    paddingHorizontal: s(14),
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: 10,
+    borderRadius: s(10),
     backgroundColor: Colors.background,
-    height: 160,
-    lineHeight: 22,
+    height: s(160),
+    lineHeight: s(22),
   },
   charCount: {
-    fontSize: 12,
+    fontSize: s(12),
     color: Colors.textLight,
     textAlign: 'right',
-    marginTop: 6,
+    marginTop: s(6),
   },
 
   // 도움 방식
   methodRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: s(10),
   },
   methodChip: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: s(14),
+    borderRadius: s(12),
     borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
-    gap: 6,
+    gap: s(6),
   },
   methodChipActive: {
     borderColor: Colors.primary,
     backgroundColor: '#EBF4FF',
   },
   methodChipEmoji: {
-    fontSize: 22,
+    fontSize: s(22),
   },
   methodChipText: {
-    fontSize: 13,
+    fontSize: s(13),
     fontWeight: '600',
     color: Colors.textSecondary,
   },
@@ -462,19 +463,19 @@ const styles = StyleSheet.create({
   },
 
   optional: {
-    fontSize: 12,
+    fontSize: s(12),
     fontWeight: '400',
     color: Colors.textLight,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: s(8),
   },
   optionChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: s(14),
+    paddingVertical: s(8),
+    borderRadius: s(20),
     borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
@@ -484,7 +485,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EBF4FF',
   },
   optionChipText: {
-    fontSize: 13,
+    fontSize: s(13),
     fontWeight: '600',
     color: Colors.textSecondary,
   },
@@ -492,21 +493,21 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   bottomPadding: {
-    height: 20,
+    height: s(20),
   },
 
   // 하단 버튼
   footer: {
-    padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    padding: s(16),
+    paddingBottom: Platform.OS === 'ios' ? s(32) : s(16),
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
   submitBtn: {
     backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: s(16),
+    borderRadius: s(12),
     alignItems: 'center',
   },
   submitBtnDisabled: {
@@ -514,7 +515,7 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     color: Colors.textWhite,
-    fontSize: 17,
+    fontSize: s(17),
     fontWeight: '700',
   },
 });

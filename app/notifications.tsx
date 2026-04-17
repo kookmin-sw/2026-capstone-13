@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { s as sc } from '../utils/scale';
 import { useNotificationStore } from '../stores/notificationStore';
 import type { AppNotification } from '../types';
 
@@ -142,38 +143,38 @@ const s = StyleSheet.create({
   header: {
     backgroundColor: BLUE_BG,
     paddingTop: Platform.OS === 'ios' ? 56 : 28,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
+    paddingBottom: sc(12),
+    paddingHorizontal: sc(16),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
+    borderBottomWidth: sc(1),
     borderBottomColor: BORDER,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: sc(36), height: sc(36), borderRadius: sc(18),
     backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
   },
-  headerTitle: { fontSize: 15, fontWeight: '800', color: T1 },
-  allRead: { fontSize: 12, fontWeight: '700', color: BLUE },
-  deleteAll: { fontSize: 12, fontWeight: '700', color: '#EF4444' },
+  headerTitle: { fontSize: sc(15), fontWeight: '800', color: T1 },
+  allRead: { fontSize: sc(12), fontWeight: '700', color: BLUE },
+  deleteAll: { fontSize: sc(12), fontWeight: '700', color: '#EF4444' },
 
   unreadBanner: {
     backgroundColor: BLUE_L,
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: BORDER,
+    paddingHorizontal: sc(16), paddingVertical: sc(8),
+    borderBottomWidth: sc(1), borderBottomColor: BORDER,
   },
-  unreadBannerText: { fontSize: 12, color: BLUE, fontWeight: '700' },
+  unreadBannerText: { fontSize: sc(12), color: BLUE, fontWeight: '700' },
 
-  list: { padding: 12, paddingBottom: 60 },
+  list: { padding: sc(12), paddingBottom: sc(60) },
 
   item: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: sc(14),
+    borderWidth: sc(1),
     borderColor: BORDER,
     overflow: 'hidden',
   },
@@ -183,29 +184,29 @@ const s = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
+    gap: sc(12),
+    padding: sc(14),
   },
 
   iconWrap: {
-    width: 40, height: 40, borderRadius: 20,
+    width: sc(40), height: sc(40), borderRadius: sc(20),
     justifyContent: 'center', alignItems: 'center', flexShrink: 0,
   },
   itemBody: { flex: 1 },
-  itemText: { fontSize: 13, color: T1, lineHeight: 18, fontWeight: '500' },
-  itemTime: { fontSize: 11, color: T2, marginTop: 4 },
+  itemText: { fontSize: sc(13), color: T1, lineHeight: sc(18), fontWeight: '500' },
+  itemTime: { fontSize: sc(11), color: T2, marginTop: sc(4) },
 
   readBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginRight: 10,
-    borderRadius: 8,
+    paddingHorizontal: sc(12),
+    paddingVertical: sc(6),
+    marginRight: sc(10),
+    borderRadius: sc(8),
     backgroundColor: BLUE_L,
   },
-  readBtnText: { fontSize: 12, fontWeight: '700', color: BLUE },
+  readBtnText: { fontSize: sc(12), fontWeight: '700', color: BLUE },
 
-  sep: { height: 8 },
+  sep: { height: sc(8) },
 
-  empty: { paddingVertical: 80, alignItems: 'center', gap: 12 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: T2 },
+  empty: { paddingVertical: sc(80), alignItems: 'center', gap: sc(12) },
+  emptyTitle: { fontSize: sc(16), fontWeight: '700', color: T2 },
 });

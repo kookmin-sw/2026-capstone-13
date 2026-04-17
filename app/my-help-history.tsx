@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { s } from '../utils/scale';
 import { useHelpHistoryStore, type HelpHistoryItem } from '../stores/helpHistoryStore';
 import { useChatStore } from '../stores/chatStore';
 import { useAuthStore } from '../stores/authStore';
@@ -164,72 +165,72 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
-    paddingBottom: 14,
+    paddingHorizontal: s(16),
+    paddingTop: Platform.OS === 'ios' ? 60 : s(20),
+    paddingBottom: s(14),
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1, borderBottomColor: 'rgba(79,70,229,0.1)',
+    borderBottomWidth: s(1), borderBottomColor: 'rgba(79,70,229,0.1)',
   },
-  backBtn: { width: 36, alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#1E1B4B' },
+  backBtn: { width: s(36), alignItems: 'center' },
+  headerTitle: { fontSize: s(17), fontWeight: '700', color: '#1E1B4B' },
 
   summaryRow: {
-    flexDirection: 'row', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 12,
+    flexDirection: 'row', gap: s(8),
+    paddingHorizontal: s(16), paddingVertical: s(12),
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1, borderBottomColor: 'rgba(79,70,229,0.06)',
+    borderBottomWidth: s(1), borderBottomColor: 'rgba(79,70,229,0.06)',
   },
   summaryBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: PRIMARY_LIGHT, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20,
+    flexDirection: 'row', alignItems: 'center', gap: s(5),
+    backgroundColor: PRIMARY_LIGHT, paddingHorizontal: s(10), paddingVertical: s(5), borderRadius: s(20),
   },
-  summaryText: { fontSize: 12, color: PRIMARY, fontWeight: '600' },
-  summaryDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' },
+  summaryText: { fontSize: s(12), color: PRIMARY, fontWeight: '600' },
+  summaryDot: { width: s(6), height: s(6), borderRadius: s(3), backgroundColor: '#10B981' },
 
-  list: { padding: 14, gap: 10, paddingBottom: 40 },
+  list: { padding: s(14), gap: s(10), paddingBottom: s(40) },
 
   card: {
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14,
-    flexDirection: 'row', gap: 12, alignItems: 'flex-start',
-    shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07, shadowRadius: 10, elevation: 2,
-    borderWidth: 1, borderColor: 'rgba(79,70,229,0.06)',
+    backgroundColor: '#FFFFFF', borderRadius: s(16), padding: s(14),
+    flexDirection: 'row', gap: s(12), alignItems: 'flex-start',
+    shadowColor: '#4F46E5', shadowOffset: { width: 0, height: s(2) },
+    shadowOpacity: 0.07, shadowRadius: s(10), elevation: 2,
+    borderWidth: s(1), borderColor: 'rgba(79,70,229,0.06)',
   },
   cardIcon: {
-    width: 52, height: 52, borderRadius: 14,
+    width: s(52), height: s(52), borderRadius: s(14),
     justifyContent: 'center', alignItems: 'center', flexShrink: 0,
   },
   cardIconEmoji: { fontSize: 24 },
   cardBody: { flex: 1, minWidth: 0 },
   cardTop: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: s(4),
   },
-  categoryLabel: { fontSize: 11, fontWeight: '600', color: '#9CA3AF' },
+  categoryLabel: { fontSize: s(11), fontWeight: '600', color: '#9CA3AF' },
   statusBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20,
+    flexDirection: 'row', alignItems: 'center', gap: s(3),
+    paddingHorizontal: s(8), paddingVertical: s(3), borderRadius: s(20),
   },
-  statusText: { fontSize: 11, fontWeight: '700' },
+  statusText: { fontSize: s(11), fontWeight: '700' },
 
-  cardTitle: { fontSize: 14, fontWeight: '700', color: '#1E1B4B', lineHeight: 20, marginBottom: 3 },
-  cardDesc: { fontSize: 12, color: '#6B7280', lineHeight: 17, marginBottom: 6 },
+  cardTitle: { fontSize: s(14), fontWeight: '700', color: '#1E1B4B', lineHeight: s(20), marginBottom: s(3) },
+  cardDesc: { fontSize: s(12), color: '#6B7280', lineHeight: s(17), marginBottom: s(6) },
 
-  requesterRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
-  requesterText: { fontSize: 11, color: '#9CA3AF' },
+  requesterRow: { flexDirection: 'row', alignItems: 'center', gap: s(4), marginBottom: s(6) },
+  requesterText: { fontSize: s(11), color: '#9CA3AF' },
 
   cardMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  timeText: { fontSize: 11, color: '#9CA3AF' },
+  timeText: { fontSize: s(11), color: '#9CA3AF' },
   methodBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8,
+    flexDirection: 'row', alignItems: 'center', gap: s(4),
+    paddingHorizontal: s(9), paddingVertical: s(4), borderRadius: s(8),
   },
-  methodDot: { width: 6, height: 6, borderRadius: 3 },
-  methodText: { fontSize: 11, fontWeight: '600' },
+  methodDot: { width: s(6), height: s(6), borderRadius: s(3) },
+  methodText: { fontSize: s(11), fontWeight: '600' },
 
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 60 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: s(60) },
 
-  emptyState: { alignItems: 'center', paddingVertical: 80 },
-  emptyEmoji: { fontSize: 48, marginBottom: 16 },
-  emptyText: { fontSize: 16, fontWeight: '700', color: '#6B7280', marginBottom: 6 },
-  emptySubtext: { fontSize: 14, color: '#9CA3AF' },
+  emptyState: { alignItems: 'center', paddingVertical: s(80) },
+  emptyEmoji: { fontSize: 48, marginBottom: s(16) },
+  emptyText: { fontSize: s(16), fontWeight: '700', color: '#6B7280', marginBottom: s(6) },
+  emptySubtext: { fontSize: s(14), color: '#9CA3AF' },
 });

@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { s as sc } from '../utils/scale';
 import {
   getCommunityReplies, addCommunityReply, deleteCommunityComment,
   translateCommunityComment, type PostCommentDto,
@@ -305,81 +306,81 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: Platform.OS === 'ios' ? 56 : 28,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    paddingBottom: sc(12),
+    paddingHorizontal: sc(16),
+    borderBottomWidth: sc(1),
     borderBottomColor: BORDER,
     backgroundColor: '#fff',
-    gap: 8,
+    gap: sc(8),
   },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: T1 },
+  backBtn: { padding: sc(4) },
+  headerTitle: { fontSize: sc(17), fontWeight: '700', color: T1 },
 
-  scrollContent: { paddingBottom: 20 },
+  scrollContent: { paddingBottom: sc(20) },
 
   // 원댓글
   parentComment: {
     flexDirection: 'row',
-    gap: 12,
-    padding: 16,
+    gap: sc(12),
+    padding: sc(16),
     backgroundColor: BLUE_L,
-    borderBottomWidth: 1,
+    borderBottomWidth: sc(1),
     borderBottomColor: BORDER,
   },
 
   // 대댓글 섹션
-  repliesSection: { padding: 16, gap: 16 },
-  repliesTitle: { fontSize: 14, fontWeight: '700', color: T1, marginBottom: 4 },
-  emptyText: { fontSize: 14, color: T2, textAlign: 'center', marginTop: 20 },
+  repliesSection: { padding: sc(16), gap: sc(16) },
+  repliesTitle: { fontSize: sc(14), fontWeight: '700', color: T1, marginBottom: sc(4) },
+  emptyText: { fontSize: sc(14), color: T2, textAlign: 'center', marginTop: sc(20) },
 
   replyItem: {
     flexDirection: 'row',
-    gap: 10,
+    gap: sc(10),
   },
 
-  avatar: { width: 40, height: 40, borderRadius: 20, flexShrink: 0 },
-  avatarText: { fontSize: 16, fontWeight: '700', color: '#fff', textAlign: 'center', lineHeight: 40 },
-  replyAvatar: { width: 32, height: 32, borderRadius: 16, flexShrink: 0, justifyContent: 'center', alignItems: 'center' },
-  replyAvatarText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  avatar: { width: sc(40), height: sc(40), borderRadius: sc(20), flexShrink: 0 },
+  avatarText: { fontSize: sc(16), fontWeight: '700', color: '#fff', textAlign: 'center', lineHeight: sc(40) },
+  replyAvatar: { width: sc(32), height: sc(32), borderRadius: sc(16), flexShrink: 0, justifyContent: 'center', alignItems: 'center' },
+  replyAvatarText: { fontSize: sc(13), fontWeight: '700', color: '#fff' },
 
   commentBody: { flex: 1 },
-  commentMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 4 },
-  authorName: { fontSize: 13, fontWeight: '700', color: T1 },
-  commentTime: { fontSize: 11, color: T2 },
-  commentContent: { fontSize: 14, color: T1, lineHeight: 20 },
+  commentMeta: { flexDirection: 'row', alignItems: 'center', gap: sc(6), flexWrap: 'wrap', marginBottom: sc(4) },
+  authorName: { fontSize: sc(13), fontWeight: '700', color: T1 },
+  commentTime: { fontSize: sc(11), color: T2 },
+  commentContent: { fontSize: sc(14), color: T1, lineHeight: sc(20) },
 
-  intlBadge: { backgroundColor: BLUE_L, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 },
-  intlBadgeText: { fontSize: 10, fontWeight: '600', color: BLUE },
+  intlBadge: { backgroundColor: BLUE_L, borderRadius: sc(6), paddingHorizontal: sc(6), paddingVertical: sc(1) },
+  intlBadgeText: { fontSize: sc(10), fontWeight: '600', color: BLUE },
 
   deleteBtn: { marginLeft: 'auto' },
-  deleteText: { fontSize: 10, color: '#EF4444', fontWeight: '600' },
+  deleteText: { fontSize: sc(10), color: '#EF4444', fontWeight: '600' },
 
-  translateBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 6 },
-  translateText: { fontSize: 12, fontWeight: '600' },
+  translateBtn: { flexDirection: 'row', alignItems: 'center', gap: sc(3), marginTop: sc(6) },
+  translateText: { fontSize: sc(12), fontWeight: '600' },
 
   // 입력 바
   inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderTopWidth: 1,
+    gap: sc(10),
+    paddingHorizontal: sc(16),
+    paddingVertical: sc(10),
+    borderTopWidth: sc(1),
     borderTopColor: BORDER,
     backgroundColor: '#fff',
   },
   input: {
     flex: 1,
     backgroundColor: '#F4F6FB',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    fontSize: 14,
+    borderRadius: sc(20),
+    paddingHorizontal: sc(14),
+    paddingVertical: sc(8),
+    fontSize: sc(14),
     color: T1,
-    maxHeight: 100,
+    maxHeight: sc(100),
   },
   sendBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: sc(36), height: sc(36), borderRadius: sc(18),
     backgroundColor: BLUE,
     justifyContent: 'center', alignItems: 'center',
   },

@@ -1,5 +1,6 @@
 // 커뮤니티 화면 - 카테고리 홈 + 피드
 import { Ionicons } from '@expo/vector-icons';
+import { s as sc } from '../../utils/scale';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -491,35 +492,35 @@ const cs = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 12,
+    paddingHorizontal: sc(20), paddingVertical: sc(12),
   },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: T1 },
-  writeBtn: { padding: 4 },
+  headerTitle: { fontSize: sc(22), fontWeight: '800', color: T1 },
+  writeBtn: { padding: sc(4) },
 
-  scroll: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40 },
+  scroll: { paddingHorizontal: sc(16), paddingTop: sc(8), paddingBottom: sc(40) },
 
   section: {
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: sc(16),
     borderWidth: 1,
     borderColor: BORDER,
     overflow: 'hidden',
-    marginTop: 8,
+    marginTop: sc(8),
   },
   menuItem: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 16, gap: 14,
+    paddingHorizontal: sc(16), paddingVertical: sc(16), gap: sc(14),
   },
   menuItemBorder: {
     borderBottomWidth: 1, borderBottomColor: BORDER,
   },
   iconWrap: {
-    width: 42, height: 42, borderRadius: 12,
+    width: sc(42), height: sc(42), borderRadius: sc(12),
     justifyContent: 'center', alignItems: 'center',
   },
   menuText: { flex: 1 },
-  menuLabel: { fontSize: 15, fontWeight: '700', color: T1 },
-  menuDesc: { fontSize: 12, color: T2, marginTop: 2 },
+  menuLabel: { fontSize: sc(15), fontWeight: '700', color: T1 },
+  menuDesc: { fontSize: sc(12), color: T2, marginTop: sc(2) },
 });
 
 // ── 피드 스타일 ───────────────────────────────────────────────
@@ -534,22 +535,22 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: sc(16),
+    paddingVertical: sc(10),
     backgroundColor: '#fff',
-    gap: 10,
+    gap: sc(10),
   },
   catSelectorBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 10, paddingVertical: 8,
-    borderRadius: 22, backgroundColor: BG,
+    flexDirection: 'row', alignItems: 'center', gap: sc(6),
+    paddingHorizontal: sc(10), paddingVertical: sc(8),
+    borderRadius: sc(22), backgroundColor: BG,
     flexShrink: 0,
   },
   catSelectorIcon: {
-    width: 28, height: 28, borderRadius: 8,
+    width: sc(28), height: sc(28), borderRadius: sc(8),
     justifyContent: 'center', alignItems: 'center',
   },
-  catSelectorLabel: { fontSize: 14, fontWeight: '800' },
+  catSelectorLabel: { fontSize: sc(14), fontWeight: '800' },
 
   dropdownBackdrop: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.25)',
@@ -557,116 +558,116 @@ const s = StyleSheet.create({
   dropdownPanel: {
     position: 'absolute', left: 12,
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: sc(16),
     borderWidth: 1, borderColor: BORDER,
-    minWidth: 200,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 12,
+    minWidth: sc(200),
+    shadowColor: '#000', shadowOffset: { width: 0, height: sc(4) },
+    shadowOpacity: 0.15, shadowRadius: sc(12),
     elevation: 8,
     overflow: 'hidden',
   },
   dropdownItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 14, paddingVertical: 13,
+    flexDirection: 'row', alignItems: 'center', gap: sc(12),
+    paddingHorizontal: sc(14), paddingVertical: sc(13),
   },
   dropdownItemBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
   dropdownIcon: {
-    width: 34, height: 34, borderRadius: 10,
+    width: sc(34), height: sc(34), borderRadius: sc(10),
     justifyContent: 'center', alignItems: 'center',
   },
-  dropdownLabel: { flex: 1, fontSize: 15, fontWeight: '600', color: T1 },
+  dropdownLabel: { flex: 1, fontSize: sc(15), fontWeight: '600', color: T1 },
   headerSearchBar: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: BG, borderRadius: 22,
-    paddingHorizontal: 14, paddingVertical: 10,
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: sc(8),
+    backgroundColor: BG, borderRadius: sc(22),
+    paddingHorizontal: sc(14), paddingVertical: sc(10),
   },
-  headerSearchInput: { flex: 1, fontSize: 15, color: T1, padding: 0 },
-  writeBtn: { padding: 4 },
+  headerSearchInput: { flex: 1, fontSize: sc(15), color: T1, padding: 0 },
+  writeBtn: { padding: sc(4) },
 
   // ── Search mode ──
   searchModeRow: {
-    flexDirection: 'row', gap: 6,
-    paddingHorizontal: 16, paddingBottom: 8,
+    flexDirection: 'row', gap: sc(6),
+    paddingHorizontal: sc(16), paddingBottom: sc(8),
     backgroundColor: '#fff',
   },
   modeChip: {
-    paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: 16, backgroundColor: BG,
+    paddingHorizontal: sc(14), paddingVertical: sc(6),
+    borderRadius: sc(16), backgroundColor: BG,
     borderWidth: 1, borderColor: BORDER,
   },
   modeChipOn: { backgroundColor: BLUE, borderColor: BLUE },
-  modeChipText: { fontSize: 13, fontWeight: '700', color: BLUE_MID },
+  modeChipText: { fontSize: sc(13), fontWeight: '700', color: BLUE_MID },
   modeChipTextOn: { color: '#fff' },
 
   // ── Category title bar ──
   catTitleBar: {
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderLeftWidth: 3, marginHorizontal: 16, marginBottom: 4,
+    paddingHorizontal: sc(16), paddingVertical: sc(8),
+    borderLeftWidth: 3, marginHorizontal: sc(16), marginBottom: sc(4),
   },
-  catTitleText: { fontSize: 14, fontWeight: '800' },
+  catTitleText: { fontSize: sc(14), fontWeight: '800' },
 
   headerDivider: { height: 1, backgroundColor: BORDER },
 
   // ── List ──
-  list: { paddingBottom: 100 },
-  postDivider: { height: 8, backgroundColor: BG },
+  list: { paddingBottom: sc(100) },
+  postDivider: { height: sc(8), backgroundColor: BG },
 
   // ── Feed Card ──
   feedCard: {
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 4,
+    paddingHorizontal: sc(16),
+    paddingTop: sc(16),
+    paddingBottom: sc(4),
   },
 
   feedHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 10,
-    gap: 10,
+    marginBottom: sc(10),
+    gap: sc(10),
   },
   feedAvatarWrap: {
-    width: 44, height: 44, borderRadius: 22,
+    width: sc(44), height: sc(44), borderRadius: sc(22),
     overflow: 'hidden', flexShrink: 0,
   },
-  feedAvatar: { width: 44, height: 44, borderRadius: 22 },
-  feedAvatarText: { fontSize: 18, fontWeight: '700', color: '#fff' },
-  feedAuthorInfo: { flex: 1, gap: 4 },
-  feedNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  feedAuthorName: { fontSize: 15, fontWeight: '700', color: T1 },
-  feedMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  feedTime: { fontSize: 12, color: T2 },
-  feedUniv: { fontSize: 12, color: T2, flex: 1 },
-  moreBtn: { padding: 4 },
+  feedAvatar: { width: sc(44), height: sc(44), borderRadius: sc(22) },
+  feedAvatarText: { fontSize: sc(18), fontWeight: '700', color: '#fff' },
+  feedAuthorInfo: { flex: 1, gap: sc(4) },
+  feedNameRow: { flexDirection: 'row', alignItems: 'center', gap: sc(6) },
+  feedAuthorName: { fontSize: sc(15), fontWeight: '700', color: T1 },
+  feedMetaRow: { flexDirection: 'row', alignItems: 'center', gap: sc(6), flexWrap: 'wrap' },
+  feedTime: { fontSize: sc(12), color: T2 },
+  feedUniv: { fontSize: sc(12), color: T2, flex: 1 },
+  moreBtn: { padding: sc(4) },
 
-  catBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  catBadgeText: { fontSize: 11, fontWeight: '700' },
+  catBadge: { paddingHorizontal: sc(8), paddingVertical: sc(2), borderRadius: sc(6) },
+  catBadgeText: { fontSize: sc(11), fontWeight: '700' },
 
-  hotBadge: { backgroundColor: '#FFF3E8', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2 },
-  hotBadgeText: { fontSize: 11, fontWeight: '700', color: ORANGE },
+  hotBadge: { backgroundColor: '#FFF3E8', borderRadius: sc(8), paddingHorizontal: sc(7), paddingVertical: sc(2) },
+  hotBadgeText: { fontSize: sc(11), fontWeight: '700', color: ORANGE },
 
-  feedBody: { marginBottom: 10 },
-  feedTitle: { fontSize: 15, fontWeight: '700', color: T1, lineHeight: 22, marginBottom: 4 },
-  feedContent: { fontSize: 14, color: T2, lineHeight: 20 },
+  feedBody: { marginBottom: sc(10) },
+  feedTitle: { fontSize: sc(15), fontWeight: '700', color: T1, lineHeight: sc(22), marginBottom: sc(4) },
+  feedContent: { fontSize: sc(14), color: T2, lineHeight: sc(20) },
 
-  imageScroll: { marginBottom: 10 },
+  imageScroll: { marginBottom: sc(10) },
   feedImage: {
-    width: 200, height: 200, borderRadius: 12,
-    marginRight: 8, backgroundColor: '#E8EDF5',
+    width: sc(200), height: sc(200), borderRadius: sc(12),
+    marginRight: sc(8), backgroundColor: '#E8EDF5',
   },
 
   feedFooter: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#F0F3F8', marginTop: 6,
+    paddingVertical: sc(10), borderTopWidth: 1, borderTopColor: '#F0F3F8', marginTop: sc(6),
   },
-  reactionLeft: { flexDirection: 'row', gap: 16 },
-  reactionRight: { flexDirection: 'row', gap: 12 },
-  reactionItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  reactionCount: { fontSize: 13, color: T2, fontWeight: '600' },
-  iconBtn: { padding: 4 },
+  reactionLeft: { flexDirection: 'row', gap: sc(16) },
+  reactionRight: { flexDirection: 'row', gap: sc(12) },
+  reactionItem: { flexDirection: 'row', alignItems: 'center', gap: sc(5) },
+  reactionCount: { fontSize: sc(13), color: T2, fontWeight: '600' },
+  iconBtn: { padding: sc(4) },
 
-  empty: { alignItems: 'center', paddingVertical: 60, gap: 8 },
-  emptyEmoji: { fontSize: 44, marginBottom: 4 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: T1 },
-  emptySub: { fontSize: 16, color: BLUE_MID },
+  empty: { alignItems: 'center', paddingVertical: sc(60), gap: sc(8) },
+  emptyEmoji: { fontSize: sc(44), marginBottom: sc(4) },
+  emptyTitle: { fontSize: sc(18), fontWeight: '700', color: T1 },
+  emptySub: { fontSize: sc(16), color: BLUE_MID },
 });

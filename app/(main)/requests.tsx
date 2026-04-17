@@ -1,5 +1,6 @@
 // 도움 요청 목록 화면
 import { useState, useEffect, useCallback } from 'react';
+import { s as sc } from '../../utils/scale';
 import {
   View,
   Text,
@@ -110,13 +111,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   list: {
-    padding: 16,
-    gap: 12,
+    padding: sc(16),
+    gap: sc(12),
   },
   requestCard: {
     backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: sc(12),
+    padding: sc(16),
     borderWidth: 1,
     borderColor: Colors.border,
   },
@@ -124,28 +125,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: sc(8),
   },
   category: {
-    fontSize: 13,
+    fontSize: sc(13),
     fontWeight: '600',
     color: Colors.textSecondary,
   },
   status: {
-    fontSize: 13,
+    fontSize: sc(13),
     fontWeight: '700',
   },
   title: {
-    fontSize: 18,
+    fontSize: sc(18),
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginBottom: 4,
+    marginBottom: sc(4),
   },
   description: {
-    fontSize: 14,
+    fontSize: sc(14),
     color: Colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: 12,
+    lineHeight: sc(20),
+    marginBottom: sc(12),
   },
   cardFooter: {
     flexDirection: 'row',
@@ -153,30 +154,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   method: {
-    fontSize: 13,
+    fontSize: sc(13),
     color: Colors.primary,
     fontWeight: '600',
   },
   requester: {
-    fontSize: 13,
+    fontSize: sc(13),
     color: Colors.textLight,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 48,
+    paddingVertical: sc(48),
   },
   emptyEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
+    fontSize: sc(48),
+    marginBottom: sc(16),
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: sc(18),
     fontWeight: '700',
     color: Colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: sc(4),
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: sc(14),
     color: Colors.textLight,
   },
 });

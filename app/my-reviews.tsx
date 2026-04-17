@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { s as sc } from '../utils/scale';
 import { useAuthStore } from '../stores/authStore';
 import { getMyReviews, type ReviewResponse } from '../services/reviewService';
 
@@ -154,55 +155,55 @@ const s = StyleSheet.create({
   header: {
     backgroundColor: BG,
     paddingTop: Platform.OS === 'ios' ? 56 : 28,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
+    paddingBottom: sc(12),
+    paddingHorizontal: sc(16),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
+    borderBottomWidth: sc(1),
     borderBottomColor: BORDER,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: sc(36), height: sc(36), borderRadius: sc(18),
     backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
   },
-  headerTitle: { fontSize: 15, fontWeight: '800', color: T1 },
+  headerTitle: { fontSize: sc(15), fontWeight: '800', color: T1 },
 
-  list: { padding: 14, paddingBottom: 60 },
+  list: { padding: sc(14), paddingBottom: sc(60) },
 
   summary: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#fff', borderRadius: 14,
-    padding: 16, marginBottom: 14,
-    borderWidth: 1, borderColor: BORDER,
+    flexDirection: 'row', alignItems: 'center', gap: sc(6),
+    backgroundColor: '#fff', borderRadius: sc(14),
+    padding: sc(16), marginBottom: sc(14),
+    borderWidth: sc(1), borderColor: BORDER,
   },
-  summaryRating: { fontSize: 22, fontWeight: '900', color: T1 },
-  summaryCount: { fontSize: 13, color: T2, fontWeight: '600', marginLeft: 4 },
+  summaryRating: { fontSize: sc(22), fontWeight: '900', color: T1 },
+  summaryCount: { fontSize: sc(13), color: T2, fontWeight: '600', marginLeft: sc(4) },
 
   card: {
     backgroundColor: '#fff',
-    borderRadius: 14, padding: 14,
-    borderWidth: 1, borderColor: BORDER,
-    gap: 8,
+    borderRadius: sc(14), padding: sc(14),
+    borderWidth: sc(1), borderColor: BORDER,
+    gap: sc(8),
   },
   cardHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center', gap: sc(10),
   },
   avatar: {
-    width: 38, height: 38, borderRadius: 19,
+    width: sc(38), height: sc(38), borderRadius: sc(19),
     justifyContent: 'center', alignItems: 'center', flexShrink: 0,
   },
-  avatarText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-  reviewerInfo: { flex: 1, gap: 3 },
-  reviewerName: { fontSize: 13, fontWeight: '700', color: T1 },
-  stars: { flexDirection: 'row', gap: 2 },
-  time: { fontSize: 11, color: T2 },
+  avatarText: { fontSize: sc(14), fontWeight: '700', color: '#fff' },
+  reviewerInfo: { flex: 1, gap: sc(3) },
+  reviewerName: { fontSize: sc(13), fontWeight: '700', color: T1 },
+  stars: { flexDirection: 'row', gap: sc(2) },
+  time: { fontSize: sc(11), color: T2 },
 
-  helpTitle: { fontSize: 11, color: T2, fontWeight: '600' },
-  comment: { fontSize: 13, color: T1, lineHeight: 19 },
-  noComment: { fontSize: 12, color: T2, fontStyle: 'italic' },
+  helpTitle: { fontSize: sc(11), color: T2, fontWeight: '600' },
+  comment: { fontSize: sc(13), color: T1, lineHeight: sc(19) },
+  noComment: { fontSize: sc(12), color: T2, fontStyle: 'italic' },
 
-  empty: { paddingVertical: 80, alignItems: 'center', gap: 12 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: T2 },
+  empty: { paddingVertical: sc(80), alignItems: 'center', gap: sc(12) },
+  emptyTitle: { fontSize: sc(16), fontWeight: '700', color: T2 },
 });

@@ -1,5 +1,6 @@
 // 로그인 화면
 import { useState } from 'react';
+import { s } from '../../utils/scale';
 import {
   View,
   Text,
@@ -146,60 +147,60 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: s(32),
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: s(48),
   },
   logoEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: s(64),
+    marginBottom: s(16),
   },
   title: {
-    fontSize: 32,
+    fontSize: s(32),
     fontWeight: '800',
     color: Colors.primary,
-    marginBottom: 8,
+    marginBottom: s(8),
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: s(14),
     color: Colors.textSecondary,
   },
   form: {
-    gap: 16,
+    gap: s(16),
   },
   input: {
     backgroundColor: Colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
+    borderRadius: s(12),
+    paddingHorizontal: s(16),
+    paddingVertical: s(14),
+    fontSize: s(16),
     color: Colors.textPrimary,
-    borderWidth: 1,
+    borderWidth: s(1),
     borderColor: Colors.border,
   },
   loginButton: {
     backgroundColor: Colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: s(12),
+    paddingVertical: s(16),
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: s(8),
   },
   disabledButton: {
     opacity: 0.6,
   },
   loginButtonText: {
     color: Colors.textWhite,
-    fontSize: 18,
+    fontSize: s(18),
     fontWeight: '700',
   },
   registerLink: {
-    marginTop: 24,
+    marginTop: s(24),
     alignItems: 'center',
   },
   registerText: {
-    fontSize: 14,
+    fontSize: s(14),
     color: Colors.textSecondary,
   },
   registerHighlight: {
@@ -207,25 +208,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   testContainer: {
-    marginTop: 24,
+    marginTop: s(24),
     alignItems: 'center',
-    gap: 10,
+    gap: s(10),
   },
   testLabel: {
-    fontSize: 11,
+    fontSize: s(11),
     color: Colors.textLight,
     letterSpacing: 1,
   },
   testButtons: {
     flexDirection: 'row',
-    gap: 10,
+    gap: s(10),
   },
   testButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: s(10),
+    borderRadius: s(10),
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: s(1),
   },
   testButtonInternational: {
     borderColor: Colors.primary,
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFEBEE',
   },
   testButtonText: {
-    fontSize: 13,
+    fontSize: s(13),
     fontWeight: '600',
     color: Colors.textPrimary,
   },

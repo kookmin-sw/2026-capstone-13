@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { s } from '../utils/scale';
 
 interface VerifiedBadgeProps {
   size?: 'sm' | 'md';
@@ -7,7 +8,7 @@ interface VerifiedBadgeProps {
 
 export function VerifiedBadge({ size = 'sm' }: VerifiedBadgeProps) {
   const iconSize = size === 'md' ? 16 : 13;
-  const fontSize = size === 'md' ? 12 : 11;
+  const fontSize = size === 'md' ? s(12) : s(11);
 
   return (
     <View style={styles.badge}>
@@ -21,12 +22,12 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: s(2),
     backgroundColor: '#f0fdf4',
-    borderRadius: 20,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderWidth: 1,
+    borderRadius: s(20),
+    paddingHorizontal: s(6),
+    paddingVertical: s(2),
+    borderWidth: s(1),
     borderColor: '#86efac',
   },
   text: {

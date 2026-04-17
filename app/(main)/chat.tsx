@@ -1,5 +1,6 @@
 // 채팅 탭: 도움 신청 수락/거절 + 채팅방 목록
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { s as sc } from '../../utils/scale';
 import { getInitial } from '../../utils/getInitial';
 import {
   View,
@@ -77,9 +78,9 @@ function PartnerAvatar({ profileUrl, name }: { profileUrl?: string; name: string
 }
 
 const pa = StyleSheet.create({
-  img:      { width: 52, height: 52, borderRadius: 26 },
-  fallback: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center' },
-  text:     { fontSize: 18, fontWeight: '800', color: '#fff' },
+  img:      { width: sc(52), height: sc(52), borderRadius: sc(26) },
+  fallback: { width: sc(52), height: sc(52), borderRadius: sc(26), justifyContent: 'center', alignItems: 'center' },
+  text:     { fontSize: sc(18), fontWeight: '800', color: '#fff' },
 });
 
 export default function ChatScreen() {
@@ -512,44 +513,44 @@ const s = StyleSheet.create({
   // ── Header ──
   header: {
     backgroundColor: BLUE_BG,
-    paddingTop: Platform.OS === 'ios' ? 56 : 28,
+    paddingTop: Platform.OS === 'ios' ? sc(56) : sc(28),
     paddingBottom: 0,
-    paddingHorizontal: 18,
+    paddingHorizontal: sc(18),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  headerTitle: { fontSize: 24, fontWeight: '900', color: T1, letterSpacing: -0.6 },
+  headerTitle: { fontSize: sc(24), fontWeight: '900', color: T1, letterSpacing: -0.6 },
   iconBtn: {
-    width: 44, height: 44, borderRadius: 22,
+    width: sc(44), height: sc(44), borderRadius: sc(22),
     backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
   },
 
   // ── Search ──
   searchWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 14, paddingTop: 8, paddingBottom: 4,
+    flexDirection: 'row', alignItems: 'center', gap: sc(8),
+    paddingHorizontal: sc(14), paddingTop: sc(8), paddingBottom: sc(4),
   },
   searchBar: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#fff', borderRadius: 12,
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: sc(8),
+    backgroundColor: '#fff', borderRadius: sc(12),
     borderWidth: 1, borderColor: BORDER,
-    paddingHorizontal: 12, paddingVertical: 8,
+    paddingHorizontal: sc(12), paddingVertical: sc(8),
   },
-  searchInput: { flex: 1, fontSize: 13, color: T1, padding: 0 },
-  searchCancel: { paddingHorizontal: 4 },
-  searchCancelText: { fontSize: 13, color: BLUE, fontWeight: '700' },
+  searchInput: { flex: 1, fontSize: sc(13), color: T1, padding: 0 },
+  searchCancel: { paddingHorizontal: sc(4) },
+  searchCancelText: { fontSize: sc(13), color: BLUE, fontWeight: '700' },
 
   // ── Filter ──
-  filterRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 22, paddingBottom: 14 },
+  filterRow: { flexDirection: 'row', gap: sc(8), paddingHorizontal: sc(22), paddingBottom: sc(14) },
   chip: {
-    paddingHorizontal: 22, paddingVertical: 10,
-    borderRadius: 22, backgroundColor: '#fff',
+    paddingHorizontal: sc(22), paddingVertical: sc(10),
+    borderRadius: sc(22), backgroundColor: '#fff',
     borderWidth: 1, borderColor: BORDER,
   },
   chipOn:      { backgroundColor: BLUE, borderColor: BLUE },
-  chipText:    { fontSize: 13, fontWeight: '700', color: T2 },
+  chipText:    { fontSize: sc(13), fontWeight: '700', color: T2 },
   chipTextOn:  { color: '#fff' },
 
   // ── List ──
@@ -558,9 +559,9 @@ const s = StyleSheet.create({
 
   // ── Section label ──
   sectionLabel: {
-    fontSize: 12, fontWeight: '700', color: T2,
+    fontSize: sc(12), fontWeight: '700', color: T2,
     letterSpacing: 0.3,
-    paddingHorizontal: 22, paddingVertical: 8,
+    paddingHorizontal: sc(22), paddingVertical: sc(8),
     backgroundColor: BLUE_BG,
   },
 
@@ -568,9 +569,9 @@ const s = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-    gap: 14,
+    paddingHorizontal: sc(22),
+    paddingVertical: sc(14),
+    gap: sc(14),
     borderBottomWidth: 1,
     borderBottomColor: '#EEF4FF',
     backgroundColor: '#FFFFFF',
@@ -579,51 +580,51 @@ const s = StyleSheet.create({
 
   avatarWrap: { position: 'relative', flexShrink: 0 },
   avatar: {
-    width: 52, height: 52, borderRadius: 26,
+    width: sc(52), height: sc(52), borderRadius: sc(26),
     justifyContent: 'center', alignItems: 'center',
   },
-  avatarText: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  avatarText: { fontSize: sc(18), fontWeight: '800', color: '#fff' },
   onlineDot: {
     position: 'absolute', bottom: 1, right: 1,
-    width: 13, height: 13, borderRadius: 7,
-    backgroundColor: '#22C55E', borderWidth: 2, borderColor: '#FFFFFF',
+    width: sc(13), height: sc(13), borderRadius: sc(7),
+    backgroundColor: '#22C55E', borderWidth: sc(2), borderColor: '#FFFFFF',
   },
 
   itemBody: { flex: 1, minWidth: 0 },
   itemTop: {
     flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 4,
+    alignItems: 'center', marginBottom: sc(4),
   },
-  itemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  itemName:   { fontSize: 15, fontWeight: '800', color: T1 },
-  statusBadge:{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  statusText: { fontSize: 10, fontWeight: '700' },
-  itemTime:   { fontSize: 11, color: T2 },
+  itemTitleRow: { flexDirection: 'row', alignItems: 'center', gap: sc(7) },
+  itemName:   { fontSize: sc(15), fontWeight: '800', color: T1 },
+  statusBadge:{ paddingHorizontal: sc(8), paddingVertical: sc(2), borderRadius: sc(6) },
+  statusText: { fontSize: sc(10), fontWeight: '700' },
+  itemTime:   { fontSize: sc(11), color: T2 },
 
   itemBottom: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center',
   },
-  itemPreview: { fontSize: 13, color: T2, fontWeight: '500', flex: 1, marginRight: 8 },
+  itemPreview: { fontSize: sc(13), color: T2, fontWeight: '500', flex: 1, marginRight: sc(8) },
   unreadBadge: {
-    width: 20, height: 20, borderRadius: 10,
+    width: sc(20), height: sc(20), borderRadius: sc(10),
     backgroundColor: BLUE,
     justifyContent: 'center', alignItems: 'center',
     flexShrink: 0,
   },
-  unreadText: { fontSize: 10, fontWeight: '800', color: '#fff' },
+  unreadText: { fontSize: sc(10), fontWeight: '800', color: '#fff' },
 
-  actionRow:     { flexDirection: 'row', gap: 8, marginTop: 10 },
+  actionRow:     { flexDirection: 'row', gap: sc(8), marginTop: sc(10) },
   rejectBtn: {
-    flex: 1, paddingVertical: 10, borderRadius: 10,
+    flex: 1, paddingVertical: sc(10), borderRadius: sc(10),
     borderWidth: 1, borderColor: BORDER, alignItems: 'center',
   },
-  rejectBtnText: { fontSize: 13, fontWeight: '700', color: T3 },
+  rejectBtnText: { fontSize: sc(13), fontWeight: '700', color: T3 },
   acceptBtn: {
-    flex: 2, paddingVertical: 10, borderRadius: 10,
+    flex: 2, paddingVertical: sc(10), borderRadius: sc(10),
     backgroundColor: BLUE, alignItems: 'center',
   },
-  acceptBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  acceptBtnText: { fontSize: sc(13), fontWeight: '700', color: '#fff' },
   btnDisabled:   { opacity: 0.6 },
 
   // ── Swipe Delete ──
@@ -631,10 +632,10 @@ const s = StyleSheet.create({
     backgroundColor: '#EF4444',
     justifyContent: 'center',
     alignItems: 'center',
-    width: 90,
-    gap: 5,
+    width: sc(90),
+    gap: sc(5),
   },
-  deleteActionText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  deleteActionText: { fontSize: sc(12), fontWeight: '700', color: '#fff' },
 
   // ── Swipe overlay ──
   swipeOverlay: {
@@ -643,8 +644,8 @@ const s = StyleSheet.create({
   },
 
   // ── Empty ──
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8, paddingHorizontal: 32 },
-  emptyIcon:  { fontSize: 48, marginBottom: 8 },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: T1 },
-  emptySub:   { fontSize: 14, color: T2, textAlign: 'center', lineHeight: 22 },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: sc(8), paddingHorizontal: sc(32) },
+  emptyIcon:  { fontSize: sc(48), marginBottom: sc(8) },
+  emptyTitle: { fontSize: sc(17), fontWeight: '700', color: T1 },
+  emptySub:   { fontSize: sc(14), color: T2, textAlign: 'center', lineHeight: sc(22) },
 });

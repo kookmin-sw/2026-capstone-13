@@ -3,6 +3,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
+import { s } from '../utils/scale';
 
 const ACTIVE_BG = '#3B6FE8';
 const INACTIVE_COLOR = '#999999';
@@ -140,16 +141,16 @@ const styles = StyleSheet.create({
     right: 20,
     flexDirection: 'row',
     backgroundColor: 'rgba(255, 255, 255, 0.55)',
-    borderRadius: 40,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    borderRadius: s(40),
+    paddingVertical: s(8),
+    paddingHorizontal: s(8),
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: s(1),
     borderColor: 'rgba(255, 255, 255, 0.8)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: s(8) },
     shadowOpacity: 0.15,
-    shadowRadius: 24,
+    shadowRadius: s(24),
     elevation: 16,
   },
   activePill: {
@@ -158,15 +159,15 @@ const styles = StyleSheet.create({
     left: 0,
     width: PILL_WIDTH,
     height: PILL_HEIGHT,
-    borderRadius: 26,
+    borderRadius: s(26),
     backgroundColor: ACTIVE_BG,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
-    paddingVertical: 6,
+    gap: s(3),
+    paddingVertical: s(6),
     zIndex: 1,
   },
   iconWrap: {
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontSize: 11,
+    fontSize: s(11),
     fontWeight: '700',
     color: INACTIVE_COLOR,
   },
@@ -187,17 +188,17 @@ const styles = StyleSheet.create({
     top: -4,
     right: -8,
     backgroundColor: '#EF4444',
-    borderRadius: 9,
-    minWidth: 16,
-    height: 16,
+    borderRadius: s(9),
+    minWidth: s(16),
+    height: s(16),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 3,
-    borderWidth: 1.5,
+    paddingHorizontal: s(3),
+    borderWidth: s(1.5),
     borderColor: '#fff',
   },
   badgeText: {
-    fontSize: 9,
+    fontSize: s(9),
     fontWeight: '800',
     color: '#fff',
   },

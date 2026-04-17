@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { s } from '../utils/scale';
 import { MOCK_REQUESTS } from '../constants/mockData';
 import type { HelpRequest, HelpCategory, HelpMethod } from '../types';
 
@@ -235,80 +236,80 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFFFFF' },
 
   header: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
-    paddingBottom: 12,
+    flexDirection: 'row', alignItems: 'center', gap: s(10),
+    paddingHorizontal: s(16),
+    paddingTop: Platform.OS === 'ios' ? 60 : s(20),
+    paddingBottom: s(12),
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1, borderBottomColor: 'rgba(79,70,229,0.1)',
+    borderBottomWidth: s(1), borderBottomColor: 'rgba(79,70,229,0.1)',
   },
-  backBtn: { padding: 4 },
+  backBtn: { padding: s(4) },
   inputWrap: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F3F4F6', borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 10, gap: 8,
+    backgroundColor: '#F3F4F6', borderRadius: s(12),
+    paddingHorizontal: s(12), paddingVertical: s(10), gap: s(8),
   },
   inputIcon: { flexShrink: 0 },
-  input: { flex: 1, fontSize: 15, color: '#1E1B4B', padding: 0 },
+  input: { flex: 1, fontSize: s(15), color: '#1E1B4B', padding: 0 },
 
   modeRow: {
-    flexDirection: 'row', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(79,70,229,0.08)',
+    flexDirection: 'row', gap: s(8),
+    paddingHorizontal: s(16), paddingVertical: s(12),
+    borderBottomWidth: s(1), borderBottomColor: 'rgba(79,70,229,0.08)',
   },
   modeBtn: {
-    paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20,
-    borderWidth: 1.5, borderColor: 'rgba(79,70,229,0.15)',
+    paddingHorizontal: s(16), paddingVertical: s(7), borderRadius: s(20),
+    borderWidth: s(1.5), borderColor: 'rgba(79,70,229,0.15)',
     backgroundColor: '#FFFFFF',
   },
   modeBtnActive: { backgroundColor: PRIMARY, borderColor: PRIMARY },
-  modeBtnText: { fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
+  modeBtnText: { fontSize: s(13), fontWeight: '600', color: '#9CA3AF' },
   modeBtnTextActive: { color: '#FFFFFF' },
 
-  list: { padding: 14, paddingBottom: 60, gap: 10 },
+  list: { padding: s(14), paddingBottom: s(60), gap: s(10) },
 
   // 카드 (home.tsx와 동일 스타일)
   card: {
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14,
-    flexDirection: 'row', gap: 12, alignItems: 'flex-start',
-    shadowColor: '#4F46E5', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 12, elevation: 3,
-    borderWidth: 1, borderColor: 'rgba(79,70,229,0.06)',
+    backgroundColor: '#FFFFFF', borderRadius: s(16), padding: s(14),
+    flexDirection: 'row', gap: s(12), alignItems: 'flex-start',
+    shadowColor: '#4F46E5', shadowOffset: { width: 0, height: s(2) },
+    shadowOpacity: 0.08, shadowRadius: s(12), elevation: 3,
+    borderWidth: s(1), borderColor: 'rgba(79,70,229,0.06)',
   },
-  cardIcon: { width: 56, height: 56, borderRadius: 14, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
+  cardIcon: { width: s(56), height: s(56), borderRadius: s(14), justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   cardIconEmoji: { fontSize: 26 },
   cardBody: { flex: 1, minWidth: 0 },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4, gap: 8 },
-  cardTitle: { fontSize: 14, fontWeight: '700', color: '#1E1B4B', letterSpacing: -0.3, lineHeight: 20, flex: 1 },
-  statusBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20, flexShrink: 0, marginTop: 1 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: s(4), gap: s(8) },
+  cardTitle: { fontSize: s(14), fontWeight: '700', color: '#1E1B4B', letterSpacing: -0.3, lineHeight: s(20), flex: 1 },
+  statusBadge: { paddingHorizontal: s(7), paddingVertical: s(3), borderRadius: s(20), flexShrink: 0, marginTop: 1 },
   statusOpen: { backgroundColor: '#D1FAE5' },
   statusMatched: { backgroundColor: PRIMARY_LIGHT },
-  statusText: { fontSize: 10, fontWeight: '600' },
+  statusText: { fontSize: s(10), fontWeight: '600' },
   statusOpenText: { color: '#065F46' },
   statusMatchedText: { color: '#3730A3' },
-  cardDesc: { fontSize: 12, color: '#6B7280', lineHeight: 18, marginBottom: 8 },
+  cardDesc: { fontSize: s(12), color: '#6B7280', lineHeight: s(18), marginBottom: s(8) },
   cardMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  schoolTag: { backgroundColor: PRIMARY_LIGHT, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  schoolTagText: { fontSize: 11, color: PRIMARY, fontWeight: '600' },
-  timeTag: { fontSize: 11, color: '#9CA3AF' },
-  methodBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
-  methodDot: { width: 6, height: 6, borderRadius: 3 },
-  methodText: { fontSize: 11, fontWeight: '600' },
+  cardInfo: { flexDirection: 'row', alignItems: 'center', gap: s(6) },
+  schoolTag: { backgroundColor: PRIMARY_LIGHT, paddingHorizontal: s(8), paddingVertical: s(2), borderRadius: s(6) },
+  schoolTagText: { fontSize: s(11), color: PRIMARY, fontWeight: '600' },
+  timeTag: { fontSize: s(11), color: '#9CA3AF' },
+  methodBadge: { flexDirection: 'row', alignItems: 'center', gap: s(4), paddingHorizontal: s(9), paddingVertical: s(4), borderRadius: s(8) },
+  methodDot: { width: s(6), height: s(6), borderRadius: s(3) },
+  methodText: { fontSize: s(11), fontWeight: '600' },
 
   // 하이라이트
   highlight: { color: PRIMARY, fontWeight: '800', backgroundColor: PRIMARY_LIGHT },
 
   // 빈 상태
-  emptyState: { alignItems: 'center', paddingVertical: 80 },
-  emptyEmoji: { fontSize: 48, marginBottom: 16 },
-  emptyText: { fontSize: 16, fontWeight: '700', color: '#6B7280', marginBottom: 4 },
-  emptySubtext: { fontSize: 14, color: '#9CA3AF', textAlign: 'center' },
+  emptyState: { alignItems: 'center', paddingVertical: s(80) },
+  emptyEmoji: { fontSize: 48, marginBottom: s(16) },
+  emptyText: { fontSize: s(16), fontWeight: '700', color: '#6B7280', marginBottom: s(4) },
+  emptySubtext: { fontSize: s(14), color: '#9CA3AF', textAlign: 'center' },
 
   // 결과 수
   resultCount: {
     position: 'absolute', bottom: 16, left: 0, right: 0, alignItems: 'center',
   },
-  resultCountText: { fontSize: 12, color: '#9CA3AF' },
+  resultCountText: { fontSize: s(12), color: '#9CA3AF' },
   resultCountNum: { color: PRIMARY, fontWeight: '700' },
 });

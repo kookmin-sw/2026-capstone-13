@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { s as sc } from '../utils/scale';
 import { createReview } from '../services/reviewService';
 
 const BLUE   = '#3B6FE8';
@@ -147,57 +148,57 @@ const s = StyleSheet.create({
   header: {
     backgroundColor: BG,
     paddingTop: Platform.OS === 'ios' ? 56 : 28,
-    paddingBottom: 12,
-    paddingHorizontal: 16,
+    paddingBottom: sc(12),
+    paddingHorizontal: sc(16),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
+    borderBottomWidth: sc(1),
     borderBottomColor: BORDER,
   },
   backBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: sc(36), height: sc(36), borderRadius: sc(18),
     backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
   },
-  headerTitle: { fontSize: 15, fontWeight: '800', color: T1 },
+  headerTitle: { fontSize: sc(15), fontWeight: '800', color: T1 },
 
-  body: { padding: 20, gap: 28 },
+  body: { padding: sc(20), gap: sc(28) },
 
   partnerCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
+    flexDirection: 'row', alignItems: 'center', gap: sc(14),
     backgroundColor: '#fff',
-    borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: BORDER,
+    borderRadius: sc(16), padding: sc(16),
+    borderWidth: sc(1), borderColor: BORDER,
   },
   avatar: {
-    width: 52, height: 52, borderRadius: 26,
+    width: sc(52), height: sc(52), borderRadius: sc(26),
     justifyContent: 'center', alignItems: 'center',
   },
-  avatarText: { fontSize: 20, fontWeight: '700', color: '#fff' },
+  avatarText: { fontSize: sc(20), fontWeight: '700', color: '#fff' },
   partnerInfo: { flex: 1 },
-  partnerName: { fontSize: 16, fontWeight: '800', color: T1 },
-  partnerSub: { fontSize: 12, color: T2, marginTop: 3 },
+  partnerName: { fontSize: sc(16), fontWeight: '800', color: T1 },
+  partnerSub: { fontSize: sc(12), color: T2, marginTop: sc(3) },
 
-  ratingSection: { alignItems: 'center', gap: 12 },
-  sectionLabel: { fontSize: 14, fontWeight: '700', color: T1, alignSelf: 'flex-start' },
-  stars: { flexDirection: 'row', gap: 8 },
-  ratingLabel: { fontSize: 14, fontWeight: '700', color: ORANGE },
+  ratingSection: { alignItems: 'center', gap: sc(12) },
+  sectionLabel: { fontSize: sc(14), fontWeight: '700', color: T1, alignSelf: 'flex-start' },
+  stars: { flexDirection: 'row', gap: sc(8) },
+  ratingLabel: { fontSize: sc(14), fontWeight: '700', color: ORANGE },
 
-  commentSection: { gap: 8 },
-  optional: { fontSize: 12, fontWeight: '400', color: T2 },
+  commentSection: { gap: sc(8) },
+  optional: { fontSize: sc(12), fontWeight: '400', color: T2 },
   commentInput: {
     backgroundColor: '#fff',
-    borderRadius: 14, borderWidth: 1, borderColor: BORDER,
-    padding: 14, fontSize: 14, color: T1,
-    minHeight: 120, textAlignVertical: 'top',
+    borderRadius: sc(14), borderWidth: sc(1), borderColor: BORDER,
+    padding: sc(14), fontSize: sc(14), color: T1,
+    minHeight: sc(120), textAlignVertical: 'top',
   },
-  charCount: { fontSize: 11, color: T2, alignSelf: 'flex-end' },
+  charCount: { fontSize: sc(11), color: T2, alignSelf: 'flex-end' },
 
   submitBtn: {
-    backgroundColor: BLUE, borderRadius: 14,
-    paddingVertical: 16, alignItems: 'center',
+    backgroundColor: BLUE, borderRadius: sc(14),
+    paddingVertical: sc(16), alignItems: 'center',
   },
   submitBtnDisabled: { opacity: 0.4 },
-  submitBtnText: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  submitBtnText: { fontSize: sc(15), fontWeight: '800', color: '#fff' },
 });

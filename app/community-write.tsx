@@ -8,6 +8,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { s } from '../utils/scale';
 import { Colors } from '../constants/colors';
 import { createCommunityPost, updateCommunityPost, uploadCommunityImage } from '../services/communityService';
 import { useAuthStore } from '../stores/authStore';
@@ -244,76 +245,76 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 56 : 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
+    paddingHorizontal: s(16),
+    paddingTop: Platform.OS === 'ios' ? 56 : s(16),
+    paddingBottom: s(12),
+    borderBottomWidth: s(1), borderBottomColor: Colors.border,
     backgroundColor: Colors.surface,
   },
-  headerBtn: { width: 40, alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
+  headerBtn: { width: s(40), alignItems: 'center' },
+  headerTitle: { fontSize: s(17), fontWeight: '700', color: Colors.textPrimary },
   submitBtn: {
-    paddingHorizontal: 16, paddingVertical: 8,
-    backgroundColor: PRIMARY, borderRadius: 20,
+    paddingHorizontal: s(16), paddingVertical: s(8),
+    backgroundColor: PRIMARY, borderRadius: s(20),
   },
   submitBtnDisabled: { backgroundColor: '#E5E7EB' },
-  submitBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
+  submitBtnText: { fontSize: s(14), fontWeight: '700', color: '#FFFFFF' },
   submitBtnTextDisabled: { color: '#9CA3AF' },
 
   scroll: { flex: 1 },
-  section: { paddingHorizontal: 16, paddingVertical: 20 },
-  label: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
+  section: { paddingHorizontal: s(16), paddingVertical: s(20) },
+  label: { fontSize: s(15), fontWeight: '700', color: Colors.textPrimary, marginBottom: s(12) },
   required: { color: '#EF4444' },
-  divider: { height: 8, backgroundColor: Colors.background },
+  divider: { height: s(8), backgroundColor: Colors.background },
 
   // 카테고리
-  categoryRow: { flexDirection: 'row', gap: 10 },
+  categoryRow: { flexDirection: 'row', gap: s(10) },
   categoryChip: {
-    flex: 1, alignItems: 'center', paddingVertical: 12, gap: 6,
-    borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border,
+    flex: 1, alignItems: 'center', paddingVertical: s(12), gap: s(6),
+    borderRadius: s(12), borderWidth: s(1.5), borderColor: Colors.border,
     backgroundColor: Colors.surface,
   },
   categoryEmoji: { fontSize: 20 },
-  categoryLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  categoryLabel: { fontSize: s(12), fontWeight: '600', color: Colors.textSecondary },
 
   // 입력
   input: {
-    fontSize: 15, color: Colors.textPrimary,
-    paddingVertical: 12, paddingHorizontal: 14,
-    borderWidth: 1, borderColor: Colors.border,
-    borderRadius: 10, backgroundColor: Colors.background,
+    fontSize: s(15), color: Colors.textPrimary,
+    paddingVertical: s(12), paddingHorizontal: s(14),
+    borderWidth: s(1), borderColor: Colors.border,
+    borderRadius: s(10), backgroundColor: Colors.background,
   },
   textarea: {
-    fontSize: 15, color: Colors.textPrimary,
-    paddingVertical: 14, paddingHorizontal: 14,
-    borderWidth: 1, borderColor: Colors.border,
-    borderRadius: 10, backgroundColor: Colors.background,
-    height: 180, lineHeight: 22,
+    fontSize: s(15), color: Colors.textPrimary,
+    paddingVertical: s(14), paddingHorizontal: s(14),
+    borderWidth: s(1), borderColor: Colors.border,
+    borderRadius: s(10), backgroundColor: Colors.background,
+    height: s(180), lineHeight: s(22),
   },
-  charCount: { fontSize: 12, color: Colors.textLight, textAlign: 'right', marginTop: 6 },
+  charCount: { fontSize: s(12), color: Colors.textLight, textAlign: 'right', marginTop: s(6) },
 
   // 사진 첨부
-  photoHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  photoCount: { fontSize: 13, color: Colors.textLight },
-  photoScroll: { gap: 10, paddingBottom: 4 },
+  photoHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: s(12) },
+  photoCount: { fontSize: s(13), color: Colors.textLight },
+  photoScroll: { gap: s(10), paddingBottom: s(4) },
   photoAddBtn: {
-    width: 90, height: 90, borderRadius: 12,
-    borderWidth: 1.5, borderColor: Colors.border, borderStyle: 'dashed',
-    justifyContent: 'center', alignItems: 'center', gap: 6,
+    width: s(90), height: s(90), borderRadius: s(12),
+    borderWidth: s(1.5), borderColor: Colors.border, borderStyle: 'dashed',
+    justifyContent: 'center', alignItems: 'center', gap: s(6),
     backgroundColor: Colors.background,
   },
   photoAddIconWrap: {
-    width: 36, height: 36, borderRadius: 18,
+    width: s(36), height: s(36), borderRadius: s(18),
     backgroundColor: PRIMARY_LIGHT,
     justifyContent: 'center', alignItems: 'center',
   },
-  photoAddText: { fontSize: 11, color: PRIMARY, fontWeight: '600' },
+  photoAddText: { fontSize: s(11), color: PRIMARY, fontWeight: '600' },
   photoThumbWrap: { position: 'relative' },
-  photoThumb: { width: 90, height: 90, borderRadius: 12 },
+  photoThumb: { width: s(90), height: s(90), borderRadius: s(12) },
   photoRemoveBtn: {
     position: 'absolute', top: -6, right: -6,
-    backgroundColor: '#FFFFFF', borderRadius: 10,
+    backgroundColor: '#FFFFFF', borderRadius: s(10),
   },
 
-  bottomPadding: { height: 40 },
+  bottomPadding: { height: s(40) },
 });

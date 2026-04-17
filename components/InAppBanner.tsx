@@ -1,5 +1,6 @@
 // 인앱 배너 알림 컴포넌트 (위에서 슬라이드 내려옴)
 import { useEffect, useRef } from 'react';
+import { s } from '../utils/scale';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   runOnJS,
@@ -115,20 +116,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surface,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: s(14),
+    paddingHorizontal: s(14),
+    paddingVertical: s(12),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: s(4) },
     shadowOpacity: 0.12,
-    shadowRadius: 10,
+    shadowRadius: s(10),
     elevation: 8,
-    gap: 10,
+    gap: s(10),
   },
   iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: s(36),
+    height: s(36),
+    borderRadius: s(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -136,13 +137,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 13,
+    fontSize: s(13),
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginBottom: 2,
+    marginBottom: s(2),
   },
   body: {
-    fontSize: 12,
+    fontSize: s(12),
     color: Colors.textSecondary,
   },
 });
