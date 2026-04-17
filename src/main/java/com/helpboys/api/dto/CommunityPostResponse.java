@@ -21,6 +21,7 @@ public class CommunityPostResponse {
     private String title;
     private String content;
     private List<String> images;
+    private Long authorId;
     private String author;
     private String authorProfileImage;
     private String university;
@@ -56,6 +57,7 @@ public class CommunityPostResponse {
                 .title(post.getTitle())
                 .content(post.getContent())
                 .images(parseImages(post.getImages()))
+                .authorId(post.getAuthor().getId())
                 .author(post.getAuthor().getNickname())
                 .authorProfileImage(post.getAuthor().getProfileImage())
                 .university(post.getAuthor().getUniversity())
@@ -80,6 +82,7 @@ public class CommunityPostResponse {
                 .title(post.getTitle())
                 .content(post.getContent())
                 .images(parseImages(post.getImages()))
+                .authorId(post.getAuthor().getId())
                 .author(post.getAuthor().getNickname())
                 .authorProfileImage(post.getAuthor().getProfileImage())
                 .university(post.getAuthor().getUniversity())

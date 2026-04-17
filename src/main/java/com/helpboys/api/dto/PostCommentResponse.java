@@ -12,6 +12,7 @@ public class PostCommentResponse {
 
     private Long id;
     private Long parentCommentId;
+    private Long authorId;
     private String author;
     private String authorProfileImage;
     private String userType;
@@ -27,6 +28,7 @@ public class PostCommentResponse {
         return PostCommentResponse.builder()
                 .id(comment.getId())
                 .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getId() : null)
+                .authorId(comment.getAuthor().getId())
                 .author(comment.getAuthor().getNickname())
                 .authorProfileImage(comment.getAuthor().getProfileImage())
                 .userType(comment.getAuthor().getUserType().name())
