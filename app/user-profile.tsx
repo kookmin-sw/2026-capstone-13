@@ -16,7 +16,13 @@ import {
 } from 'react-native';
 import { getInitial } from '../utils/getInitial';
 import { getPublicUserProfile } from '../services/authService';
-import type { User } from '../types';
+import { getUserHelpHistory, getUserRequestHistory } from '../services/helpService';
+import { getUserCommunityPosts } from '../services/communityService';
+import { getMyReviews } from '../services/reviewService';
+import { useAuthStore } from '../stores/authStore';
+import type { User, HelpRequest, HelpCategory, HelpMethod, RequestStatus } from '../types';
+import type { CommunityPostDto } from '../services/communityService';
+import type { ReviewResponse } from '../services/reviewService';
 
 const BLUE    = '#3B6FE8';
 const BLUE_BG = '#F5F8FF';
@@ -59,6 +65,33 @@ const USER_TYPE_LABEL: Record<string, string> = {
   EXCHANGE: '교환학생',
 };
 
+const CATEGORY_EMOJI: Record<HelpCategory, string> = {
+  BANK: '🏦', HOSPITAL: '🏥', SCHOOL: '🏫', DAILY: '🏠', OTHER: '📌',
+};
+const CATEGORY_LABEL: Record<HelpCategory, string> = {
+  BANK: '은행', HOSPITAL: '병원', SCHOOL: '학교', DAILY: '생활', OTHER: '기타',
+};
+const STATUS_CONFIG: Record<RequestStatus, { label: string; color: string; bg: string }> = {
+  WAITING:     { label: '모집중',    bg: '#D1FAE5', color: '#065F46' },
+  MATCHED:     { label: '대기중',    bg: '#EEF4FF', color: BLUE },
+  IN_PROGRESS: { label: '진행중',    bg: '#FEF3C7', color: '#92400E' },
+  COMPLETED:   { label: '도움 완료', bg: '#D1FAE5', color: '#065F46' },
+  CANCELLED:   { label: '취소됨',    bg: '#FEE2E2', color: '#991B1B' },
+};
+const POST_CATEGORY_LABEL: Record<string, string> = {
+  INFO: '일반', QUESTION: '로컬', CHAT: '모임', CULTURE: '장터',
+};
+
+function formatTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return '방금 전';
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  return `${Math.floor(h / 24)}일 전`;
+}
+
 const AVATAR_COLORS = ['#F0A040', '#F06060', BLUE, '#90C4F0', '#A0A8B0'];
 
 function avatarColor(name: string): string {
@@ -76,9 +109,17 @@ function toAbsoluteUrl(path?: string): string | null {
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const currentUser = useAuthStore((state) => state.user);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [imgFullscreen, setImgFullscreen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'help' | 'community' | null>(null);
+  const [helpHistory, setHelpHistory] = useState<HelpRequest[]>([]);
+  const [communityPosts, setCommunityPosts] = useState<CommunityPostDto[]>([]);
+  const [tabLoading, setTabLoading] = useState(false);
+  const [reviewModal, setReviewModal] = useState(false);
+  const [reviews, setReviews] = useState<ReviewResponse[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -92,6 +133,25 @@ export default function UserProfileScreen() {
   }, [id]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
+
+  useEffect(() => {
+    if (!id || !activeTab) return;
+    const userId = Number(id);
+    setTabLoading(true);
+    if (activeTab === 'help') {
+      const isKorean = user?.userType === 'KOREAN';
+      const fetchFn = isKorean ? getUserHelpHistory : getUserRequestHistory;
+      fetchFn(userId)
+        .then((res) => { if (res.success) setHelpHistory(res.data); })
+        .catch(() => {})
+        .finally(() => setTabLoading(false));
+    } else {
+      getUserCommunityPosts(userId)
+        .then((res) => { if (res.success) setCommunityPosts(res.data); })
+        .catch(() => {})
+        .finally(() => setTabLoading(false));
+    }
+  }, [activeTab, id]);
 
   if (loading) {
     return (
@@ -172,10 +232,24 @@ export default function UserProfileScreen() {
                 </View>
               ) : null}
               {/* 별점 */}
-              <View style={s.ratingRow}>
+              <TouchableOpacity
+                style={s.ratingRow}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setReviewModal(true);
+                  if (reviews.length === 0) {
+                    setReviewsLoading(true);
+                    getMyReviews(Number(id))
+                      .then((data) => setReviews(data))
+                      .catch(() => {})
+                      .finally(() => setReviewsLoading(false));
+                  }
+                }}
+              >
                 <Ionicons name="star" size={14} color="#F59E0B" />
                 <Text style={s.ratingText}>{Number(user.rating ?? 0).toFixed(1)} <Text style={s.ratingCount}>({user.ratingCount ?? 0})</Text></Text>
-              </View>
+                <Ionicons name="chevron-forward" size={14} color="#F59E0B" style={{ marginTop: 1, marginLeft: -2 }} />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -221,16 +295,130 @@ export default function UserProfileScreen() {
         {/* 구분선 */}
         <View style={s.sectionDivider} />
 
-        {/* 도움 내역 / 작성한 글 버튼 */}
+        {/* 도움내역 / 커뮤니티 탭 버튼 */}
         <View style={s.tabBtnRow}>
-          <TouchableOpacity style={[s.tabBtn, s.tabBtnLeft]} activeOpacity={0.8}>
-            <Text style={s.tabBtnText}>도움내역</Text>
+          <TouchableOpacity style={[s.tabBtn, s.tabBtnLeft]} activeOpacity={0.8} onPress={() => setActiveTab('help')}>
+            <Text style={[s.tabBtnText, activeTab === 'help' && s.tabBtnActive]}>도움내역</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.tabBtn} activeOpacity={0.8}>
-            <Text style={s.tabBtnText}>커뮤니티</Text>
+          <TouchableOpacity style={s.tabBtn} activeOpacity={0.8} onPress={() => setActiveTab('community')}>
+            <Text style={[s.tabBtnText, activeTab === 'community' && s.tabBtnActive]}>커뮤니티</Text>
           </TouchableOpacity>
         </View>
+        <View style={s.sectionDivider} />
+
+        {/* 탭 콘텐츠 */}
+        {!activeTab ? null : tabLoading ? (
+          <ActivityIndicator color={BLUE} style={{ marginTop: 32 }} />
+        ) : activeTab === 'help' ? (
+          helpHistory.length === 0 ? (
+            <View style={s.emptyTab}>
+              <Text style={s.emptyTabText}>도움 내역이 없어요</Text>
+            </View>
+          ) : (
+            helpHistory.map((item) => {
+              const st = STATUS_CONFIG[item.status];
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={s.listCard}
+                  activeOpacity={0.85}
+                  onPress={() => router.push({ pathname: '/request-detail', params: { id: item.id } })}
+                >
+                  <View style={s.listCardIcon}>
+                    <Text style={{ fontSize: 20 }}>{CATEGORY_EMOJI[item.category]}</Text>
+                  </View>
+                  <View style={s.listCardBody}>
+                    <View style={s.listCardTop}>
+                      <Text style={s.listCardCategory}>{CATEGORY_LABEL[item.category]}</Text>
+                      <View style={[s.statusBadge, { backgroundColor: st.bg }]}>
+                        <Text style={[s.statusBadgeText, { color: st.color }]}>{st.label}</Text>
+                      </View>
+                    </View>
+                    <Text style={s.listCardTitle} numberOfLines={2}>{item.title}</Text>
+                    <Text style={s.listCardTime}>{formatTime(item.createdAt)}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )
+        ) : (
+          (() => {
+            const myNationality = currentUser?.nationality ?? null;
+            const filtered = communityPosts.filter((p) => {
+              if (p.category !== 'QUESTION') return true;
+              const authorNationality = p.authorNationality ?? null;
+              if (myNationality === null) return authorNationality === null;
+              return authorNationality === myNationality;
+            });
+            return filtered.length === 0 ? (
+            <View style={s.emptyTab}>
+              <Text style={s.emptyTabText}>작성한 글이 없어요</Text>
+            </View>
+          ) : (
+            filtered.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={s.listCard}
+                activeOpacity={0.85}
+                onPress={() => router.push({ pathname: '/community-post', params: { id: item.id } })}
+              >
+                <View style={s.listCardBody}>
+                  <View style={s.listCardTop}>
+                    <Text style={s.listCardCategory}>{POST_CATEGORY_LABEL[item.category] ?? item.category}</Text>
+                    <Text style={s.listCardTime}>{formatTime(item.createdAt)}</Text>
+                  </View>
+                  <Text style={s.listCardTitle} numberOfLines={2}>{item.title}</Text>
+                  <Text style={s.listCardDesc} numberOfLines={1}>{item.content}</Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          );
+          })()
+        )}
       </ScrollView>
+
+      {/* 별점 리뷰 모달 */}
+      <Modal visible={reviewModal} transparent animationType="slide" onRequestClose={() => setReviewModal(false)}>
+        <View style={s.reviewOverlay}>
+          <View style={s.reviewSheet}>
+            <View style={s.reviewSheetHeader}>
+              <Text style={s.reviewSheetTitle}>받은 후기</Text>
+              <TouchableOpacity onPress={() => setReviewModal(false)} activeOpacity={0.7}>
+                <Ionicons name="close" size={22} color={T1} />
+              </TouchableOpacity>
+            </View>
+            {reviewsLoading ? (
+              <ActivityIndicator color={BLUE} style={{ marginTop: 40 }} />
+            ) : reviews.length === 0 ? (
+              <View style={s.reviewEmpty}>
+                <Text style={s.reviewEmptyText}>아직 받은 후기가 없어요</Text>
+              </View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 12 }}>
+                {reviews.map((r) => (
+                  <View key={r.id} style={s.reviewCard}>
+                    <View style={s.reviewCardTop}>
+                      <View style={s.reviewStars}>
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <Ionicons key={i} name="star" size={14} color={i <= r.rating ? '#F59E0B' : '#E5E7EB'} />
+                        ))}
+                      </View>
+                      <Text style={s.reviewTime}>{formatTime(r.createdAt)}</Text>
+                    </View>
+                    {r.helpRequestTitle ? (
+                      <Text style={s.reviewRequestTitle} numberOfLines={1}>{r.helpRequestTitle}</Text>
+                    ) : null}
+                    {r.comment ? (
+                      <Text style={s.reviewComment}>{r.comment}</Text>
+                    ) : null}
+                    <Text style={s.reviewerName}>{r.reviewer.nickname}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* 프로필 사진 풀스크린 */}
       {profileUri ? (
@@ -286,6 +474,28 @@ const s = StyleSheet.create({
   tabBtn: { width: '50%', paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
   tabBtnLeft: { borderRightWidth: 1, borderRightColor: BORDER },
   tabBtnText: { fontSize: 14, fontWeight: '700', color: T2 },
+  tabBtnActive: { color: BLUE },
+
+  emptyTab: { paddingVertical: 60, alignItems: 'center' },
+  emptyTabText: { fontSize: 14, color: T2 },
+
+  listCard: {
+    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 10,
+    borderRadius: 14, padding: 14, flexDirection: 'row', gap: 12,
+    borderWidth: 1, borderColor: BORDER,
+  },
+  listCardIcon: {
+    width: 44, height: 44, borderRadius: 12, backgroundColor: BLUE_L,
+    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
+  },
+  listCardBody: { flex: 1, gap: 4 },
+  listCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  listCardCategory: { fontSize: 11, fontWeight: '600', color: T2 },
+  listCardTitle: { fontSize: 14, fontWeight: '700', color: T1 },
+  listCardDesc: { fontSize: 12, color: T2 },
+  listCardTime: { fontSize: 11, color: T2 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  statusBadgeText: { fontSize: 11, fontWeight: '700' },
 
   avatarSection: {
     flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 4,
@@ -345,6 +555,31 @@ const s = StyleSheet.create({
     backgroundColor: BLUE_L, borderRadius: 20,
   },
   hobbyText: { fontSize: 11, fontWeight: '600', color: BLUE },
+
+  reviewOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end',
+  },
+  reviewSheet: {
+    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    maxHeight: '75%', paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+  },
+  reviewSheetHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: BORDER,
+  },
+  reviewSheetTitle: { fontSize: 16, fontWeight: '700', color: T1 },
+  reviewEmpty: { paddingVertical: 60, alignItems: 'center' },
+  reviewEmptyText: { fontSize: 14, color: T2 },
+  reviewCard: {
+    backgroundColor: BLUE_L, borderRadius: 12, padding: 14, gap: 6,
+  },
+  reviewCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  reviewStars: { flexDirection: 'row', gap: 2 },
+  reviewTime: { fontSize: 11, color: T2 },
+  reviewRequestTitle: { fontSize: 12, color: T2 },
+  reviewComment: { fontSize: 14, color: T1, lineHeight: 20 },
+  reviewerName: { fontSize: 12, fontWeight: '600', color: BLUE },
 
   fsOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',

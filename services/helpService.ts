@@ -105,3 +105,17 @@ export const getHelpedRequests = async (): Promise<ApiResponse<HelpRequest[]>> =
   const content: HelpRequest[] = response.data.data?.content ?? response.data.data ?? [];
   return { ...response.data, data: content };
 };
+
+// 특정 유저의 도움 내역 (한국인: 도우미로 완료)
+export const getUserHelpHistory = async (userId: number): Promise<ApiResponse<HelpRequest[]>> => {
+  const response = await api.get(`/requests/user/${userId}/helped`);
+  const content: HelpRequest[] = response.data.data?.content ?? response.data.data ?? [];
+  return { ...response.data, data: content.map(normalizeHelpRequest) };
+};
+
+// 특정 유저의 도움 요청 내역 (외국인: 요청자로 완료)
+export const getUserRequestHistory = async (userId: number): Promise<ApiResponse<HelpRequest[]>> => {
+  const response = await api.get(`/requests/user/${userId}/requested`);
+  const content: HelpRequest[] = response.data.data?.content ?? response.data.data ?? [];
+  return { ...response.data, data: content.map(normalizeHelpRequest) };
+};
