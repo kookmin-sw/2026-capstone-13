@@ -142,6 +142,7 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
   onImageScrollEnd?: () => void;
 }) {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
   const [liked, setLiked] = useState(item.liked);
   const [likeCount, setLikeCount] = useState(item.likes);
@@ -149,6 +150,7 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
   const [translating, setTranslating] = useState(false);
   const { getTranslation, setTranslation } = useCommunityStore();
   const translated = getTranslation(item.id);
+  const isMyPost = item.authorId !== undefined && item.authorId === user?.id;
   const profileUri = toAbsoluteUrl(item.authorProfileImage);
   const catColor = CATEGORY_COLOR[item.category];
   const catBg    = CATEGORY_BG[item.category];
@@ -162,8 +164,8 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
         <View style={s.feedHeader}>
           <TouchableOpacity
             style={s.feedAvatarWrap}
-            activeOpacity={0.8}
-            onPress={() => item.authorId && router.push({ pathname: '/user-profile', params: { id: item.authorId } })}
+            activeOpacity={isMyPost ? 1 : 0.8}
+            onPress={() => !isMyPost && item.authorId && router.push({ pathname: '/user-profile', params: { id: item.authorId } })}
           >
             {profileUri ? (
               <Image source={{ uri: profileUri }} style={s.feedAvatar} />
@@ -176,8 +178,8 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
           <View style={s.feedAuthorInfo}>
             <View style={s.feedNameRow}>
               <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => item.authorId && router.push({ pathname: '/user-profile', params: { id: item.authorId } })}
+                activeOpacity={isMyPost ? 1 : 0.8}
+                onPress={() => !isMyPost && item.authorId && router.push({ pathname: '/user-profile', params: { id: item.authorId } })}
               >
                 <Text style={s.feedAuthorName}>{item.author}</Text>
               </TouchableOpacity>

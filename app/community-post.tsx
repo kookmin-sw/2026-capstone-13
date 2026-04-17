@@ -298,8 +298,8 @@ export default function CommunityPostScreen() {
           {/* 작성자 정보 */}
           <TouchableOpacity
             style={s.authorRow}
-            activeOpacity={0.8}
-            onPress={() => post.authorId && router.push({ pathname: '/user-profile', params: { id: post.authorId } })}
+            activeOpacity={post.authorId === user?.id ? 1 : 0.8}
+            onPress={() => post.authorId !== user?.id && post.authorId && router.push({ pathname: '/user-profile', params: { id: post.authorId } })}
           >
             {toAbsoluteUrl(post.authorProfileImage)
               ? <Image source={{ uri: toAbsoluteUrl(post.authorProfileImage)! }} style={s.avatar} />
@@ -372,8 +372,8 @@ export default function CommunityPostScreen() {
                   onPress={() => router.push({ pathname: '/comment-detail', params: { commentId: c.id, postId: post!.id, authorId: c.authorId ?? '', authorName: c.author, authorProfileImage: c.authorProfileImage ?? '', content: c.content, createdAt: c.createdAt, userType: c.userType } })}
                 >
                   <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => c.authorId && router.push({ pathname: '/user-profile', params: { id: c.authorId } })}
+                    activeOpacity={c.authorId === user?.id ? 1 : 0.8}
+                    onPress={() => c.authorId !== user?.id && c.authorId && router.push({ pathname: '/user-profile', params: { id: c.authorId } })}
                   >
                     {toAbsoluteUrl(c.authorProfileImage)
                       ? <Image source={{ uri: toAbsoluteUrl(c.authorProfileImage)! }} style={s.commentAvatar} />
@@ -385,8 +385,8 @@ export default function CommunityPostScreen() {
                   <View style={s.commentBody}>
                     <View style={s.commentMeta}>
                       <TouchableOpacity
-                        activeOpacity={0.8}
-                        onPress={() => c.authorId && router.push({ pathname: '/user-profile', params: { id: c.authorId } })}
+                        activeOpacity={c.authorId === user?.id ? 1 : 0.8}
+                        onPress={() => c.authorId !== user?.id && c.authorId && router.push({ pathname: '/user-profile', params: { id: c.authorId } })}
                       >
                         <Text style={s.commentAuthor}>{c.author}</Text>
                       </TouchableOpacity>
