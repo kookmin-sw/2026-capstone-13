@@ -23,6 +23,7 @@ public class UserResponse {
     private String mbti;
     private String hobbies;
     private Double rating;
+    private Integer ratingCount;
     private Integer helpCount;
     private String createdAt;
     private String preferredLanguage;
@@ -46,6 +47,7 @@ public class UserResponse {
                 .mbti(user.getMbti())
                 .hobbies(user.getHobbies())
                 .rating(user.getRating())
+                .ratingCount(user.getRatingCount())
                 .helpCount(user.getHelpCount())
                 .createdAt(user.getCreatedAt().toString())
                 .preferredLanguage(user.getPreferredLanguage())
@@ -70,6 +72,7 @@ public class UserResponse {
                 .mbti(user.getMbti())
                 .hobbies(user.getHobbies())
                 .rating(user.getRating())
+                .ratingCount(user.getRatingCount())
                 .helpCount(user.getHelpCount())
                 .createdAt(user.getCreatedAt().toString())
                 .preferredLanguage(user.getPreferredLanguage())
