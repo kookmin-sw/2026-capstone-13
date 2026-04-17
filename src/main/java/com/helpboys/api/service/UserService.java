@@ -73,6 +73,7 @@ public class UserService implements UserDetailsService {
                 .userType(request.getUserType())
                 .university(request.getUniversity())
                 .major(request.getMajor())
+                .nationality(request.getNationality())
                 .emailVerified(true)
                 .studentIdImageUrl(request.getStudentIdImageUrl())
                 .studentIdStatus(User.StudentIdStatus.PENDING)

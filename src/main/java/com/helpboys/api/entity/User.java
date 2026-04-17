@@ -54,6 +54,10 @@ public class User {
     @Column
     private String major;
 
+    // 국적 (ISO 3166-1 alpha-2, 예: CN, JP, VN, KR 등)
+    @Column
+    private String nationality;
+
     @Column
     private String mbti;
 
