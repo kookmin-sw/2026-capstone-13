@@ -8,6 +8,7 @@ import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.DirectChatMessageRepository;
 import com.helpboys.api.repository.DirectChatRoomRepository;
+import com.helpboys.api.repository.UserBlockRepository;
 import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ public class DirectChatService {
     private final DirectChatRoomRepository roomRepository;
     private final DirectChatMessageRepository messageRepository;
     private final UserRepository userRepository;
+    private final UserBlockRepository userBlockRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final FcmService fcmService;
 
@@ -98,7 +100,9 @@ public class DirectChatService {
             throw new BusinessException("접근 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
         markAsRead(roomId, userId);
+        List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
         return messageRepository.findByRoom_IdOrderByCreatedAtAsc(roomId).stream()
+                .filter(m -> !blockedIds.contains(m.getSender().getId()))
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
@@ -130,20 +134,23 @@ public class DirectChatService {
 
         ChatMessageDto result = toDto(saved);
 
-        // 수신자에게 unreadCount 이벤트
         User receiver = room.getUser1().getId().equals(sender.getId()) ? room.getUser2() : room.getUser1();
-        long unread = messageRepository.countUnreadMessages(room.getId(), receiver.getId());
-        messagingTemplate.convertAndSend("/topic/user/" + receiver.getId(),
-                Map.of("type", "UNREAD_UPDATE", "directRoomId", room.getId(), "unreadCount", unread));
 
-        // FCM 푸시
-        if (receiver.getFcmToken() != null) {
-            try {
-                String preview = dto.getContent() != null && dto.getContent().length() > 50
-                        ? dto.getContent().substring(0, 50) + "…" : dto.getContent();
-                fcmService.sendPush(receiver.getFcmToken(), sender.getNickname(), preview);
-            } catch (Exception e) {
-                log.warn("[FCM] DM 푸시 전송 실패: {}", e.getMessage());
+        // 수신자가 발신자를 차단한 경우 브로드캐스트/알림 생략
+        boolean receiverBlockedSender = userBlockRepository.existsByBlockerIdAndBlockedId(receiver.getId(), sender.getId());
+        if (!receiverBlockedSender) {
+            long unread = messageRepository.countUnreadMessages(room.getId(), receiver.getId());
+            messagingTemplate.convertAndSend("/topic/user/" + receiver.getId(),
+                    Map.of("type", "UNREAD_UPDATE", "directRoomId", room.getId(), "unreadCount", unread));
+
+            if (receiver.getFcmToken() != null) {
+                try {
+                    String preview = dto.getContent() != null && dto.getContent().length() > 50
+                            ? dto.getContent().substring(0, 50) + "…" : dto.getContent();
+                    fcmService.sendPush(receiver.getFcmToken(), sender.getNickname(), preview);
+                } catch (Exception e) {
+                    log.warn("[FCM] DM 푸시 전송 실패: {}", e.getMessage());
+                }
             }
         }
 

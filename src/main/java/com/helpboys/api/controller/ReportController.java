@@ -59,6 +59,16 @@ public class ReportController {
         return ResponseEntity.ok(ApiResponse.success("조회 성공", reportService.getBlockedUsers(userId)));
     }
 
+    // GET /api/users/{userId}/block-status - 차단 여부 확인
+    @GetMapping("/api/users/{userId}/block-status")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Boolean>>> getBlockStatus(
+            @PathVariable Long userId,
+            @RequestHeader("Authorization") String token) {
+        Long myId = extractUserId(token);
+        boolean isBlocked = reportService.isBlocked(myId, userId);
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", java.util.Map.of("isBlocked", isBlocked)));
+    }
+
     private Long extractUserId(String bearerToken) {
         String token = bearerToken.replace("Bearer ", "");
         return jwtUtil.extractUserId(token);

@@ -9,6 +9,7 @@ import com.helpboys.api.dto.UserResponse;
 import com.helpboys.api.entity.Notification;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.exception.BusinessException;
+import com.helpboys.api.repository.UserBlockRepository;
 import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final UserBlockRepository userBlockRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
@@ -242,10 +244,12 @@ public class UserService implements UserDetailsService {
         return UserResponse.fromPublic(user);
     }
 
-    // 한국인 유저 목록 조회
-    public List<UserResponse> getKoreanUsers() {
+    // 한국인 유저 목록 조회 (차단 유저 제외)
+    public List<UserResponse> getKoreanUsers(Long userId) {
+        List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
         return userRepository.findByUserType(User.UserType.KOREAN)
                 .stream()
+                .filter(u -> !blockedIds.contains(u.getId()))
                 .map(UserResponse::from)
                 .collect(Collectors.toList());
     }

@@ -73,7 +73,18 @@ public class CommunityPostResponse {
 
     // 상세용 (최상위 댓글 + replyCount 포함)
     public static CommunityPostResponse fromDetail(CommunityPost post, boolean liked) {
-        long topLevelCount = post.getCommentList().stream()
+        return fromDetail(post, liked, java.util.Set.of());
+    }
+
+    // 상세용 + 차단 유저 댓글 제외
+    public static CommunityPostResponse fromDetail(CommunityPost post, boolean liked, java.util.Set<Long> blockedIds) {
+        List<com.helpboys.api.entity.PostComment> filtered = blockedIds.isEmpty()
+                ? post.getCommentList()
+                : post.getCommentList().stream()
+                        .filter(c -> !blockedIds.contains(c.getAuthor().getId()))
+                        .collect(Collectors.toList());
+
+        long topLevelCount = filtered.stream()
                 .filter(c -> c.getParentComment() == null).count();
 
         return CommunityPostResponse.builder()
@@ -90,7 +101,7 @@ public class CommunityPostResponse {
                 .authorNationality(post.getAuthor().getNationality())
                 .likes(post.getLikes())
                 .comments((int) topLevelCount)
-                .commentList(buildTopLevelComments(post.getCommentList()))
+                .commentList(buildTopLevelComments(filtered))
                 .liked(liked)
                 .createdAt(post.getCreatedAt().toString())
                 .build();

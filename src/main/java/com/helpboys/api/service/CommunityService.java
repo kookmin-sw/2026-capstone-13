@@ -73,12 +73,14 @@ public class CommunityService {
         return posts.map(post -> CommunityPostResponse.fromList(post, likedPostIds.contains(post.getId())));
     }
 
-    // 게시글 상세 조회 (댓글 포함)
+    // 게시글 상세 조회 (댓글 포함, 차단 유저 댓글 제외)
     @Transactional(readOnly = true)
     public CommunityPostResponse getPostById(Long postId, Long userId) {
         CommunityPost post = findPostById(postId);
         boolean liked = postLikeRepository.existsByPostIdAndUserId(postId, userId);
-        return CommunityPostResponse.fromDetail(post, liked);
+        List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
+        java.util.Set<Long> blockedSet = new java.util.HashSet<>(blockedIds);
+        return CommunityPostResponse.fromDetail(post, liked, blockedSet);
     }
 
     // 특정 유저의 게시글 목록 조회 (프로필 조회용)

@@ -29,10 +29,12 @@ public class UserController {
     private final JwtUtil jwtUtil;
     private final RateLimiter rateLimiter;
 
-    // GET /api/users/list/koreans - 한국인 유저 목록 조회 (외국인/교환학생이 도움 요청할 한국인 탐색)
+    // GET /api/users/list/koreans - 한국인 유저 목록 조회 (외국인/교환학생이 도움 요청할 한국인 탐색, 차단 유저 제외)
     @GetMapping("/list/koreans")
-    public ResponseEntity<ApiResponse<List<UserResponse>>> getKoreanUsers() {
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", userService.getKoreanUsers()));
+    public ResponseEntity<ApiResponse<List<UserResponse>>> getKoreanUsers(
+            @RequestHeader("Authorization") String token) {
+        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", userService.getKoreanUsers(userId)));
     }
 
     // GET /api/users/me - 내 프로필 조회

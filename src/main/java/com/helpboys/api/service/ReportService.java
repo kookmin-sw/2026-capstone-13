@@ -90,6 +90,12 @@ public class ReportService {
                 .collect(Collectors.toList());
     }
 
+    // 특정 유저 차단 여부 확인
+    @Transactional(readOnly = true)
+    public boolean isBlocked(Long blockerId, Long blockedId) {
+        return userBlockRepository.existsByBlockerIdAndBlockedId(blockerId, blockedId);
+    }
+
     private User findUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
