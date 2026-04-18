@@ -172,7 +172,8 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing]         = useState(false);
   const [viewMode, setViewMode]              = useState<'card' | 'list'>('card');
   const [searchQuery, setSearchQuery]        = useState('');
-  const [statusFilter, setStatusFilter]      = useState<'ALL' | 'WAITING' | 'IN_PROGRESS' | 'COMPLETED'>('ALL');
+  const [searchField, setSearchField]        = useState<'ALL' | 'TITLE' | 'CONTENT'>('ALL');
+  const [statusFilter, setStatusFilter]      = useState<'ALL' | 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | 'ONLINE' | 'OFFLINE'>('WAITING');
   const [intlTab, setIntlTab]                = useState<'card' | 'write' | 'list'>('card');
   const tabAnim                              = useRef(new Animated.Value(0)).current;
   const intlTabAnim                          = useRef(new Animated.Value(0)).current;
@@ -187,7 +188,7 @@ export default function HomeScreen() {
       tension: 35,
     }).start();
     setTimeout(() => {
-      scrollViewRef.current?.scrollTo({ y: koreanCardY.current - 60, animated: true });
+      scrollViewRef.current?.scrollTo({ y: mode === 'card' ? 0 : koreanCardY.current - 70, animated: true });
     }, 50);
   }, [tabAnim]);
 
@@ -469,29 +470,25 @@ const goTo = (item: HelpRequest) =>
             </View>
             <View style={{ display: viewMode === 'list' ? 'flex' : 'none' }}>
               <View style={s.listViewWrap}>
-                <View style={s.listFilterRow}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.listFilterScroll} style={{ maxWidth: 260 }}>
-                    {([
-                      { key: 'ALL',         label: '전체' },
-                      { key: 'WAITING',     label: '최신' },
-                      { key: 'IN_PROGRESS', label: '매칭중' },
-                      { key: 'COMPLETED',   label: '완료' },
-                    ] as const).map(({ key, label }) => (
-                      <TouchableOpacity
-                        key={key}
-                        style={[s.listFilterChip, statusFilter === key && s.listFilterChipOn]}
-                        onPress={() => setStatusFilter(key)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={[s.listFilterChipText, statusFilter === key && s.listFilterChipTextOn]}>{label}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                  <View style={s.searchBox}>
+                <View style={{ position: 'relative' }}>
+                  {/* 검색 필드 필터 */}
+                  <TouchableOpacity
+                    style={[s.searchFieldToggle, s.searchFieldBtn, s.searchFieldBtnOn]}
+                    onPress={() => {
+                      setSearchField(f => f === 'ALL' ? 'TITLE' : f === 'TITLE' ? 'CONTENT' : 'ALL');
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={s.searchFieldBtnTextOn}>
+                      {searchField === 'ALL' ? '전체' : searchField === 'TITLE' ? '제목' : '본문'}
+                    </Text>
+                  </TouchableOpacity>
+                  {/* 검색창 */}
+                  <View style={[s.searchBox, { marginLeft: sc(70), marginRight: sc(30) }]}>
                     <Ionicons name="search-outline" size={15} color={T2} />
                     <TextInput
                       style={s.searchInput}
-                      placeholder="검색"
+                      placeholder={searchField === 'TITLE' ? '제목 검색' : searchField === 'CONTENT' ? '본문 검색' : '전체 검색'}
                       placeholderTextColor={T2}
                       value={searchQuery}
                       onChangeText={setSearchQuery}
@@ -504,19 +501,44 @@ const goTo = (item: HelpRequest) =>
                     )}
                   </View>
                 </View>
+                <View style={[s.listFilterRow, { paddingLeft: sc(0) }]}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.listFilterScroll}>
+                    {([
+                      { key: 'WAITING',     label: '전체' },
+                      { key: 'IN_PROGRESS', label: '매칭중' },
+                      { key: 'COMPLETED',   label: '완료' },
+                      { key: 'ONLINE',      label: '온라인' },
+                      { key: 'OFFLINE',     label: '오프라인' },
+                    ] as const).map(({ key, label }) => (
+                      <TouchableOpacity
+                        key={key}
+                        style={[s.listFilterChip, statusFilter === key && s.listFilterChipOn]}
+                        onPress={() => setStatusFilter(key)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[s.listFilterChipText, statusFilter === key && s.listFilterChipTextOn]}>{label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
                 {(() => {
                   const CAT_LABEL: Record<HelpCategory, string> = {
                     BANK: '은행', HOSPITAL: '병원', SCHOOL: '학교', DAILY: '일상', OTHER: '기타',
                   };
                   const filtered = requests
-                    .filter(r => statusFilter === 'ALL'
-                      ? (r.status === 'WAITING' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED')
-                      : r.status === statusFilter
-                    )
-                    .filter(r => searchQuery.trim() === '' ||
-                      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      (r.requester?.nickname ?? '').toLowerCase().includes(searchQuery.toLowerCase())
-                    );
+                    .filter(r => {
+                      if (statusFilter === 'ALL' || statusFilter === 'WAITING') return r.status === 'WAITING' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED';
+                      if (statusFilter === 'ONLINE') return r.helpMethod === 'CHAT' || r.helpMethod === 'VIDEO_CALL';
+                      if (statusFilter === 'OFFLINE') return r.helpMethod === 'OFFLINE';
+                      return r.status === statusFilter;
+                    })
+                    .filter(r => {
+                      const kw = searchQuery.trim().toLowerCase();
+                      if (!kw) return true;
+                      if (searchField === 'TITLE') return r.title.toLowerCase().includes(kw);
+                      if (searchField === 'CONTENT') return r.description.toLowerCase().includes(kw);
+                      return r.title.toLowerCase().includes(kw) || r.description.toLowerCase().includes(kw);
+                    });
                   if (filtered.length === 0) {
                     return (
                       <View style={s.listEmpty}>
@@ -1223,6 +1245,51 @@ const s = StyleSheet.create({
   listFilterChipOn:      { backgroundColor: BLUE },
   listFilterChipText:    { fontSize: sc(12), fontWeight: '700', color: '#888' },
   listFilterChipTextOn:  { color: '#fff' },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: sc(8),
+    marginBottom: sc(6),
+  },
+  searchFieldToggle: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    zIndex: 10,
+  },
+  searchFieldBtn: {
+    width: sc(58),
+    paddingVertical: sc(9),
+    borderRadius: sc(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: BLUE_L,
+  },
+  searchFieldBtnOn: { backgroundColor: BLUE },
+  searchFieldBtnText: { fontSize: sc(12), fontWeight: '700', color: BLUE },
+  searchFieldBtnTextOn: { color: '#fff' },
+  searchDropdown: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: sc(12),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: sc(4) },
+    shadowOpacity: 0.12,
+    shadowRadius: sc(8),
+    elevation: 8,
+    zIndex: 100,
+    minWidth: sc(80),
+    overflow: 'hidden',
+  },
+  searchDropdownItem: {
+    paddingHorizontal: sc(16),
+    paddingVertical: sc(12),
+  },
+  searchDropdownItemOn: { backgroundColor: BLUE_L },
+  searchDropdownText: { fontSize: sc(13), fontWeight: '600', color: T1 },
+  searchDropdownTextOn: { color: BLUE, fontWeight: '700' },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
