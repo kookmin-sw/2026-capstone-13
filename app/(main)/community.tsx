@@ -9,6 +9,7 @@ import { getInitial } from '../../utils/getInitial';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Dimensions,
   FlatList,
   Image,
@@ -444,7 +445,18 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<SearchMode>('title');
   const [dropdownVisible, setDropdownVisible] = useState(false);
+  const { width: SCREEN_WIDTH } = Dimensions.get('window');
+  const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.72, 280);
+  const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const searchInputRef = useRef<TextInput>(null);
+
+  const openDrawer = () => {
+    setDropdownVisible(true);
+    Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, bounciness: 0, speed: 20 }).start();
+  };
+  const closeDrawer = () => {
+    Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 220, useNativeDriver: true }).start(() => setDropdownVisible(false));
+  };
   const HEADER_HEIGHT = insets.top + 76;
 
   const fetchPosts = useCallback(async () => {
@@ -540,7 +552,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
       <View style={[s.stickyHeader, { paddingTop: insets.top + 10 }]}>
         <View style={s.header}>
           {/* 카테고리 선택 버튼 */}
-          <TouchableOpacity style={s.catSelectorBtn} onPress={() => setDropdownVisible(true)} activeOpacity={0.8}>
+          <TouchableOpacity style={s.catSelectorBtn} onPress={openDrawer} activeOpacity={0.8}>
             <View style={[s.catSelectorIcon, { backgroundColor: menuItem?.bg ?? BG }]}>
               <Ionicons name={(menuItem?.icon ?? 'apps-outline') as never} size={16} color={menuItem?.color ?? T1} />
             </View>
@@ -595,29 +607,42 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
         {isLoading ? <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 40 }} /> : null}
       </View>
 
-      {/* 카테고리 드롭다운 모달 */}
-      <Modal visible={dropdownVisible} transparent animationType="fade" onRequestClose={() => setDropdownVisible(false)}>
-        <TouchableOpacity style={s.dropdownBackdrop} activeOpacity={1} onPress={() => setDropdownVisible(false)}>
-          <View style={[s.dropdownPanel, { top: insets.top + 56 }]}>
+      {/* 카테고리 사이드 드로어 */}
+      <Modal visible={dropdownVisible} transparent animationType="none" onRequestClose={closeDrawer}>
+        <View style={s.drawerOverlay}>
+          {/* 배경 딤 */}
+          <TouchableOpacity style={s.drawerBackdrop} activeOpacity={1} onPress={closeDrawer} />
+          {/* 슬라이드 패널 */}
+          <Animated.View style={[s.drawerPanel, { width: DRAWER_WIDTH, transform: [{ translateX: slideAnim }] }]}>
+            <View style={[s.drawerHeader, { paddingTop: insets.top + 16 }]}>
+              <Text style={s.drawerTitle}>게시판 선택</Text>
+              <TouchableOpacity onPress={closeDrawer} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close" size={22} color={T1} />
+              </TouchableOpacity>
+            </View>
+            <View style={s.drawerDivider} />
             {CATEGORY_MENU.map((item, idx) => {
               const isActive = item.key === category;
               return (
                 <TouchableOpacity
                   key={item.key}
-                  style={[s.dropdownItem, idx < CATEGORY_MENU.length - 1 && s.dropdownItemBorder]}
-                  onPress={() => { onCategoryChange(item.key as FilterCategory); setDropdownVisible(false); }}
+                  style={[s.drawerItem, idx < CATEGORY_MENU.length - 1 && s.drawerItemBorder, isActive && { backgroundColor: item.bg }]}
+                  onPress={() => { onCategoryChange(item.key as FilterCategory); closeDrawer(); }}
                   activeOpacity={0.7}
                 >
-                  <View style={[s.dropdownIcon, { backgroundColor: item.bg }]}>
-                    <Ionicons name={item.icon as never} size={18} color={item.color} />
+                  <View style={[s.drawerIcon, { backgroundColor: isActive ? item.color : item.bg }]}>
+                    <Ionicons name={item.icon as never} size={20} color={isActive ? '#fff' : item.color} />
                   </View>
-                  <Text style={[s.dropdownLabel, isActive && { color: item.color, fontWeight: '800' }]}>{item.label}</Text>
-                  {isActive && <Ionicons name="checkmark" size={16} color={item.color} />}
+                  <View style={s.drawerItemText}>
+                    <Text style={[s.drawerLabel, isActive && { color: item.color, fontWeight: '800' }]}>{item.label}</Text>
+                    <Text style={s.drawerDesc}>{item.desc}</Text>
+                  </View>
+                  {isActive && <Ionicons name="checkmark-circle" size={20} color={item.color} />}
                 </TouchableOpacity>
               );
             })}
-          </View>
-        </TouchableOpacity>
+          </Animated.View>
+        </View>
       </Modal>
     </View>
   );
@@ -700,30 +725,32 @@ const s = StyleSheet.create({
   },
   catSelectorLabel: { fontSize: sc(14), fontWeight: '800' },
 
-  dropdownBackdrop: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.25)',
-  },
-  dropdownPanel: {
-    position: 'absolute', left: 12,
+  drawerOverlay: { flex: 1 },
+  drawerBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
+  drawerPanel: {
+    position: 'absolute', top: 0, left: 0, bottom: 0,
     backgroundColor: '#fff',
-    borderRadius: sc(16),
-    borderWidth: 1, borderColor: BORDER,
-    minWidth: sc(200),
-    shadowColor: '#000', shadowOffset: { width: 0, height: sc(4) },
-    shadowOpacity: 0.15, shadowRadius: sc(12),
-    elevation: 8,
-    overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 4, height: 0 },
+    shadowOpacity: 0.12, shadowRadius: sc(16), elevation: 16,
   },
-  dropdownItem: {
-    flexDirection: 'row', alignItems: 'center', gap: sc(12),
-    paddingHorizontal: sc(14), paddingVertical: sc(13),
+  drawerHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: sc(20), paddingBottom: sc(14),
   },
-  dropdownItemBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
-  dropdownIcon: {
-    width: sc(34), height: sc(34), borderRadius: sc(10),
+  drawerTitle: { fontSize: sc(18), fontWeight: '800', color: T1 },
+  drawerDivider: { height: 1, backgroundColor: BORDER, marginBottom: sc(8) },
+  drawerItem: {
+    flexDirection: 'row', alignItems: 'center', gap: sc(14),
+    paddingHorizontal: sc(20), paddingVertical: sc(16),
+  },
+  drawerItemBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
+  drawerIcon: {
+    width: sc(44), height: sc(44), borderRadius: sc(13),
     justifyContent: 'center', alignItems: 'center',
   },
-  dropdownLabel: { flex: 1, fontSize: sc(15), fontWeight: '600', color: T1 },
+  drawerItemText: { flex: 1, gap: sc(2) },
+  drawerLabel: { fontSize: sc(16), fontWeight: '700', color: T1 },
+  drawerDesc: { fontSize: sc(12), color: T2 },
   headerSearchBar: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: sc(8),
     backgroundColor: BG, borderRadius: sc(22),

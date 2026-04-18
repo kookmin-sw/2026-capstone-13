@@ -465,7 +465,6 @@ const goTo = (item: HelpRequest) =>
             <View style={{ display: viewMode === 'card' ? 'flex' : 'none', marginLeft: 6, marginBottom: 24 }}>
               <KoreanAccountCardStack
                 requests={requests.filter(r => r.status === 'WAITING')}
-                onCardPress={(card) => card.requester?.id && router.push({ pathname: '/user-profile', params: { id: card.requester.id } })}
                 onAccept={(card) => goTo(card)}
               />
             </View>

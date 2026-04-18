@@ -21,11 +21,15 @@ import { useHelpRequestStore } from '../../stores/helpRequestStore';
 import type { HelpCategory, HelpMethod } from '../../types';
 import { s } from '../../utils/scale';
 
-const CATEGORIES: HelpCategory[] = ['BANK', 'HOSPITAL', 'SCHOOL', 'DAILY', 'OTHER'];
+const CATEGORIES: HelpCategory[] = ['BANK', 'HOSPITAL', 'DAILY', 'OTHER'];
 const METHODS: HelpMethod[] = ['CHAT', 'VIDEO_CALL', 'OFFLINE'];
 
-const CATEGORY_EMOJI: Record<HelpCategory, string> = {
-  BANK: '🏦', HOSPITAL: '🏥', SCHOOL: '🏫', DAILY: '🏠', OTHER: '📌',
+const CATEGORY_ICON: Record<HelpCategory, { name: React.ComponentProps<typeof Ionicons>['name']; color: string }> = {
+  BANK:     { name: 'business-outline',      color: '#5B7FA6' }, // 행정
+  HOSPITAL: { name: 'school-outline',        color: '#5B7FA6' }, // 학업
+  SCHOOL:   { name: 'school-outline',        color: '#5B7FA6' }, // 학교행정
+  DAILY:    { name: 'home-outline',          color: '#5B7FA6' }, // 생활
+  OTHER:    { name: 'add-circle-outline',    color: '#5B7FA6' }, // 기타
 };
 
 const METHOD_ICON: Record<HelpMethod, string> = {
@@ -157,7 +161,11 @@ export default function WriteScreen() {
                 ]}
                 onPress={() => setSelectedCategory(cat)}
               >
-                <Text style={styles.categoryChipEmoji}>{CATEGORY_EMOJI[cat]}</Text>
+                <Ionicons
+                  name={CATEGORY_ICON[cat].name}
+                  size={s(18)}
+                  color={selectedCategory === cat ? CATEGORY_ICON[cat].color : '#AABBCC'}
+                />
                 <Text style={[
                   styles.categoryChipText,
                   selectedCategory === cat && styles.categoryChipTextActive,
@@ -371,16 +379,16 @@ const styles = StyleSheet.create({
   // 카테고리
   categoryGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: s(10),
+    gap: s(8),
   },
   categoryChip: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: s(6),
-    paddingHorizontal: s(14),
+    justifyContent: 'center',
+    gap: s(5),
     paddingVertical: s(10),
-    borderRadius: s(10),
+    borderRadius: s(12),
     borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
@@ -389,11 +397,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     backgroundColor: '#EBF4FF',
   },
-  categoryChipEmoji: {
-    fontSize: s(16),
-  },
   categoryChipText: {
-    fontSize: s(14),
+    fontSize: s(13),
     fontWeight: '600',
     color: Colors.textSecondary,
   },

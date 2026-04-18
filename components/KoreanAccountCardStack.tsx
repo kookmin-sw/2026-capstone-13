@@ -83,7 +83,7 @@ const CardContent = memo(
     const isVerified = card.requester.studentIdVerified || card.requester.studentIdStatus === 'APPROVED';
 
     return (
-      <TouchableOpacity style={styles.card} activeOpacity={0.95} onPress={onCardPress}>
+      <View style={styles.card}>
         {showImage ? (
           <ImageBackground
             source={{ uri: profileUri }}
@@ -152,7 +152,7 @@ const CardContent = memo(
             </View>
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   },
   (prev, next) => prev.card.id === next.card.id,
