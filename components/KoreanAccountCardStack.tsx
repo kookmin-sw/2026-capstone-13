@@ -74,7 +74,7 @@ function formatTime(iso: string): string {
 const truncatedCache = new Map<string | number, boolean>();
 
 const CardContent = memo(
-  function CardContent({ card, onSkip, onAccept }: { card: HelpRequest; onSkip?: () => void; onAccept?: () => void }) {
+  function CardContent({ card, onSkip, onAccept, onCardPress }: { card: HelpRequest; onSkip?: () => void; onAccept?: () => void; onCardPress?: () => void }) {
     const [imgError, setImgError] = useState(false);
     const [isTruncated, setIsTruncated] = useState(() => truncatedCache.get(card.id) ?? false);
     const profileUri = card.requester.profileImage?.trim();
@@ -83,7 +83,7 @@ const CardContent = memo(
     const isVerified = card.requester.studentIdVerified || card.requester.studentIdStatus === 'APPROVED';
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity style={styles.card} activeOpacity={0.95} onPress={onCardPress}>
         {showImage ? (
           <ImageBackground
             source={{ uri: profileUri }}
@@ -152,7 +152,7 @@ const CardContent = memo(
             </View>
           </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   },
   (prev, next) => prev.card.id === next.card.id,
@@ -280,6 +280,7 @@ export default function KoreanAccountCardStack({ requests, onCardPress, onAccept
             card={card0}
             onSkip={handleSkip}
             onAccept={handleAccept}
+            onCardPress={onCardPress ? () => onCardPressRef.current?.(card0) : undefined}
           />
         </Animated.View>
       </View>

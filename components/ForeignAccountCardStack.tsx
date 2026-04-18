@@ -82,7 +82,7 @@ const truncatedCache = new Map<string | number, boolean>();
 
 // ── 카드 한 장 ─────────────────────────────────────────────
 const CardContent = memo(
-  function CardContent({ user, onPress, onSkip }: { user: User; onPress?: () => void; onSkip?: () => void }) {
+  function CardContent({ user, onPress, onSkip, onProfilePress }: { user: User; onPress?: () => void; onSkip?: () => void; onProfilePress?: () => void }) {
     const [imgError, setImgError] = useState(false);
     const [isTruncated, setIsTruncated] = useState(() => truncatedCache.get(user.id) ?? false);
     const profileUri = toAbsoluteUrl(user.profileImage?.trim());
@@ -92,7 +92,7 @@ const CardContent = memo(
     const isVerified = user.studentIdVerified || user.studentIdStatus === 'APPROVED';
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity style={styles.card} activeOpacity={0.95} onPress={onProfilePress}>
         {showImage ? (
           <ImageBackground
             source={{ uri: profileUri }}
@@ -166,7 +166,7 @@ const CardContent = memo(
             </View>
           </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   },
   (prev, next) => prev.user.id === next.user.id,
@@ -176,11 +176,12 @@ const CardContent = memo(
 interface ForeignAccountCardStackProps {
   users: User[];
   onPress?: (user: User) => void;
+  onProfilePress?: (user: User) => void;
 }
 
 const SWIPE_THRESHOLD = 80;
 
-export default function ForeignAccountCardStack({ users, onPress }: ForeignAccountCardStackProps) {
+export default function ForeignAccountCardStack({ users, onPress, onProfilePress }: ForeignAccountCardStackProps) {
   const n = users.length;
 
   const [order, setOrder] = useState<[number, number, number]>([0, 1, 2]);
@@ -294,6 +295,7 @@ export default function ForeignAccountCardStack({ users, onPress }: ForeignAccou
               user={user0}
               onPress={onPress ? () => onPressRef.current?.(user0) : undefined}
               onSkip={handleSkip}
+              onProfilePress={onProfilePress ? () => onProfilePress(user0) : undefined}
             />
           </Animated.View>
         </GestureDetector>

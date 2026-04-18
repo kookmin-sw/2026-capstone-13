@@ -277,7 +277,12 @@ export default function RequestDetailScreen() {
             </TouchableOpacity>
             <View style={styles.heroNameWrap}>
               <View style={styles.heroNameTopRow}>
-                <Text style={styles.heroName}>{item.requester.nickname}</Text>
+                <TouchableOpacity
+                  activeOpacity={!isMyPost && item.requester.id && item.requester.nickname !== '(알 수 없음)' ? 0.7 : 1}
+                  onPress={() => !isMyPost && item.requester.id && item.requester.nickname !== '(알 수 없음)' && router.push({ pathname: '/user-profile', params: { id: item.requester.id } })}
+                >
+                  <Text style={styles.heroName}>{item.requester.nickname}</Text>
+                </TouchableOpacity>
                 <View style={styles.heroBadgeRow}>
                   <View style={[styles.heroBadge, { backgroundColor: CATEGORY_BG[item.category] }]}>
                     <Text style={[styles.heroBadgeText, { color: CATEGORY_COLOR[item.category] }]}>

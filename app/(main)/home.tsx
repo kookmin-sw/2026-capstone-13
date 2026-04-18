@@ -334,6 +334,7 @@ const goTo = (item: HelpRequest) =>
               <ForeignAccountCardStack
                 users={koreanUsers}
                 onPress={() => switchIntlTab('write')}
+                onProfilePress={(u) => router.push({ pathname: '/user-profile', params: { id: u.id } })}
               />
             </View>
             <View style={{ display: intlTab === 'write' ? 'flex' : 'none' }}>
@@ -464,7 +465,7 @@ const goTo = (item: HelpRequest) =>
             <View style={{ display: viewMode === 'card' ? 'flex' : 'none', marginLeft: 6, marginBottom: 24 }}>
               <KoreanAccountCardStack
                 requests={requests.filter(r => r.status === 'WAITING')}
-                onCardPress={(card) => goTo(card)}
+                onCardPress={(card) => card.requester?.id && router.push({ pathname: '/user-profile', params: { id: card.requester.id } })}
                 onAccept={(card) => goTo(card)}
               />
             </View>
