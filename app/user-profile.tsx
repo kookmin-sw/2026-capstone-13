@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   Modal,
@@ -15,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { getPublicUserProfile } from '../services/authService';
+import { blockUser, getBlockStatus, unblockUser } from '../services/blockService';
 import { getOrCreateDirectRoom } from '../services/directChatService';
 import type { CommunityPostDto } from '../services/communityService';
 import { getUserCommunityPosts } from '../services/communityService';
@@ -123,11 +125,17 @@ export default function UserProfileScreen() {
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
-      const res = await getPublicUserProfile(Number(id));
-      if (res.success) setUser(res.data);
+      const [profileRes, blockRes] = await Promise.all([
+        getPublicUserProfile(Number(id)),
+        getBlockStatus(Number(id)),
+      ]);
+      if (profileRes.success) setUser(profileRes.data);
+      if (blockRes.success) setIsBlocked(blockRes.data.isBlocked);
     } catch {
       // ignore
     } finally {
@@ -187,9 +195,53 @@ export default function UserProfileScreen() {
           <Ionicons name="arrow-back" size={20} color={T1} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>프로필</Text>
-        <TouchableOpacity style={s.blockHeaderBtn} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={s.blockHeaderBtn}
+          activeOpacity={0.8}
+          disabled={blockLoading}
+          onPress={() => {
+            if (isBlocked) {
+              Alert.alert('차단 해제', '이 사용자의 차단을 해제하시겠어요?', [
+                { text: '취소', style: 'cancel' },
+                {
+                  text: '해제',
+                  onPress: async () => {
+                    setBlockLoading(true);
+                    try {
+                      await unblockUser(Number(id));
+                      setIsBlocked(false);
+                    } catch {
+                      Alert.alert('오류', '차단 해제에 실패했습니다.');
+                    } finally {
+                      setBlockLoading(false);
+                    }
+                  },
+                },
+              ]);
+            } else {
+              Alert.alert('차단하기', '이 사용자를 차단하시겠어요?\n차단한 사용자의 글과 메시지가 보이지 않습니다.', [
+                { text: '취소', style: 'cancel' },
+                {
+                  text: '차단',
+                  style: 'destructive',
+                  onPress: async () => {
+                    setBlockLoading(true);
+                    try {
+                      await blockUser(Number(id));
+                      setIsBlocked(true);
+                    } catch {
+                      Alert.alert('오류', '차단에 실패했습니다.');
+                    } finally {
+                      setBlockLoading(false);
+                    }
+                  },
+                },
+              ]);
+            }
+          }}
+        >
           <Ionicons name="ban-outline" size={14} color="#EF4444" />
-          <Text style={s.blockHeaderText}>차단하기</Text>
+          <Text style={s.blockHeaderText}>{isBlocked ? '차단해제' : '차단하기'}</Text>
         </TouchableOpacity>
       </View>
 

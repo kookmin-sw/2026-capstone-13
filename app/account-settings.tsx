@@ -74,6 +74,19 @@ export default function AccountSettingsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
+      {/* 차단 관리 섹션 */}
+      <View style={styles.section}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push('/blocked-users')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="ban-outline" size={20} color={T1} />
+          <Text style={[styles.menuItemText, { color: T1 }]}>차단 관리</Text>
+          <Ionicons name="chevron-forward" size={18} color={T2} style={styles.menuChevron} />
+        </TouchableOpacity>
+      </View>
+
       {/* 탈퇴 섹션 */}
       <View style={styles.section}>
         <TouchableOpacity
