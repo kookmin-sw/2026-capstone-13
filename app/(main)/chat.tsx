@@ -26,6 +26,7 @@ import {
   rejectHelper,
 } from '../../services/helpService';
 import { getChatRooms, type ChatRoomResponse } from '../../services/chatService';
+import { getDirectChatRooms, type DirectChatRoomResponse } from '../../services/directChatService';
 
 const BLUE     = '#3B6FE8';
 const BLUE_BG  = '#FFFFFF';
@@ -36,10 +37,11 @@ const T2       = '#A8C8FA';
 const T3       = '#6B9DF0';
 const GREEN    = '#22C55E';
 
-type FilterTab = 'ALL' | 'IN_PROGRESS' | 'COMPLETED';
+type FilterTab = 'ALL' | 'IN_PROGRESS' | 'COMPLETED' | 'DIRECT';
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
   { key: 'ALL',         label: '전체'   },
+  { key: 'DIRECT',      label: '일반'   },
   { key: 'IN_PROGRESS', label: '진행중' },
   { key: 'COMPLETED',   label: '완료'   },
 ];
@@ -88,9 +90,10 @@ export default function ChatScreen() {
   const { user } = useAuthStore();
   const isInternational = user?.userType !== 'KOREAN';
 
-  const [requests, setRequests]     = useState<ChatRoomResponse[]>([]);
-  const [isLoading, setIsLoading]   = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [requests, setRequests]         = useState<ChatRoomResponse[]>([]);
+  const [directRooms, setDirectRooms]   = useState<DirectChatRoomResponse[]>([]);
+  const [isLoading, setIsLoading]       = useState(true);
+  const [refreshing, setRefreshing]     = useState(false);
   const [actioningId, setActioningId] = useState<number | null>(null);
   const [filter, setFilter]         = useState<FilterTab>('ALL');
   const [searchVisible, setSearchVisible] = useState(false);
@@ -102,22 +105,25 @@ export default function ChatScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await getChatRooms();
-      if (res.success) {
-        setRequests(res.data);
-        // 조건 4: 외국인(requester)이 이전에 나갔다가 상대가 재신청해서 MATCHED가 된 경우
-        // → leftRooms에서 자동으로 제거해 수락/거절 UI가 다시 보이게 함
+      const [helpRes, directRes] = await Promise.allSettled([getChatRooms(), getDirectChatRooms()]);
+      if (helpRes.status === 'fulfilled' && helpRes.value.success) {
+        const data = helpRes.value.data;
+        setRequests(data);
         if (isInternational) {
-          res.data.forEach((r) => {
-            if (r.status === 'MATCHED' && hasLeft(r.id, myId)) {
-              rejoinRoom(r.id, myId);
-            }
+          data.forEach((r) => {
+            if (r.status === 'MATCHED' && hasLeft(r.id, myId)) rejoinRoom(r.id, myId);
           });
         }
-        const total = res.data
+        const helpUnread = data
           .filter((r) => !hasLeft(r.id, myId) && r.status !== 'WAITING')
           .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
-        setUnreadCount(total);
+        const directUnread = directRes.status === 'fulfilled' && directRes.value.success
+          ? directRes.value.data.filter((r) => !hasLeft(r.id, myId)).reduce((sum, r) => sum + (r.unreadCount ?? 0), 0)
+          : 0;
+        setUnreadCount(helpUnread + directUnread);
+      }
+      if (directRes.status === 'fulfilled' && directRes.value.success) {
+        setDirectRooms(directRes.value.data);
       }
     } catch {
       // 조회 실패 무시
@@ -206,39 +212,67 @@ export default function ChatScreen() {
     });
   };
 
+  const goToDirectChat = (room: DirectChatRoomResponse) => {
+    router.push({
+      pathname: '/chatroom',
+      params: {
+        roomId: room.id,
+        requestTitle: room.partnerNickname,
+        partnerNickname: room.partnerNickname,
+        partnerProfileImage: toAbsoluteUrl(room.partnerProfileImage) ?? '',
+        isDirect: 'true',
+        roomUnreadCount: String(room.unreadCount ?? 0),
+      },
+    });
+  };
+
   const openSearch = () => {
     setSearchVisible(true);
     setTimeout(() => searchInputRef.current?.focus(), 100);
   };
   const closeSearch = () => { setSearchVisible(false); setSearchQuery(''); };
 
-  const visibleItems = requests
-    .filter((r) => {
-      if (hasLeft(r.id, myId)) return false;
-      if (filter === 'ALL')         return r.status === 'MATCHED' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED' || r.status === 'WAITING';
-      if (filter === 'IN_PROGRESS') return r.status === 'IN_PROGRESS';
-      if (filter === 'COMPLETED')   return r.status === 'COMPLETED';
-      return false;
-    })
-    .sort((a, b) => {
-      if (a.status === 'MATCHED' && b.status !== 'MATCHED') return -1;
-      if (b.status === 'MATCHED' && a.status !== 'MATCHED') return 1;
-      return new Date(b.lastMessageTime ?? 0).getTime() - new Date(a.lastMessageTime ?? 0).getTime();
-    })
+  const visibleItems = filter === 'DIRECT'
+    ? []
+    : requests
+        .filter((r) => {
+          if (hasLeft(r.id, myId)) return false;
+          if (filter === 'ALL')         return r.status === 'MATCHED' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED' || r.status === 'WAITING';
+          if (filter === 'IN_PROGRESS') return r.status === 'IN_PROGRESS';
+          if (filter === 'COMPLETED')   return r.status === 'COMPLETED';
+          return false;
+        })
+        .sort((a, b) => {
+          if (a.status === 'MATCHED' && b.status !== 'MATCHED') return -1;
+          if (b.status === 'MATCHED' && a.status !== 'MATCHED') return 1;
+          return new Date(b.lastMessageTime ?? 0).getTime() - new Date(a.lastMessageTime ?? 0).getTime();
+        })
+        .filter((r) => {
+          if (!searchQuery.trim()) return true;
+          return r.partnerNickname.toLowerCase().includes(searchQuery.trim().toLowerCase());
+        });
+
+  const visibleDirectRooms = directRooms
+    .filter((r) => !hasLeft(r.id, myId))
     .filter((r) => {
       if (!searchQuery.trim()) return true;
       return r.partnerNickname.toLowerCase().includes(searchQuery.trim().toLowerCase());
     });
 
   // 섹션 헤더 포함 리스트 데이터
-  type ListData = ChatRoomResponse | { type: 'sectionHeader'; label: string; id: string };
+  type ListData = ChatRoomResponse | DirectChatRoomResponse | { type: 'sectionHeader'; label: string; id: string };
 
   const listDataWithSections: ListData[] = (() => {
+    if (filter === 'DIRECT') return visibleDirectRooms;
     if (filter !== 'ALL') return visibleItems;
     const inProgress = visibleItems.filter(r => r.status === 'IN_PROGRESS' || r.status === 'MATCHED');
     const completed  = visibleItems.filter(r => r.status === 'COMPLETED');
     const waiting    = visibleItems.filter(r => r.status === 'WAITING');
     const result: ListData[] = [];
+    if (visibleDirectRooms.length > 0) {
+      result.push({ type: 'sectionHeader', label: `일반 ${visibleDirectRooms.length}`, id: 'sec-direct' });
+      result.push(...visibleDirectRooms);
+    }
     if (inProgress.length > 0) {
       result.push({ type: 'sectionHeader', label: `진행중 ${inProgress.length}`, id: 'sec-progress' });
       result.push(...inProgress);
@@ -303,6 +337,62 @@ export default function ChatScreen() {
     // 섹션 헤더
     if ('type' in item && item.type === 'sectionHeader') {
       return <Text style={s.sectionLabel}>{item.label}</Text>;
+    }
+
+    // 일반 DM 방
+    if (!('status' in item)) {
+      const room = item as DirectChatRoomResponse;
+      const name = room.partnerNickname;
+      return (
+        <Swipeable
+          ref={(ref) => {
+            if (ref) swipeableRefs.current.set(room.id, ref);
+            else swipeableRefs.current.delete(room.id);
+          }}
+          renderRightActions={() => (
+            <TouchableOpacity style={s.deleteAction} onPress={() => {
+              if (user) {
+                useChatStore.getState().leaveRoom(room.id, Number(user.id));
+                setDirectRooms((prev) => prev.filter((r) => r.id !== room.id));
+              }
+            }}>
+              <Ionicons name="trash-outline" size={22} color="#fff" />
+              <Text style={s.deleteActionText}>나가기</Text>
+            </TouchableOpacity>
+          )}
+          rightThreshold={60}
+          overshootRight={false}
+        >
+          <TouchableOpacity
+            style={s.item}
+            onPress={() => goToDirectChat(room)}
+            activeOpacity={0.85}
+          >
+            <View style={s.avatarWrap}>
+              <PartnerAvatar profileUrl={toAbsoluteUrl(room.partnerProfileImage) ?? undefined} name={name} />
+            </View>
+            <View style={s.itemBody}>
+              <View style={s.itemTop}>
+                <View style={s.itemTitleRow}>
+                  <Text style={s.itemName}>{name}</Text>
+                  <View style={[s.statusBadge, { backgroundColor: '#F0F9FF' }]}>
+                    <Text style={[s.statusText, { color: '#0EA5E9' }]}>일반</Text>
+                  </View>
+                </View>
+                <Text style={s.itemTime}>{formatTime(room.lastMessageTime ?? '')}</Text>
+              </View>
+              <View style={s.itemBottom}>
+                <Text style={s.itemPreview} numberOfLines={1}>{room.lastMessage ?? '채팅을 시작해보세요'}</Text>
+                {room.unreadCount > 0 && (
+                  <View style={s.unreadBadge}>
+                    <Text style={s.unreadText}>{room.unreadCount > 99 ? '99+' : room.unreadCount}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Swipeable>
+      );
     }
 
     const room           = item as ChatRoomResponse;
@@ -458,14 +548,16 @@ export default function ChatScreen() {
         ))}
       </View>
 
-      {visibleItems.length === 0 ? (
+      {listDataWithSections.length === 0 ? (
         <View style={s.empty}>
           <Text style={s.emptyIcon}>💬</Text>
           <Text style={s.emptyTitle}>아직 채팅이 없어요</Text>
           <Text style={s.emptySub}>
-            {isInternational
-              ? '도움 요청을 올리면 도움을 줄 분이 나타나요!'
-              : '도움 요청 목록에서 도움을 신청해보세요!'}
+            {filter === 'DIRECT'
+              ? '상대방 프로필에서 채팅하기를 눌러보세요!'
+              : isInternational
+                ? '도움 요청을 올리면 도움을 줄 분이 나타나요!'
+                : '도움 요청 목록에서 도움을 신청해보세요!'}
           </Text>
         </View>
       ) : (

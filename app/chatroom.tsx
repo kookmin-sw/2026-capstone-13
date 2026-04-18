@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import { s } from '../utils/scale';
 import { getChatMessages, sendVoiceMessage, translateChatMessage, type ChatMessageDto } from '../services/chatService';
+import { getDirectMessages, leaveDirectRoom } from '../services/directChatService';
 import { leaveHelpRequest, completeHelpRequest, rejectHelper, startHelpRequest } from '../services/helpService';
 import { hasReviewed } from '../services/reviewService';
 import { useAuthStore } from '../stores/authStore';
@@ -66,6 +67,7 @@ export default function ChatRoomScreen() {
     requestStatus?: string;
     requesterId?: string;
     roomUnreadCount?: string;
+    isDirect?: string;
   }>();
 
   const roomId = Number(params.roomId);
@@ -73,6 +75,7 @@ export default function ChatRoomScreen() {
   const partnerProfileImage = params.partnerProfileImage || null;
   const requestTitle = params.requestTitle ?? '도움 요청';
   const isRequester = user?.id === Number(params.requesterId);
+  const isDirect = params.isDirect === 'true';
   const [partnerImgError, setPartnerImgError] = useState(false);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
@@ -96,24 +99,28 @@ export default function ChatRoomScreen() {
   // 이전 메시지 조회
   const loadHistory = useCallback(async () => {
     try {
-      const res = await getChatMessages(roomId);
-      if (res.success && res.data.length > 0) {
-        const sysLeaveFromPartner = res.data.find(
-          (m) => m.content?.startsWith(SYS_LEAVE) && m.senderId !== user?.id
-        );
-        // MATCHED/IN_PROGRESS는 재매칭된 상태 → 이전 SYS_LEAVE 이력 무시
-        const currentStatus = params.requestStatus ?? '';
-        const isActiveMatch = currentStatus === 'MATCHED' || currentStatus === 'IN_PROGRESS';
-        if (sysLeaveFromPartner && !isActiveMatch) setChatEnded(true);
-        const normalMsgs = res.data.filter((m) => !m.content?.startsWith(SYS_LEAVE));
-        setMessages(normalMsgs);
+      if (isDirect) {
+        const res = await getDirectMessages(roomId);
+        if (res.success && res.data.length > 0) setMessages(res.data as ChatMessageDto[]);
+      } else {
+        const res = await getChatMessages(roomId);
+        if (res.success && res.data.length > 0) {
+          const sysLeaveFromPartner = res.data.find(
+            (m) => m.content?.startsWith(SYS_LEAVE) && m.senderId !== user?.id
+          );
+          const currentStatus = params.requestStatus ?? '';
+          const isActiveMatch = currentStatus === 'MATCHED' || currentStatus === 'IN_PROGRESS';
+          if (sysLeaveFromPartner && !isActiveMatch) setChatEnded(true);
+          const normalMsgs = res.data.filter((m) => !m.content?.startsWith(SYS_LEAVE));
+          setMessages(normalMsgs);
+        }
       }
     } catch {
       // 새 채팅방이면 이력 없음 - 무시
     } finally {
       setIsLoading(false);
     }
-  }, [roomId]);
+  }, [roomId, isDirect]);
 
   // COMPLETED 상태면 포커스 될 때마다 리뷰 작성 여부 재조회 (후기 작성 후 돌아올 때 반영)
   useFocusEffect(useCallback(() => {
@@ -157,7 +164,8 @@ export default function ChatRoomScreen() {
         onConnect: () => {
           if (!mounted) return;
           setIsConnected(true);
-          client.subscribe(`/topic/chat/${roomId}`, (frame) => {
+          const topic = isDirect ? `/topic/direct/${roomId}` : `/topic/chat/${roomId}`;
+          client.subscribe(topic, (frame) => {
             try {
               const msg = JSON.parse(frame.body);
               if (!mounted) return;
@@ -267,7 +275,7 @@ export default function ChatRoomScreen() {
     };
 
     client.publish({
-      destination: '/app/chat/send',
+      destination: isDirect ? '/app/direct-chat/send' : '/app/chat/send',
       body: JSON.stringify(payload),
     });
 
@@ -275,26 +283,29 @@ export default function ChatRoomScreen() {
   };
 
   const handleLeave = () => {
-    Alert.alert('채팅방 나가기', '채팅방을 나가시겠어요?\n상대방에게 알림이 전송됩니다.', [
+    Alert.alert('채팅방 나가기', '채팅방을 나가시겠어요?', [
       { text: '취소', style: 'cancel' },
       {
         text: '나가기',
         style: 'destructive',
         onPress: () => {
-          // 채팅방 나가기 → 상태 WAITING 복귀 (다시 모집 가능)
-          leaveHelpRequest(Number(roomId)).catch(() => {});
-          const client = clientRef.current;
-          if (client?.connected && user) {
-            client.publish({
-              destination: '/app/chat/send',
-              body: JSON.stringify({
-                roomId,
-                senderId: user.id,
-                senderNickname: user.nickname,
-                content: `${SYS_LEAVE}${user.nickname}`,
-                createdAt: new Date().toISOString(),
-              }),
-            });
+          if (isDirect) {
+            leaveDirectRoom(Number(roomId)).catch(() => {});
+          } else {
+            leaveHelpRequest(Number(roomId)).catch(() => {});
+            const client = clientRef.current;
+            if (client?.connected && user) {
+              client.publish({
+                destination: '/app/chat/send',
+                body: JSON.stringify({
+                  roomId,
+                  senderId: user.id,
+                  senderNickname: user.nickname,
+                  content: `${SYS_LEAVE}${user.nickname}`,
+                  createdAt: new Date().toISOString(),
+                }),
+              });
+            }
           }
           if (user) leaveRoom(Number(roomId), Number(user.id));
           setMessages([]);
@@ -646,7 +657,7 @@ export default function ChatRoomScreen() {
           activeOpacity={1}
         >
           <View style={styles.menuDropdown}>
-            {isRequester && !chatEnded && helpStatus !== 'COMPLETED' && (
+            {!isDirect && isRequester && !chatEnded && helpStatus !== 'COMPLETED' && (
               <>
                 <TouchableOpacity
                   style={styles.menuItem}
@@ -658,7 +669,7 @@ export default function ChatRoomScreen() {
                 <View style={styles.menuDivider} />
               </>
             )}
-            {helpStatus === 'COMPLETED' && !alreadyReviewed && (
+            {!isDirect && helpStatus === 'COMPLETED' && !alreadyReviewed && (
               <>
                 <TouchableOpacity
                   style={styles.menuItem}
@@ -681,7 +692,7 @@ export default function ChatRoomScreen() {
                 <View style={styles.menuDivider} />
               </>
             )}
-            {helpStatus === 'COMPLETED' && alreadyReviewed && (
+            {!isDirect && helpStatus === 'COMPLETED' && alreadyReviewed && (
               <>
                 <View style={styles.menuItem}>
                   <Ionicons name="star" size={18} color="#F97316" />
@@ -701,19 +712,21 @@ export default function ChatRoomScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* 요청 컨텍스트 배너 */}
-      <View style={styles.contextBanner}>
-        <View style={styles.contextIconBox}>
-          <Ionicons name="document-text-outline" size={14} color="#fff" />
+      {/* 요청 컨텍스트 배너 (일반 채팅은 숨김) */}
+      {!isDirect && (
+        <View style={styles.contextBanner}>
+          <View style={styles.contextIconBox}>
+            <Ionicons name="document-text-outline" size={14} color="#fff" />
+          </View>
+          <View style={styles.contextBody}>
+            <Text style={styles.contextText} numberOfLines={1}>{requestTitle}</Text>
+            <Text style={styles.contextSub}>진행중 · 국민대학교</Text>
+          </View>
+          <View style={styles.contextBadge}>
+            <Text style={styles.contextBadgeText}>진행중</Text>
+          </View>
         </View>
-        <View style={styles.contextBody}>
-          <Text style={styles.contextText} numberOfLines={1}>{requestTitle}</Text>
-          <Text style={styles.contextSub}>진행중 · 국민대학교</Text>
-        </View>
-        <View style={styles.contextBadge}>
-          <Text style={styles.contextBadgeText}>진행중</Text>
-        </View>
-      </View>
+      )}
 
       {/* 메시지 목록 */}
       {isLoading ? (
@@ -736,7 +749,7 @@ export default function ChatRoomScreen() {
             listData.length <= 1 && styles.messageListEmpty,
           ]}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={helpStatus === 'MATCHED' ? (
+          ListHeaderComponent={!isDirect && helpStatus === 'MATCHED' ? (
             <View style={styles.noticeBanner}>
               <View style={styles.noticeHeader}>
                 <Text style={styles.noticeIcon}>🤝</Text>
@@ -784,7 +797,7 @@ export default function ChatRoomScreen() {
 
 
       {/* 입력창 */}
-      {(helpStatus === 'MATCHED' || chatEnded) && (
+      {!isDirect && (helpStatus === 'MATCHED' || chatEnded) && (
         <View style={styles.inputBarLocked}>
           <Ionicons name={chatEnded ? 'close-circle-outline' : 'lock-closed-outline'} size={14} color="#9CA3AF" />
           <Text style={styles.inputLockedText}>
@@ -792,7 +805,7 @@ export default function ChatRoomScreen() {
           </Text>
         </View>
       )}
-      <View style={[styles.inputBar, (helpStatus === 'MATCHED' || chatEnded) && styles.inputBarHidden]}>
+      <View style={[styles.inputBar, !isDirect && (helpStatus === 'MATCHED' || chatEnded) && styles.inputBarHidden]}>
         <TouchableOpacity style={styles.attachBtn}>
           <Ionicons name="add" size={22} color="#6B7280" />
         </TouchableOpacity>

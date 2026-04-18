@@ -11,6 +11,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useBannerStore } from '../../stores/bannerStore';
 import { getMyRequests, getHelpedRequests } from '../../services/helpService';
 import { getChatRooms } from '../../services/chatService';
+import { getDirectChatRooms } from '../../services/directChatService';
 import InAppBanner from '../../components/InAppBanner';
 import CustomTabBar from '../../components/CustomTabBar';
 
@@ -30,14 +31,13 @@ export default function MainLayout() {
     if (!user) return;
     const { hasLeft } = useChatStore.getState();
     const myId = Number(user.id);
-    getChatRooms().then((res) => {
-      if (res.success && Array.isArray(res.data)) {
-        const total = res.data
+    Promise.allSettled([getChatRooms(), getDirectChatRooms()]).then(([helpRes, directRes]) => {
+      let total = 0;
+      if (helpRes.status === 'fulfilled' && helpRes.value.success && Array.isArray(helpRes.value.data)) {
+        total += helpRes.value.data
           .filter((r) => !hasLeft(r.id, myId) && r.status !== 'WAITING')
           .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
-        setUnreadCount(total);
-        // 방 정보 캐시 저장
-        res.data.forEach((r) => {
+        helpRes.value.data.forEach((r) => {
           roomCacheRef.current[r.id] = {
             requestTitle: r.title,
             partnerNickname: r.partnerNickname,
@@ -47,6 +47,21 @@ export default function MainLayout() {
           };
         });
       }
+      if (directRes.status === 'fulfilled' && directRes.value.success && Array.isArray(directRes.value.data)) {
+        total += directRes.value.data
+          .filter((r) => !hasLeft(r.id, myId))
+          .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0);
+        directRes.value.data.forEach((r) => {
+          roomCacheRef.current[-(r.id)] = {
+            requestTitle: r.partnerNickname,
+            partnerNickname: r.partnerNickname,
+            partnerProfileImage: r.partnerProfileImage,
+            requestStatus: 'DIRECT',
+            requesterId: '',
+          };
+        });
+      }
+      setUnreadCount(total);
     }).catch(() => {});
   }, [user?.id]);
 
@@ -60,19 +75,24 @@ export default function MainLayout() {
       if (!mounted) return;
 
       // 활성 채팅방 ID 수집
-      const results = await Promise.allSettled([getMyRequests(), getHelpedRequests()]);
+      const results = await Promise.allSettled([getMyRequests(), getHelpedRequests(), getDirectChatRooms()]);
       if (!mounted) return;
 
       const activeRoomIds = new Set<number>();
-      results.forEach((result) => {
+      const directRoomIds = new Set<number>();
+      results.slice(0, 2).forEach((result) => {
         if (result.status === 'fulfilled' && result.value.success && Array.isArray(result.value.data)) {
           result.value.data
             .filter((r) => r.status === 'IN_PROGRESS' || r.status === 'MATCHED')
             .forEach((r) => activeRoomIds.add(r.id));
         }
       });
+      const directResult = results[2];
+      if (directResult.status === 'fulfilled' && directResult.value.success && Array.isArray(directResult.value.data)) {
+        directResult.value.data.forEach((r) => directRoomIds.add(r.id));
+      }
 
-      if (activeRoomIds.size === 0) return;
+      if (activeRoomIds.size === 0 && directRoomIds.size === 0) return;
 
       const client = new Client({
         webSocketFactory: () => new WebSocket(WS_URL),
@@ -89,13 +109,10 @@ export default function MainLayout() {
               if (!mounted) return;
               try {
                 const msg = JSON.parse(frame.body);
-                // SYS 메시지는 뱃지 증가에서 제외
                 if (msg.content?.startsWith('SYS_LEAVE:') || msg.content?.startsWith('SYS_CALL_')) return;
-                // 상대방 메시지이고 현재 그 채팅방 안에 없을 때만 뱃지 증가
                 const { activeChatroomId } = useChatStore.getState();
                 if (msg.senderId !== user.id && activeChatroomId !== roomId) {
                   incrementUnread();
-                  // 인앱 배너 표시
                   const roomInfo = roomCacheRef.current[roomId];
                   showBanner({
                     type: 'chat',
@@ -108,6 +125,33 @@ export default function MainLayout() {
                       partnerProfileImage: roomInfo.partnerProfileImage,
                       requestStatus: roomInfo.requestStatus,
                       requesterId: roomInfo.requesterId,
+                    } : undefined,
+                  });
+                }
+              } catch {}
+            });
+          });
+          directRoomIds.forEach((roomId) => {
+            client.subscribe(`/topic/direct/${roomId}`, (frame) => {
+              if (!mounted) return;
+              try {
+                const msg = JSON.parse(frame.body);
+                if (msg.type === 'READ') return;
+                const { activeChatroomId } = useChatStore.getState();
+                if (msg.senderId !== user.id && activeChatroomId !== roomId) {
+                  incrementUnread();
+                  const roomInfo = roomCacheRef.current[-(roomId)];
+                  showBanner({
+                    type: 'chat',
+                    title: msg.senderNickname ?? roomInfo?.partnerNickname ?? '새 메시지',
+                    body: msg.content,
+                    roomId,
+                    roomParams: roomInfo ? {
+                      requestTitle: roomInfo.partnerNickname,
+                      partnerNickname: roomInfo.partnerNickname,
+                      partnerProfileImage: roomInfo.partnerProfileImage,
+                      requestStatus: 'DIRECT',
+                      requesterId: '',
                     } : undefined,
                   });
                 }

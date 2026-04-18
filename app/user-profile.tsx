@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { getPublicUserProfile } from '../services/authService';
+import { getOrCreateDirectRoom } from '../services/directChatService';
 import type { CommunityPostDto } from '../services/communityService';
 import { getUserCommunityPosts } from '../services/communityService';
 import { getUserHelpHistory, getUserRequestHistory } from '../services/helpService';
@@ -121,6 +122,7 @@ export default function UserProfileScreen() {
   const [reviewModal, setReviewModal] = useState(false);
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -435,7 +437,35 @@ export default function UserProfileScreen() {
 
       {/* 하단 버튼 바 */}
       <View style={s.bottomBar}>
-        <TouchableOpacity style={s.chatBtn} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={[s.chatBtn, chatLoading && { opacity: 0.7 }]}
+          activeOpacity={0.8}
+          disabled={chatLoading}
+          onPress={async () => {
+            if (!user) return;
+            setChatLoading(true);
+            try {
+              const res = await getOrCreateDirectRoom(Number(id));
+              if (res.success) {
+                router.push({
+                  pathname: '/chatroom',
+                  params: {
+                    roomId: res.data.id,
+                    requestTitle: user.nickname,
+                    partnerNickname: user.nickname,
+                    partnerProfileImage: toAbsoluteUrl(user.profileImage) ?? '',
+                    isDirect: 'true',
+                    roomUnreadCount: String(res.data.unreadCount ?? 0),
+                  },
+                });
+              }
+            } catch {
+              // ignore
+            } finally {
+              setChatLoading(false);
+            }
+          }}
+        >
           <Ionicons name="chatbubble-outline" size={18} color="#fff" />
           <Text style={s.chatBtnText}>채팅하기</Text>
         </TouchableOpacity>
