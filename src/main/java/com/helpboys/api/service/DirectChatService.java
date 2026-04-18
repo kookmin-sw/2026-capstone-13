@@ -5,6 +5,7 @@ import com.helpboys.api.dto.DirectChatRoomResponse;
 import com.helpboys.api.entity.DirectChatMessage;
 import com.helpboys.api.entity.DirectChatRoom;
 import com.helpboys.api.entity.User;
+import com.helpboys.api.entity.UserBlock;
 import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.DirectChatMessageRepository;
 import com.helpboys.api.repository.DirectChatRoomRepository;
@@ -12,6 +13,7 @@ import com.helpboys.api.repository.UserBlockRepository;
 import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -57,8 +59,12 @@ public class DirectChatService {
             room = roomRepository.save(room);
         }
 
-        DirectChatMessage last = messageRepository.findTopByRoom_IdOrderByCreatedAtDesc(room.getId()).orElse(null);
-        long unread = messageRepository.countUnreadMessages(room.getId(), myUserId);
+        List<Long> myBlockedIds = userBlockRepository.findBlockedIdsByBlockerId(myUserId);
+        List<Long> excludeIds = myBlockedIds.isEmpty() ? List.of(-1L) : myBlockedIds;
+        DirectChatMessage last = messageRepository
+                .findByRoomExcludingOrderByCreatedAtDesc(room.getId(), excludeIds, PageRequest.of(0, 1))
+                .stream().findFirst().orElse(null);
+        long unread = messageRepository.countUnreadMessagesExcluding(room.getId(), myUserId, excludeIds);
         return DirectChatRoomResponse.from(room, myUserId,
                 last != null ? last.getContent() : null,
                 last != null ? last.getCreatedAt().toString() : null,
@@ -68,17 +74,23 @@ public class DirectChatService {
     // 내 DM 방 목록 (내가 나가지 않은 방 + 메시지 있는 방만)
     @Transactional(readOnly = true)
     public List<DirectChatRoomResponse> getRooms(Long userId) {
+        List<Long> myBlockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
+        List<Long> excludeIds = myBlockedIds.isEmpty() ? List.of(-1L) : myBlockedIds;
         return roomRepository.findByUserId(userId).stream()
                 .filter(r -> {
                     boolean iLeftByUser1 = r.getUser1().getId().equals(userId) && r.isLeftByUser1();
                     boolean iLeftByUser2 = r.getUser2().getId().equals(userId) && r.isLeftByUser2();
                     if (iLeftByUser1 || iLeftByUser2) return false;
-                    // 메시지 없으면 목록에서 숨김
-                    return messageRepository.findTopByRoom_IdOrderByCreatedAtDesc(r.getId()).isPresent();
+                    // 차단 유저 제외 후 메시지 없으면 목록에서 숨김
+                    return !messageRepository
+                            .findByRoomExcludingOrderByCreatedAtDesc(r.getId(), excludeIds, PageRequest.of(0, 1))
+                            .isEmpty();
                 })
                 .map(r -> {
-                    DirectChatMessage last = messageRepository.findTopByRoom_IdOrderByCreatedAtDesc(r.getId()).orElse(null);
-                    long unread = messageRepository.countUnreadMessages(r.getId(), userId);
+                    DirectChatMessage last = messageRepository
+                            .findByRoomExcludingOrderByCreatedAtDesc(r.getId(), excludeIds, PageRequest.of(0, 1))
+                            .stream().findFirst().orElse(null);
+                    long unread = messageRepository.countUnreadMessagesExcluding(r.getId(), userId, excludeIds);
                     return DirectChatRoomResponse.from(r, userId,
                             last != null ? last.getContent() : null,
                             last != null ? last.getCreatedAt().toString() : null,
@@ -100,9 +112,16 @@ public class DirectChatService {
             throw new BusinessException("접근 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
         markAsRead(roomId, userId);
-        List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
+        // 차단 시점 이후 메시지만 숨김 (차단 전 메시지는 유지)
+        List<UserBlock> blocks = userBlockRepository.findByBlockerIdOrderByCreatedAtDesc(userId);
+        Map<Long, LocalDateTime> blockTimeMap = blocks.stream()
+                .collect(Collectors.toMap(ub -> ub.getBlocked().getId(), UserBlock::getCreatedAt));
         return messageRepository.findByRoom_IdOrderByCreatedAtAsc(roomId).stream()
-                .filter(m -> !blockedIds.contains(m.getSender().getId()))
+                .filter(m -> {
+                    LocalDateTime blockTime = blockTimeMap.get(m.getSender().getId());
+                    if (blockTime == null) return true;
+                    return m.getCreatedAt().isBefore(blockTime);
+                })
                 .map(this::toDto)
                 .collect(Collectors.toList());
     }
