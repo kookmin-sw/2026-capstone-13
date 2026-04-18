@@ -14,16 +14,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getInitial } from '../utils/getInitial';
-import { s as sc } from '../utils/scale';
 import { getPublicUserProfile } from '../services/authService';
-import { getUserHelpHistory, getUserRequestHistory } from '../services/helpService';
+import type { CommunityPostDto } from '../services/communityService';
 import { getUserCommunityPosts } from '../services/communityService';
+import { getUserHelpHistory, getUserRequestHistory } from '../services/helpService';
+import type { ReviewResponse } from '../services/reviewService';
 import { getMyReviews } from '../services/reviewService';
 import { useAuthStore } from '../stores/authStore';
-import type { User, HelpRequest, HelpCategory, HelpMethod, RequestStatus } from '../types';
-import type { CommunityPostDto } from '../services/communityService';
-import type { ReviewResponse } from '../services/reviewService';
+import type { HelpCategory, HelpRequest, RequestStatus, User } from '../types';
+import { getInitial } from '../utils/getInitial';
+import { s as sc } from '../utils/scale';
 
 const BLUE    = '#3B6FE8';
 const BLUE_BG = '#F5F8FF';
@@ -472,37 +472,32 @@ const s = StyleSheet.create({
   topSection: { backgroundColor: '#fff', paddingHorizontal: sc(16), paddingTop: sc(24), paddingBottom: sc(6), gap: sc(12) },
   sectionDivider: { height: sc(1), backgroundColor: BORDER },
   tabBtnRow: { flexDirection: 'row', backgroundColor: '#fff' },
-<<<<<<< HEAD
   tabBtn: { width: '50%', paddingVertical: sc(14), alignItems: 'center', justifyContent: 'center' },
   tabBtnLeft: { borderRightWidth: sc(1), borderRightColor: BORDER },
   tabBtnText: { fontSize: sc(14), fontWeight: '700', color: T2 },
-=======
-  tabBtn: { width: '50%', paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
-  tabBtnLeft: { borderRightWidth: 1, borderRightColor: BORDER },
-  tabBtnText: { fontSize: 14, fontWeight: '700', color: T2 },
   tabBtnActive: { color: BLUE },
 
-  emptyTab: { paddingVertical: 60, alignItems: 'center' },
-  emptyTabText: { fontSize: 14, color: T2 },
+  emptyTab: { paddingVertical: sc(60), alignItems: 'center' },
+  emptyTabText: { fontSize: sc(14), color: T2 },
 
   listCard: {
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 10,
-    borderRadius: 14, padding: 14, flexDirection: 'row', gap: 12,
-    borderWidth: 1, borderColor: BORDER,
+    backgroundColor: '#fff', marginHorizontal: sc(16), marginTop: sc(10),
+    borderRadius: sc(14), padding: sc(14), flexDirection: 'row', gap: sc(12),
+    borderWidth: sc(1), borderColor: BORDER,
   },
   listCardIcon: {
-    width: 44, height: 44, borderRadius: 12, backgroundColor: BLUE_L,
+    width: sc(44), height: sc(44), borderRadius: sc(12), backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center', flexShrink: 0,
   },
-  listCardBody: { flex: 1, gap: 4 },
+  listCardBody: { flex: 1, gap: sc(4) },
   listCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  listCardCategory: { fontSize: 11, fontWeight: '600', color: T2 },
-  listCardTitle: { fontSize: 14, fontWeight: '700', color: T1 },
-  listCardDesc: { fontSize: 12, color: T2 },
-  listCardTime: { fontSize: 11, color: T2 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  statusBadgeText: { fontSize: 11, fontWeight: '700' },
->>>>>>> b58b441f28bd74f28ba99b65cdb0cb04a18e65b2
+  listCardCategory: { fontSize: sc(11), fontWeight: '600', color: T2 },
+  listCardTitle: { fontSize: sc(14), fontWeight: '700', color: T1 },
+  listCardDesc: { fontSize: sc(12), color: T2 },
+  listCardTime: { fontSize: sc(11), color: T2 },
+  statusBadge: { paddingHorizontal: sc(8), paddingVertical: sc(3), borderRadius: sc(20) },
+  statusBadgeText: { fontSize: sc(11), fontWeight: '700' },
+
 
   avatarSection: {
     flexDirection: 'row', alignItems: 'center', gap: sc(16), marginBottom: sc(4),

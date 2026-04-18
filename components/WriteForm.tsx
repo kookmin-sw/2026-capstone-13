@@ -101,20 +101,20 @@ export default function WriteForm({ onSuccess }: WriteFormProps) {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-    <View style={s.wrap}>
+    <View style={styles.wrap}>
 
       {/* 카테고리 */}
-      <View style={s.section}>
-        <Text style={s.label}>카테고리</Text>
-        <View style={s.categoryGrid}>
+      <View style={styles.section}>
+        <Text style={styles.label}>카테고리</Text>
+        <View style={styles.categoryGrid}>
           {CATEGORIES.map((cat) => (
             <TouchableOpacity
               key={cat}
-              style={[s.categoryChip, selectedCategory === cat && s.categoryChipActive]}
+              style={[styles.categoryChip, selectedCategory === cat && styles.categoryChipActive]}
               onPress={() => setSelectedCategory(cat)}
             >
-              <Text style={s.categoryChipEmoji}>{CATEGORY_EMOJI[cat]}</Text>
-              <Text style={[s.categoryChipText, selectedCategory === cat && s.categoryChipTextActive]}>
+              <Text style={styles.categoryChipEmoji}>{CATEGORY_EMOJI[cat]}</Text>
+              <Text style={[styles.categoryChipText, selectedCategory === cat && styles.categoryChipTextActive]}>
                 {CATEGORY_LABEL[cat]}
               </Text>
             </TouchableOpacity>
@@ -123,24 +123,24 @@ export default function WriteForm({ onSuccess }: WriteFormProps) {
       </View>
 
       {/* 제목 */}
-      <View style={s.section}>
-        <Text style={s.label}>제목</Text>
+      <View style={styles.section}>
+        <Text style={styles.label}>제목</Text>
         <TextInput
-          style={s.input}
+          style={styles.input}
           placeholder="제목을 입력해주세요."
           placeholderTextColor={Colors.textLight}
           value={title}
           onChangeText={setTitle}
           maxLength={50}
         />
-        <Text style={s.charCount}>{title.length}/50</Text>
+        <Text style={styles.charCount}>{title.length}/50</Text>
       </View>
 
       {/* 설명 */}
-      <View style={[s.section, { paddingTop: 4 }]}>
-        <Text style={s.label}>자세한 설명</Text>
+      <View style={[styles.section, { paddingTop: 4 }]}>
+        <Text style={styles.label}>자세한 설명</Text>
         <TextInput
-          style={s.textarea}
+          style={styles.textarea}
           placeholder={'어떤 도움이 필요한지 자세히 적어주세요.\n\n상황을 자세히 설명할수록 더 빠르게 매칭됩니다.'}
           placeholderTextColor={Colors.textLight}
           value={description}
@@ -149,21 +149,21 @@ export default function WriteForm({ onSuccess }: WriteFormProps) {
           textAlignVertical="top"
           maxLength={500}
         />
-        <Text style={s.charCount}>{description.length}/500</Text>
+        <Text style={styles.charCount}>{description.length}/500</Text>
       </View>
 
       {/* 도움 방식 */}
-      <View style={[s.section, { paddingTop: 4 }]}>
-        <Text style={s.label}>도움 방식</Text>
-        <View style={s.methodRow}>
+      <View style={[styles.section, { paddingTop: 4 }]}>
+        <Text style={styles.label}>도움 방식</Text>
+        <View style={styles.methodRow}>
           {METHODS.map((method) => (
             <TouchableOpacity
               key={method}
-              style={[s.methodChip, selectedMethod === method && s.methodChipActive]}
+              style={[styles.methodChip, selectedMethod === method && styles.methodChipActive]}
               onPress={() => setSelectedMethod(method)}
             >
-              <Text style={s.methodChipEmoji}>{METHOD_ICON[method]}</Text>
-              <Text style={[s.methodChipText, selectedMethod === method && s.methodChipTextActive]}>
+              <Text style={styles.methodChipEmoji}>{METHOD_ICON[method]}</Text>
+              <Text style={[styles.methodChipText, selectedMethod === method && styles.methodChipTextActive]}>
                 {METHOD_LABEL[method]}
               </Text>
             </TouchableOpacity>
@@ -173,10 +173,10 @@ export default function WriteForm({ onSuccess }: WriteFormProps) {
 
       {/* 장소 (오프라인) */}
       {selectedMethod === 'OFFLINE' && (
-        <View style={s.section}>
-          <Text style={s.label}>만날 장소 <Text style={s.optional}>(선택)</Text></Text>
+        <View style={styles.section}>
+          <Text style={styles.label}>만날 장소 <Text style={styles.optional}>(선택)</Text></Text>
           <TextInput
-            style={s.input}
+            style={styles.input}
             placeholder="예: 국민대 도서관, 정문 카페"
             placeholderTextColor={Colors.textLight}
             value={location}
@@ -186,32 +186,32 @@ export default function WriteForm({ onSuccess }: WriteFormProps) {
       )}
 
       {/* 희망 일정 */}
-      <View style={s.section}>
-        <Text style={s.label}>희망 일정 <Text style={s.optional}>(선택)</Text></Text>
-        <View style={s.chipRow}>
+      <View style={styles.section}>
+        <Text style={styles.label}>희망 일정 <Text style={styles.optional}>(선택)</Text></Text>
+        <View style={styles.chipRow}>
           {SCHEDULE_OPTIONS.map((opt) => (
             <TouchableOpacity
               key={opt}
-              style={[s.optionChip, schedule === opt && s.optionChipActive]}
+              style={[styles.optionChip, schedule === opt && styles.optionChipActive]}
               onPress={() => setSchedule(schedule === opt ? null : opt)}
             >
-              <Text style={[s.optionChipText, schedule === opt && s.optionChipTextActive]}>{opt}</Text>
+              <Text style={[styles.optionChipText, schedule === opt && styles.optionChipTextActive]}>{opt}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
       {/* 제출 버튼 */}
-      <View style={s.footer}>
+      <View style={styles.footer}>
         <TouchableOpacity
-          style={[s.submitBtn, isSubmitting && s.submitBtnDisabled]}
+          style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting}
           activeOpacity={0.85}
         >
           {isSubmitting
             ? <ActivityIndicator color={Colors.textWhite} />
-            : <Text style={s.submitBtnText}>작성 완료</Text>
+            : <Text style={styles.submitBtnText}>작성 완료</Text>
           }
         </TouchableOpacity>
       </View>
@@ -221,7 +221,7 @@ export default function WriteForm({ onSuccess }: WriteFormProps) {
   );
 }
 
-const s = StyleSheet.create({
+const styles = StyleSheet.create({
   wrap: {
     marginHorizontal: s(16),
     marginVertical: s(12),
