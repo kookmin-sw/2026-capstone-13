@@ -8,9 +8,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getInitial } from '../../utils/getInitial';
 import {
   ActivityIndicator,
+  Alert,
+  Dimensions,
   FlatList,
   Image,
   Modal,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -19,7 +22,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getCommunityPosts, toggleCommunityLike, translateCommunityPost, type CommunityPostDto } from '../../services/communityService';
+import { blockUser } from '../../services/blockService';
+import { getCommunityPosts, deleteCommunityPost, toggleCommunityLike, translateCommunityPost, type CommunityPostDto } from '../../services/communityService';
+import { getOrCreateDirectRoom } from '../../services/directChatService';
 import { useCommunityStore } from '../../stores/communityStore';
 import { useAuthStore } from '../../stores/authStore';
 import type { PostCategory } from '../../types';
@@ -135,10 +140,12 @@ function CategoryHomeScreen({ onSelect }: { onSelect: (cat: FilterCategory) => v
 }
 
 // ── 피드 카드 컴포넌트 ──────────────────────────────────────
-function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd }: {
+function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScrollStart, onImageScrollEnd }: {
   item: CommunityPostDto;
   onPress: () => void;
   onLike: (postId: number, liked: boolean, likeCount: number) => void;
+  onDelete: (postId: number) => void;
+  onBlockSuccess?: () => void;
   onImageScrollStart?: () => void;
   onImageScrollEnd?: () => void;
 }) {
@@ -149,9 +156,13 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
   const [likeCount, setLikeCount] = useState(item.likes);
   useEffect(() => { setLiked(item.liked); setLikeCount(item.likes); }, [item.id, item.liked, item.likes]);
   const [translating, setTranslating] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
+  const moreRef = useRef<TouchableOpacity>(null);
   const { getTranslation, setTranslation } = useCommunityStore();
   const translated = getTranslation(item.id);
   const isMyPost = item.authorId !== undefined && item.authorId === user?.id;
+  const isDeletedUser = item.author === '(알 수 없음)';
   const profileUri = toAbsoluteUrl(item.authorProfileImage);
   const catColor = CATEGORY_COLOR[item.category];
   const catBg    = CATEGORY_BG[item.category];
@@ -200,9 +211,25 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
               ) : null}
             </View>
           </View>
-          <View style={s.moreBtn}>
-            <Ionicons name="ellipsis-horizontal" size={18} color={T2} />
-          </View>
+          {!isDeletedUser && (
+            <TouchableOpacity
+              ref={moreRef}
+              style={s.moreBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.7}
+              onPress={() => {
+                moreRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
+                  setMenuPos({
+                    top: pageY + height + 4,
+                    right: Dimensions.get('window').width - pageX - width,
+                  });
+                  setMenuVisible(true);
+                });
+              }}
+            >
+              <Ionicons name="ellipsis-horizontal" size={18} color={T2} />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={s.feedBody}>
@@ -287,6 +314,119 @@ function FeedCard({ item, onPress, onLike, onImageScrollStart, onImageScrollEnd 
         </View>
         <View style={s.reactionRight} />
       </View>
+
+      {/* ... 드롭다운 메뉴 */}
+      <Modal visible={menuVisible} transparent animationType="none" onRequestClose={() => setMenuVisible(false)}>
+        <Pressable style={s.menuOverlay} onPress={() => setMenuVisible(false)}>
+          <View style={[s.menuBox, { top: menuPos.top, right: menuPos.right }]}>
+            {isMyPost ? (
+              <>
+                <TouchableOpacity
+                  style={s.menuItem}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    router.push({
+                      pathname: '/community-write',
+                      params: { id: String(item.id), category: item.category, title: item.title, content: item.content },
+                    });
+                  }}
+                >
+                  <Ionicons name="pencil-outline" size={16} color={T1} />
+                  <Text style={s.menuItemText}>수정</Text>
+                </TouchableOpacity>
+                <View style={s.menuDivider} />
+                <TouchableOpacity
+                  style={s.menuItem}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    Alert.alert('게시글 삭제', '이 게시글을 삭제하시겠어요?', [
+                      { text: '취소', style: 'cancel' },
+                      {
+                        text: '삭제',
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            await deleteCommunityPost(item.id);
+                            onDelete(item.id);
+                          } catch {
+                            Alert.alert('오류', '삭제에 실패했습니다.');
+                          }
+                        },
+                      },
+                    ]);
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                  <Text style={[s.menuItemText, { color: '#EF4444' }]}>삭제</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={s.menuItem}
+                  activeOpacity={0.7}
+                  onPress={async () => {
+                    setMenuVisible(false);
+                    if (!item.authorId) return;
+                    try {
+                      const res = await getOrCreateDirectRoom(item.authorId);
+                      if (res.success) {
+                        router.push({
+                          pathname: '/chatroom',
+                          params: {
+                            roomId: res.data.id,
+                            requestTitle: item.author,
+                            partnerNickname: item.author,
+                            partnerProfileImage: toAbsoluteUrl(item.authorProfileImage) ?? '',
+                            isDirect: 'true',
+                            roomUnreadCount: String(res.data.unreadCount ?? 0),
+                          },
+                        });
+                      }
+                    } catch {}
+                  }}
+                >
+                  <Ionicons name="chatbubble-outline" size={16} color={T1} />
+                  <Text style={s.menuItemText}>채팅하기</Text>
+                </TouchableOpacity>
+                <View style={s.menuDivider} />
+                <TouchableOpacity
+                  style={s.menuItem}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    if (!item.authorId) return;
+                    Alert.alert(
+                      '차단하기',
+                      `${item.author}님을 차단하시겠어요?\n차단한 사용자의 글과 메시지가 보이지 않습니다.`,
+                      [
+                        { text: '취소', style: 'cancel' },
+                        {
+                          text: '차단',
+                          style: 'destructive',
+                          onPress: async () => {
+                            try {
+                              await blockUser(item.authorId!);
+                              onBlockSuccess?.();
+                            } catch {
+                              Alert.alert('오류', '차단에 실패했습니다.');
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <Ionicons name="ban-outline" size={16} color="#EF4444" />
+                  <Text style={[s.menuItemText, { color: '#EF4444' }]}>차단하기</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -327,6 +467,12 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
     setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, liked, likes: likeCount } : p));
   }, []);
 
+  const handleDelete = useCallback((postId: number) => {
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }, []);
+
+  const handleBlockSuccess = useCallback(() => { fetchPosts(); }, [fetchPosts]);
+
   const handleImageScrollStart = useCallback(() => setFlatListScrollEnabled(false), []);
   const handleImageScrollEnd = useCallback(() => setFlatListScrollEnabled(true), []);
 
@@ -361,10 +507,12 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
       item={item}
       onPress={() => router.push({ pathname: '/community-post', params: { id: item.id } })}
       onLike={handleLike}
+      onDelete={handleDelete}
+      onBlockSuccess={handleBlockSuccess}
       onImageScrollStart={handleImageScrollStart}
       onImageScrollEnd={handleImageScrollEnd}
     />
-  ), [router, handleLike, handleImageScrollStart, handleImageScrollEnd]);
+  ), [router, handleLike, handleDelete, handleBlockSuccess, handleImageScrollStart, handleImageScrollEnd]);
 
   return (
     <View style={s.container}>
@@ -670,4 +818,21 @@ const s = StyleSheet.create({
   emptyEmoji: { fontSize: sc(44), marginBottom: sc(4) },
   emptyTitle: { fontSize: sc(18), fontWeight: '700', color: T1 },
   emptySub: { fontSize: sc(16), color: BLUE_MID },
+
+  // ── Dropdown menu ──
+  menuOverlay: { flex: 1 },
+  menuBox: {
+    position: 'absolute',
+    backgroundColor: '#fff',
+    borderRadius: sc(12), borderWidth: sc(1), borderColor: BORDER,
+    shadowColor: '#000', shadowOffset: { width: 0, height: sc(4) },
+    shadowOpacity: 0.12, shadowRadius: sc(12), elevation: 8,
+    minWidth: sc(140), overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row', alignItems: 'center', gap: sc(10),
+    paddingHorizontal: sc(16), paddingVertical: sc(14),
+  },
+  menuItemText: { fontSize: sc(14), fontWeight: '600', color: T1 },
+  menuDivider: { height: sc(1), backgroundColor: BORDER },
 });
