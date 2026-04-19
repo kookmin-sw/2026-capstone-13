@@ -264,10 +264,15 @@ export default function UserProfileScreen() {
             </TouchableOpacity>
             <View style={s.avatarInfo}>
               {/* 이름 + 나이 */}
-              <Text style={s.nameText}>
-                {user.nickname}
-                {user.age ? <Text style={s.ageText}> ({user.age})</Text> : null}
-              </Text>
+              <View style={s.nameRow}>
+                <Text style={s.nameText}>
+                  {user.nickname}
+                  {user.age ? <Text style={s.ageText}> ({user.age})</Text> : null}
+                </Text>
+                {(user.studentIdVerified || user.studentIdStatus === 'APPROVED') && (
+                  <Ionicons name="shield-checkmark" size={20} color="#22c55e" />
+                )}
+              </View>
               {/* 국가 */}
               {(nationality || user.userType === 'KOREAN') ? (
                 <View style={s.schoolRow}>
@@ -591,6 +596,7 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   avatarInitial: { fontSize: sc(34), fontWeight: '800', color: '#fff' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: sc(6) },
   nameText: { fontSize: sc(22), fontWeight: '800', color: T1, lineHeight: sc(26) },
   ageText: { fontSize: sc(22), fontWeight: '800', color: T1, lineHeight: sc(26) },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: sc(4) },
