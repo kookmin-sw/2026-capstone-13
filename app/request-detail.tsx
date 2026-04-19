@@ -198,6 +198,7 @@ export default function RequestDetailScreen() {
         editDuration: meta['소요시간'] ?? '',
         editLanguage: meta['언어'] ?? '',
         editLocation: meta['장소'] ?? '',
+        editImages: meta['사진'] ?? '',
       },
     });
   };
@@ -405,7 +406,7 @@ export default function RequestDetailScreen() {
         )}
 
         {/* ── 매칭된 헬퍼 ── */}
-        {item.helper && (
+        {item.helper && item.status !== 'COMPLETED' && item.status !== 'IN_PROGRESS' && (
           <>
             <View style={styles.divider} />
             <View style={styles.bodySection}>
@@ -450,18 +451,26 @@ export default function RequestDetailScreen() {
 
       {/* ── 하단 CTA ── */}
       <View style={styles.cta}>
-        {isInChat ? (
+{item.status === 'COMPLETED' ? (
+          <View style={[styles.helpBtn, styles.helpBtnOutline]}>
+            <Text style={styles.helpBtnOutlineText}>도움이 완료됐어요</Text>
+          </View>
+        ) : (item.status === 'IN_PROGRESS' || item.status === 'MATCHED') && !isInChat ? (
+          <View style={[styles.helpBtn, styles.helpBtnOutline]}>
+            <Text style={styles.helpBtnOutlineText}>도움이 진행중이에요</Text>
+          </View>
+        ) : isInChat ? (
           <TouchableOpacity style={styles.helpBtn} onPress={goToChatRoom}>
-            <Ionicons name="chatbubble-outline" size={16} color="#fff" />
+            <Ionicons name="chatbubble-outline" size={16} color={BLUE} />
             <Text style={styles.helpBtnText}>채팅방으로 이동</Text>
           </TouchableOpacity>
         ) : isMyPost && item.status === 'WAITING' ? (
           <View style={styles.myPostActions}>
-            <TouchableOpacity style={styles.editBtn} onPress={handleEdit}>
-              <Text style={styles.editBtnText}>수정</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
               <Text style={styles.deleteBtnText}>삭제</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.editBtn} onPress={handleEdit}>
+              <Text style={styles.editBtnText}>수정</Text>
             </TouchableOpacity>
           </View>
         ) : isMyPost ? (
@@ -822,6 +831,13 @@ const styles = StyleSheet.create({
   helperRatingNum: { color: T2, fontWeight: '600' },
 
   bottomPadding: { height: s(24) },
+  statusBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: s(8), marginHorizontal: s(16), marginTop: s(16),
+    paddingVertical: s(14), borderRadius: s(14),
+    backgroundColor: BLUE_L,
+  },
+  statusBannerText: { fontSize: s(15), fontWeight: '800' },
 
   photoRow: {
     flexDirection: 'row',
@@ -860,14 +876,10 @@ const styles = StyleSheet.create({
   // ── 하단 CTA ──
   cta: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: s(16),
+    paddingHorizontal: s(40),
     paddingTop: s(12),
-    paddingBottom: Platform.OS === 'ios' ? s(32) : s(16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -s(2) },
-    shadowOpacity: 0.08,
-    shadowRadius: s(8),
-    elevation: 6,
+    paddingBottom: Platform.OS === 'ios' ? s(32) : s(20),
+    minHeight: s(76),
   },
   bookmarkBtn: {
     width: s(50),
@@ -880,26 +892,36 @@ const styles = StyleSheet.create({
   },
   helpBtn: {
     height: s(52),
-    backgroundColor: BLUE,
+    backgroundColor: '#fff',
     borderRadius: s(999),
     justifyContent: 'center',
     alignItems: 'center',
     flexDirection: 'row',
     gap: s(6),
-    shadowColor: BLUE,
-    shadowOffset: { width: 0, height: s(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: s(12),
-    elevation: 6,
+    borderWidth: s(1.5),
+    borderColor: BLUE,
   },
   helpBtnDisabled: {
     backgroundColor: '#D1D5DB',
     shadowOpacity: 0,
     elevation: 0,
   },
+  helpBtnOutline: {
+    backgroundColor: '#fff',
+    borderWidth: s(1.5),
+    borderColor: '#D1D5DB',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  helpBtnOutlineText: {
+    color: '#9CA3AF',
+    fontSize: s(18),
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
   helpBtnEmoji: { fontSize: s(16) },
   helpBtnText: {
-    color: '#FFFFFF',
+    color: BLUE,
     fontSize: s(18),
     fontWeight: '800',
     letterSpacing: -0.3,
@@ -928,14 +950,15 @@ const styles = StyleSheet.create({
     flex: 1,
     height: s(50),
     borderRadius: s(14),
-    backgroundColor: '#FEE2E2',
+    borderWidth: s(1.5),
+    borderColor: '#F97316',
     justifyContent: 'center',
     alignItems: 'center',
   },
   deleteBtnText: {
     fontSize: s(15),
     fontWeight: '800',
-    color: '#DC2626',
+    color: '#F97316',
   },
   closedBtn: {
     flex: 1,
@@ -946,6 +969,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closedBtnText: { fontSize: s(14), color: T2, fontWeight: '600' },
+  completedBtn: {
+    flex: 1,
+    height: s(52),
+    backgroundColor: '#D1D5DB',
+    borderRadius: s(999),
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: s(8),
+  },
+  completedBtnText: { fontSize: s(18), color: '#6B7280', fontWeight: '800', letterSpacing: -0.3 },
 
   // ── 신고 모달 ──
   reportOverlay: {

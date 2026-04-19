@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Image,
+  KeyboardAvoidingView,
   Platform,
   RefreshControl,
   ScrollView,
@@ -18,7 +19,7 @@ import ForeignAccountCardStack from '../../components/ForeignAccountCardStack';
 import KoreanAccountCardStack from '../../components/KoreanAccountCardStack';
 import WriteForm from '../../components/WriteForm';
 import { s as sc } from '../../utils/scale';
-import { getKoreanUsers } from '../../services/authService';
+import { getActiveHelperCount, getKoreanUsers } from '../../services/authService';
 import { getHelpedRequests, getHelpRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
@@ -105,58 +106,19 @@ function StreakTopCarousel({ completedCount, waitingCount, progress, DOTS }: Str
 }
 
 // ── 외국인용: 통계 + CTA 슬라이드 캐러셀 ──
-interface IntlTopCarouselProps {
-  completedCount: number;
-  waitingCount: number;
-  inProgressCount: number;
-}
 
-function IntlTopCarousel({ completedCount, waitingCount, inProgressCount }: IntlTopCarouselProps) {
-  const [slide, setSlide] = useState(0);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        setSlide(prev => (prev + 1) % 2);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      });
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [fadeAnim]);
-
+function IntlTopCarousel({ activeHelperCount }: { activeHelperCount: number }) {
   return (
-    <Animated.View style={[s.streakSlideWrap, { opacity: fadeAnim }]}>
-      {slide === 0 ? (
-        <View style={s.streakStatRow}>
-          {[
-            { label: '요청도움', value: waitingCount,    color: ORANGE,    bg: 'rgba(249,115,22,0.10)' },
-            { label: '진행중',   value: inProgressCount, color: BLUE,      bg: 'rgba(59,111,232,0.10)' },
-            { label: '완료',     value: completedCount,  color: '#22C55E', bg: 'rgba(34,197,94,0.10)'  },
-          ].map(({ label, value, color, bg }) => (
-            <View key={label} style={[s.streakStatItem, { backgroundColor: bg }]}>
-              <Text style={[s.streakStatNum, { color }]}>{value}</Text>
-              <Text style={[s.streakStatLabel, { color }]}>{label}</Text>
-            </View>
-          ))}
+    <View style={s.streakSlideWrap}>
+      <View style={s.streakCtaRow}>
+        <View style={s.streakCtaTextWrap}>
+          <Text style={s.streakCtaTitle}>지금 바로 도움을 요청해보세요!</Text>
+          <Text style={s.streakCtaSub}>
+            오늘 접속한 <Text style={{ fontWeight: '900', color: ORANGE }}>{activeHelperCount}명</Text>의 헬퍼가 기다리고 있어요!
+          </Text>
         </View>
-      ) : (
-        <View style={s.streakCtaRow}>
-          <View style={s.streakCtaTextWrap}>
-            <Text style={s.streakCtaTitle}>지금 바로 도움을 요청해보세요!</Text>
-            <Text style={s.streakCtaSub}>한국인 헬퍼가 기다리고 있어요</Text>
-          </View>
-        </View>
-      )}
-    </Animated.View>
+      </View>
+    </View>
   );
 }
 
@@ -172,9 +134,10 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing]         = useState(false);
   const [viewMode, setViewMode]              = useState<'card' | 'list'>('card');
   const [searchQuery, setSearchQuery]        = useState('');
-  const [searchField, setSearchField]        = useState<'ALL' | 'TITLE' | 'CONTENT'>('ALL');
-  const [statusFilter, setStatusFilter]      = useState<'ALL' | 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | 'ONLINE' | 'OFFLINE'>('WAITING');
+  const [searchFocused, setSearchFocused]    = useState(false);
+  const [statusFilter, setStatusFilter]      = useState<'ALL' | 'IN_PROGRESS' | 'COMPLETED' | 'ONLINE' | 'OFFLINE'>('ALL');
   const [intlTab, setIntlTab]                = useState<'card' | 'write' | 'list'>('card');
+  const [activeHelperCount, setActiveHelperCount] = useState<number>(0);
   const tabAnim                              = useRef(new Animated.Value(0)).current;
   const intlTabAnim                          = useRef(new Animated.Value(0)).current;
 
@@ -218,14 +181,16 @@ export default function HomeScreen() {
 
   const fetchRequests = useCallback(async () => {
     try {
-      const [reqRes, helpedRes] = await Promise.allSettled([
+      const [reqRes, helpedRes, helperCountRes] = await Promise.allSettled([
         getHelpRequests(),
         getHelpedRequests(),
+        getActiveHelperCount(),
       ]);
       if (reqRes.status === 'fulfilled' && reqRes.value.success) setRequests(reqRes.value.data);
       if (helpedRes.status === 'fulfilled' && helpedRes.value.success) {
         setCompletedCount(helpedRes.value.data.filter((r: HelpRequest) => r.status === 'COMPLETED').length);
       }
+      if (helperCountRes.status === 'fulfilled') setActiveHelperCount(helperCountRes.value);
     } catch {
       setRequests([]);
     } finally {
@@ -250,6 +215,10 @@ const goTo = (item: HelpRequest) =>
         onScroll={e => { currentScrollY.current = e.nativeEvent.contentOffset.y; }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BLUE} />}
         contentContainerStyle={{ paddingTop: Platform.OS === 'ios' ? 56 : 32, paddingBottom: 100 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="none"
+        scrollEnabled={!searchFocused}
+        automaticallyAdjustKeyboardInsets
       >
         {/* ── NAV ── */}
         <View style={s.nav}>
@@ -276,11 +245,7 @@ const goTo = (item: HelpRequest) =>
           return (
             <View style={s.streakCard}>
               {isInternational ? (
-                <IntlTopCarousel
-                  completedCount={completedCount}
-                  waitingCount={waitingCount}
-                  inProgressCount={inProgressCount}
-                />
+                <IntlTopCarousel activeHelperCount={activeHelperCount} />
               ) : (
                 <>
                   <StreakTopCarousel
@@ -337,18 +302,39 @@ const goTo = (item: HelpRequest) =>
                 onProfilePress={(u) => router.push({ pathname: '/user-profile', params: { id: u.id } })}
               />
             </View>
-            <View style={{ display: intlTab === 'write' ? 'flex' : 'none' }}>
+            {intlTab === 'write' && (
               <WriteForm onSuccess={() => switchIntlTab('list')} />
-            </View>
+            )}
             <View style={{ display: intlTab === 'list' ? 'flex' : 'none' }}>
               <View style={s.listViewWrap}>
+                {/* 검색창 */}
+                <View style={s.searchBoxRound}>
+                  <Ionicons name="search-outline" size={16} color={T2} />
+                  <TextInput
+                    style={s.searchInput}
+                    placeholder="전체 검색"
+                    placeholderTextColor={T2}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    returnKeyType="search"
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => setSearchFocused(false)}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+                      <Ionicons name="close-circle" size={15} color={T2} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {/* 필터 칩 */}
                 <View style={s.listFilterRow}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.listFilterScroll} style={{ maxWidth: 260 }}>
+                  <View style={s.listFilterScroll}>
                     {([
                       { key: 'ALL',         label: '전체' },
-                      { key: 'WAITING',     label: '최신' },
                       { key: 'IN_PROGRESS', label: '매칭중' },
                       { key: 'COMPLETED',   label: '완료' },
+                      { key: 'ONLINE',      label: '온라인' },
+                      { key: 'OFFLINE',     label: '오프라인' },
                     ] as const).map(({ key, label }) => (
                       <TouchableOpacity
                         key={key}
@@ -359,22 +345,6 @@ const goTo = (item: HelpRequest) =>
                         <Text style={[s.listFilterChipText, statusFilter === key && s.listFilterChipTextOn]}>{label}</Text>
                       </TouchableOpacity>
                     ))}
-                  </ScrollView>
-                  <View style={s.searchBox}>
-                    <Ionicons name="search-outline" size={15} color={T2} />
-                    <TextInput
-                      style={s.searchInput}
-                      placeholder="검색"
-                      placeholderTextColor={T2}
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                      returnKeyType="search"
-                    />
-                    {searchQuery.length > 0 && (
-                      <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
-                        <Ionicons name="close-circle" size={15} color={T2} />
-                      </TouchableOpacity>
-                    )}
                   </View>
                 </View>
                 {(() => {
@@ -382,14 +352,19 @@ const goTo = (item: HelpRequest) =>
                     BANK: '은행', HOSPITAL: '병원', SCHOOL: '학교', DAILY: '일상', OTHER: '기타',
                   };
                   const filtered = requests
-                    .filter(r => statusFilter === 'ALL'
-                      ? (r.status === 'WAITING' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED')
-                      : r.status === statusFilter
-                    )
-                    .filter(r => searchQuery.trim() === '' ||
-                      r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      (r.requester?.nickname ?? '').toLowerCase().includes(searchQuery.toLowerCase())
-                    );
+                    .filter(r => {
+                      if (statusFilter === 'ALL') return true;
+                      if (statusFilter === 'IN_PROGRESS') return r.status === 'WAITING' || r.status === 'MATCHED';
+                      if (statusFilter === 'COMPLETED') return r.status === 'COMPLETED';
+                      if (statusFilter === 'ONLINE') return r.helpMethod === 'CHAT' || r.helpMethod === 'VIDEO_CALL';
+                      if (statusFilter === 'OFFLINE') return r.helpMethod === 'OFFLINE';
+                      return true;
+                    })
+                    .filter(r => {
+                      const kw = searchQuery.trim().toLowerCase();
+                      if (!kw) return true;
+                      return r.title.toLowerCase().includes(kw) || r.description.toLowerCase().includes(kw);
+                    });
                   if (filtered.length === 0) {
                     return (
                       <View style={s.listEmpty}>
@@ -470,41 +445,30 @@ const goTo = (item: HelpRequest) =>
             </View>
             <View style={{ display: viewMode === 'list' ? 'flex' : 'none' }}>
               <View style={s.listViewWrap}>
-                <View style={{ position: 'relative' }}>
-                  {/* 검색 필드 필터 */}
-                  <TouchableOpacity
-                    style={[s.searchFieldToggle, s.searchFieldBtn, s.searchFieldBtnOn]}
-                    onPress={() => {
-                      setSearchField(f => f === 'ALL' ? 'TITLE' : f === 'TITLE' ? 'CONTENT' : 'ALL');
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={s.searchFieldBtnTextOn}>
-                      {searchField === 'ALL' ? '전체' : searchField === 'TITLE' ? '제목' : '본문'}
-                    </Text>
-                  </TouchableOpacity>
-                  {/* 검색창 */}
-                  <View style={[s.searchBox, { marginLeft: sc(70), marginRight: sc(30) }]}>
-                    <Ionicons name="search-outline" size={15} color={T2} />
-                    <TextInput
-                      style={s.searchInput}
-                      placeholder={searchField === 'TITLE' ? '제목 검색' : searchField === 'CONTENT' ? '본문 검색' : '전체 검색'}
-                      placeholderTextColor={T2}
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                      returnKeyType="search"
-                    />
-                    {searchQuery.length > 0 && (
-                      <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
-                        <Ionicons name="close-circle" size={15} color={T2} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                {/* 검색창 */}
+                <View style={s.searchBoxRound}>
+                  <Ionicons name="search-outline" size={16} color={T2} />
+                  <TextInput
+                    style={s.searchInput}
+                    placeholder="전체 검색"
+                    placeholderTextColor={T2}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    returnKeyType="search"
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => setSearchFocused(false)}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+                      <Ionicons name="close-circle" size={15} color={T2} />
+                    </TouchableOpacity>
+                  )}
                 </View>
-                <View style={[s.listFilterRow, { paddingLeft: sc(0) }]}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.listFilterScroll}>
+                {/* 필터 칩 */}
+                <View style={s.listFilterRow}>
+                  <View style={s.listFilterScroll}>
                     {([
-                      { key: 'WAITING',     label: '전체' },
+                      { key: 'ALL',         label: '전체' },
                       { key: 'IN_PROGRESS', label: '매칭중' },
                       { key: 'COMPLETED',   label: '완료' },
                       { key: 'ONLINE',      label: '온라인' },
@@ -519,7 +483,7 @@ const goTo = (item: HelpRequest) =>
                         <Text style={[s.listFilterChipText, statusFilter === key && s.listFilterChipTextOn]}>{label}</Text>
                       </TouchableOpacity>
                     ))}
-                  </ScrollView>
+                  </View>
                 </View>
                 {(() => {
                   const CAT_LABEL: Record<HelpCategory, string> = {
@@ -527,16 +491,16 @@ const goTo = (item: HelpRequest) =>
                   };
                   const filtered = requests
                     .filter(r => {
-                      if (statusFilter === 'ALL' || statusFilter === 'WAITING') return r.status === 'WAITING' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED';
+                      if (statusFilter === 'ALL') return true;
+                      if (statusFilter === 'IN_PROGRESS') return r.status === 'WAITING' || r.status === 'MATCHED';
+                      if (statusFilter === 'COMPLETED') return r.status === 'COMPLETED';
                       if (statusFilter === 'ONLINE') return r.helpMethod === 'CHAT' || r.helpMethod === 'VIDEO_CALL';
                       if (statusFilter === 'OFFLINE') return r.helpMethod === 'OFFLINE';
-                      return r.status === statusFilter;
+                      return true;
                     })
                     .filter(r => {
                       const kw = searchQuery.trim().toLowerCase();
                       if (!kw) return true;
-                      if (searchField === 'TITLE') return r.title.toLowerCase().includes(kw);
-                      if (searchField === 'CONTENT') return r.description.toLowerCase().includes(kw);
                       return r.title.toLowerCase().includes(kw) || r.description.toLowerCase().includes(kw);
                     });
                   if (filtered.length === 0) {
@@ -1000,8 +964,8 @@ const s = StyleSheet.create({
     backgroundColor: BLUE_L, alignItems: 'center', justifyContent: 'center',
   },
   streakCtaTextWrap: { flex: 1 },
-  streakCtaTitle: { fontSize: sc(14), fontWeight: '800', color: T1 },
-  streakCtaSub:   { fontSize: sc(11), color: T2, marginTop: sc(2) },
+  streakCtaTitle: { fontSize: sc(18), fontWeight: '800', color: T1 },
+  streakCtaSub:   { fontSize: sc(13), color: T2, marginTop: sc(4) },
   helpTitleBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1233,17 +1197,17 @@ const s = StyleSheet.create({
     gap: sc(8),
     marginBottom: sc(2),
   },
-  listFilterScroll: { gap: sc(6), alignItems: 'center' },
+  listFilterScroll: { flexDirection: 'row', flexWrap: 'wrap', gap: sc(6), alignItems: 'center' },
   listFilterChip: {
     width: sc(58),
     paddingVertical: sc(9),
-    borderRadius: sc(20),
+    borderRadius: sc(10),
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
   },
   listFilterChipOn:      { backgroundColor: BLUE },
-  listFilterChipText:    { fontSize: sc(12), fontWeight: '700', color: '#888' },
+  listFilterChipText:    { fontSize: sc(14), fontWeight: '700', color: '#888' },
   listFilterChipTextOn:  { color: '#fff' },
   searchRow: {
     flexDirection: 'row',
@@ -1251,23 +1215,6 @@ const s = StyleSheet.create({
     gap: sc(8),
     marginBottom: sc(6),
   },
-  searchFieldToggle: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    zIndex: 10,
-  },
-  searchFieldBtn: {
-    width: sc(58),
-    paddingVertical: sc(9),
-    borderRadius: sc(20),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: BLUE_L,
-  },
-  searchFieldBtnOn: { backgroundColor: BLUE },
-  searchFieldBtnText: { fontSize: sc(12), fontWeight: '700', color: BLUE },
-  searchFieldBtnTextOn: { color: '#fff' },
   searchDropdown: {
     position: 'absolute',
     top: '100%',
@@ -1300,7 +1247,18 @@ const s = StyleSheet.create({
     paddingVertical: sc(7),
     flex: 1,
   },
-  searchInput: { flex: 1, fontSize: sc(12), color: T1, padding: 0 },
+  searchBoxRound: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: sc(8),
+    backgroundColor: '#fff',
+    borderRadius: sc(10),
+    borderWidth: sc(1),
+    borderColor: '#E4EAF4',
+    paddingHorizontal: sc(14),
+    paddingVertical: sc(10),
+  },
+  searchInput: { flex: 1, fontSize: sc(14), color: T1, padding: 0 },
 
   // ── 유학생 슬라이드 보기 ──
   intlSlideScroll: { paddingHorizontal: sc(16), gap: sc(12), paddingBottom: sc(4) },

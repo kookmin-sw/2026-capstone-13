@@ -60,6 +60,12 @@ export const getKoreanUsers = async (): Promise<ApiResponse<User[]>> => {
   return response.data;
 };
 
+// 오늘 접속한 한국인 헬퍼 수
+export const getActiveHelperCount = async (): Promise<number> => {
+  const response = await api.get<{ data: number }>('/users/active-helpers-count');
+  return response.data.data;
+};
+
 // 이메일 인증번호 발송
 export const sendVerificationCode = async (email: string): Promise<ApiResponse<null>> => {
   const response = await api.post<ApiResponse<null>>('/auth/send-code', { email });

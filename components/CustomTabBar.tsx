@@ -85,6 +85,9 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
     }
   };
 
+  const currentRouteName = state.routes[state.index]?.name;
+  if (currentRouteName === 'write') return null;
+
   return (
     <View style={styles.container}>
       <Animated.View

@@ -141,7 +141,7 @@ function CategoryHomeScreen({ onSelect }: { onSelect: (cat: FilterCategory) => v
 }
 
 // ── 피드 카드 컴포넌트 ──────────────────────────────────────
-function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScrollStart, onImageScrollEnd }: {
+function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScrollStart, onImageScrollEnd, index = 0 }: {
   item: CommunityPostDto;
   onPress: () => void;
   onLike: (postId: number, liked: boolean, likeCount: number) => void;
@@ -149,8 +149,17 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
   onBlockSuccess?: () => void;
   onImageScrollStart?: () => void;
   onImageScrollEnd?: () => void;
+  index?: number;
 }) {
   const router = useRouter();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(-80)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 900, delay: Math.min(index * 120, 600), useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 900, delay: Math.min(index * 120, 600), useNativeDriver: true }),
+    ]).start();
+  }, []);
   const { user } = useAuthStore();
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
   const [liked, setLiked] = useState(item.liked);
@@ -172,7 +181,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
   const validImages = item.images.filter((_, i) => !imgErrors[i]);
 
   return (
-    <View style={s.feedCard}>
+    <Animated.View style={[s.feedCard, { opacity: fadeAnim, transform: [{ translateX: slideAnim }] }]}>
       <TouchableOpacity activeOpacity={0.95} onPress={onPress}>
         <View style={s.feedHeader}>
           <TouchableOpacity
@@ -428,7 +437,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
           </View>
         </Pressable>
       </Modal>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -452,10 +461,10 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
 
   const openDrawer = () => {
     setDropdownVisible(true);
-    Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, bounciness: 0, speed: 20 }).start();
+    Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }).start();
   };
   const closeDrawer = () => {
-    Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 220, useNativeDriver: true }).start(() => setDropdownVisible(false));
+    Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 450, useNativeDriver: true }).start(() => setDropdownVisible(false));
   };
   const HEADER_HEIGHT = insets.top + 76;
 
@@ -514,9 +523,10 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
   const headerTitle = menuItem?.label ?? '게시판';
   const headerColor = menuItem?.color ?? T1;
 
-  const renderPost = useCallback(({ item }: { item: CommunityPostDto }) => (
+  const renderPost = useCallback(({ item, index }: { item: CommunityPostDto; index: number }) => (
     <FeedCard
       item={item}
+      index={index}
       onPress={() => router.push({ pathname: '/community-post', params: { id: item.id } })}
       onLike={handleLike}
       onDelete={handleDelete}

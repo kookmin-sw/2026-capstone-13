@@ -1,48 +1,77 @@
-// 도움 요청 글쓰기 화면
+// 도움 요청 글쓰기 / 수정 화면
 import { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
   StyleSheet,
   ScrollView,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, CategoryLabels, MethodLabels } from '../../constants/colors';
+import * as ImagePicker from 'expo-image-picker';
+import * as SecureStore from 'expo-secure-store';
 import { createHelpRequest, updateHelpRequest } from '../../services/helpService';
-import { useAuthStore } from '../../stores/authStore';
 import { useHelpRequestStore } from '../../stores/helpRequestStore';
 import type { HelpCategory, HelpMethod } from '../../types';
 import { s } from '../../utils/scale';
 
-const CATEGORIES: HelpCategory[] = ['BANK', 'HOSPITAL', 'DAILY', 'OTHER'];
-const METHODS: HelpMethod[] = ['CHAT', 'VIDEO_CALL', 'OFFLINE'];
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api';
 
+const uploadImage = async (uri: string): Promise<string> => {
+  const token = await SecureStore.getItemAsync('accessToken');
+  const rawName = uri.split('/').pop() ?? 'image.jpg';
+  const match = /\.(\w+)$/.exec(rawName);
+  const ext = match ? match[1].toLowerCase() : 'jpg';
+  const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+  const filename = match ? rawName : `image_${Date.now()}.jpg`;
+  const formData = new FormData();
+  formData.append('file', { uri, name: filename, type } as unknown as Blob);
+  const response = await fetch(`${BASE_URL}/community/upload`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!response.ok) throw new Error('이미지 업로드 실패');
+  const json = await response.json();
+  return json.data.url;
+};
+
+const BLUE   = '#3B6FE8';
+const BLUE_L = '#EEF4FF';
+const ORANGE = '#F97316';
+const T1     = '#0C1C3C';
+const T2     = '#AABBCC';
+const BG     = '#F0F4FA';
+const DIV    = '#D4E4FF';
+
+const CATEGORIES: HelpCategory[] = ['BANK', 'SCHOOL', 'DAILY', 'OTHER'];
+const METHODS: HelpMethod[] = ['CHAT', 'OFFLINE'];
+
+const CATEGORY_LABEL: Record<HelpCategory, string> = {
+  BANK: '행정', HOSPITAL: '병원', SCHOOL: '학업', DAILY: '생활', OTHER: '기타',
+};
 const CATEGORY_ICON: Record<HelpCategory, { name: React.ComponentProps<typeof Ionicons>['name']; color: string }> = {
-  BANK:     { name: 'business-outline',      color: '#5B7FA6' }, // 행정
-  HOSPITAL: { name: 'school-outline',        color: '#5B7FA6' }, // 학업
-  SCHOOL:   { name: 'school-outline',        color: '#5B7FA6' }, // 학교행정
-  DAILY:    { name: 'home-outline',          color: '#5B7FA6' }, // 생활
-  OTHER:    { name: 'add-circle-outline',    color: '#5B7FA6' }, // 기타
+  BANK:     { name: 'business-outline',   color: '#5B7FA6' },
+  HOSPITAL: { name: 'school-outline',     color: '#5B7FA6' },
+  SCHOOL:   { name: 'school-outline',     color: '#5B7FA6' },
+  DAILY:    { name: 'home-outline',       color: '#5B7FA6' },
+  OTHER:    { name: 'add-circle-outline', color: '#5B7FA6' },
 };
-
-const METHOD_ICON: Record<HelpMethod, string> = {
-  CHAT: '💬', VIDEO_CALL: '📹', OFFLINE: '🤝',
+const METHOD_LABEL: Record<string, string> = {
+  CHAT: '온라인', OFFLINE: '오프라인',
 };
-
-const SCHEDULE_OPTIONS = ['오늘', '이번 주 내', '이번 달 내', '협의 가능'];
-const DURATION_OPTIONS = ['30분 이내', '1시간 이내', '2시간 이내', '협의 가능'];
-const LANGUAGE_OPTIONS = ['한국어', '영어', '한국어·영어'];
+const SCHEDULE_OPTIONS = ['오늘', '이번 주', '아무때나'];
 
 export default function WriteScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
   const { addRequest } = useHelpRequestStore();
   const params = useLocalSearchParams<{
     editId?: string;
@@ -51,49 +80,61 @@ export default function WriteScreen() {
     editCategory?: HelpCategory;
     editMethod?: HelpMethod;
     editSchedule?: string;
-    editDuration?: string;
     editLanguage?: string;
     editLocation?: string;
+    editImages?: string;
   }>();
 
   const isEditMode = !!params.editId;
 
-  const [title, setTitle] = useState(params.editTitle ?? '');
-  const [description, setDescription] = useState(params.editDescription ?? '');
+  const [title, setTitle]                       = useState(params.editTitle ?? '');
+  const [description, setDescription]           = useState(params.editDescription ?? '');
   const [selectedCategory, setSelectedCategory] = useState<HelpCategory | null>(params.editCategory ?? null);
-  const [selectedMethod, setSelectedMethod] = useState<HelpMethod | null>(params.editMethod ?? null);
-  const [schedule, setSchedule] = useState<string | null>(params.editSchedule || null);
-  const [duration, setDuration] = useState<string | null>(params.editDuration || null);
-  const [language, setLanguage] = useState<string | null>(params.editLanguage || null);
-  const [location, setLocation] = useState(params.editLocation ?? '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedMethod, setSelectedMethod]     = useState<HelpMethod | null>(params.editMethod ?? null);
+  const [schedule, setSchedule]                 = useState<string | null>(params.editSchedule || null);
+  const [language, setLanguage]                 = useState(params.editLanguage ?? '');
+  const [location, setLocation]                 = useState(params.editLocation ?? '');
+  const [images, setImages]                     = useState<string[]>(params.editImages ? params.editImages.split(',').filter(Boolean) : []);
+  const [isUploading, setIsUploading]           = useState(false);
+  const [isSubmitting, setIsSubmitting]         = useState(false);
+
+  const handlePickImage = async () => {
+    if (images.length >= 3) { Alert.alert('알림', '사진은 최대 3장까지 첨부할 수 있어요.'); return; }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') { Alert.alert('권한 필요', '갤러리 접근 권한이 필요해요.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setIsUploading(true);
+    try {
+      const url = await uploadImage(result.assets[0].uri);
+      setImages(prev => [...prev, url]);
+    } catch {
+      Alert.alert('오류', '이미지 업로드에 실패했어요.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const isValid = !!selectedCategory && title.trim().length > 0 && description.trim().length > 0 && !!selectedMethod && language.trim().length > 0 && !!schedule;
 
   const handleSubmit = async () => {
-    if (!selectedCategory) {
-      Alert.alert('알림', '카테고리를 선택해주세요.');
-      return;
-    }
-    if (!title.trim()) {
-      Alert.alert('알림', '제목을 입력해주세요.');
-      return;
-    }
-    if (!description.trim()) {
-      Alert.alert('알림', '자세한 설명을 입력해주세요.');
-      return;
-    }
-    if (!selectedMethod) {
-      Alert.alert('알림', '도움 방식을 선택해주세요.');
-      return;
-    }
+    if (!selectedCategory)    { Alert.alert('알림', '카테고리를 선택해주세요.'); return; }
+    if (!title.trim())        { Alert.alert('알림', '제목을 입력해주세요.'); return; }
+    if (!description.trim())  { Alert.alert('알림', '자세한 설명을 입력해주세요.'); return; }
+    if (!selectedMethod)      { Alert.alert('알림', '도움 방식을 선택해주세요.'); return; }
+    if (!language.trim())     { Alert.alert('알림', '희망 언어를 입력해주세요.'); return; }
+    if (!schedule)            { Alert.alert('알림', '희망 일정을 선택해주세요.'); return; }
 
     setIsSubmitting(true);
 
-    // 추가 정보를 description에 구조화해서 저장
     const metaLines: string[] = [];
     if (schedule) metaLines.push(`희망일정:${schedule}`);
-    if (duration) metaLines.push(`소요시간:${duration}`);
-    if (language) metaLines.push(`언어:${language}`);
+    if (language.trim()) metaLines.push(`언어:${language.trim()}`);
     if (selectedMethod === 'OFFLINE' && location.trim()) metaLines.push(`장소:${location.trim()}`);
+    if (images.length > 0) metaLines.push(`사진:${images.join(',')}`);
     const fullDescription = metaLines.length > 0
       ? `${description.trim()}\n\n[정보]\n${metaLines.join('\n')}`
       : description.trim();
@@ -133,394 +174,304 @@ export default function WriteScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBtn} onPress={() => router.back()}>
-          <Ionicons name="close" size={24} color={Colors.textPrimary} />
+          <Ionicons name="close" size={24} color={T1} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isEditMode ? '도움 요청 수정' : '도움 요청하기'}</Text>
         <View style={styles.headerBtn} />
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} automaticallyAdjustKeyboardInsets>
 
-        {/* 카테고리 선택 */}
-        <View style={styles.section}>
-          <Text style={styles.label}>카테고리</Text>
-          <View style={styles.categoryGrid}>
-            {CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                style={[
-                  styles.categoryChip,
-                  selectedCategory === cat && styles.categoryChipActive,
-                ]}
-                onPress={() => setSelectedCategory(cat)}
-              >
-                <Ionicons
-                  name={CATEGORY_ICON[cat].name}
-                  size={s(18)}
-                  color={selectedCategory === cat ? CATEGORY_ICON[cat].color : '#AABBCC'}
-                />
-                <Text style={[
-                  styles.categoryChipText,
-                  selectedCategory === cat && styles.categoryChipTextActive,
-                ]}>
-                  {CategoryLabels[cat].replace(/^.{1,2}\s/, '')}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+          <View style={styles.section}>
 
-        <View style={styles.divider} />
-
-        {/* 제목 */}
-        <View style={styles.section}>
-          <Text style={styles.label}>제목</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="제목을 입력해주세요."
-            placeholderTextColor={Colors.textLight}
-            value={title}
-            onChangeText={setTitle}
-            maxLength={50}
-          />
-          <Text style={styles.charCount}>{title.length}/50</Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* 자세한 설명 */}
-        <View style={styles.section}>
-          <Text style={styles.label}>자세한 설명</Text>
-          <TextInput
-            style={styles.textarea}
-            placeholder={'어떤 도움이 필요한지 자세히 적어주세요.\n\n상황을 자세히 설명할수록 더 빠르게 매칭됩니다.'}
-            placeholderTextColor={Colors.textLight}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            textAlignVertical="top"
-            maxLength={500}
-          />
-          <Text style={styles.charCount}>{description.length}/500</Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* 도움 방식 */}
-        <View style={styles.section}>
-          <Text style={styles.label}>도움 방식</Text>
-          <View style={styles.methodRow}>
-            {METHODS.map((method) => (
-              <TouchableOpacity
-                key={method}
-                style={[
-                  styles.methodChip,
-                  selectedMethod === method && styles.methodChipActive,
-                ]}
-                onPress={() => setSelectedMethod(method)}
-              >
-                <Text style={styles.methodChipEmoji}>{METHOD_ICON[method]}</Text>
-                <Text style={[
-                  styles.methodChipText,
-                  selectedMethod === method && styles.methodChipTextActive,
-                ]}>
-                  {MethodLabels[method].replace(/^.{1,2}\s/, '')}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* 희망 일정 */}
-        <View style={styles.section}>
-          <Text style={styles.label}>📅 희망 일정 <Text style={styles.optional}>(선택)</Text></Text>
-          <View style={styles.chipRow}>
-            {SCHEDULE_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt}
-                style={[styles.optionChip, schedule === opt && styles.optionChipActive]}
-                onPress={() => setSchedule(schedule === opt ? null : opt)}
-              >
-                <Text style={[styles.optionChipText, schedule === opt && styles.optionChipTextActive]}>{opt}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* 소요 시간 */}
-        <View style={styles.section}>
-          <Text style={styles.label}>⏱ 소요 시간 <Text style={styles.optional}>(선택)</Text></Text>
-          <View style={styles.chipRow}>
-            {DURATION_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt}
-                style={[styles.optionChip, duration === opt && styles.optionChipActive]}
-                onPress={() => setDuration(duration === opt ? null : opt)}
-              >
-                <Text style={[styles.optionChipText, duration === opt && styles.optionChipTextActive]}>{opt}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* 언어 */}
-        <View style={styles.section}>
-          <Text style={styles.label}>🌐 언어 <Text style={styles.optional}>(선택)</Text></Text>
-          <View style={styles.chipRow}>
-            {LANGUAGE_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt}
-                style={[styles.optionChip, language === opt && styles.optionChipActive]}
-                onPress={() => setLanguage(language === opt ? null : opt)}
-              >
-                <Text style={[styles.optionChipText, language === opt && styles.optionChipTextActive]}>{opt}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* 장소 (오프라인 선택 시만 표시) */}
-        {selectedMethod === 'OFFLINE' && (
-          <>
+            {/* 1. 도움 종류 */}
+            <Text style={styles.sectionTitle}>도움 종류</Text>
             <View style={styles.divider} />
-            <View style={styles.section}>
-              <Text style={styles.label}>📍 만날 장소 <Text style={styles.optional}>(선택)</Text></Text>
-              <TextInput
-                style={styles.input}
-                placeholder="예: 국민대 도서관, 정문 카페"
-                placeholderTextColor={Colors.textLight}
-                value={location}
-                onChangeText={setLocation}
-              />
+            <View style={styles.categoryGrid}>
+              {CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.catChip, selectedCategory === cat && styles.catChipActive]}
+                  onPress={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                >
+                  <Ionicons
+                    name={CATEGORY_ICON[cat].name}
+                    size={s(18)}
+                    color={selectedCategory === cat ? CATEGORY_ICON[cat].color : T2}
+                  />
+                  <Text style={[styles.catChipText, selectedCategory === cat && styles.catChipTextActive]}>
+                    {CATEGORY_LABEL[cat]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          </>
-        )}
 
-        <View style={styles.bottomPadding} />
-      </ScrollView>
+            {/* 2. 제목 + 설명 */}
+            <Text style={[styles.sectionTitle, { marginTop: s(20) }]}>도움 요청글</Text>
+            <View style={styles.divider} />
+            <TextInput
+              style={styles.input}
+              placeholder="제목을 입력해주세요."
+              placeholderTextColor={T2}
+              value={title}
+              onChangeText={setTitle}
+              maxLength={50}
+            />
+            <View style={styles.divider} />
+            <TextInput
+              style={styles.textarea}
+              placeholder={'어떤 도움이 필요한지 자세히 적어주세요.\n\n상황을 자세히 설명할수록 더 빠르게 매칭됩니다.'}
+              placeholderTextColor={T2}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              textAlignVertical="top"
+              maxLength={500}
+            />
+            <Text style={styles.charCount}>{description.length}/500</Text>
 
-      {/* 작성 완료 버튼 */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={Colors.textWhite} />
-          ) : (
-            <Text style={styles.submitBtnText}>{isEditMode ? '수정 완료' : '작성 완료'}</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+            <View style={styles.sectionDivider} />
+
+            {/* 3. 사진 첨부 */}
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionTitle}>사진 첨부 <Text style={styles.optional}>(선택)</Text></Text>
+              <TouchableOpacity
+                style={styles.photoAddBtn}
+                onPress={handlePickImage}
+                disabled={isUploading || images.length >= 3}
+                activeOpacity={0.8}
+              >
+                {isUploading
+                  ? <ActivityIndicator size="small" color={BLUE} />
+                  : <Ionicons name="camera-outline" size={s(18)} color={BLUE} />
+                }
+                <Text style={styles.photoAddBtnText}>{images.length}/3</Text>
+              </TouchableOpacity>
+            </View>
+            {images.length > 0 && (
+              <View style={styles.photoRow}>
+                {images.map((uri, idx) => (
+                  <View key={idx} style={styles.photoWrap}>
+                    <Image source={{ uri }} style={styles.photoThumb} />
+                    <TouchableOpacity
+                      style={styles.photoRemove}
+                      onPress={() => setImages(prev => prev.filter((_, i) => i !== idx))}
+                    >
+                      <Ionicons name="close" size={s(12)} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View style={styles.sectionDivider} />
+
+            {/* 4. 도움 방식 */}
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionTitle}>도움 방식</Text>
+              <View style={styles.methodRow}>
+                {METHODS.map((method) => {
+                  const isSelected = selectedMethod === method;
+                  const color = method === 'OFFLINE' ? ORANGE : BLUE;
+                  return (
+                    <TouchableOpacity
+                      key={method}
+                      style={[
+                        styles.methodChip,
+                        isSelected
+                          ? { borderColor: color, backgroundColor: method === 'OFFLINE' ? '#FFF3E0' : BLUE_L }
+                          : styles.methodChipUnselected,
+                      ]}
+                      onPress={() => setSelectedMethod(selectedMethod === method ? null : method)}
+                    >
+                      <View style={[styles.methodDot, { backgroundColor: isSelected ? color : '#D1D5DB' }]} />
+                      <Text style={[styles.methodChipText, isSelected ? { color } : styles.methodChipTextOff]}>
+                        {METHOD_LABEL[method]}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.sectionDivider} />
+
+            {/* 5. 희망 언어 */}
+            <Text style={styles.sectionTitle}>희망 언어</Text>
+            <TextInput
+              style={[styles.input, { marginTop: s(12) }]}
+              placeholder="예: 영어"
+              placeholderTextColor={T2}
+              value={language}
+              onChangeText={setLanguage}
+            />
+
+            {/* 6. 장소 (오프라인) */}
+            {selectedMethod === 'OFFLINE' && (
+              <>
+                <View style={styles.sectionDivider} />
+                <Text style={styles.sectionTitle}>만날 장소</Text>
+                <TextInput
+                  style={[styles.input, { marginTop: s(12) }]}
+                  placeholder="예: 국민대 도서관, 정문 카페"
+                  placeholderTextColor={T2}
+                  value={location}
+                  onChangeText={setLocation}
+                />
+              </>
+            )}
+
+            <View style={styles.sectionDivider} />
+
+            {/* 7. 희망 일정 */}
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionTitle}>희망 일정</Text>
+              <View style={styles.chipRow}>
+                {SCHEDULE_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.optionChip, schedule === opt && styles.optionChipActive]}
+                    onPress={() => setSchedule(schedule === opt ? null : opt)}
+                  >
+                    <Text style={[styles.optionChipText, schedule === opt && styles.optionChipTextActive]}>{opt}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+          </View>
+
+        </ScrollView>
+      </TouchableWithoutFeedback>
+
+    {/* 하단 고정 버튼 */}
+    <View style={styles.footer}>
+      <TouchableOpacity
+        style={[styles.submitBtn, !isValid && styles.submitBtnInactive, isSubmitting && styles.submitBtnDisabled]}
+        onPress={handleSubmit}
+        disabled={isSubmitting}
+        activeOpacity={0.85}
+      >
+        {isSubmitting
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={styles.submitBtnText}>{isEditMode ? '수정 완료' : '작성 완료'}</Text>
+        }
+      </TouchableOpacity>
+    </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-  },
+  container: { flex: 1, backgroundColor: BG },
 
-  // 헤더
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: s(16),
     paddingTop: Platform.OS === 'ios' ? s(56) : s(16),
     paddingBottom: s(12),
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.surface,
+    borderBottomWidth: 1, borderBottomColor: DIV,
+    backgroundColor: '#fff',
   },
-  headerBtn: {
-    width: s(40),
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: s(17),
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
+  headerBtn:   { width: s(40), alignItems: 'center' },
+  headerTitle: { fontSize: s(17), fontWeight: '700', color: T1 },
 
-  scroll: {
-    flex: 1,
-  },
+  scroll:        { flex: 1 },
+  scrollContent: { paddingHorizontal: s(16), paddingVertical: s(12), paddingBottom: s(40) },
+
   section: {
-    paddingHorizontal: s(16),
-    paddingVertical: s(20),
-  },
-  label: {
-    fontSize: s(15),
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: s(12),
-  },
-  divider: {
-    height: s(8),
-    backgroundColor: Colors.background,
+    backgroundColor: '#fff', borderRadius: s(20), padding: s(16),
+    shadowColor: '#000', shadowOffset: { width: 0, height: s(4) },
+    shadowOpacity: 0.12, shadowRadius: s(12), elevation: 6,
   },
 
-  // 카테고리
-  categoryGrid: {
-    flexDirection: 'row',
-    gap: s(8),
-  },
-  categoryChip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: s(5),
-    paddingVertical: s(10),
-    borderRadius: s(12),
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-  },
-  categoryChipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: '#EBF4FF',
-  },
-  categoryChipText: {
-    fontSize: s(13),
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  categoryChipTextActive: {
-    color: Colors.primary,
-  },
+  sectionTitle: { fontSize: s(18), fontWeight: '800', color: T1 },
+  divider:      { height: 1, backgroundColor: DIV, marginTop: s(10), marginBottom: s(12) },
+  sectionDivider: { height: 1, backgroundColor: DIV, marginVertical: s(20) },
+  optional:     { fontSize: s(13), fontWeight: '500', color: T2 },
+  charCount:    { fontSize: s(12), color: T2, textAlign: 'right', marginTop: s(6) },
+  rowBetween:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
-  // 입력
+  categoryGrid:      { flexDirection: 'row', flexWrap: 'wrap', gap: s(8) },
+  catChip: {
+    flexDirection: 'row', alignItems: 'center', gap: s(6),
+    paddingHorizontal: s(14), paddingVertical: s(10),
+    borderRadius: s(12), borderWidth: s(1.5), borderColor: DIV, backgroundColor: BG,
+  },
+  catChipActive:     { borderColor: BLUE, backgroundColor: BLUE_L },
+  catChipText:       { fontSize: s(14), fontWeight: '600', color: T2 },
+  catChipTextActive: { color: BLUE, fontWeight: '700' },
+
   input: {
-    fontSize: s(16),
-    color: Colors.textPrimary,
-    paddingVertical: s(12),
-    paddingHorizontal: s(14),
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: s(10),
-    backgroundColor: Colors.background,
+    fontSize: s(15), color: T1,
+    paddingVertical: s(12), paddingHorizontal: s(14),
+    borderWidth: 1, borderColor: DIV, borderRadius: s(12), backgroundColor: BG,
+  },
+  inlineInput: {
+    fontSize: s(14), color: T1,
+    paddingVertical: s(8), paddingHorizontal: s(12),
+    borderWidth: 1, borderColor: DIV, borderRadius: s(12), backgroundColor: BG,
+    width: s(110), textAlign: 'left',
   },
   textarea: {
-    fontSize: s(15),
-    color: Colors.textPrimary,
-    paddingVertical: s(14),
-    paddingHorizontal: s(14),
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: s(10),
-    backgroundColor: Colors.background,
-    height: s(160),
-    lineHeight: s(22),
-  },
-  charCount: {
-    fontSize: s(12),
-    color: Colors.textLight,
-    textAlign: 'right',
-    marginTop: s(6),
+    fontSize: s(15), color: T1,
+    paddingVertical: s(14), paddingHorizontal: s(14),
+    borderWidth: 1, borderColor: DIV, borderRadius: s(12), backgroundColor: BG,
+    height: s(110), lineHeight: s(22),
   },
 
-  // 도움 방식
-  methodRow: {
-    flexDirection: 'row',
-    gap: s(10),
-  },
+  methodRow:            { flexDirection: 'row', gap: s(8) },
   methodChip: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: s(14),
-    borderRadius: s(12),
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-    gap: s(6),
+    flexDirection: 'row', alignItems: 'center', gap: s(6),
+    paddingHorizontal: s(14), paddingVertical: s(8),
+    borderRadius: s(20), borderWidth: s(1.5),
   },
-  methodChipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: '#EBF4FF',
-  },
-  methodChipEmoji: {
-    fontSize: s(22),
-  },
-  methodChipText: {
-    fontSize: s(13),
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  methodChipTextActive: {
-    color: Colors.primary,
-  },
+  methodChipUnselected: { backgroundColor: BG, borderColor: DIV },
+  methodDot:            { width: s(7), height: s(7), borderRadius: s(4) },
+  methodChipText:       { fontSize: s(13), fontWeight: '700' },
+  methodChipTextOff:    { color: T2 },
 
-  optional: {
-    fontSize: s(12),
-    fontWeight: '400',
-    color: Colors.textLight,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: s(8),
-  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: s(8) },
   optionChip: {
-    paddingHorizontal: s(14),
-    paddingVertical: s(8),
-    borderRadius: s(20),
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
+    paddingHorizontal: s(18), paddingVertical: s(10),
+    borderRadius: s(20), borderWidth: s(1.5), borderColor: DIV, backgroundColor: BG,
   },
-  optionChipActive: {
-    borderColor: Colors.primary,
-    backgroundColor: '#EBF4FF',
+  optionChipActive:     { borderColor: BLUE, backgroundColor: BLUE_L },
+  optionChipText:       { fontSize: s(13), fontWeight: '600', color: T2 },
+  optionChipTextActive: { color: BLUE, fontWeight: '700' },
+
+  photoAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: s(4),
+    backgroundColor: BLUE_L, borderRadius: s(20),
+    paddingHorizontal: s(12), paddingVertical: s(6),
   },
-  optionChipText: {
-    fontSize: s(13),
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  optionChipTextActive: {
-    color: Colors.primary,
-  },
-  bottomPadding: {
-    height: s(20),
+  photoAddBtnText: { fontSize: s(13), fontWeight: '700', color: BLUE },
+  photoRow:        { flexDirection: 'row', gap: s(10), marginTop: s(12), flexWrap: 'wrap' },
+  photoWrap:       { position: 'relative' },
+  photoThumb:      { width: s(80), height: s(80), borderRadius: s(12), backgroundColor: BG },
+  photoRemove: {
+    position: 'absolute', top: -s(6), right: -s(6),
+    width: s(20), height: s(20), borderRadius: s(10),
+    backgroundColor: '#374151', justifyContent: 'center', alignItems: 'center',
   },
 
-  // 하단 버튼
   footer: {
-    padding: s(16),
+    paddingHorizontal: s(32),
+    paddingTop: s(12),
     paddingBottom: Platform.OS === 'ios' ? s(32) : s(16),
-    backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    backgroundColor: BG,
   },
   submitBtn: {
-    backgroundColor: Colors.primary,
-    paddingVertical: s(16),
-    borderRadius: s(12),
-    alignItems: 'center',
+    backgroundColor: BLUE, paddingVertical: s(16), borderRadius: s(30), alignItems: 'center',
+    shadowColor: BLUE, shadowOffset: { width: 0, height: s(6) },
+    shadowOpacity: 0.35, shadowRadius: s(20), elevation: 8,
   },
-  submitBtnDisabled: {
-    opacity: 0.6,
-  },
-  submitBtnText: {
-    color: Colors.textWhite,
-    fontSize: s(17),
-    fontWeight: '700',
-  },
+  submitBtnInactive: { backgroundColor: '#D1D5DB', shadowOpacity: 0 },
+  submitBtnDisabled: { opacity: 0.6 },
+  submitBtnText:     { color: '#fff', fontSize: s(18), fontWeight: '800', letterSpacing: -0.3 },
 });
