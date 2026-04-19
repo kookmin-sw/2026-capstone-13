@@ -618,13 +618,13 @@ const s = StyleSheet.create({
 
   commentItem: { flexDirection: 'row', gap: sc(10), marginBottom: sc(16) },
   commentAvatar: {
-    width: sc(30), height: sc(30), borderRadius: sc(15),
+    width: sc(38), height: sc(38), borderRadius: sc(19),
     justifyContent: 'center', alignItems: 'center', flexShrink: 0,
   },
-  commentAvatarText: { fontSize: sc(11), fontWeight: '700', color: '#fff' },
+  commentAvatarText: { fontSize: sc(14), fontWeight: '700', color: '#fff' },
   commentBody: { flex: 1 },
   commentMeta: { flexDirection: 'row', alignItems: 'center', gap: sc(6), marginBottom: sc(4) },
-  commentAuthor: { fontSize: sc(12), fontWeight: '700', color: T1 },
+  commentAuthor: { fontSize: sc(14), fontWeight: '700', color: T1 },
   commentIntlBadge: {
     paddingHorizontal: sc(6), paddingVertical: sc(1),
     backgroundColor: '#FFF0E6', borderRadius: sc(5),
@@ -634,7 +634,7 @@ const s = StyleSheet.create({
   commentDeleteBtn: { marginLeft: 'auto' },
   commentDeleteText: { fontSize: sc(10), color: '#EF4444', fontWeight: '600' },
   replyCountText: { fontSize: sc(12), color: BLUE, fontWeight: '600' },
-  commentContent: { fontSize: sc(13), color: T1, lineHeight: sc(19) },
+  commentContent: { fontSize: sc(14), color: T1, lineHeight: sc(21) },
   commentTranslateBtn: { marginTop: sc(4), alignSelf: 'flex-start' },
   commentTranslateText: { fontSize: sc(11), color: T2, fontWeight: '600' },
   commentTranslateTextActive: { color: BLUE },
@@ -667,12 +667,12 @@ const s = StyleSheet.create({
   commentInput: {
     flex: 1,
     backgroundColor: BLUE_BG,
-    borderRadius: sc(20), borderWidth: sc(1), borderColor: BORDER,
-    paddingHorizontal: sc(14), paddingVertical: sc(8),
-    fontSize: sc(13), color: T1, maxHeight: sc(80),
+    borderRadius: sc(22), borderWidth: sc(1), borderColor: BORDER,
+    paddingHorizontal: sc(16), paddingVertical: sc(10),
+    fontSize: sc(15), color: T1, maxHeight: sc(100),
   },
   sendBtn: {
-    width: sc(36), height: sc(36), borderRadius: sc(18),
+    width: sc(40), height: sc(40), borderRadius: sc(20),
     backgroundColor: BLUE,
     justifyContent: 'center', alignItems: 'center',
   },
