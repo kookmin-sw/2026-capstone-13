@@ -203,10 +203,6 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
               )}
             </View>
             <View style={s.feedMetaRow}>
-              <View style={[s.catBadge, { backgroundColor: catBg }]}>
-                <Text style={[s.catBadgeText, { color: catColor }]}>{CATEGORY_LABEL[item.category]}</Text>
-              </View>
-              <Text style={s.feedTime}>{formatTime(item.createdAt)}</Text>
               {item.university ? (
                 <Text style={s.feedUniv} numberOfLines={1}>{item.university}</Text>
               ) : null}
@@ -313,7 +309,9 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
             }
           </TouchableOpacity>
         </View>
-        <View style={s.reactionRight} />
+        <View style={s.reactionRight}>
+          <Text style={s.feedTime}>{formatTime(item.createdAt)}</Text>
+        </View>
       </View>
 
       {/* ... 드롭다운 메뉴 */}
@@ -811,12 +809,12 @@ const s = StyleSheet.create({
   },
   feedAvatar: { width: sc(44), height: sc(44), borderRadius: sc(22) },
   feedAvatarText: { fontSize: sc(18), fontWeight: '700', color: '#fff' },
-  feedAuthorInfo: { flex: 1, gap: sc(4) },
+  feedAuthorInfo: { flex: 1, gap: sc(1) },
   feedNameRow: { flexDirection: 'row', alignItems: 'center', gap: sc(6) },
-  feedAuthorName: { fontSize: sc(15), fontWeight: '700', color: T1 },
+  feedAuthorName: { fontSize: sc(16), fontWeight: '700', color: T1 },
   feedMetaRow: { flexDirection: 'row', alignItems: 'center', gap: sc(6), flexWrap: 'wrap' },
   feedTime: { fontSize: sc(12), color: T2 },
-  feedUniv: { fontSize: sc(12), color: T2, flex: 1 },
+  feedUniv: { fontSize: sc(13), color: T2 },
   moreBtn: { padding: sc(4) },
 
   catBadge: { paddingHorizontal: sc(8), paddingVertical: sc(2), borderRadius: sc(6) },
