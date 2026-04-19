@@ -23,6 +23,10 @@ import { getHelpRequestById, acceptHelpRequest, cancelHelpRequest } from '../ser
 import { useAuthStore } from '../stores/authStore';
 import type { HelpCategory, HelpMethod, HelpRequest } from '../types';
 
+const CategoryEmoji: Record<HelpCategory, string> = {
+  BANK: '🏦', HOSPITAL: '🏥', SCHOOL: '🏫', DAILY: '🏠', OTHER: '📌',
+};
+
 // ── Design tokens (홈화면과 완전 통일) ──
 const BLUE    = '#3B6FE8';
 const BLUE_L  = '#EEF4FF';
@@ -40,12 +44,12 @@ function toAbsoluteUrl(path?: string): string | null {
   return SERVER_BASE_URL + path;
 }
 
-const CATEGORY_ICON: Record<HelpCategory, { name: React.ComponentProps<typeof Ionicons>['name']; color: string; bg: string }> = {
-  BANK:     { name: 'document-text-outline', color: '#5B7FA6', bg: '#E8EDF4' }, // 행정
-  HOSPITAL: { name: 'school-outline',        color: '#5B7FA6', bg: '#E8EDF4' }, // 학업
-  SCHOOL:   { name: 'school-outline',        color: '#5B7FA6', bg: '#E8EDF4' }, // 학교행정
-  DAILY:    { name: 'home-outline',          color: '#5B7FA6', bg: '#E8EDF4' }, // 생활
-  OTHER:    { name: 'star-outline',          color: '#5B7FA6', bg: '#E8EDF4' }, // 기타
+const CATEGORY_ICON: Record<HelpCategory, { name: React.ComponentProps<typeof Ionicons>['name'] }> = {
+  BANK:     { name: 'business-outline'                   },
+  HOSPITAL: { name: 'medkit-outline'                     },
+  SCHOOL:   { name: 'book-outline'                       },
+  DAILY:    { name: 'home-outline'                       },
+  OTHER:    { name: 'ellipsis-horizontal-circle-outline' },
 };
 const CATEGORY_BG: Record<HelpCategory, string> = {
   BANK: '#FEF3C7', HOSPITAL: '#FEE2E2', SCHOOL: '#EDE9FE', DAILY: '#D1FAE5', OTHER: '#F3F4F6',
@@ -297,13 +301,8 @@ export default function RequestDetailScreen() {
             </ScrollView>
           </View>
         ) : (
-          <View style={[styles.emptyBanner, { backgroundColor: CATEGORY_ICON[item.category].bg }]}>
-            <View style={[styles.emptyBannerIconWrap, { backgroundColor: CATEGORY_ICON[item.category].color }]}>
-              <Ionicons name={CATEGORY_ICON[item.category].name} size={s(48)} color="#fff" />
-            </View>
-            <Text style={[styles.emptyBannerLabel, { color: CATEGORY_ICON[item.category].color }]}>
-              {CategoryLabels[item.category].replace(/\S+\s/, '')}
-            </Text>
+          <View style={styles.emptyBanner}>
+            <Ionicons name={CATEGORY_ICON[item.category].name} size={s(48)} color="#AABBCC" />
           </View>
         )}
 
@@ -318,7 +317,7 @@ export default function RequestDetailScreen() {
               <Image source={{ uri: profileUri! }} style={styles.authorAvatar} onError={() => setImgError(true)} />
             ) : (
               <View style={styles.authorAvatarFallback}>
-                <Text style={styles.authorAvatarInitial}>{initial}</Text>
+                <Text style={styles.authorAvatarEmoji}>{CategoryEmoji[item.category]}</Text>
               </View>
             )}
             {isVerified && (
@@ -578,7 +577,7 @@ const styles = StyleSheet.create({
   },
   emptyBanner: {
     width: '100%',
-    height: s(220),
+    height: s(280),
     backgroundColor: '#E8ECF0',
     justifyContent: 'center',
     alignItems: 'center',
@@ -679,6 +678,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: BLUE,
     opacity: 0.7,
+  },
+  authorAvatarEmoji: {
+    fontSize: s(28),
   },
   authorInfo: { flex: 1 },
   ratingStars: { fontSize: s(15), fontWeight: '800', color: '#F59E0B' },
@@ -877,8 +879,8 @@ const styles = StyleSheet.create({
   cta: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: s(40),
-    paddingTop: s(12),
-    paddingBottom: Platform.OS === 'ios' ? s(32) : s(20),
+    paddingTop: s(4),
+    paddingBottom: Platform.OS === 'ios' ? s(24) : s(12),
     minHeight: s(76),
   },
   bookmarkBtn: {
@@ -935,7 +937,7 @@ const styles = StyleSheet.create({
   editBtn: {
     flex: 1,
     height: s(50),
-    borderRadius: s(14),
+    borderRadius: s(25),
     borderWidth: s(1.5),
     borderColor: BLUE,
     justifyContent: 'center',
@@ -949,7 +951,7 @@ const styles = StyleSheet.create({
   deleteBtn: {
     flex: 1,
     height: s(50),
-    borderRadius: s(14),
+    borderRadius: s(25),
     borderWidth: s(1.5),
     borderColor: '#F97316',
     justifyContent: 'center',

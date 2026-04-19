@@ -149,17 +149,8 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
   onBlockSuccess?: () => void;
   onImageScrollStart?: () => void;
   onImageScrollEnd?: () => void;
-  index?: number;
 }) {
   const router = useRouter();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(-80)).current;
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 900, delay: Math.min(index * 120, 600), useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 900, delay: Math.min(index * 120, 600), useNativeDriver: true }),
-    ]).start();
-  }, []);
   const { user } = useAuthStore();
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
   const [liked, setLiked] = useState(item.liked);
@@ -181,7 +172,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
   const validImages = item.images.filter((_, i) => !imgErrors[i]);
 
   return (
-    <Animated.View style={[s.feedCard, { opacity: fadeAnim, transform: [{ translateX: slideAnim }] }]}>
+    <View style={s.feedCard}>
       <TouchableOpacity activeOpacity={0.95} onPress={onPress}>
         <View style={s.feedHeader}>
           <TouchableOpacity
@@ -437,7 +428,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
           </View>
         </Pressable>
       </Modal>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -455,7 +446,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
   const [searchMode, setSearchMode] = useState<SearchMode>('title');
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const { width: SCREEN_WIDTH } = Dimensions.get('window');
-  const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.72, 280);
+  const DRAWER_WIDTH = SCREEN_WIDTH * 0.58;
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const searchInputRef = useRef<TextInput>(null);
 
@@ -564,10 +555,10 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
           {/* 카테고리 선택 버튼 */}
           <TouchableOpacity style={s.catSelectorBtn} onPress={openDrawer} activeOpacity={0.8}>
             <View style={[s.catSelectorIcon, { backgroundColor: menuItem?.bg ?? BG }]}>
-              <Ionicons name={(menuItem?.icon ?? 'apps-outline') as never} size={16} color={menuItem?.color ?? T1} />
+              <Ionicons name={(menuItem?.icon ?? 'ellipsis-vertical') as never} size={16} color={menuItem?.color ?? T1} />
             </View>
             <Text style={[s.catSelectorLabel, { color: menuItem?.color ?? T1 }]}>{headerTitle}</Text>
-            <Ionicons name="chevron-down" size={14} color={T2} />
+            <Ionicons name="chevron-forward" size={14} color={T2} />
           </TouchableOpacity>
           {/* 검색바 */}
           <View style={s.headerSearchBar}>
@@ -636,7 +627,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
               return (
                 <TouchableOpacity
                   key={item.key}
-                  style={[s.drawerItem, idx < CATEGORY_MENU.length - 1 && s.drawerItemBorder, isActive && { backgroundColor: item.bg }]}
+                  style={[s.drawerItem, s.drawerItemBorder, isActive && { backgroundColor: item.bg }]}
                   onPress={() => { onCategoryChange(item.key as FilterCategory); closeDrawer(); }}
                   activeOpacity={0.7}
                 >
@@ -740,8 +731,11 @@ const s = StyleSheet.create({
   drawerPanel: {
     position: 'absolute', top: 0, left: 0, bottom: 0,
     backgroundColor: '#fff',
+    borderTopRightRadius: sc(20),
+    borderBottomRightRadius: sc(20),
     shadowColor: '#000', shadowOffset: { width: 4, height: 0 },
     shadowOpacity: 0.12, shadowRadius: sc(16), elevation: 16,
+    overflow: 'hidden',
   },
   drawerHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

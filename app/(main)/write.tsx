@@ -59,11 +59,11 @@ const CATEGORY_LABEL: Record<HelpCategory, string> = {
   BANK: '행정', HOSPITAL: '병원', SCHOOL: '학업', DAILY: '생활', OTHER: '기타',
 };
 const CATEGORY_ICON: Record<HelpCategory, { name: React.ComponentProps<typeof Ionicons>['name']; color: string }> = {
-  BANK:     { name: 'business-outline',   color: '#5B7FA6' },
-  HOSPITAL: { name: 'school-outline',     color: '#5B7FA6' },
-  SCHOOL:   { name: 'school-outline',     color: '#5B7FA6' },
-  DAILY:    { name: 'home-outline',       color: '#5B7FA6' },
-  OTHER:    { name: 'add-circle-outline', color: '#5B7FA6' },
+  BANK:     { name: 'business-outline',                   color: '#3B6FE8' },
+  HOSPITAL: { name: 'medkit-outline',                     color: '#EF4444' },
+  SCHOOL:   { name: 'book-outline',                       color: '#8B5CF6' },
+  DAILY:    { name: 'home-outline',                       color: '#F97316' },
+  OTHER:    { name: 'ellipsis-horizontal-circle-outline', color: '#6B7280' },
 };
 const METHOD_LABEL: Record<string, string> = {
   CHAT: '온라인', OFFLINE: '오프라인',

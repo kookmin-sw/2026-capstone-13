@@ -47,11 +47,11 @@ export const Colors = {
 
 // 카테고리 라벨 (한국어)
 export const CategoryLabels: Record<HelpCategory, string> = {
-  BANK: '🏦 은행',
+  BANK: '🏢 행정',
   HOSPITAL: '🏥 병원',
-  SCHOOL: '🏫 학교행정',
+  SCHOOL: '📚 학업',
   DAILY: '🏠 생활',
-  OTHER: '📌 기타',
+  OTHER: '⋯ 기타',
 };
 
 // 도움 방식 라벨 (한국어)
