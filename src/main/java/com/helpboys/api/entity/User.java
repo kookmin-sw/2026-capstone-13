@@ -119,6 +119,9 @@ public class User {
     @Builder.Default
     private Integer ratingCount = 0;
 
+    @Column(name = "last_login_at")
+    private LocalDateTime lastLoginAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();

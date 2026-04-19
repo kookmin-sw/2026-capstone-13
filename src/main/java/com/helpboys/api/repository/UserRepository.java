@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +14,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
     List<User> findByStudentIdStatus(User.StudentIdStatus status);
     List<User> findByUserType(User.UserType userType);
+
+    @Query("SELECT COUNT(u) FROM User u WHERE u.userType = 'KOREAN' AND u.lastLoginAt >= :since AND u.isDeleted = false")
+    long countActiveKoreanHelpers(@Param("since") LocalDateTime since);
 
     @Modifying
     @Query("UPDATE User u SET u.helpCount = u.helpCount + 1 WHERE u.id = :id")

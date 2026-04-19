@@ -97,11 +97,19 @@ public class UserService implements UserDetailsService {
             throw new BusinessException("이메일 또는 비밀번호가 올바르지 않습니다.", HttpStatus.UNAUTHORIZED);
         }
 
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepository.save(user);
+
         String token = jwtUtil.generateToken(user.getEmail(), user.getId());
         return LoginResponse.builder()
                 .accessToken(token)
                 .user(UserResponse.from(user))
                 .build();
+    }
+
+    public long getTodayActiveHelperCount() {
+        LocalDateTime startOfDay = LocalDateTime.now().toLocalDate().atStartOfDay();
+        return userRepository.countActiveKoreanHelpers(startOfDay);
     }
 
     // 이미지 Cloudinary 업로드 (공통)

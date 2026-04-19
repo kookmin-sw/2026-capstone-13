@@ -37,6 +37,12 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("조회 성공", userService.getKoreanUsers(userId)));
     }
 
+    // GET /api/users/active-helpers-count - 오늘 접속한 한국인 헬퍼 수
+    @GetMapping("/active-helpers-count")
+    public ResponseEntity<ApiResponse<Long>> getActiveHelperCount() {
+        return ResponseEntity.ok(ApiResponse.success("조회 성공", userService.getTodayActiveHelperCount()));
+    }
+
     // GET /api/users/me - 내 프로필 조회
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getMyProfile(
