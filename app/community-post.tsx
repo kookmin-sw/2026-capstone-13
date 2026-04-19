@@ -9,6 +9,8 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { s as sc } from '../utils/scale';
 import { getCommunityPost, addCommunityComment, toggleCommunityLike, updateCommunityPost, deleteCommunityPost, deleteCommunityComment, translateCommunityPost, translateCommunityComment, type CommunityPostDetailDto, type PostCommentDto } from '../services/communityService';
+import { blockUser } from '../services/blockService';
+import { getOrCreateDirectRoom } from '../services/directChatService';
 import { useAuthStore } from '../stores/authStore';
 import { useCommunityStore } from '../stores/communityStore';
 
@@ -269,6 +271,73 @@ export default function CommunityPostScreen() {
               </Pressable>
             </Modal>
           </View>
+        ) : post.author !== '(알 수 없음)' ? (
+          <View>
+            <TouchableOpacity style={s.moreBtn} onPress={() => setMenuVisible(true)}>
+              <Ionicons name="ellipsis-horizontal" size={20} color={T1} />
+            </TouchableOpacity>
+            <Modal transparent visible={menuVisible} animationType="none" onRequestClose={() => setMenuVisible(false)}>
+              <Pressable style={s.menuOverlay} onPress={() => setMenuVisible(false)}>
+                <View style={s.menuBox}>
+                  <TouchableOpacity
+                    style={s.menuItem}
+                    onPress={async () => {
+                      setMenuVisible(false);
+                      if (!post.authorId) return;
+                      try {
+                        const res = await getOrCreateDirectRoom(post.authorId);
+                        if (res.success) {
+                          router.push({
+                            pathname: '/chatroom',
+                            params: {
+                              roomId: res.data.id,
+                              requestTitle: post.author,
+                              partnerNickname: post.author,
+                              partnerProfileImage: toAbsoluteUrl(post.authorProfileImage) ?? '',
+                              isDirect: 'true',
+                              roomUnreadCount: String(res.data.unreadCount ?? 0),
+                            },
+                          });
+                        }
+                      } catch {}
+                    }}
+                  >
+                    <Ionicons name="chatbubble-outline" size={16} color={T1} />
+                    <Text style={s.menuItemText}>채팅하기</Text>
+                  </TouchableOpacity>
+                  <View style={s.menuDivider} />
+                  <TouchableOpacity
+                    style={s.menuItem}
+                    onPress={() => {
+                      setMenuVisible(false);
+                      if (!post.authorId) return;
+                      Alert.alert(
+                        '차단하기',
+                        `${post.author}님을 차단하시겠어요?\n차단한 사용자의 글과 메시지가 보이지 않습니다.`,
+                        [
+                          { text: '취소', style: 'cancel' },
+                          {
+                            text: '차단', style: 'destructive',
+                            onPress: async () => {
+                              try {
+                                await blockUser(post.authorId!);
+                                router.back();
+                              } catch {
+                                Alert.alert('오류', '차단에 실패했습니다.');
+                              }
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                  >
+                    <Ionicons name="ban-outline" size={16} color="#EF4444" />
+                    <Text style={[s.menuItemText, { color: '#EF4444' }]}>차단하기</Text>
+                  </TouchableOpacity>
+                </View>
+              </Pressable>
+            </Modal>
+          </View>
         ) : (
           <View style={{ width: 36 }} />
         )}
@@ -280,21 +349,10 @@ export default function CommunityPostScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
-        {/* 카테고리 배지 */}
         <View style={s.postWrap}>
-          <View style={s.catRow}>
-            <View style={s.catBadge}>
-              <Text style={s.catBadgeText}>{CATEGORY_LABEL[post.category]}</Text>
-            </View>
-            {post.userType !== 'KOREAN' && (
-              <View style={s.intlBadge}>
-                <Text style={s.intlBadgeText}>{post.userType === 'EXCHANGE' ? '교환학생' : '유학생'}</Text>
-              </View>
-            )}
+          <View style={s.catBadgeAbsolute}>
+            <Text style={s.catBadgeText}>{CATEGORY_LABEL[post.category]}</Text>
           </View>
-
-          {/* 제목 */}
-          <Text style={s.postTitle}>{translation ? translation.title : post.title}</Text>
 
           {/* 작성자 정보 */}
           <TouchableOpacity
@@ -308,11 +366,14 @@ export default function CommunityPostScreen() {
                   <Text style={s.avatarText}>{getInitial(post.author)}</Text>
                 </View>
             }
-            <View>
+            <View style={{ gap: sc(1) }}>
               <Text style={s.authorName}>{post.author}</Text>
-              <Text style={s.authorSub}>{post.university} · {formatTime(post.createdAt)}</Text>
+              <Text style={s.authorSub}>{post.university}</Text>
             </View>
           </TouchableOpacity>
+
+          {/* 제목 */}
+          <Text style={s.postTitle}>{translation ? translation.title : post.title}</Text>
 
           {/* 본문 */}
           <Text style={s.postContent}>{translation ? translation.content : post.content}</Text>
@@ -330,29 +391,32 @@ export default function CommunityPostScreen() {
 
           {/* 좋아요 / 댓글 수 / 번역 버튼 */}
           <View style={s.reactionBar}>
-            <TouchableOpacity style={s.reactionBtn} onPress={handleLike} activeOpacity={0.8}>
-              <Ionicons
-                name={isLiked ? 'heart' : 'heart-outline'}
-                size={18}
-                color={isLiked ? '#EF4444' : T2}
-              />
-              <Text style={[s.reactionCount, isLiked && s.reactionCountLiked]}>{post.likes}</Text>
-            </TouchableOpacity>
-            <View style={s.reactionBtn}>
-              <Ionicons name="chatbubble-outline" size={17} color={T2} />
-              <Text style={s.reactionCount}>{comments.length}</Text>
+            <View style={s.reactionBtns}>
+              <TouchableOpacity style={s.reactionBtn} onPress={handleLike} activeOpacity={0.8}>
+                <Ionicons
+                  name={isLiked ? 'heart' : 'heart-outline'}
+                  size={18}
+                  color={isLiked ? '#EF4444' : T2}
+                />
+                <Text style={[s.reactionCount, isLiked && s.reactionCountLiked]}>{post.likes}</Text>
+              </TouchableOpacity>
+              <View style={s.reactionBtn}>
+                <Ionicons name="chatbubble-outline" size={17} color={T2} />
+                <Text style={s.reactionCount}>{comments.length}</Text>
+              </View>
+              <TouchableOpacity
+                style={[s.reactionBtn, translation && s.translateBtnActive]}
+                onPress={handleTranslate}
+                activeOpacity={0.8}
+                disabled={translating}
+              >
+                {translating
+                  ? <ActivityIndicator size="small" color={BLUE} />
+                  : <Ionicons name="language-outline" size={18} color={translation ? '#fff' : T2} />
+                }
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={[s.reactionBtn, translation && s.translateBtnActive]}
-              onPress={handleTranslate}
-              activeOpacity={0.8}
-              disabled={translating}
-            >
-              {translating
-                ? <ActivityIndicator size="small" color={BLUE} />
-                : <Ionicons name="language-outline" size={18} color={translation ? '#fff' : T2} />
-              }
-            </TouchableOpacity>
+            <Text style={s.postTime}>{formatTime(post.createdAt)}</Text>
           </View>
         </View>
 
@@ -471,7 +535,7 @@ export default function CommunityPostScreen() {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BLUE_BG },
+  container: { flex: 1, backgroundColor: '#fff' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BLUE_BG },
 
   // 헤더
@@ -499,31 +563,36 @@ const s = StyleSheet.create({
   postWrap: {
     backgroundColor: '#fff',
     padding: sc(18),
-    borderBottomWidth: sc(8),
-    borderBottomColor: BLUE_BG,
+    borderBottomWidth: sc(1),
+    borderBottomColor: BORDER,
+    position: 'relative',
   },
-  catRow: { flexDirection: 'row', gap: sc(6), marginBottom: sc(10) },
+  catBadgeAbsolute: {
+    position: 'absolute', top: sc(18), right: sc(18),
+    paddingHorizontal: sc(12), paddingVertical: sc(5),
+    backgroundColor: BLUE_L, borderRadius: sc(8),
+  },
   catBadge: {
     paddingHorizontal: sc(10), paddingVertical: sc(3),
     backgroundColor: BLUE_L, borderRadius: sc(8),
   },
-  catBadgeText: { fontSize: sc(11), fontWeight: '800', color: BLUE },
+  catBadgeText: { fontSize: sc(13), fontWeight: '800', color: BLUE },
   intlBadge: {
     paddingHorizontal: sc(10), paddingVertical: sc(3),
     backgroundColor: '#FFF0E6', borderRadius: sc(8),
   },
   intlBadgeText: { fontSize: sc(11), fontWeight: '800', color: '#C45A10' },
 
-  postTitle: { fontSize: sc(18), fontWeight: '900', color: T1, lineHeight: sc(26), marginBottom: sc(14), letterSpacing: -0.4 },
+  postTitle: { fontSize: sc(18), fontWeight: '900', color: T1, lineHeight: sc(26), marginTop: sc(6), marginBottom: sc(8), letterSpacing: -0.4 },
 
-  authorRow: { flexDirection: 'row', alignItems: 'center', gap: sc(10), marginBottom: sc(16) },
+  authorRow: { flexDirection: 'row', alignItems: 'center', gap: sc(10), marginBottom: sc(8) },
   avatar: {
-    width: sc(36), height: sc(36), borderRadius: sc(18),
+    width: sc(44), height: sc(44), borderRadius: sc(22),
     justifyContent: 'center', alignItems: 'center',
   },
-  avatarText: { fontSize: sc(14), fontWeight: '700', color: '#fff' },
-  authorName: { fontSize: sc(13), fontWeight: '700', color: T1 },
-  authorSub: { fontSize: sc(11), color: T2, marginTop: sc(1) },
+  avatarText: { fontSize: sc(18), fontWeight: '700', color: '#fff' },
+  authorName: { fontSize: sc(16), fontWeight: '700', color: T1 },
+  authorSub: { fontSize: sc(13), color: T2 },
 
   postContent: { fontSize: sc(14), color: T1, lineHeight: sc(22), marginBottom: sc(8) },
 
@@ -531,9 +600,11 @@ const s = StyleSheet.create({
   image: { width: sc(200), height: sc(200), borderRadius: sc(12), marginRight: sc(8) },
 
   reactionBar: {
-    flexDirection: 'row', gap: sc(16),
-    paddingTop: sc(8),
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', paddingTop: sc(8),
   },
+  reactionBtns: { flexDirection: 'row', gap: sc(16), alignItems: 'center' },
+  postTime: { fontSize: sc(12), color: T2 },
   reactionBtn: { flexDirection: 'row', alignItems: 'center', gap: sc(5) },
   reactionCount: { fontSize: sc(14), color: T2, fontWeight: '600' },
   reactionCountLiked: { color: '#EF4444' },
