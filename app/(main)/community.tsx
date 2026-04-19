@@ -457,7 +457,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
   const closeDrawer = () => {
     Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 450, useNativeDriver: true }).start(() => setDropdownVisible(false));
   };
-  const HEADER_HEIGHT = insets.top + 76;
+  const HEADER_HEIGHT = insets.top + 68;
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -699,7 +699,7 @@ const cs = StyleSheet.create({
 
 // ── 피드 스타일 ───────────────────────────────────────────────
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG },
+  container: { flex: 1, backgroundColor: '#fff' },
   stickyHeader: {
     position: 'absolute', top: 0, left: 0, right: 0,
     zIndex: 10, backgroundColor: '#fff',
@@ -789,7 +789,7 @@ const s = StyleSheet.create({
 
   // ── List ──
   list: { paddingBottom: sc(100) },
-  postDivider: { height: sc(8), backgroundColor: BG },
+  postDivider: { height: sc(1), backgroundColor: BORDER },
 
   // ── Feed Card ──
   feedCard: {
@@ -837,7 +837,7 @@ const s = StyleSheet.create({
 
   feedFooter: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: sc(10), borderTopWidth: 1, borderTopColor: '#F0F3F8', marginTop: sc(6),
+    paddingVertical: sc(6), marginTop: sc(2),
   },
   reactionLeft: { flexDirection: 'row', gap: sc(16) },
   reactionRight: { flexDirection: 'row', gap: sc(12) },

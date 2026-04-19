@@ -525,14 +525,14 @@ const s = StyleSheet.create({
   authorName: { fontSize: sc(13), fontWeight: '700', color: T1 },
   authorSub: { fontSize: sc(11), color: T2, marginTop: sc(1) },
 
-  postContent: { fontSize: sc(14), color: T1, lineHeight: sc(22), marginBottom: sc(16) },
+  postContent: { fontSize: sc(14), color: T1, lineHeight: sc(22), marginBottom: sc(8) },
 
   imageScroll: { marginBottom: sc(16) },
   image: { width: sc(200), height: sc(200), borderRadius: sc(12), marginRight: sc(8) },
 
   reactionBar: {
     flexDirection: 'row', gap: sc(16),
-    paddingTop: sc(14), borderTopWidth: sc(1), borderTopColor: BORDER,
+    paddingTop: sc(8),
   },
   reactionBtn: { flexDirection: 'row', alignItems: 'center', gap: sc(5) },
   reactionCount: { fontSize: sc(14), color: T2, fontWeight: '600' },
