@@ -583,9 +583,9 @@ const s = StyleSheet.create({
   },
   intlBadgeText: { fontSize: sc(11), fontWeight: '800', color: '#C45A10' },
 
-  postTitle: { fontSize: sc(18), fontWeight: '900', color: T1, lineHeight: sc(26), marginTop: sc(6), marginBottom: sc(8), letterSpacing: -0.4 },
+  postTitle: { fontSize: sc(18), fontWeight: '900', color: T1, lineHeight: sc(26), marginTop: sc(4), marginBottom: sc(8), letterSpacing: -0.4 },
 
-  authorRow: { flexDirection: 'row', alignItems: 'center', gap: sc(10), marginBottom: sc(8) },
+  authorRow: { flexDirection: 'row', alignItems: 'center', gap: sc(10), marginBottom: sc(4) },
   avatar: {
     width: sc(44), height: sc(44), borderRadius: sc(22),
     justifyContent: 'center', alignItems: 'center',
