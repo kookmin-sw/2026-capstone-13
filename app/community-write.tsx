@@ -24,11 +24,11 @@ export default function CommunityWriteScreen() {
 
   const localEmoji = user?.userType === 'KOREAN' ? '🇰🇷' : user?.userType === 'EXCHANGE' ? '✈️' : '🌍';
 
-  const CATEGORIES: { key: PostCategory; label: string; emoji: string; color: string }[] = [
-    { key: 'INFO',     label: '일반', emoji: '💬',       color: '#3B82F6' },
-    { key: 'QUESTION', label: '로컬', emoji: localEmoji, color: '#F59E0B' },
-    { key: 'CHAT',     label: '모임', emoji: '🤝',       color: '#10B981' },
-    { key: 'CULTURE',  label: '장터', emoji: '🛒',       color: '#8B5CF6' },
+  const CATEGORIES: { key: PostCategory; label: string; icon: string; color: string; bg: string }[] = [
+    { key: 'INFO',     label: '일반', icon: 'chatbubbles-outline', color: '#3B6FE8', bg: '#EEF4FF' },
+    { key: 'QUESTION', label: '로컬', icon: 'location-outline',    color: '#F97316', bg: '#FFF3E8' },
+    { key: 'CHAT',     label: '모임', icon: 'people-outline',      color: '#16A34A', bg: '#F0FDF4' },
+    { key: 'CULTURE',  label: '장터', icon: 'storefront-outline',  color: '#8B5CF6', bg: '#F5F3FF' },
   ];
   const params = useLocalSearchParams<{ id?: string; category?: string; title?: string; content?: string }>();
 
@@ -158,7 +158,9 @@ export default function CommunityWriteScreen() {
                   onPress={() => setSelectedCategory(cat.key)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+                  <View style={[styles.categoryIconWrap, { backgroundColor: isActive ? cat.color + '28' : cat.bg }]}>
+                    <Ionicons name={cat.icon as never} size={30} color={cat.color} />
+                  </View>
                   <Text style={[styles.categoryLabel, isActive && { color: cat.color, fontWeight: '700' }]}>
                     {cat.label}
                   </Text>
@@ -166,12 +168,9 @@ export default function CommunityWriteScreen() {
               );
             })}
           </View>
-        </View>
+          <View style={styles.fieldDivider} />
 
-        <View style={styles.divider} />
-
-        {/* 제목 */}
-        <View style={styles.section}>
+        {/* 제목 + 내용 */}
           <Text style={styles.label}>제목 <Text style={styles.required}>*</Text></Text>
           <TextInput
             style={styles.input}
@@ -182,12 +181,7 @@ export default function CommunityWriteScreen() {
             maxLength={50}
           />
           <Text style={styles.charCount}>{title.length} / 50</Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* 내용 */}
-        <View style={styles.section}>
+          <View style={styles.fieldDivider} />
           <Text style={styles.label}>내용 <Text style={styles.required}>*</Text></Text>
           <TextInput
             style={styles.textarea}
@@ -200,12 +194,9 @@ export default function CommunityWriteScreen() {
             maxLength={1000}
           />
           <Text style={styles.charCount}>{content.length} / 1000</Text>
-        </View>
-
-        <View style={styles.divider} />
+          <View style={styles.fieldDivider} />
 
         {/* 사진 첨부 */}
-        <View style={styles.section}>
           <View style={styles.photoHeader}>
             <Text style={styles.label}>사진 첨부</Text>
             <Text style={styles.photoCount}>{images.length} / {MAX_IMAGES}</Text>
@@ -266,15 +257,16 @@ const styles = StyleSheet.create({
   label: { fontSize: s(15), fontWeight: '700', color: Colors.textPrimary, marginBottom: s(12) },
   required: { color: '#EF4444' },
   divider: { height: s(8), backgroundColor: Colors.background },
+  fieldDivider: { height: s(1), backgroundColor: Colors.border, marginVertical: s(16) },
 
   // 카테고리
   categoryRow: { flexDirection: 'row', gap: s(10) },
   categoryChip: {
     flex: 1, alignItems: 'center', paddingVertical: s(12), gap: s(6),
-    borderRadius: s(12), borderWidth: s(1.5), borderColor: Colors.border,
+    borderRadius: s(12),
     backgroundColor: Colors.surface,
   },
-  categoryEmoji: { fontSize: 20 },
+  categoryIconWrap: { width: s(56), height: s(56), borderRadius: s(14), justifyContent: 'center', alignItems: 'center' },
   categoryLabel: { fontSize: s(12), fontWeight: '600', color: Colors.textSecondary },
 
   // 입력

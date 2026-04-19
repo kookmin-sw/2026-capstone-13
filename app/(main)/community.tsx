@@ -38,7 +38,7 @@ const BORDER   = '#E8EDF5';
 const ORANGE   = '#F97316';
 const T1       = '#0E1E40';
 const T2       = '#6B7A99';
-const T3       = '#6B9DF0';
+const T3       = '#16A34A';
 const BG       = '#F4F6FB';
 
 type FilterCategory = 'ALL' | PostCategory;
@@ -52,7 +52,7 @@ const CATEGORY_COLOR: Record<PostCategory, string> = {
 };
 
 const CATEGORY_BG: Record<PostCategory, string> = {
-  INFO: BLUE_L, QUESTION: '#FFF3E8', CHAT: '#EEF4FF', CULTURE: '#F5F3FF',
+  INFO: BLUE_L, QUESTION: '#FFF3E8', CHAT: '#F0FDF4', CULTURE: '#F5F3FF',
 };
 
 // 카테고리 홈 메뉴 정의
@@ -67,7 +67,7 @@ const CATEGORY_MENU: {
   { key: 'ALL',      label: '전체', desc: '모든 글 모아보기',           icon: 'apps-outline',         color: T1,       bg: BG },
   { key: 'INFO',     label: '일반',        desc: '자유롭게 이야기해요',         icon: 'chatbubbles-outline',  color: BLUE,     bg: BLUE_L },
   { key: 'QUESTION', label: '로컬',        desc: '우리 지역 이야기',            icon: 'location-outline',     color: ORANGE,   bg: '#FFF3E8' },
-  { key: 'CHAT',     label: '모임',        desc: '같이 만나요',                icon: 'people-outline',       color: T3,       bg: '#EEF4FF' },
+  { key: 'CHAT',     label: '모임',        desc: '같이 만나요',                icon: 'people-outline',       color: T3,       bg: '#F0FDF4' },
   { key: 'CULTURE',  label: '장터',        desc: '사고 팔고 나눠요',            icon: 'storefront-outline',   color: '#8B5CF6', bg: '#F5F3FF' },
 ];
 
