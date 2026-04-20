@@ -387,9 +387,6 @@ export default function ChatScreen() {
               <View style={s.itemTop}>
                 <View style={s.itemTitleRow}>
                   <Text style={s.itemName}>{name}</Text>
-                  <View style={[s.statusBadge, { backgroundColor: '#F0F9FF' }]}>
-                    <Text style={[s.statusText, { color: '#0EA5E9' }]}>일반</Text>
-                  </View>
                 </View>
                 <Text style={s.itemTime}>{formatTime(room.lastMessageTime ?? '')}</Text>
               </View>
@@ -458,9 +455,6 @@ export default function ChatScreen() {
             <View style={s.itemTop}>
               <View style={s.itemTitleRow}>
                 <Text style={s.itemName}>{name}</Text>
-                <View style={[s.statusBadge, { backgroundColor: statusBg }]}>
-                  <Text style={[s.statusText, { color: statusColor }]}>{statusLabel}</Text>
-                </View>
               </View>
               <Text style={s.itemTime}>{formatTime(room.lastMessageTime ?? '')}</Text>
             </View>
