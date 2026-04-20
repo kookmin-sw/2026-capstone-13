@@ -40,7 +40,6 @@ const GREEN    = '#22C55E';
 type FilterTab = 'ALL' | 'IN_PROGRESS' | 'COMPLETED' | 'DIRECT';
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
-  { key: 'ALL',         label: '전체'   },
   { key: 'DIRECT',      label: '일반'   },
   { key: 'IN_PROGRESS', label: '진행중' },
   { key: 'COMPLETED',   label: '완료'   },
@@ -95,7 +94,7 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading]       = useState(true);
   const [refreshing, setRefreshing]     = useState(false);
   const [actioningId, setActioningId] = useState<number | null>(null);
-  const [filter, setFilter]         = useState<FilterTab>('ALL');
+  const [filter, setFilter]         = useState<FilterTab>('DIRECT');
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery]     = useState('');
   const searchInputRef = useRef<TextInput>(null);
@@ -238,7 +237,7 @@ export default function ChatScreen() {
         .filter((r) => {
           if (hasLeft(r.id, myId)) return false;
           if (filter === 'ALL')         return r.status === 'MATCHED' || r.status === 'IN_PROGRESS' || r.status === 'COMPLETED' || r.status === 'WAITING';
-          if (filter === 'IN_PROGRESS') return r.status === 'IN_PROGRESS';
+          if (filter === 'IN_PROGRESS') return r.status === 'IN_PROGRESS' || r.status === 'WAITING' || r.status === 'MATCHED';
           if (filter === 'COMPLETED')   return r.status === 'COMPLETED';
           return false;
         })
@@ -258,6 +257,19 @@ export default function ChatScreen() {
       if (!searchQuery.trim()) return true;
       return r.partnerNickname.toLowerCase().includes(searchQuery.trim().toLowerCase());
     });
+
+  const tabUnread: Record<FilterTab, number> = {
+    ALL: 0,
+    DIRECT: directRooms
+      .filter((r) => !hasLeft(r.id, myId))
+      .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0),
+    IN_PROGRESS: requests
+      .filter((r) => !hasLeft(r.id, myId) && (r.status === 'IN_PROGRESS' || r.status === 'WAITING' || r.status === 'MATCHED'))
+      .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0),
+    COMPLETED: requests
+      .filter((r) => !hasLeft(r.id, myId) && r.status === 'COMPLETED')
+      .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0),
+  };
 
   // 섹션 헤더 포함 리스트 데이터
   type ListData = ChatRoomResponse | DirectChatRoomResponse | { type: 'sectionHeader'; label: string; id: string };
@@ -504,7 +516,7 @@ export default function ChatScreen() {
       <View style={s.header}>
         <Text style={s.headerTitle}>채팅</Text>
         <TouchableOpacity style={s.iconBtn} onPress={openSearch}>
-          <Ionicons name="search-outline" size={14} color={T3} />
+          <Ionicons name="search-outline" size={22} color={T3} />
         </TouchableOpacity>
       </View>
 
@@ -536,17 +548,29 @@ export default function ChatScreen() {
 
       {/* 필터 탭 */}
       <View style={s.filterRow}>
-        {FILTER_TABS.map(({ key, label }) => (
-          <TouchableOpacity
-            key={key}
-            style={[s.chip, filter === key && s.chipOn]}
-            onPress={() => setFilter(key)}
-            activeOpacity={0.8}
-          >
-            <Text style={[s.chipText, filter === key && s.chipTextOn]}>{label}</Text>
-          </TouchableOpacity>
-        ))}
+        {FILTER_TABS.map(({ key, label }) => {
+          const unread = tabUnread[key];
+          const isOn = filter === key;
+          return (
+            <TouchableOpacity
+              key={key}
+              style={[s.chip, isOn && s.chipOn]}
+              onPress={() => setFilter(key)}
+              activeOpacity={0.8}
+            >
+              <Text style={[s.chipText, isOn && s.chipTextOn]}>{label}</Text>
+              {unread > 0 && (
+                <View style={[s.tabBadge, isOn && s.tabBadgeOn]}>
+                  <Text style={[s.tabBadgeText, isOn && s.tabBadgeTextOn]}>
+                    {unread > 99 ? '99+' : unread}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
+      <View style={s.divider} />
 
       {listDataWithSections.length === 0 ? (
         <View style={s.empty}>
@@ -607,16 +631,17 @@ const s = StyleSheet.create({
     backgroundColor: BLUE_BG,
     paddingTop: Platform.OS === 'ios' ? sc(56) : sc(28),
     paddingBottom: 0,
-    paddingHorizontal: sc(18),
+    paddingHorizontal: sc(22),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerTitle: { fontSize: sc(24), fontWeight: '900', color: T1, letterSpacing: -0.6 },
   iconBtn: {
-    width: sc(44), height: sc(44), borderRadius: sc(22),
+    width: sc(34), height: sc(34), borderRadius: sc(17),
     backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center',
+    marginTop: sc(4),
   },
 
   // ── Search ──
@@ -635,15 +660,21 @@ const s = StyleSheet.create({
   searchCancelText: { fontSize: sc(13), color: BLUE, fontWeight: '700' },
 
   // ── Filter ──
-  filterRow: { flexDirection: 'row', gap: sc(8), paddingHorizontal: sc(22), paddingBottom: sc(14) },
+  filterRow: { flexDirection: 'row', gap: sc(8), paddingHorizontal: sc(22), paddingTop: sc(8), paddingBottom: sc(14) },
+  divider: { height: 1, backgroundColor: BORDER },
   chip: {
-    paddingHorizontal: sc(22), paddingVertical: sc(10),
+    paddingHorizontal: sc(14), paddingVertical: sc(6),
     borderRadius: sc(22), backgroundColor: '#fff',
     borderWidth: 1, borderColor: BORDER,
+    flexDirection: 'row', alignItems: 'center', gap: sc(5),
   },
-  chipOn:      { backgroundColor: BLUE, borderColor: BLUE },
-  chipText:    { fontSize: sc(13), fontWeight: '700', color: T2 },
-  chipTextOn:  { color: '#fff' },
+  chipOn:          { backgroundColor: BLUE, borderColor: BLUE },
+  chipText:        { fontSize: sc(13), fontWeight: '700', color: T2 },
+  chipTextOn:      { color: '#fff' },
+  tabBadge:        { minWidth: sc(18), height: sc(18), borderRadius: sc(9), backgroundColor: BLUE, justifyContent: 'center', alignItems: 'center', paddingHorizontal: sc(4) },
+  tabBadgeOn:      { backgroundColor: '#fff' },
+  tabBadgeText:    { fontSize: sc(10), fontWeight: '800', color: '#fff' },
+  tabBadgeTextOn:  { color: BLUE },
 
   // ── List ──
   list:      { paddingVertical: 0 },
