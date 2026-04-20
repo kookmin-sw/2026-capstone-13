@@ -140,14 +140,17 @@ export default function UserProfileScreen() {
   const [chatLoading, setChatLoading] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
+  const [communityCount, setCommunityCount] = useState<number | null>(null);
 
   const fetchProfile = useCallback(async () => {
     try {
-      const [profileRes, blockRes] = await Promise.all([
+      const [profileRes, blockRes, communityRes] = await Promise.all([
         getPublicUserProfile(Number(id)),
         getBlockStatus(Number(id)),
+        getUserCommunityPosts(Number(id)),
       ]);
       if (profileRes.success) setUser(profileRes.data);
+      if (communityRes.success) setCommunityCount(communityRes.data.length);
       if (blockRes.success) setIsBlocked(blockRes.data.isBlocked);
     } catch {
       // ignore
@@ -377,10 +380,14 @@ export default function UserProfileScreen() {
         {/* 도움내역 / 커뮤니티 탭 버튼 */}
         <View style={s.tabBtnRow}>
           <TouchableOpacity style={[s.tabBtn, s.tabBtnLeft]} activeOpacity={0.8} onPress={() => setActiveTab('help')}>
-            <Text style={[s.tabBtnText, activeTab === 'help' && s.tabBtnActive]}>도움내역</Text>
+            <Text style={[s.tabBtnText, activeTab === 'help' && s.tabBtnActive]}>
+              {`도움내역${user?.helpCount != null ? ` (${user.helpCount})` : ''}`}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.tabBtn} activeOpacity={0.8} onPress={() => setActiveTab('community')}>
-            <Text style={[s.tabBtnText, activeTab === 'community' && s.tabBtnActive]}>커뮤니티</Text>
+            <Text style={[s.tabBtnText, activeTab === 'community' && s.tabBtnActive]}>
+              {`커뮤니티${communityCount != null ? ` (${communityCount})` : ''}`}
+            </Text>
           </TouchableOpacity>
         </View>
         <View style={s.sectionDivider} />
