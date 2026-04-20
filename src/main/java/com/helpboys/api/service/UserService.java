@@ -255,9 +255,9 @@ public class UserService implements UserDetailsService {
     // 한국인 유저 목록 조회 (차단 유저 제외)
     public List<UserResponse> getKoreanUsers(Long userId) {
         List<Long> blockedIds = userBlockRepository.findBlockedIdsByBlockerId(userId);
-        return userRepository.findByUserType(User.UserType.KOREAN)
+        List<Long> excludedIds = blockedIds.isEmpty() ? List.of(-1L) : blockedIds;
+        return userRepository.findByUserTypeExcluding(User.UserType.KOREAN, excludedIds)
                 .stream()
-                .filter(u -> !blockedIds.contains(u.getId()))
                 .map(UserResponse::from)
                 .collect(Collectors.toList());
     }

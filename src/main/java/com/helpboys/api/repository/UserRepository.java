@@ -15,6 +15,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByStudentIdStatus(User.StudentIdStatus status);
     List<User> findByUserType(User.UserType userType);
 
+    @Query("SELECT u FROM User u WHERE u.userType = :userType AND u.id NOT IN :excludedIds AND u.isDeleted = false")
+    List<User> findByUserTypeExcluding(@Param("userType") User.UserType userType, @Param("excludedIds") List<Long> excludedIds);
+
     @Query("SELECT COUNT(u) FROM User u WHERE u.userType = 'KOREAN' AND u.lastLoginAt >= :since AND u.isDeleted = false")
     long countActiveKoreanHelpers(@Param("since") LocalDateTime since);
 
