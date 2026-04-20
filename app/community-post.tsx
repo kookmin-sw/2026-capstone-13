@@ -26,7 +26,7 @@ const T3      = '#6B9DF0';
 const ORANGE  = '#F97316';
 
 const CATEGORY_LABEL: Record<string, string> = {
-  INFO: '일반', QUESTION: '로컬', CHAT: '모임', CULTURE: '장터',
+  INFO: '자유게시판', QUESTION: '로컬게시판', CHAT: '모임게시판', CULTURE: '장터게시판',
 };
 
 const AVATAR_COLORS = ['#3B6FE8', '#6B9DF0', '#A8C8FA', '#5B8DEF', '#4A7CE0'];
@@ -369,12 +369,24 @@ export default function CommunityPostScreen() {
       <View style={s.moreBtnWrap}>
         {isOwnPost ? (
           <>
-            <TouchableOpacity style={s.moreBtn} onPress={handleEdit}>
-              <Ionicons name="pencil-outline" size={18} color={T1} />
+            <TouchableOpacity style={s.moreBtn} onPress={() => setMenuVisible(true)}>
+              <Ionicons name="ellipsis-vertical" size={20} color={T1} />
             </TouchableOpacity>
-            <TouchableOpacity style={s.moreBtn} onPress={handleDelete}>
-              <Ionicons name="trash-outline" size={18} color="#EF4444" />
-            </TouchableOpacity>
+            <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+              <Pressable style={s.menuOverlay} onPress={() => setMenuVisible(false)}>
+                <View style={s.menuSheet}>
+                  <TouchableOpacity style={s.menuItem} onPress={handleEdit}>
+                    <Ionicons name="pencil-outline" size={18} color={T1} />
+                    <Text style={s.menuItemText}>수정</Text>
+                  </TouchableOpacity>
+                  <View style={s.menuDivider} />
+                  <TouchableOpacity style={s.menuItem} onPress={handleDelete}>
+                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                    <Text style={[s.menuItemText, { color: '#EF4444' }]}>삭제</Text>
+                  </TouchableOpacity>
+                </View>
+              </Pressable>
+            </Modal>
           </>
         ) : post.author !== '(알 수 없음)' ? (
           <>
@@ -440,9 +452,6 @@ export default function CommunityPostScreen() {
               </View>
             </View>
           </TouchableOpacity>
-
-          {/* 제목 */}
-          <Text style={s.postTitle}>{translation ? translation.title : post.title}</Text>
 
           {/* 본문 */}
           <Text style={s.postContent}>{translation ? translation.content : post.content}</Text>
@@ -790,7 +799,7 @@ const s = StyleSheet.create({
   authorName: { fontSize: sc(16), fontWeight: '700', color: T1 },
   authorSub: { fontSize: sc(13), color: '#5B8DEF', fontWeight: '600' },
 
-  postContent: { fontSize: sc(14), color: T1, lineHeight: sc(22), marginBottom: sc(8) },
+  postContent: { fontSize: sc(16), color: T1, lineHeight: sc(25), marginBottom: sc(8) },
 
   imageScroll: { marginBottom: sc(16), flexDirection: 'row', flexWrap: 'wrap', gap: sc(8) },
   image: { width: sc(160), height: sc(160), borderRadius: sc(12), marginRight: sc(8) },
@@ -888,7 +897,17 @@ const s = StyleSheet.create({
     width: sc(36), height: sc(36), borderRadius: sc(18),
     backgroundColor: BLUE_L, justifyContent: 'center', alignItems: 'center',
   },
-  menuOverlay: { flex: 1 },
+  menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.2)' },
+  menuSheet: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 110 : 78,
+    right: sc(16),
+    backgroundColor: '#fff',
+    borderRadius: sc(12), borderWidth: 1, borderColor: BORDER,
+    shadowColor: '#000', shadowOffset: { width: 0, height: sc(4) },
+    shadowOpacity: 0.12, shadowRadius: sc(12), elevation: 8,
+    minWidth: sc(130), overflow: 'hidden',
+  },
   menuBox: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 116 : 84,

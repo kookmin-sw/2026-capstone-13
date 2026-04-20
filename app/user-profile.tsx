@@ -83,7 +83,7 @@ const STATUS_CONFIG: Record<RequestStatus, { label: string; color: string; bg: s
   CANCELLED:   { label: '취소됨',    bg: '#FEE2E2', color: '#991B1B' },
 };
 const POST_CATEGORY_LABEL: Record<string, string> = {
-  INFO: '일반', QUESTION: '로컬', CHAT: '모임', CULTURE: '장터',
+  INFO: '자유게시판', QUESTION: '로컬게시판', CHAT: '모임게시판', CULTURE: '장터게시판',
 };
 
 function formatTime(dateStr: string): string {

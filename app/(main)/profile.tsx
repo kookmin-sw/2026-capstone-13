@@ -431,7 +431,6 @@ export default function ProfileScreen() {
 
               {/* 2. 내 소개 */}
               <Text style={styles.editSectionTitle}>내 소개</Text>
-              <View style={styles.editDivider} />
               <TextInput
                 style={styles.editTextarea}
                 value={profileInput.bio}
@@ -1076,6 +1075,7 @@ const styles = StyleSheet.create({
   },
   editTextarea: {
     fontSize: sc(15), color: T1,
+    marginTop: sc(10),
     paddingVertical: sc(14), paddingHorizontal: sc(14),
     borderWidth: 1, borderColor: '#D4E4FF', borderRadius: sc(12), backgroundColor: '#F0F4FA',
     height: sc(100), lineHeight: sc(22), textAlignVertical: 'top',

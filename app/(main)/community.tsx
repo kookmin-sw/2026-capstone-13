@@ -44,7 +44,7 @@ const BG       = '#F4F6FB';
 type FilterCategory = 'ALL' | PostCategory;
 
 const CATEGORY_LABEL: Record<PostCategory, string> = {
-  INFO: '자유', QUESTION: '로컬', CHAT: '모임', CULTURE: '장터',
+  INFO: '자유게시판', QUESTION: '로컬게시판', CHAT: '모임게시판', CULTURE: '장터게시판',
 };
 
 const CATEGORY_COLOR: Record<PostCategory, string> = {
@@ -64,10 +64,10 @@ const CATEGORY_MENU: {
   color: string;
   bg: string;
 }[] = [
-  { key: 'INFO',     label: '자유',        desc: '자유롭게 이야기해요',         icon: 'chatbubbles-outline',  color: BLUE,     bg: BLUE_L },
-  { key: 'QUESTION', label: '로컬',        desc: '우리 지역 이야기',            icon: 'location-outline',     color: BLUE,     bg: BLUE_L },
-  { key: 'CHAT',     label: '모임',        desc: '같이 만나요',                icon: 'people-outline',       color: BLUE,     bg: BLUE_L },
-  { key: 'CULTURE',  label: '장터',        desc: '사고 팔고 나눠요',            icon: 'storefront-outline',   color: BLUE,     bg: BLUE_L },
+  { key: 'INFO',     label: '자유게시판', desc: '자유롭게 이야기해요',  icon: 'chatbubbles-outline', color: BLUE, bg: BLUE_L },
+  { key: 'QUESTION', label: '로컬게시판', desc: '우리 지역 이야기',    icon: 'location-outline',    color: BLUE, bg: BLUE_L },
+  { key: 'CHAT',     label: '모임게시판', desc: '같이 만나요',         icon: 'people-outline',      color: BLUE, bg: BLUE_L },
+  { key: 'CULTURE',  label: '장터게시판', desc: '사고 팔고 나눠요',    icon: 'storefront-outline',  color: BLUE, bg: BLUE_L },
 ];
 
 const AVATAR_COLORS = ['#F0A040', '#F06060', BLUE, '#90C4F0', '#A0A8B0'];
@@ -434,7 +434,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
   const closeDrawer = () => {
     Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 450, useNativeDriver: true }).start(() => setDropdownVisible(false));
   };
-  const HEADER_HEIGHT = insets.top + 145;
+  const HEADER_HEIGHT = insets.top + 115;
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -527,7 +527,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
       />
 
       {/* 고정 헤더 */}
-      <View style={[s.stickyHeader, { paddingTop: insets.top + 10 }]}>
+      <View style={[s.stickyHeader, { paddingTop: insets.top + 4 }]}>
         <View style={s.header}>
           {/* 카테고리 선택 버튼 */}
           <TouchableOpacity style={s.catSelectorBtn} onPress={openDrawer} activeOpacity={0.8}>
@@ -553,6 +553,14 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
               </TouchableOpacity>
             )}
           </View>
+          {/* 글쓰기 버튼 */}
+          <TouchableOpacity
+            style={s.writeBtn}
+            onPress={() => router.push({ pathname: '/community-write', params: { category: category === 'ALL' ? undefined : category } })}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="pencil-outline" size={sc(15)} color="#fff" />
+          </TouchableOpacity>
         </View>
         {searchVisible && (
           <View style={s.searchModeRow}>
@@ -577,22 +585,12 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
             <Ionicons name={(menuItem?.icon ?? 'chatbubbles-outline') as never} size={18} color="#fff" />
           </View>
           <View>
-            <Text style={s.boardBannerTitle}>{headerTitle} 게시판</Text>
+            <Text style={s.boardBannerTitle}>{headerTitle}</Text>
             <Text style={s.boardBannerDesc}>{menuItem?.desc ?? '자유롭게 이야기해보세요'}</Text>
           </View>
         </View>
         {isLoading ? <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 40 }} /> : null}
       </View>
-
-      {/* 하단 글쓰기 버튼 */}
-      <TouchableOpacity
-        style={s.fab}
-        onPress={() => router.push('/community-write')}
-        activeOpacity={0.85}
-      >
-        <Ionicons name="pencil-outline" size={sc(15)} color="#fff" />
-        <Text style={s.fabText}>글쓰기</Text>
-      </TouchableOpacity>
 
       {/* 카테고리 사이드 드로어 */}
       <Modal visible={dropdownVisible} transparent animationType="none" onRequestClose={closeDrawer}>
@@ -696,7 +694,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: sc(16),
-    paddingVertical: sc(10),
+    paddingVertical: sc(6),
     backgroundColor: '#fff',
     gap: sc(10),
   },
@@ -742,18 +740,12 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
   },
   headerSearchInput: { flex: 1, fontSize: sc(15), color: T1, padding: 0 },
-  fab: {
-    position: 'absolute', bottom: sc(100),
-    alignSelf: 'center',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: sc(6),
+  writeBtn: {
+    alignItems: 'center', justifyContent: 'center',
     backgroundColor: BLUE,
-    width: sc(95),
-    paddingVertical: sc(13),
-    borderRadius: sc(28),
-    shadowColor: BLUE, shadowOffset: { width: 0, height: sc(4) },
-    shadowOpacity: 0.35, shadowRadius: sc(10), elevation: 8,
+    width: sc(36), height: sc(36),
+    borderRadius: sc(18),
   },
-  fabText: { fontSize: sc(17), fontWeight: '800', color: '#fff' },
 
   // ── Search mode ──
   searchModeRow: {

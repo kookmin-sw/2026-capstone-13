@@ -126,13 +126,21 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  // 프로필 상세 수정 (로컬 즉시 반영 후 서버 동기화)
+  // 프로필 상세 수정 (서버 저장 후 응답값으로 상태 업데이트)
   updateProfileDetail: async (data: UpdateProfileRequest) => {
-    set((state) => ({ user: state.user ? { ...state.user, ...data } : null }));
+    let prevUser: User | null = null;
+    set((state) => {
+      prevUser = state.user;
+      return { user: state.user ? { ...state.user, ...data } : null };
+    });
     try {
-      await updateProfileDetailApi(data);
+      const response = await updateProfileDetailApi(data);
+      if (response.success && response.data) {
+        set({ user: { ...response.data, profileImage: toAbsoluteUrl(response.data.profileImage) } });
+      }
     } catch {
-      // 서버 업로드 실패해도 로컬 표시는 유지
+      // 서버 실패 시 이전 상태로 롤백
+      set({ user: prevUser });
     }
   },
 

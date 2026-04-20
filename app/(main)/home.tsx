@@ -408,9 +408,11 @@ const goTo = (item: HelpRequest) =>
                       </View>
                       <Text style={s.listCardTitle} numberOfLines={2}>{item.title}</Text>
                       <Text style={s.listCardDesc} numberOfLines={3} ellipsizeMode="tail">{item.description.split('\n\n[정보]\n')[0]}</Text>
-                      <TouchableOpacity style={s.listHelpBtn} activeOpacity={0.8} onPress={() => goTo(item)}>
-                        <Text style={s.listHelpBtnText}>도와주기 ›</Text>
-                      </TouchableOpacity>
+                      {item.status === 'WAITING' && (
+                        <TouchableOpacity style={s.listHelpBtn} activeOpacity={0.8} onPress={() => goTo(item)}>
+                          <Text style={s.listHelpBtnText}>도와주기 ›</Text>
+                        </TouchableOpacity>
+                      )}
                     </TouchableOpacity>
                   ));
                 })()}
@@ -546,9 +548,11 @@ const goTo = (item: HelpRequest) =>
                       </View>
                       <Text style={s.listCardTitle} numberOfLines={2}>{item.title}</Text>
                       <Text style={s.listCardDesc} numberOfLines={3} ellipsizeMode="tail">{item.description.split('\n\n[정보]\n')[0]}</Text>
-                      <TouchableOpacity style={s.listHelpBtn} activeOpacity={0.8} onPress={() => goTo(item)}>
-                        <Text style={s.listHelpBtnText}>도와주기 ›</Text>
-                      </TouchableOpacity>
+                      {item.status === 'WAITING' && (
+                        <TouchableOpacity style={s.listHelpBtn} activeOpacity={0.8} onPress={() => goTo(item)}>
+                          <Text style={s.listHelpBtnText}>도와주기 ›</Text>
+                        </TouchableOpacity>
+                      )}
                     </TouchableOpacity>
                   ));
                 })()}
