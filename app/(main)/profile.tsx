@@ -73,7 +73,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, updateProfileImage, updateProfileDetail, loadUser } = useAuthStore();
   const { helpHistory, fetchHelpHistory } = useHelpHistoryStore();
-  const { fetchMyRequests } = useHelpRequestStore();
+  const { fetchMyRequests, myRequests } = useHelpRequestStore();
   const [imageMenuVisible, setImageMenuVisible] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
   const { monthlyGoal, setMonthlyGoal } = useGoalStore();
@@ -337,6 +337,29 @@ export default function ProfileScreen() {
           </View>
         </View>
       </View>
+
+      {/* ── 활동 카드 (외국인: 받은 도움 횟수) ── */}
+      {!isKorean && (() => {
+        const now = new Date();
+        const receivedCount = myRequests.filter(r => {
+          if (r.status !== 'COMPLETED') return false;
+          const d = new Date(r.updatedAt ?? r.createdAt ?? '');
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        }).length;
+        return (
+          <View style={styles.activityCard}>
+            <View style={styles.activityTopRow}>
+              <View style={styles.activityStreakWrap}>
+                <Text style={styles.activityStreak}>이번달 받은 도움</Text>
+              </View>
+              <View style={[styles.activityGoalStepper, { gap: sc(4) }]}>
+                <Text style={[styles.activityGoalValue, { fontSize: sc(26), color: BLUE }]}>{receivedCount}</Text>
+                <Text style={{ fontSize: sc(14), color: BLUE, fontWeight: '800' }}>건</Text>
+              </View>
+            </View>
+          </View>
+        );
+      })()}
 
       {/* ── 활동 카드 (한국인만 표시) ── */}
       {isKorean ? (() => {
@@ -1124,7 +1147,8 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: '#FFFFFF',
     borderRadius: sc(16), padding: sc(16),
     alignItems: 'center', gap: sc(6),
-    borderWidth: 1, borderColor: BORDER,
+    shadowColor: '#000', shadowOffset: { width: 0, height: sc(2) },
+    shadowOpacity: 0.08, shadowRadius: sc(8), elevation: 3,
   },
   miniCardTitle: { fontSize: sc(15), fontWeight: '800', color: T1 },
   miniCardSub: { fontSize: sc(11), color: BLUE_MID, fontWeight: '500' },
@@ -1161,9 +1185,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     marginHorizontal: sc(16), marginBottom: sc(12),
     borderRadius: sc(16),
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: BORDER,
+    shadowColor: '#000', shadowOffset: { width: 0, height: sc(2) },
+    shadowOpacity: 0.08, shadowRadius: sc(8), elevation: 3,
   },
   menuItem: {
     flexDirection: 'row', alignItems: 'center',
@@ -1184,6 +1207,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: '#EF4444',
+    shadowColor: '#000', shadowOffset: { width: 0, height: sc(2) },
+    shadowOpacity: 0.08, shadowRadius: sc(8), elevation: 3,
   },
   logoutText: { fontSize: sc(15), fontWeight: '700', color: '#EF4444' },
 

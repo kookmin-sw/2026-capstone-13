@@ -107,20 +107,54 @@ function StreakTopCarousel({ completedCount, waitingCount, DOTS, loginStreak }: 
   );
 }
 
-// ── 외국인용: 통계 + CTA 슬라이드 캐러셀 ──
+// ── 외국인용: ~일 연속 접속중 + CTA 슬라이드 캐러셀 ──
 
-function IntlTopCarousel({ activeHelperCount }: { activeHelperCount: number }) {
+function IntlTopCarousel({ activeHelperCount, loginStreak }: { activeHelperCount: number; loginStreak: number }) {
+  const [slide, setSlide] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setSlide(prev => (prev + 1) % 2);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      });
+    }, 6500);
+    return () => clearInterval(interval);
+  }, [fadeAnim]);
+
   return (
-    <View style={s.streakSlideWrap}>
-      <View style={s.streakCtaRow}>
-        <View style={s.streakCtaTextWrap}>
-          <Text style={s.streakCtaTitle}>지금 바로 도움을 요청해보세요!</Text>
-          <Text style={s.streakCtaSub}>
-            오늘 접속한 <Text style={{ fontWeight: '900', color: ORANGE }}>{activeHelperCount}명</Text>의 헬퍼가 기다리고 있어요!
-          </Text>
-        </View>
+    <Animated.View style={[s.streakTopRow, { opacity: fadeAnim }]}>
+      <View style={s.streakTextWrap}>
+        {slide === 0 ? (
+          <Text style={s.streakCtaTitle}>{loginStreak}일 연속 접속중!</Text>
+        ) : (
+          <View style={s.streakCtaRow}>
+            <View style={s.streakCtaTextWrap}>
+              <Text style={s.streakCtaTitle}>지금 바로 도움을 요청해보세요!</Text>
+              <Text style={s.streakCtaSub}>
+                <Text style={{ fontWeight: '900', color: BLUE }}>{activeHelperCount}명</Text>의 헬퍼가 기다리고 있어요
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
-    </View>
+      {slide === 0 && (
+        <View style={s.streakDots}>
+          {Array.from({ length: 9 }).map((_, i) => (
+            <View key={i} style={[s.streakDot, i < loginStreak && s.streakDotOn]} />
+          ))}
+        </View>
+      )}
+    </Animated.View>
   );
 }
 
@@ -252,7 +286,7 @@ const goTo = (item: HelpRequest) =>
           return (
             <View style={s.streakCard}>
               {isInternational ? (
-                <IntlTopCarousel activeHelperCount={activeHelperCount} />
+                <IntlTopCarousel activeHelperCount={activeHelperCount} loginStreak={loginStreak} />
               ) : (
                 <>
                   <StreakTopCarousel
@@ -930,7 +964,7 @@ const s = StyleSheet.create({
   streakTopRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: sc(14), paddingTop: sc(14), paddingBottom: sc(8), gap: sc(12),
-    height: sc(58),
+    height: sc(72),
   },
   streakTextWrap: { flex: 1 },
   streakTitle:    { fontSize: sc(19), fontWeight: '800', color: T1 },
@@ -969,15 +1003,14 @@ const s = StyleSheet.create({
   streakStatLabel: { fontSize: sc(11), fontWeight: '700', marginTop: sc(2) },
   streakCtaRow: {
     flexDirection: 'row', alignItems: 'center', gap: sc(10),
-    paddingHorizontal: sc(14), paddingVertical: sc(14),
   },
   streakCtaIconWrap: {
     width: sc(38), height: sc(38), borderRadius: sc(12),
     backgroundColor: BLUE_L, alignItems: 'center', justifyContent: 'center',
   },
   streakCtaTextWrap: { flex: 1 },
-  streakCtaTitle: { fontSize: sc(18), fontWeight: '800', color: T1 },
-  streakCtaSub:   { fontSize: sc(13), color: T2, marginTop: sc(4) },
+  streakCtaTitle: { fontSize: sc(19), fontWeight: '800', color: T1 },
+  streakCtaSub:   { fontSize: sc(15), color: '#4B5563', marginTop: sc(4), fontWeight: '600' },
   helpTitleBox: {
     flexDirection: 'row',
     alignItems: 'center',
