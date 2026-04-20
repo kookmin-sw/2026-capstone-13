@@ -9,6 +9,7 @@ import {
   Image,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -69,8 +70,12 @@ const USER_TYPE_LABEL: Record<string, string> = {
   EXCHANGE: '교환학생',
 };
 
-const CATEGORY_EMOJI: Record<HelpCategory, string> = {
-  BANK: '🏦', HOSPITAL: '🏥', SCHOOL: '🏫', DAILY: '🏠', OTHER: '📌',
+const CATEGORY_ICON: Record<HelpCategory, { name: string; color: string; bg: string }> = {
+  BANK:     { name: 'business-outline',                   color: '#3B6FE8', bg: '#EEF4FF' },
+  HOSPITAL: { name: 'medkit-outline',                     color: '#3B6FE8', bg: '#EEF4FF' },
+  SCHOOL:   { name: 'book-outline',                       color: '#3B6FE8', bg: '#EEF4FF' },
+  DAILY:    { name: 'home-outline',                       color: '#3B6FE8', bg: '#EEF4FF' },
+  OTHER:    { name: 'ellipsis-horizontal-circle-outline', color: '#3B6FE8', bg: '#EEF4FF' },
 };
 const CATEGORY_LABEL: Record<HelpCategory, string> = {
   BANK: '은행', HOSPITAL: '병원', SCHOOL: '학교', DAILY: '생활', OTHER: '기타',
@@ -87,7 +92,8 @@ const POST_CATEGORY_LABEL: Record<string, string> = {
 };
 
 function formatTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const utc = dateStr.includes('Z') || dateStr.includes('+') ? dateStr : dateStr + 'Z';
+  const diff = Date.now() - new Date(utc).getTime();
   const m = Math.floor(diff / 60000);
   if (m < 1) return '방금 전';
   if (m < 60) return `${m}분 전`;
@@ -124,6 +130,7 @@ export default function UserProfileScreen() {
   const [reviewModal, setReviewModal] = useState(false);
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [selectedReview, setSelectedReview] = useState<ReviewResponse | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
@@ -152,8 +159,14 @@ export default function UserProfileScreen() {
     if (activeTab === 'help') {
       const isKorean = user?.userType === 'KOREAN';
       const fetchFn = isKorean ? getUserHelpHistory : getUserRequestHistory;
-      fetchFn(userId)
-        .then((res) => { if (res.success) setHelpHistory(res.data); })
+      Promise.all([
+        fetchFn(userId),
+        getMyReviews(userId),
+      ])
+        .then(([helpRes, reviewData]) => {
+          if (helpRes.success) setHelpHistory(helpRes.data);
+          setReviews(Array.isArray(reviewData) ? reviewData : []);
+        })
         .catch(() => {})
         .finally(() => setTabLoading(false));
     } else {
@@ -376,26 +389,32 @@ export default function UserProfileScreen() {
             </View>
           ) : (
             helpHistory.map((item) => {
-              const st = STATUS_CONFIG[item.status];
+              const review = reviews.find((r) => r.helpRequestId === item.id);
               return (
                 <TouchableOpacity
                   key={item.id}
                   style={s.listCard}
                   activeOpacity={0.85}
-                  onPress={() => router.push({ pathname: '/request-detail', params: { id: item.id } })}
+                  onPress={() => {
+                    if (review) { setSelectedReview(review); }
+                  }}
                 >
-                  <View style={s.listCardIcon}>
-                    <Text style={{ fontSize: 20 }}>{CATEGORY_EMOJI[item.category]}</Text>
+                  <View style={[s.listCardIcon, { backgroundColor: CATEGORY_ICON[item.category].bg }]}>
+                    <Ionicons name={CATEGORY_ICON[item.category].name as never} size={22} color={CATEGORY_ICON[item.category].color} />
                   </View>
                   <View style={s.listCardBody}>
-                    <View style={s.listCardTop}>
-                      <Text style={s.listCardCategory}>{CATEGORY_LABEL[item.category]}</Text>
-                      <View style={[s.statusBadge, { backgroundColor: st.bg }]}>
-                        <Text style={[s.statusBadgeText, { color: st.color }]}>{st.label}</Text>
-                      </View>
+                    <Text style={s.listCardCategory}>{CATEGORY_LABEL[item.category]}</Text>
+                    <Text style={s.listCardTitle} numberOfLines={1}>{item.title}</Text>
+                    <View style={s.listCardBottomRow}>
+                      {review ? (
+                        <View style={s.listCardStars}>
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Ionicons key={i} name="star" size={9} color={i < review.rating ? '#F59E0B' : '#E5E7EB'} />
+                          ))}
+                        </View>
+                      ) : <View />}
+                      <Text style={s.listCardTime}>{formatTime(item.createdAt)}</Text>
                     </View>
-                    <Text style={s.listCardTitle} numberOfLines={2}>{item.title}</Text>
-                    <Text style={s.listCardTime}>{formatTime(item.createdAt)}</Text>
                   </View>
                 </TouchableOpacity>
               );
@@ -478,6 +497,38 @@ export default function UserProfileScreen() {
             )}
           </View>
         </View>
+      </Modal>
+
+      {/* 후기 상세 모달 */}
+      <Modal visible={!!selectedReview} transparent animationType="fade" onRequestClose={() => setSelectedReview(null)}>
+        <Pressable style={s.reviewDetailOverlay} onPress={() => setSelectedReview(null)}>
+          <Pressable style={s.reviewDetailBox} onPress={() => {}}>
+            <View style={s.reviewDetailHeader}>
+              <View style={s.reviewDetailTitleRow}>
+                <View style={s.reviewDetailBadge}>
+                  <Text style={s.reviewDetailTitle}>받은 후기</Text>
+                </View>
+                <View style={s.reviewDetailStars}>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Ionicons key={i} name="star" size={18} color={i < (selectedReview?.rating ?? 0) ? '#F59E0B' : '#E5E7EB'} />
+                  ))}
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedReview(null)}>
+                <Ionicons name="close" size={20} color={T1} />
+              </TouchableOpacity>
+            </View>
+            <View style={s.reviewDetailDivider} />
+            {selectedReview?.comment ? (
+              <Text style={s.reviewDetailComment}>{selectedReview.comment}</Text>
+            ) : (
+              <Text style={s.reviewDetailNoComment}>작성된 후기 내용이 없어요.</Text>
+            )}
+            <Text style={s.reviewDetailFrom}>
+              {selectedReview?.reviewer.nickname} · {selectedReview ? formatTime(selectedReview.createdAt) : ''}
+            </Text>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* 프로필 사진 풀스크린 */}
@@ -573,13 +624,15 @@ const s = StyleSheet.create({
     borderWidth: sc(1), borderColor: BORDER,
   },
   listCardIcon: {
-    width: sc(44), height: sc(44), borderRadius: sc(12), backgroundColor: BLUE_L,
+    width: sc(52), height: sc(52), borderRadius: sc(14), backgroundColor: BLUE_L,
     justifyContent: 'center', alignItems: 'center', flexShrink: 0,
   },
-  listCardBody: { flex: 1, gap: sc(4) },
+  listCardBody: { flex: 1, height: sc(52), justifyContent: 'space-between' },
   listCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   listCardCategory: { fontSize: sc(11), fontWeight: '600', color: T2 },
   listCardTitle: { fontSize: sc(14), fontWeight: '700', color: T1 },
+  listCardStars: { flexDirection: 'row', gap: sc(2) },
+  listCardBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   listCardDesc: { fontSize: sc(12), color: T2 },
   listCardTime: { fontSize: sc(11), color: T2 },
   statusBadge: { paddingHorizontal: sc(8), paddingVertical: sc(3), borderRadius: sc(20) },
@@ -670,6 +723,32 @@ const s = StyleSheet.create({
   reviewRequestTitle: { fontSize: 12, color: T2 },
   reviewComment: { fontSize: 14, color: T1, lineHeight: 20 },
   reviewerName: { fontSize: 12, fontWeight: '600', color: BLUE },
+
+  reviewDetailOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center', alignItems: 'center', paddingHorizontal: sc(16),
+  },
+  reviewDetailBox: {
+    backgroundColor: '#fff', borderRadius: sc(14), padding: sc(14),
+    width: '100%',
+    shadowColor: '#000', shadowOffset: { width: 0, height: sc(4) },
+    shadowOpacity: 0.12, shadowRadius: sc(16), elevation: 10,
+  },
+  reviewDetailHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: sc(14),
+  },
+  reviewDetailTitleRow: { flexDirection: 'row', alignItems: 'center', gap: sc(10) },
+  reviewDetailBadge: {
+    backgroundColor: BLUE_L, borderRadius: sc(20),
+    paddingHorizontal: sc(12), paddingVertical: sc(5),
+  },
+  reviewDetailTitle: { fontSize: sc(13), fontWeight: '800', color: BLUE },
+  reviewDetailStars: { flexDirection: 'row', gap: sc(4) },
+  reviewDetailDivider: { height: 1, backgroundColor: BORDER, marginBottom: sc(12) },
+  reviewDetailComment: { fontSize: sc(14), color: T1, lineHeight: sc(22), marginBottom: sc(14) },
+  reviewDetailNoComment: { fontSize: sc(13), color: T2, marginBottom: sc(14) },
+  reviewDetailFrom: { fontSize: sc(12), color: T2, textAlign: 'right' },
 
   fsOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.95)',
