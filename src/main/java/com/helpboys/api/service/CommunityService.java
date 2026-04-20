@@ -180,6 +180,20 @@ public class CommunityService {
         }
     }
 
+    public List<Map<String, Object>> getPostLikers(Long postId) {
+        return postLikeRepository.findByPostIdWithUser(postId).stream()
+                .map(pl -> {
+                    User u = pl.getUser();
+                    Map<String, Object> m = new java.util.HashMap<>();
+                    m.put("id", u.getId());
+                    m.put("nickname", u.getNickname());
+                    m.put("profileImage", u.getProfileImage());
+                    m.put("university", u.getUniversity());
+                    return m;
+                })
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     // 게시글 수정
     @Transactional
     public CommunityPostResponse updatePost(Long postId, CommunityPostRequest request, Long userId) {

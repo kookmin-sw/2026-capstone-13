@@ -115,6 +115,14 @@ public class CommunityController {
                         communityService.addComment(id, body.get("content"), userId)));
     }
 
+    // GET /api/community/{id}/likers - 좋아요 누른 사람 목록
+    @GetMapping("/{id}/likers")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getPostLikers(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String token) {
+        return ResponseEntity.ok(ApiResponse.success("조회 완료", communityService.getPostLikers(id)));
+    }
+
     // POST /api/community/{id}/like - 좋아요 토글
     @PostMapping("/{id}/like")
     public ResponseEntity<ApiResponse<Map<String, Object>>> toggleLike(
