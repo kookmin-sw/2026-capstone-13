@@ -27,6 +27,7 @@ public class CommunityPostResponse {
     private String university;
     private String userType;
     private String authorNationality;
+    private String authorMajor;
     private Integer likes;
     private Integer comments;
     private List<PostCommentResponse> commentList;
@@ -63,6 +64,7 @@ public class CommunityPostResponse {
                 .university(post.getAuthor().getUniversity())
                 .userType(post.getAuthor().getUserType().name())
                 .authorNationality(post.getAuthor().getNationality())
+                .authorMajor(post.getAuthor().getMajor())
                 .likes(post.getLikes())
                 .comments((int) topLevelCount)
                 .commentList(Collections.emptyList())
@@ -99,6 +101,7 @@ public class CommunityPostResponse {
                 .university(post.getAuthor().getUniversity())
                 .userType(post.getAuthor().getUserType().name())
                 .authorNationality(post.getAuthor().getNationality())
+                .authorMajor(post.getAuthor().getMajor())
                 .likes(post.getLikes())
                 .comments((int) topLevelCount)
                 .commentList(buildTopLevelComments(filtered))
