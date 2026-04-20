@@ -271,6 +271,11 @@ public class CommunityService {
         if (!comment.getAuthor().getId().equals(userId)) {
             throw new BusinessException("삭제 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
+        // 대댓글 먼저 삭제
+        List<PostComment> replies = postCommentRepository.findByParentCommentIdOrderByCreatedAtAsc(commentId);
+        if (!replies.isEmpty()) {
+            postCommentRepository.deleteAll(replies);
+        }
         postCommentRepository.delete(comment);
     }
 
