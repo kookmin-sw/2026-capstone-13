@@ -16,6 +16,7 @@ export interface CommunityPostDto {
   university: string;
   userType: string;
   authorNationality?: string;
+  authorMajor?: string;
   likes: number;
   comments: number;
   commentList: PostCommentDto[];
@@ -136,6 +137,12 @@ export const deleteCommunityPost = async (postId: number): Promise<ApiResponse<n
 // 댓글 삭제
 export const deleteCommunityComment = async (commentId: number): Promise<ApiResponse<null>> => {
   const response = await api.delete<ApiResponse<null>>(`/community/comments/${commentId}`);
+  return response.data;
+};
+
+// 좋아요 누른 사람 목록
+export const getCommunityPostLikers = async (postId: number): Promise<ApiResponse<{ id: number; nickname: string; profileImage?: string; university: string }[]>> => {
+  const response = await api.get(`/community/${postId}/likers`);
   return response.data;
 };
 

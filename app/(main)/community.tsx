@@ -44,7 +44,7 @@ const BG       = '#F4F6FB';
 type FilterCategory = 'ALL' | PostCategory;
 
 const CATEGORY_LABEL: Record<PostCategory, string> = {
-  INFO: '일반', QUESTION: '로컬', CHAT: '모임', CULTURE: '장터',
+  INFO: '자유', QUESTION: '로컬', CHAT: '모임', CULTURE: '장터',
 };
 
 const CATEGORY_COLOR: Record<PostCategory, string> = {
@@ -64,11 +64,10 @@ const CATEGORY_MENU: {
   color: string;
   bg: string;
 }[] = [
-  { key: 'ALL',      label: '전체', desc: '모든 글 모아보기',           icon: 'apps-outline',         color: T1,       bg: BG },
-  { key: 'INFO',     label: '일반',        desc: '자유롭게 이야기해요',         icon: 'chatbubbles-outline',  color: BLUE,     bg: BLUE_L },
-  { key: 'QUESTION', label: '로컬',        desc: '우리 지역 이야기',            icon: 'location-outline',     color: ORANGE,   bg: '#FFF3E8' },
-  { key: 'CHAT',     label: '모임',        desc: '같이 만나요',                icon: 'people-outline',       color: T3,       bg: '#F0FDF4' },
-  { key: 'CULTURE',  label: '장터',        desc: '사고 팔고 나눠요',            icon: 'storefront-outline',   color: '#8B5CF6', bg: '#F5F3FF' },
+  { key: 'INFO',     label: '자유',        desc: '자유롭게 이야기해요',         icon: 'chatbubbles-outline',  color: BLUE,     bg: BLUE_L },
+  { key: 'QUESTION', label: '로컬',        desc: '우리 지역 이야기',            icon: 'location-outline',     color: BLUE,     bg: BLUE_L },
+  { key: 'CHAT',     label: '모임',        desc: '같이 만나요',                icon: 'people-outline',       color: BLUE,     bg: BLUE_L },
+  { key: 'CULTURE',  label: '장터',        desc: '사고 팔고 나눠요',            icon: 'storefront-outline',   color: BLUE,     bg: BLUE_L },
 ];
 
 const AVATAR_COLORS = ['#F0A040', '#F06060', BLUE, '#90C4F0', '#A0A8B0'];
@@ -110,7 +109,7 @@ function CategoryHomeScreen({ onSelect }: { onSelect: (cat: FilterCategory) => v
       <View style={cs.header}>
         <Text style={cs.headerTitle}>커뮤니티</Text>
         <TouchableOpacity style={cs.writeBtn} onPress={() => router.push('/community-write')} activeOpacity={0.75}>
-          <Ionicons name="create-outline" size={24} color={T1} />
+          <Ionicons name="pencil-outline" size={24} color={T1} />
         </TouchableOpacity>
       </View>
 
@@ -203,34 +202,14 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
               )}
             </View>
             <View style={s.feedMetaRow}>
-              {item.university ? (
-                <Text style={s.feedUniv} numberOfLines={1}>{item.university}</Text>
+              {(item.authorMajor || item.university) ? (
+                <Text style={s.feedUniv} numberOfLines={1}>{item.authorMajor || item.university}</Text>
               ) : null}
             </View>
           </View>
-          {!isDeletedUser && (
-            <TouchableOpacity
-              ref={moreRef}
-              style={s.moreBtn}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              activeOpacity={0.7}
-              onPress={() => {
-                moreRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
-                  setMenuPos({
-                    top: pageY + height + 4,
-                    right: Dimensions.get('window').width - pageX - width,
-                  });
-                  setMenuVisible(true);
-                });
-              }}
-            >
-              <Ionicons name="ellipsis-horizontal" size={18} color={T2} />
-            </TouchableOpacity>
-          )}
         </View>
 
         <View style={s.feedBody}>
-          <Text style={s.feedTitle} numberOfLines={2}>{translated ? translated.title : item.title}</Text>
           {(translated ? translated.content : item.content) ? (
             <Text style={s.feedContent} numberOfLines={3}>{translated ? translated.content : item.content}</Text>
           ) : null}
@@ -455,7 +434,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
   const closeDrawer = () => {
     Animated.timing(slideAnim, { toValue: -DRAWER_WIDTH, duration: 450, useNativeDriver: true }).start(() => setDropdownVisible(false));
   };
-  const HEADER_HEIGHT = insets.top + 68;
+  const HEADER_HEIGHT = insets.top + 145;
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -552,11 +531,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
         <View style={s.header}>
           {/* 카테고리 선택 버튼 */}
           <TouchableOpacity style={s.catSelectorBtn} onPress={openDrawer} activeOpacity={0.8}>
-            <View style={[s.catSelectorIcon, { backgroundColor: menuItem?.bg ?? BG }]}>
-              <Ionicons name={(menuItem?.icon ?? 'ellipsis-vertical') as never} size={16} color={menuItem?.color ?? T1} />
-            </View>
-            <Text style={[s.catSelectorLabel, { color: menuItem?.color ?? T1 }]}>{headerTitle}</Text>
-            <Ionicons name="chevron-forward" size={14} color={T2} />
+            <Ionicons name="ellipsis-vertical" size={22} color={T1} />
           </TouchableOpacity>
           {/* 검색바 */}
           <View style={s.headerSearchBar}>
@@ -578,13 +553,6 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity
-            style={s.writeBtn}
-            onPress={() => router.push('/community-write')}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="create-outline" size={24} color={T1} />
-          </TouchableOpacity>
         </View>
         {searchVisible && (
           <View style={s.searchModeRow}>
@@ -603,8 +571,28 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
           </View>
         )}
         <View style={s.headerDivider} />
+        {/* 게시판 배너 */}
+        <View style={s.boardBanner}>
+          <View style={s.boardBannerIcon}>
+            <Ionicons name={(menuItem?.icon ?? 'chatbubbles-outline') as never} size={18} color="#fff" />
+          </View>
+          <View>
+            <Text style={s.boardBannerTitle}>{headerTitle} 게시판</Text>
+            <Text style={s.boardBannerDesc}>{menuItem?.desc ?? '자유롭게 이야기해보세요'}</Text>
+          </View>
+        </View>
         {isLoading ? <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 40 }} /> : null}
       </View>
+
+      {/* 하단 글쓰기 버튼 */}
+      <TouchableOpacity
+        style={s.fab}
+        onPress={() => router.push('/community-write')}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="pencil-outline" size={sc(15)} color="#fff" />
+        <Text style={s.fabText}>글쓰기</Text>
+      </TouchableOpacity>
 
       {/* 카테고리 사이드 드로어 */}
       <Modal visible={dropdownVisible} transparent animationType="none" onRequestClose={closeDrawer}>
@@ -649,7 +637,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
 
 // ── 메인 화면 (라우팅 허브) ──────────────────────────────────
 export default function CommunityScreen() {
-  const [activeCategory, setActiveCategory] = useState<FilterCategory>('ALL');
+  const [activeCategory, setActiveCategory] = useState<FilterCategory>('INFO');
 
   return (
     <FeedScreen
@@ -713,16 +701,10 @@ const s = StyleSheet.create({
     gap: sc(10),
   },
   catSelectorBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: sc(6),
-    paddingHorizontal: sc(10), paddingVertical: sc(8),
-    borderRadius: sc(22), backgroundColor: BG,
-    flexShrink: 0,
-  },
-  catSelectorIcon: {
-    width: sc(28), height: sc(28), borderRadius: sc(8),
+    width: sc(38), height: sc(38), borderRadius: sc(19),
     justifyContent: 'center', alignItems: 'center',
+    backgroundColor: BG, flexShrink: 0,
   },
-  catSelectorLabel: { fontSize: sc(14), fontWeight: '800' },
 
   drawerOverlay: { flex: 1 },
   drawerBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
@@ -755,11 +737,23 @@ const s = StyleSheet.create({
   drawerDesc: { fontSize: sc(12), color: T2 },
   headerSearchBar: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: sc(8),
-    backgroundColor: BG, borderRadius: sc(22),
+    backgroundColor: BG, borderRadius: sc(8),
     paddingHorizontal: sc(14), paddingVertical: sc(10),
+    borderWidth: 1, borderColor: BORDER,
   },
   headerSearchInput: { flex: 1, fontSize: sc(15), color: T1, padding: 0 },
-  writeBtn: { padding: sc(4) },
+  fab: {
+    position: 'absolute', bottom: sc(100),
+    alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: sc(6),
+    backgroundColor: BLUE,
+    width: sc(95),
+    paddingVertical: sc(13),
+    borderRadius: sc(28),
+    shadowColor: BLUE, shadowOffset: { width: 0, height: sc(4) },
+    shadowOpacity: 0.35, shadowRadius: sc(10), elevation: 8,
+  },
+  fabText: { fontSize: sc(17), fontWeight: '800', color: '#fff' },
 
   // ── Search mode ──
   searchModeRow: {
@@ -785,6 +779,19 @@ const s = StyleSheet.create({
 
   headerDivider: { height: 1, backgroundColor: BORDER },
 
+  boardBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: sc(12),
+    paddingHorizontal: sc(16), paddingVertical: sc(12),
+    backgroundColor: BLUE_L,
+  },
+  boardBannerIcon: {
+    width: sc(36), height: sc(36), borderRadius: sc(10),
+    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
+    backgroundColor: BLUE,
+  },
+  boardBannerTitle: { fontSize: sc(14), fontWeight: '800', color: BLUE },
+  boardBannerDesc: { fontSize: sc(12), color: T2, marginTop: sc(1) },
+
   // ── List ──
   list: { paddingBottom: sc(100) },
   postDivider: { height: sc(1), backgroundColor: BORDER },
@@ -799,17 +806,18 @@ const s = StyleSheet.create({
 
   feedHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: sc(10),
     gap: sc(10),
   },
   feedAvatarWrap: {
-    width: sc(44), height: sc(44), borderRadius: sc(22),
+    width: sc(46), height: sc(46), borderRadius: sc(23),
     overflow: 'hidden', flexShrink: 0,
+    borderWidth: 1.5, borderColor: BLUE_MID,
   },
   feedAvatar: { width: sc(44), height: sc(44), borderRadius: sc(22) },
   feedAvatarText: { fontSize: sc(18), fontWeight: '700', color: '#fff' },
-  feedAuthorInfo: { flex: 1, gap: sc(1) },
+  feedAuthorInfo: { flex: 1, gap: sc(4), justifyContent: 'center' },
   feedNameRow: { flexDirection: 'row', alignItems: 'center', gap: sc(6) },
   feedAuthorName: { fontSize: sc(16), fontWeight: '700', color: T1 },
   feedMetaRow: { flexDirection: 'row', alignItems: 'center', gap: sc(6), flexWrap: 'wrap' },
@@ -825,11 +833,11 @@ const s = StyleSheet.create({
 
   feedBody: { marginBottom: sc(10) },
   feedTitle: { fontSize: sc(15), fontWeight: '700', color: T1, lineHeight: sc(22), marginBottom: sc(4) },
-  feedContent: { fontSize: sc(14), color: T2, lineHeight: sc(20) },
+  feedContent: { fontSize: sc(16), color: T1, lineHeight: sc(22) },
 
   imageScroll: { marginBottom: sc(10) },
   feedImage: {
-    width: sc(200), height: sc(200), borderRadius: sc(12),
+    width: sc(160), height: sc(160), borderRadius: sc(12),
     marginRight: sc(8), backgroundColor: '#E8EDF5',
   },
 
