@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { s as sc } from '../utils/scale';
 import { getCommunityPost, addCommunityComment, addCommunityReply, toggleCommunityLike, updateCommunityPost, deleteCommunityPost, deleteCommunityComment, translateCommunityPost, translateCommunityComment, getCommunityReplies, getCommunityPostLikers, type CommunityPostDetailDto, type PostCommentDto } from '../services/communityService';
 import { blockUser } from '../services/blockService';
+import { reportContent } from '../services/reportService';
 import * as Haptics from 'expo-haptics';
 import { getOrCreateDirectRoom } from '../services/directChatService';
 import { useAuthStore } from '../stores/authStore';
@@ -67,6 +68,9 @@ export default function CommunityPostScreen() {
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
   const [menuVisible, setMenuVisible] = useState(false);
+  const [otherMenuVisible, setOtherMenuVisible] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
+  const [reportReason, setReportReason] = useState('');
   const [translating, setTranslating] = useState(false);
   const { getTranslation, setTranslation: setStoreTranslation } = useCommunityStore();
   const translation = post ? getTranslation(post.id) : null;
@@ -89,6 +93,32 @@ export default function CommunityPostScreen() {
   const commentItemRefs = useRef<Record<number, any>>({});
   const currentScrollY = useRef<number>(0);
 
+
+  const REPORT_REASONS = ['스팸/광고', '욕설/혐오 표현', '부적절한 내용', '사기/허위 정보', '기타'];
+
+  const reportPanResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gs) => gs.dy > 10,
+    onPanResponderRelease: (_, gs) => {
+      if (gs.dy > 10 || gs.vy > 0.3) {
+        setReportVisible(false);
+        setReportReason('');
+      }
+    },
+  })).current;
+
+  const handleReport = async () => {
+    if (!reportReason) { Alert.alert('신고 사유를 선택해주세요.'); return; }
+    if (!post?.authorId) return;
+    try {
+      await reportContent({ targetUserId: post.authorId, targetType: 'POST', targetId: post.id, reason: reportReason });
+      setReportVisible(false);
+      setReportReason('');
+      Alert.alert('신고 완료', '신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+    } catch {
+      Alert.alert('오류', '신고에 실패했습니다.');
+    }
+  };
 
   const handlePanResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -390,29 +420,48 @@ export default function CommunityPostScreen() {
           </>
         ) : post.author !== '(알 수 없음)' ? (
           <>
-            <TouchableOpacity style={s.moreBtn} onPress={() => {
-              if (!post.authorId) return;
-              Alert.alert(
-                '차단하기',
-                `${post.author}님을 차단하시겠어요?\n차단한 사용자의 글과 메시지가 보이지 않습니다.`,
-                [
-                  { text: '취소', style: 'cancel' },
-                  {
-                    text: '차단', style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        await blockUser(post.authorId!);
-                        router.back();
-                      } catch {
-                        Alert.alert('오류', '차단에 실패했습니다.');
-                      }
-                    },
-                  },
-                ]
-              );
-            }}>
-              <Ionicons name="ban-outline" size={18} color="#EF4444" />
+            <TouchableOpacity style={s.moreBtn} onPress={() => setOtherMenuVisible(true)}>
+              <Ionicons name="ellipsis-vertical" size={20} color={T1} />
             </TouchableOpacity>
+            <Modal visible={otherMenuVisible} transparent animationType="fade" onRequestClose={() => setOtherMenuVisible(false)}>
+              <Pressable style={s.menuOverlay} onPress={() => setOtherMenuVisible(false)}>
+                <View style={s.menuSheet}>
+                  <TouchableOpacity style={s.menuItem} onPress={() => {
+                    setOtherMenuVisible(false);
+                    if (!post.authorId) return;
+                    Alert.alert(
+                      '차단하기',
+                      `${post.author}님을 차단하시겠어요?\n차단한 사용자의 글과 메시지가 보이지 않습니다.`,
+                      [
+                        { text: '취소', style: 'cancel' },
+                        {
+                          text: '차단', style: 'destructive',
+                          onPress: async () => {
+                            try {
+                              await blockUser(post.authorId!);
+                              router.back();
+                            } catch {
+                              Alert.alert('오류', '차단에 실패했습니다.');
+                            }
+                          },
+                        },
+                      ]
+                    );
+                  }}>
+                    <Ionicons name="ban-outline" size={18} color="#EF4444" />
+                    <Text style={[s.menuItemText, { color: '#EF4444' }]}>차단하기</Text>
+                  </TouchableOpacity>
+                  <View style={s.menuDivider} />
+                  <TouchableOpacity style={s.menuItem} onPress={() => {
+                    setReportVisible(true);
+                    setOtherMenuVisible(false);
+                  }}>
+                    <Ionicons name="alert-circle-outline" size={18} color="#EF4444" />
+                    <Text style={[s.menuItemText, { color: '#EF4444' }]}>신고하기</Text>
+                  </TouchableOpacity>
+                </View>
+              </Pressable>
+            </Modal>
           </>
         ) : null}
       </View>
@@ -704,6 +753,36 @@ export default function CommunityPostScreen() {
         </Pressable>
       </Modal>
 
+      {/* 신고 모달 */}
+      <Modal visible={reportVisible} transparent animationType="slide" onRequestClose={() => { setReportVisible(false); setReportReason(''); }}>
+        <TouchableOpacity style={s.reportOverlay} activeOpacity={1} onPress={() => { setReportVisible(false); setReportReason(''); }}>
+          <TouchableOpacity style={s.reportSheet} activeOpacity={1} onPress={() => {}}>
+            <View style={s.reportHandleWrap} {...reportPanResponder.panHandlers}>
+              <View style={s.reportHandle} />
+            </View>
+            <Text style={s.reportTitle}>신고하기</Text>
+            <View style={s.reportDivider} />
+            {REPORT_REASONS.map((reason) => (
+              <TouchableOpacity key={reason} style={s.reportItem} activeOpacity={0.7} onPress={() => setReportReason(reason)}>
+                <View style={[s.reportRadio, reportReason === reason && s.reportRadioOn]}>
+                  {reportReason === reason && <View style={s.reportRadioDot} />}
+                </View>
+                <Text style={[s.reportItemText, reportReason === reason && s.reportItemTextOn]}>{reason}</Text>
+              </TouchableOpacity>
+            ))}
+            <View style={s.reportDivider} />
+            <View style={s.reportBtnRow}>
+              <TouchableOpacity style={s.reportCancelBtn} onPress={() => { setReportVisible(false); setReportReason(''); }}>
+                <Text style={s.reportCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.reportSubmitBtn, !reportReason && s.reportSubmitBtnOff]} onPress={handleReport}>
+                <Text style={s.reportSubmitText}>신고하기</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       {/* 풀스크린 이미지 뷰어 */}
       <Modal visible={!!fullscreenImage} transparent animationType="fade" onRequestClose={() => setFullscreenImage(null)}>
         <View style={s.fsOverlay}>
@@ -964,4 +1043,36 @@ const s = StyleSheet.create({
   notFound: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: sc(12) },
   notFoundText: { fontSize: sc(16), color: T1, fontWeight: '700' },
   backLink: { fontSize: sc(14), color: BLUE, fontWeight: '700' },
+
+  // 신고 모달
+  reportOverlay: { flex: 1, backgroundColor: 'transparent', justifyContent: 'flex-end' },
+  reportSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: sc(32),
+    borderTopRightRadius: sc(32),
+    paddingHorizontal: sc(20),
+    paddingBottom: Platform.OS === 'ios' ? sc(40) : sc(24),
+    paddingTop: sc(12),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 16,
+  },
+  reportHandleWrap: { alignItems: 'center', paddingVertical: sc(8), marginHorizontal: -sc(20) },
+  reportHandle: { width: sc(40), height: sc(4), borderRadius: sc(2), backgroundColor: '#E0E0E0', alignSelf: 'center', marginBottom: sc(16) },
+  reportTitle: { fontSize: sc(18), fontWeight: '900', color: T1, marginBottom: sc(4) },
+  reportDivider: { height: 1, backgroundColor: BORDER, marginVertical: sc(12) },
+  reportItem: { flexDirection: 'row', alignItems: 'center', gap: sc(12), paddingVertical: sc(12) },
+  reportRadio: { width: sc(22), height: sc(22), borderRadius: sc(11), borderWidth: sc(2), borderColor: '#D1D5DB', justifyContent: 'center', alignItems: 'center' },
+  reportRadioOn: { borderColor: BLUE },
+  reportRadioDot: { width: sc(10), height: sc(10), borderRadius: sc(5), backgroundColor: BLUE },
+  reportItemText: { fontSize: sc(15), color: T1, fontWeight: '500' },
+  reportItemTextOn: { color: BLUE, fontWeight: '700' },
+  reportBtnRow: { flexDirection: 'row', gap: sc(10), marginTop: sc(4) },
+  reportCancelBtn: { flex: 1, height: sc(50), borderRadius: sc(14), borderWidth: sc(1.5), borderColor: BORDER, justifyContent: 'center', alignItems: 'center' },
+  reportCancelText: { fontSize: sc(15), fontWeight: '700', color: T2 },
+  reportSubmitBtn: { flex: 1, height: sc(50), borderRadius: sc(14), backgroundColor: BLUE, justifyContent: 'center', alignItems: 'center' },
+  reportSubmitBtnOff: { backgroundColor: '#F3F4F6' },
+  reportSubmitText: { fontSize: sc(15), fontWeight: '800', color: '#fff' },
 });

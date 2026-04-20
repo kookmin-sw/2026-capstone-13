@@ -1,5 +1,5 @@
 // 도움 요청 상세 화면 (홈화면 무드 통일 리디자인)
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getInitial } from '../utils/getInitial';
 import {
   View,
@@ -14,6 +14,7 @@ import {
   Modal,
   StatusBar,
   Dimensions,
+  PanResponder,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -119,6 +120,15 @@ export default function RequestDetailScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [reportVisible, setReportVisible] = useState(false);
   const [reportReason, setReportReason] = useState('');
+  const reportPanResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gs) => gs.dy > 10,
+    onPanResponderRelease: (_, gs) => {
+      if (gs.dy > 10 || gs.vy > 0.3) {
+        setReportVisible(false);
+      }
+    },
+  })).current;
 
   useEffect(() => {
     const fetch = async () => {
@@ -501,7 +511,9 @@ export default function RequestDetailScreen() {
       <Modal visible={reportVisible} transparent animationType="slide" onRequestClose={() => setReportVisible(false)}>
         <TouchableOpacity style={styles.reportOverlay} activeOpacity={1} onPress={() => setReportVisible(false)}>
           <TouchableOpacity style={styles.reportSheet} activeOpacity={1} onPress={() => {}}>
-            <View style={styles.reportHandle} />
+            <View style={styles.reportHandleWrap} {...reportPanResponder.panHandlers}>
+              <View style={styles.reportHandle} />
+            </View>
             <Text style={styles.reportTitle}>신고하기</Text>
             <View style={styles.reportDivider} />
             {REPORT_REASONS.map((reason) => (
@@ -986,16 +998,26 @@ const styles = StyleSheet.create({
   // ── 신고 모달 ──
   reportOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
   },
   reportSheet: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: s(24),
-    borderTopRightRadius: s(24),
+    borderTopLeftRadius: s(32),
+    borderTopRightRadius: s(32),
     paddingHorizontal: s(20),
     paddingBottom: Platform.OS === 'ios' ? s(40) : s(24),
     paddingTop: s(12),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 16,
+  },
+  reportHandleWrap: {
+    alignItems: 'center',
+    paddingVertical: s(8),
+    marginHorizontal: -s(20),
   },
   reportHandle: {
     width: s(40),

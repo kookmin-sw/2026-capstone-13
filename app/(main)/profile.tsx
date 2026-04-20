@@ -3,12 +3,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { s as sc } from '../../utils/scale';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { VerifiedBadge } from '../../components/VerifiedBadge';
 import { useAuthStore } from '../../stores/authStore';
 import { useHelpHistoryStore } from '../../stores/helpHistoryStore';
 import { useHelpRequestStore } from '../../stores/helpRequestStore';
+import { getHelpedRequests } from '../../services/helpService';
+import { useGoalStore } from '../../stores/goalStore';
 
 const MAJORS = [
   '국어국문전공', '글로벌한국어전공', '영미어문전공', '글로벌커뮤니케이션영어전공',
@@ -73,13 +75,30 @@ export default function ProfileScreen() {
   const { helpHistory, fetchHelpHistory } = useHelpHistoryStore();
   const { fetchMyRequests } = useHelpRequestStore();
   const [imageMenuVisible, setImageMenuVisible] = useState(false);
+  const [completedCount, setCompletedCount] = useState(0);
+  const { monthlyGoal, setMonthlyGoal } = useGoalStore();
 
   const isKorean = user?.userType === 'KOREAN';
 
   useEffect(() => {
     loadUser();
-    if (isKorean) fetchHelpHistory();
-    else fetchMyRequests();
+    if (isKorean) {
+      fetchHelpHistory();
+      getHelpedRequests().then(res => {
+        if (res.success) {
+          const now = new Date();
+          const thisMonth = now.getMonth();
+          const thisYear = now.getFullYear();
+          const count = res.data.filter((r: any) => {
+            const d = new Date(r.updatedAt ?? r.createdAt ?? '');
+            return r.status === 'COMPLETED' && d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+          }).length;
+          setCompletedCount(count);
+        }
+      }).catch(() => {});
+    } else {
+      fetchMyRequests();
+    }
   }, []);
 
   const [imageLoadError, setImageLoadError] = useState(false);
@@ -101,13 +120,47 @@ export default function ProfileScreen() {
   const [hobbyInput, setHobbyInput] = useState('');
   const [showMajorList, setShowMajorList] = useState(false);
   const [birthModalVisible, setBirthModalVisible] = useState(false);
-  const [birthYear, setBirthYear] = useState(2000);
-  const [birthMonth, setBirthMonth] = useState(1);
-  const [birthDay, setBirthDay] = useState(1);
+  const [birthYear, setBirthYear] = useState(2002);
+  const [birthMonth, setBirthMonth] = useState(5);
+  const [birthDay, setBirthDay] = useState(31);
+  const [savedBirthYear, setSavedBirthYear] = useState(2002);
+  const [savedBirthMonth, setSavedBirthMonth] = useState(5);
+  const [savedBirthDay, setSavedBirthDay] = useState(31);
 
   const YEARS = Array.from({ length: 60 }, (_, i) => 2010 - i);
   const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
   const getDays = (y: number, m: number) => new Date(y, m, 0).getDate();
+
+  const ITEM_HEIGHT = sc(44);
+  const VISIBLE_ITEMS = 5;
+  const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
+
+  const yearRef = useRef<ScrollView>(null);
+  const monthRef = useRef<ScrollView>(null);
+  const dayRef = useRef<ScrollView>(null);
+
+  const scrollToIndex = (ref: React.RefObject<ScrollView>, index: number, animated = true) => {
+    ref.current?.scrollTo({ y: index * ITEM_HEIGHT, animated });
+  };
+
+  const handleOpenBirthPickerScroll = () => {
+    const yIdx = YEARS.indexOf(savedBirthYear);
+    const mIdx = savedBirthMonth - 1;
+    const dIdx = savedBirthDay - 1;
+    setTimeout(() => {
+      scrollToIndex(yearRef, yIdx, false);
+      scrollToIndex(monthRef, mIdx, false);
+      scrollToIndex(dayRef, dIdx, false);
+    }, 50);
+  };
+
+  const handleOpenBirthModal = () => {
+    setBirthYear(savedBirthYear);
+    setBirthMonth(savedBirthMonth);
+    setBirthDay(savedBirthDay);
+    setBirthModalVisible(true);
+    handleOpenBirthPickerScroll();
+  };
 
   const handleConfirmBirth = () => {
     const today = new Date();
@@ -117,6 +170,9 @@ export default function ProfileScreen() {
       today.getMonth() < birth.getMonth() ||
       (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate());
     if (notYetBirthday) age -= 1;
+    setSavedBirthYear(birthYear);
+    setSavedBirthMonth(birthMonth);
+    setSavedBirthDay(birthDay);
     setProfileInput((prev) => ({ ...prev, age: String(age) }));
     setBirthModalVisible(false);
   };
@@ -284,11 +340,50 @@ export default function ProfileScreen() {
 
       {/* ── 활동 카드 (한국인만 표시) ── */}
       {isKorean ? (() => {
+        const progress = Math.min(completedCount / monthlyGoal, 1);
         return (
           <View style={styles.activityCard}>
             <View style={styles.activityTopRow}>
               <View style={styles.activityStreakWrap}>
-                <Text style={styles.activityStreak}>한달 도움 목표를 설정해보세요</Text>
+                <Text style={styles.activityStreak}>이번달 도움 목표를 설정해보세요</Text>
+              </View>
+              <View style={styles.activityGoalStepper}>
+                <TouchableOpacity
+                  style={styles.activityStepBtn}
+                  activeOpacity={0.7}
+                  onPress={() => setMonthlyGoal(Math.max(0, monthlyGoal - 5))}
+                >
+                  <Text style={styles.activityStepBtnText}>−</Text>
+                </TouchableOpacity>
+                <Text style={styles.activityGoalValue}>{monthlyGoal}</Text>
+                <TouchableOpacity
+                  style={styles.activityStepBtn}
+                  activeOpacity={0.7}
+                  onPress={() => setMonthlyGoal(monthlyGoal + 5)}
+                >
+                  <Text style={styles.activityStepBtnText}>+</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.activityProgressWrap}>
+              <View style={styles.activityProgressLabelRow}>
+                <Text style={styles.activityProgressLabel}>이번달 도움 횟수</Text>
+                <Text style={styles.activityProgressCount}>{completedCount} / {monthlyGoal}</Text>
+              </View>
+              <View style={styles.activityProgressTrack}>
+                <View
+                  style={[
+                    styles.activityProgressFill,
+                    {
+                      width: `${progress * 100}%` as `${number}%`,
+                      backgroundColor: monthlyGoal === 0 ? '#D1D5DB' : progress >= 1 ? '#22C55E' : BLUE,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.activityProgressLabels}>
+                <Text style={styles.activityProgressStart}>0</Text>
+                <Text style={styles.activityProgressEnd}>{monthlyGoal}회 달성</Text>
               </View>
             </View>
           </View>
@@ -390,18 +485,15 @@ export default function ProfileScreen() {
       <Modal transparent={false} animationType="slide" visible={profileModalVisible} onRequestClose={() => setProfileModalVisible(false)}>
         <KeyboardAvoidingView style={styles.profileModalFull} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
-          {/* 헤더 */}
-          <View style={styles.profileModalHeader}>
-            <TouchableOpacity style={styles.profileHeaderBtn} onPress={() => setProfileModalVisible(false)} activeOpacity={0.7}>
-              <Ionicons name="close" size={24} color={T1} />
-            </TouchableOpacity>
-            <Text style={styles.profileModalTitle}>프로필 수정</Text>
-            <TouchableOpacity style={styles.profileHeaderBtn} onPress={handleSaveProfile} activeOpacity={0.7}>
-              <Text style={styles.profileModalSaveBtn}>저장</Text>
-            </TouchableOpacity>
-          </View>
+          {/* 헤더 - 절대 위치 버튼들 */}
+          <TouchableOpacity style={styles.profileCloseBtn} onPress={() => setProfileModalVisible(false)} activeOpacity={0.7}>
+            <Ionicons name="close" size={24} color={T1} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.profileSaveFloatBtn} onPress={handleSaveProfile} activeOpacity={0.7}>
+            <Text style={styles.profileModalSaveBtn}>저장</Text>
+          </TouchableOpacity>
 
-          <ScrollView style={styles.profileScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.profileScrollContent} automaticallyAdjustKeyboardInsets>
+          <ScrollView style={styles.profileScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.profileScrollContent} keyboardShouldPersistTaps="handled">
 
               {/* 1. 프로필 사진 */}
               <View style={styles.photoMainWrap}>
@@ -415,22 +507,20 @@ export default function ProfileScreen() {
                       />
                     ) : (
                       <View style={styles.photoMainPlaceholder}>
-                        <Ionicons name="add" size={sc(40)} color="#CCCCCC" />
+                        <Ionicons name="person" size={sc(40)} color="#CCCCCC" />
                       </View>
                     )}
                   </TouchableOpacity>
-                  {user?.profileImage?.trim() && !imageLoadError && (
-                    <TouchableOpacity style={styles.photoRemoveBtn} onPress={handleDeleteImage} activeOpacity={0.8}>
-                      <Ionicons name="close" size={sc(12)} color="#fff" />
-                    </TouchableOpacity>
-                  )}
                 </View>
+                <TouchableOpacity style={styles.photoCameraBtn} onPress={() => setImageMenuVisible(true)} activeOpacity={0.8}>
+                  <Ionicons name="camera" size={sc(16)} color="#fff" />
+                </TouchableOpacity>
               </View>
 
               <View style={styles.editSectionDivider} />
 
               {/* 2. 내 소개 */}
-              <Text style={styles.editSectionTitle}>내 소개</Text>
+              <Text style={styles.editSectionTitle}>한줄 소개</Text>
               <TextInput
                 style={styles.editTextarea}
                 value={profileInput.bio}
@@ -446,33 +536,40 @@ export default function ProfileScreen() {
 
               {/* 3. 기본 정보 */}
               <Text style={styles.editSectionTitle}>기본 정보</Text>
-              <View style={styles.editDivider} />
 
               {/* 성별 */}
-              <View style={styles.editFieldWrap}>
-                <Text style={styles.editFieldLabel}>성별</Text>
+
+              <View style={[styles.editFieldWrap, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: sc(12) }]}>
+                <Text style={[styles.editFieldLabel, { marginBottom: 0, marginTop: sc(6), fontSize: sc(16) }]}>성별</Text>
                 <View style={styles.chipRow}>
-                  {['남자', '여자'].map((g) => (
-                    <TouchableOpacity
-                      key={g}
-                      style={[styles.optionChip, profileInput.gender === g && styles.optionChipActive]}
-                      onPress={() => setProfileInput((prev) => ({ ...prev, gender: g }))}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[styles.optionChipText, profileInput.gender === g && styles.optionChipTextActive]}>{g}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {[{ label: '남성', value: '남자' }, { label: '여성', value: '여자' }].map(({ label, value }) => {
+                    const isSelected = profileInput.gender === value;
+                    const isLocked = !!user?.gender;
+                    return (
+                      <TouchableOpacity
+                        key={value}
+                        style={[styles.optionChip, isSelected && styles.optionChipActive]}
+                        onPress={() => {
+                          if (isLocked) return;
+                          setProfileInput((prev) => ({ ...prev, gender: value }));
+                        }}
+                        activeOpacity={isLocked ? 1 : 0.8}
+                      >
+                        <Text style={[styles.optionChipText, isSelected && styles.optionChipTextActive]}>{label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
 
               <View style={styles.editSectionDivider} />
 
               {/* 나이 */}
-              <View style={styles.editFieldWrap}>
-                <Text style={styles.editFieldLabel}>나이</Text>
+              <View style={[styles.editFieldWrap, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                <Text style={[styles.editFieldLabel, { marginBottom: 0, fontSize: sc(16) }]}>나이</Text>
                 <TouchableOpacity
-                  style={styles.editInput}
-                  onPress={() => setBirthModalVisible(true)}
+                  style={[styles.editInput, { marginLeft: sc(12), paddingHorizontal: sc(10) }]}
+                  onPress={handleOpenBirthModal}
                   activeOpacity={0.8}
                 >
                   <Text style={{ color: profileInput.age ? T1 : BLUE_MID, fontSize: sc(15) }}>
@@ -485,30 +582,32 @@ export default function ProfileScreen() {
 
               {/* 학과 */}
               <View style={styles.editFieldWrap}>
-                <Text style={styles.editFieldLabel}>학과</Text>
-                <TouchableOpacity
-                  style={[styles.editInput, isKorean && { backgroundColor: BORDER, opacity: 0.7 }]}
-                  onPress={() => {
-                    if (isKorean) {
-                      Alert.alert('학생증 인증 필요', '한국인 학생은 학생증 인증 후 전공을 변경할 수 있습니다.');
-                      return;
-                    }
-                    setShowMajorList((v) => !v);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Text style={{ color: profileInput.major ? T1 : BLUE_MID, fontSize: sc(15) }}>
-                      {profileInput.major || '학과를 선택하세요'}
-                    </Text>
-                    {isKorean
-                      ? <Ionicons name="lock-closed-outline" size={16} color={BLUE_MID} />
-                      : <Ionicons name={showMajorList ? 'chevron-up' : 'chevron-down'} size={16} color={BLUE_MID} />
-                    }
-                  </View>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={[styles.editFieldLabel, { marginBottom: 0, fontSize: sc(16) }]}>학과</Text>
+                  <TouchableOpacity
+                    style={[styles.editInput, { marginLeft: sc(12), alignSelf: 'flex-end', minWidth: sc(160), maxWidth: sc(200), paddingHorizontal: sc(10) }, isKorean && { backgroundColor: BORDER, opacity: 0.7 }]}
+                    onPress={() => {
+                      if (isKorean) {
+                        Alert.alert('학생증 인증 필요', '한국인 학생은 학생증 인증 후 전공을 변경할 수 있습니다.');
+                        return;
+                      }
+                      setShowMajorList((v) => !v);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text style={{ color: profileInput.major ? T1 : BLUE_MID, fontSize: sc(15) }}>
+                        {profileInput.major || '학과를 선택하세요'}
+                      </Text>
+                      {isKorean
+                        ? <Ionicons name="lock-closed-outline" size={16} color={BLUE_MID} />
+                        : <Ionicons name={showMajorList ? 'chevron-up' : 'chevron-down'} size={16} color={BLUE_MID} />
+                      }
+                    </View>
+                  </TouchableOpacity>
+                </View>
                 {isKorean && (
-                  <Text style={{ fontSize: sc(11), color: BLUE_MID, marginTop: sc(4) }}>학생증 인증 후 변경 가능합니다.</Text>
+                  <Text style={{ fontSize: sc(11), color: BLUE_MID, marginTop: sc(4), textAlign: 'right' }}>학생증 인증 후 변경 가능합니다.</Text>
                 )}
                 {showMajorList && !isKorean && (
                   <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: sc(12), marginTop: sc(4), overflow: 'hidden' }}>
@@ -527,13 +626,11 @@ export default function ProfileScreen() {
                 )}
               </View>
 
-
               <View style={styles.editSectionDivider} />
 
               {/* 번역 언어 */}
               <Text style={styles.editSectionTitle}>번역 언어</Text>
-              <View style={styles.editDivider} />
-              <View style={styles.chipRow}>
+              <View style={[styles.chipRow, { marginTop: sc(12) }]}>
                 {LANGUAGES.map((lang) => (
                   <TouchableOpacity
                     key={lang.code}
@@ -551,11 +648,10 @@ export default function ProfileScreen() {
               <View style={styles.editSectionDivider} />
 
               {/* 취미 */}
-              <View style={styles.editRowBetween}>
+              <View style={[styles.editRowBetween, { marginBottom: sc(12) }]}>
                 <Text style={styles.editSectionTitle}>취미</Text>
                 <Text style={styles.editOptional}>({profileInput.hobbies.length}/5)</Text>
               </View>
-              <View style={styles.editDivider} />
               {profileInput.hobbies.length > 0 && (
                 <View style={styles.hobbyTagList}>
                   {profileInput.hobbies.map((h, i) => (
@@ -584,6 +680,7 @@ export default function ProfileScreen() {
                   </TouchableOpacity>
                 </View>
               )}
+              <View style={{ height: sc(32) }} />
 
           </ScrollView>
 
@@ -621,38 +718,108 @@ export default function ProfileScreen() {
 
           {/* 생년월일 피커 오버레이 */}
           {birthModalVisible && (
-            <TouchableOpacity style={styles.inlineOverlay} activeOpacity={1} onPress={() => setBirthModalVisible(false)}>
-              <TouchableOpacity style={styles.inlineSheet} activeOpacity={1} onPress={() => {}}>
+            <View style={styles.inlineOverlay}>
+              <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setBirthModalVisible(false)} />
+              <View style={styles.inlineSheet}>
                 <View style={styles.bottomSheetHandle} />
                 <Text style={styles.bottomSheetTitle}>생년월일 선택</Text>
-                <View style={styles.birthPickerRow}>
-                  <ScrollView style={styles.birthPickerCol} showsVerticalScrollIndicator={false}>
-                    {YEARS.map((y) => (
-                      <TouchableOpacity key={y} style={[styles.birthPickerItem, birthYear === y && styles.birthPickerItemActive]} onPress={() => setBirthYear(y)}>
-                        <Text style={[styles.birthPickerText, birthYear === y && styles.birthPickerTextActive]}>{y}년</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                  <ScrollView style={styles.birthPickerCol} showsVerticalScrollIndicator={false}>
-                    {MONTHS.map((m) => (
-                      <TouchableOpacity key={m} style={[styles.birthPickerItem, birthMonth === m && styles.birthPickerItemActive]} onPress={() => setBirthMonth(m)}>
-                        <Text style={[styles.birthPickerText, birthMonth === m && styles.birthPickerTextActive]}>{m}월</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                  <ScrollView style={styles.birthPickerCol} showsVerticalScrollIndicator={false}>
-                    {Array.from({ length: getDays(birthYear, birthMonth) }, (_, i) => i + 1).map((d) => (
-                      <TouchableOpacity key={d} style={[styles.birthPickerItem, birthDay === d && styles.birthPickerItemActive]} onPress={() => setBirthDay(d)}>
-                        <Text style={[styles.birthPickerText, birthDay === d && styles.birthPickerTextActive]}>{d}일</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                <View style={{ height: 1, backgroundColor: BORDER, marginBottom: sc(12) }} />
+
+                {/* 슬롯 피커 */}
+                <View style={{ height: PICKER_HEIGHT, flexDirection: 'row', gap: sc(8), paddingHorizontal: sc(8) }}>
+
+                  {/* 년 */}
+                  <View style={{ flex: 1, position: 'relative' }}>
+                    <View pointerEvents="none" style={{
+                      position: 'absolute', left: 0, right: 0,
+                      top: ITEM_HEIGHT * 2, height: ITEM_HEIGHT,
+                      borderRadius: sc(10), borderWidth: 1.5, borderColor: BLUE,
+                      zIndex: 1,
+                    }} />
+                    <ScrollView
+                      ref={yearRef}
+                      style={{ flex: 1 }}
+                      showsVerticalScrollIndicator={false}
+                      snapToInterval={ITEM_HEIGHT}
+                      decelerationRate="fast"
+                      contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
+                      onMomentumScrollEnd={(e) => {
+                        const idx = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
+                        setBirthYear(YEARS[Math.max(0, Math.min(idx, YEARS.length - 1))]);
+                      }}
+                    >
+                      {YEARS.map((y) => (
+                        <View key={y} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+                          <Text style={{ fontSize: sc(15), color: birthYear === y ? BLUE : '#999', fontWeight: birthYear === y ? '700' : '400' }}>{y}년</Text>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  {/* 월 */}
+                  <View style={{ flex: 1, position: 'relative' }}>
+                    <View pointerEvents="none" style={{
+                      position: 'absolute', left: 0, right: 0,
+                      top: ITEM_HEIGHT * 2, height: ITEM_HEIGHT,
+                      borderRadius: sc(10), borderWidth: 1.5, borderColor: BLUE,
+                      zIndex: 1,
+                    }} />
+                    <ScrollView
+                      ref={monthRef}
+                      style={{ flex: 1 }}
+                      showsVerticalScrollIndicator={false}
+                      snapToInterval={ITEM_HEIGHT}
+                      decelerationRate="fast"
+                      contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
+                      onMomentumScrollEnd={(e) => {
+                        const idx = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
+                        setBirthMonth(idx + 1);
+                      }}
+                    >
+                      {MONTHS.map((m) => (
+                        <View key={m} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+                          <Text style={{ fontSize: sc(15), color: birthMonth === m ? BLUE : '#999', fontWeight: birthMonth === m ? '700' : '400' }}>{m}월</Text>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  {/* 일 */}
+                  <View style={{ flex: 1, position: 'relative' }}>
+                    <View pointerEvents="none" style={{
+                      position: 'absolute', left: 0, right: 0,
+                      top: ITEM_HEIGHT * 2, height: ITEM_HEIGHT,
+                      borderRadius: sc(10), borderWidth: 1.5, borderColor: BLUE,
+                      zIndex: 1,
+                    }} />
+                    <ScrollView
+                      ref={dayRef}
+                      style={{ flex: 1 }}
+                      showsVerticalScrollIndicator={false}
+                      snapToInterval={ITEM_HEIGHT}
+                      decelerationRate="fast"
+                      contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
+                      onMomentumScrollEnd={(e) => {
+                        const idx = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
+                        const days = getDays(birthYear, birthMonth);
+                        setBirthDay(Math.max(1, Math.min(idx + 1, days)));
+                      }}
+                    >
+                      {Array.from({ length: getDays(birthYear, birthMonth) }, (_, i) => i + 1).map((d) => (
+                        <View key={d} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+                          <Text style={{ fontSize: sc(15), color: birthDay === d ? BLUE : '#999', fontWeight: birthDay === d ? '700' : '400' }}>{d}일</Text>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+
                 </View>
-                <TouchableOpacity style={styles.birthConfirmBtn} onPress={handleConfirmBirth} activeOpacity={0.8}>
+
+                <TouchableOpacity style={[styles.birthConfirmBtn, { borderRadius: sc(30), marginHorizontal: sc(24), marginBottom: sc(16), marginTop: sc(16) }]} onPress={handleConfirmBirth} activeOpacity={0.8}>
                   <Text style={styles.birthConfirmText}>확인</Text>
                 </TouchableOpacity>
-              </TouchableOpacity>
-            </TouchableOpacity>
+              </View>
+            </View>
           )}
 
         </KeyboardAvoidingView>
@@ -774,8 +941,8 @@ const styles = StyleSheet.create({
   photoSectionSub: { fontSize: sc(13), color: '#999999', marginBottom: sc(16) },
   photoMainWrap: { position: 'relative', alignSelf: 'center' },
   photoMainBox: {
-    width: sc(160), height: sc(160),
-    borderRadius: sc(80), overflow: 'hidden',
+    width: sc(120), height: sc(120),
+    borderRadius: sc(60), overflow: 'hidden',
     backgroundColor: '#F2F2F2',
   },
   photoRemoveBtn: {
@@ -783,6 +950,15 @@ const styles = StyleSheet.create({
     width: sc(24), height: sc(24), borderRadius: sc(12),
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center', alignItems: 'center',
+  },
+  photoCameraBtn: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: sc(32), height: sc(32), borderRadius: sc(16),
+    backgroundColor: BLUE,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: '#fff',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2, shadowRadius: sc(4), elevation: 4,
   },
   photoMainImage: { width: '100%', height: '100%' },
   photoMainPlaceholder: {
@@ -874,6 +1050,36 @@ const styles = StyleSheet.create({
   activityProgressLabels: { flexDirection: 'row', justifyContent: 'space-between' },
   activityProgressStart: { fontSize: sc(11), color: BLUE_MID },
   activityProgressEnd: { fontSize: sc(11), color: BLUE_MID },
+
+  // ── 목표 스테퍼 ──
+  activityGoalStepper: {
+    flexDirection: 'row', alignItems: 'center', gap: sc(8),
+  },
+  activityStepBtn: {
+    width: sc(28), height: sc(28), borderRadius: sc(8),
+    backgroundColor: BLUE_L, alignItems: 'center', justifyContent: 'center',
+  },
+  activityStepBtnText: { fontSize: sc(18), fontWeight: '800', color: BLUE, lineHeight: sc(22) },
+  activityGoalValue: { fontSize: sc(16), fontWeight: '800', color: T1, minWidth: sc(28), textAlign: 'center' },
+
+  // ── 목표 수정 모달 ──
+  goalEditSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: '#fff', borderTopLeftRadius: sc(20), borderTopRightRadius: sc(20),
+    padding: sc(24), paddingBottom: sc(40), alignItems: 'center',
+  },
+  goalEditTitle: { fontSize: sc(17), fontWeight: '800', color: T1, marginBottom: sc(6) },
+  goalEditSub: { fontSize: sc(13), color: BLUE_MID, marginBottom: sc(20), textAlign: 'center' },
+  goalEditInput: {
+    width: '100%', borderWidth: 1.5, borderColor: BORDER, borderRadius: sc(12),
+    fontSize: sc(28), fontWeight: '800', color: T1, textAlign: 'center',
+    paddingVertical: sc(12), marginBottom: sc(20),
+  },
+  goalEditBtn: {
+    width: '100%', backgroundColor: BLUE, borderRadius: sc(12),
+    paddingVertical: sc(14), alignItems: 'center',
+  },
+  goalEditBtnText: { fontSize: sc(15), fontWeight: '800', color: '#fff' },
 
   activityTopRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -1039,20 +1245,33 @@ const styles = StyleSheet.create({
   profileModalFull: {
     flex: 1, backgroundColor: '#fff',
   },
-  profileModalHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: sc(16),
-    paddingTop: Platform.OS === 'ios' ? sc(72) : sc(24),
-    paddingBottom: sc(12),
-    borderBottomWidth: 1, borderBottomColor: '#D4E4FF',
+  profileCloseBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? sc(56) : sc(24),
+    left: sc(16),
+    zIndex: 100,
+    width: sc(40), height: sc(40), borderRadius: sc(20),
     backgroundColor: '#fff',
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15, shadowRadius: sc(8), elevation: 5,
   },
-  profileHeaderBtn:  { width: sc(40), alignItems: 'center' },
-  profileModalTitle: { fontSize: sc(19), fontWeight: '800', color: T1 },
-  profileModalSaveBtn: { fontSize: sc(19), fontWeight: '800', color: BLUE },
+  profileSaveFloatBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? sc(56) : sc(24),
+    right: sc(16),
+    zIndex: 100,
+    paddingHorizontal: sc(18), paddingVertical: sc(10),
+    borderRadius: sc(20),
+    backgroundColor: '#fff',
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15, shadowRadius: sc(8), elevation: 5,
+  },
+  profileModalSaveBtn: { fontSize: sc(16), fontWeight: '800', color: BLUE },
 
   profileScroll:        { flex: 1 },
-  profileScrollContent: { paddingHorizontal: sc(16), paddingVertical: sc(12), paddingBottom: sc(40) },
+  profileScrollContent: { paddingHorizontal: sc(16), paddingTop: sc(100), paddingBottom: sc(16) },
 
   editSection: {
     backgroundColor: '#fff', borderRadius: sc(20), padding: sc(16),
@@ -1078,7 +1297,7 @@ const styles = StyleSheet.create({
     marginTop: sc(10),
     paddingVertical: sc(14), paddingHorizontal: sc(14),
     borderWidth: 1, borderColor: '#D4E4FF', borderRadius: sc(12), backgroundColor: '#F0F4FA',
-    height: sc(100), lineHeight: sc(22), textAlignVertical: 'top',
+    height: sc(56), lineHeight: sc(22), textAlignVertical: 'top',
   },
 
   chipRow:             { flexDirection: 'row', flexWrap: 'wrap', gap: sc(8) },

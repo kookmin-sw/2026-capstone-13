@@ -23,6 +23,7 @@ import { getActiveHelperCount, getKoreanUsers } from '../../services/authService
 import { getHelpedRequests, getHelpRequests } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { useGoalStore } from '../../stores/goalStore';
 import type { HelpRequest, HelpCategory, User } from '../../types';
 
 // ── Design tokens ──
@@ -56,9 +57,10 @@ interface StreakTopCarouselProps {
   inProgressCount: number;
   progress: number;
   DOTS: number;
+  loginStreak: number;
 }
 
-function StreakTopCarousel({ completedCount, waitingCount, progress, DOTS }: StreakTopCarouselProps) {
+function StreakTopCarousel({ completedCount, waitingCount, DOTS, loginStreak }: StreakTopCarouselProps) {
   const [slide, setSlide] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -76,7 +78,7 @@ function StreakTopCarousel({ completedCount, waitingCount, progress, DOTS }: Str
           useNativeDriver: true,
         }).start();
       });
-    }, 6000);
+    }, 6500);
     return () => clearInterval(interval);
   }, [fadeAnim]);
 
@@ -84,7 +86,7 @@ function StreakTopCarousel({ completedCount, waitingCount, progress, DOTS }: Str
     <Animated.View style={[s.streakTopRow, { opacity: fadeAnim }]}>
       <View style={s.streakTextWrap}>
         {slide === 0 ? (
-          <Text style={s.streakTitle}>{completedCount}일 연속 접속중!</Text>
+          <Text style={s.streakTitle}>{loginStreak}일 연속 접속중!</Text>
         ) : (
           <View style={s.streakSlide2Row}>
             <Text style={s.streakSlide2Text}>지금 도움이 필요해요</Text>
@@ -97,7 +99,7 @@ function StreakTopCarousel({ completedCount, waitingCount, progress, DOTS }: Str
       {slide === 0 && (
         <View style={s.streakDots}>
           {Array.from({ length: DOTS }).map((_, i) => (
-            <View key={i} style={[s.streakDot, i < Math.round(progress * DOTS) && s.streakDotOn]} />
+            <View key={i} style={[s.streakDot, i < loginStreak && s.streakDotOn]} />
           ))}
         </View>
       )}
@@ -127,6 +129,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { hasUnread, fetchHasUnread } = useNotificationStore();
+  const { monthlyGoal, loginStreak, checkAndUpdateStreak } = useGoalStore();
   const isInternational = user?.userType === 'INTERNATIONAL' || user?.userType === 'EXCHANGE';
   const [requests, setRequests]             = useState<HelpRequest[]>([]);
   const [koreanUsers, setKoreanUsers]       = useState<User[]>([]);
@@ -178,6 +181,10 @@ export default function HomeScreen() {
       }).catch(() => {});
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!isInternational) checkAndUpdateStreak();
+  }, []);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -237,7 +244,7 @@ const goTo = (item: HelpRequest) =>
 
         {/* ── 연속 도움중 카드 (공통 표시) ── */}
         {(() => {
-          const MONTHLY_GOAL = 20;
+          const MONTHLY_GOAL = monthlyGoal;
           const progress = Math.min(completedCount / MONTHLY_GOAL, 1);
           const DOTS = 9;
           const waitingCount = requests.filter(r => r.status === 'WAITING').length;
@@ -254,14 +261,15 @@ const goTo = (item: HelpRequest) =>
                     inProgressCount={inProgressCount}
                     progress={progress}
                     DOTS={DOTS}
+                    loginStreak={loginStreak}
                   />
                   <View style={s.streakProgressWrap}>
                     <View style={s.streakProgressLabelRow}>
-                      <Text style={s.streakProgressLabel}>이번달 도움 목표</Text>
+                      <Text style={s.streakProgressLabel}>이번달 도움 횟수</Text>
                       <Text style={s.streakProgressCount}>{completedCount} / {MONTHLY_GOAL}</Text>
                     </View>
                     <View style={s.streakProgressTrack}>
-                      <View style={[s.streakProgressFill, { width: `${progress * 100}%` as `${number}%` }]} />
+                      <View style={[s.streakProgressFill, { width: `${progress * 100}%` as `${number}%`, backgroundColor: MONTHLY_GOAL === 0 ? '#D1D5DB' : progress >= 1 ? '#22C55E' : BLUE }]} />
                     </View>
                   </View>
                 </>
