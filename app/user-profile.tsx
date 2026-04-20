@@ -90,6 +90,12 @@ const STATUS_CONFIG: Record<RequestStatus, { label: string; color: string; bg: s
 const POST_CATEGORY_LABEL: Record<string, string> = {
   INFO: '자유게시판', QUESTION: '로컬게시판', CHAT: '모임게시판', CULTURE: '장터게시판',
 };
+const POST_CATEGORY_ICON: Record<string, { name: string; color: string }> = {
+  INFO:     { name: 'chatbubbles-outline', color: '#3B6FE8' },
+  QUESTION: { name: 'location-outline',   color: '#F97316' },
+  CHAT:     { name: 'people-outline',     color: '#16A34A' },
+  CULTURE:  { name: 'storefront-outline', color: '#8B5CF6' },
+};
 
 function formatTime(dateStr: string): string {
   const utc = dateStr.includes('Z') || dateStr.includes('+') ? dateStr : dateStr + 'Z';
@@ -441,13 +447,17 @@ export default function UserProfileScreen() {
                 activeOpacity={0.85}
                 onPress={() => router.push({ pathname: '/community-post', params: { id: item.id } })}
               >
-                <View style={s.listCardBody}>
+                <View style={s.communityCardBody}>
                   <View style={s.listCardTop}>
-                    <Text style={s.listCardCategory}>{POST_CATEGORY_LABEL[item.category] ?? item.category}</Text>
+                    <View style={s.postCatRow}>
+                      {POST_CATEGORY_ICON[item.category] && (
+                        <Ionicons name={POST_CATEGORY_ICON[item.category].name as never} size={13} color={POST_CATEGORY_ICON[item.category].color} />
+                      )}
+                      <Text style={[s.listCardCategory, { color: T1 }]}>{POST_CATEGORY_LABEL[item.category] ?? item.category}</Text>
+                    </View>
                     <Text style={s.listCardTime}>{formatTime(item.createdAt)}</Text>
                   </View>
-                  <Text style={s.listCardTitle} numberOfLines={2}>{item.title}</Text>
-                  <Text style={s.listCardDesc} numberOfLines={1}>{item.content}</Text>
+                  <Text style={s.listCardDesc} numberOfLines={2}>{item.content}</Text>
                 </View>
               </TouchableOpacity>
             ))
@@ -619,8 +629,8 @@ const s = StyleSheet.create({
   emptyTabText: { fontSize: sc(14), color: T2 },
 
   listCard: {
-    backgroundColor: '#fff', marginHorizontal: sc(16), marginTop: sc(10),
-    borderRadius: sc(14), padding: sc(14), flexDirection: 'row', gap: sc(12),
+    backgroundColor: '#fff', marginHorizontal: sc(16), marginTop: sc(8),
+    borderRadius: sc(14), paddingHorizontal: sc(14), paddingVertical: sc(10), flexDirection: 'row', gap: sc(12),
     borderWidth: sc(1), borderColor: BORDER,
   },
   listCardIcon: {
@@ -629,11 +639,13 @@ const s = StyleSheet.create({
   },
   listCardBody: { flex: 1, height: sc(52), justifyContent: 'space-between' },
   listCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  listCardCategory: { fontSize: sc(11), fontWeight: '600', color: T2 },
+  listCardCategory: { fontSize: sc(13), fontWeight: '600', color: T2 },
   listCardTitle: { fontSize: sc(14), fontWeight: '700', color: T1 },
   listCardStars: { flexDirection: 'row', gap: sc(2) },
   listCardBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  listCardDesc: { fontSize: sc(12), color: T2 },
+  listCardDesc: { fontSize: sc(13), color: T2 },
+  communityCardBody: { flex: 1, gap: sc(2) },
+  postCatRow: { flexDirection: 'row', alignItems: 'center', gap: sc(4) },
   listCardTime: { fontSize: sc(11), color: T2 },
   statusBadge: { paddingHorizontal: sc(8), paddingVertical: sc(3), borderRadius: sc(20) },
   statusBadgeText: { fontSize: sc(11), fontWeight: '700' },
