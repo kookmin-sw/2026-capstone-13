@@ -640,7 +640,17 @@ const s = StyleSheet.create({
     borderRadius: sc(20), paddingHorizontal: sc(16), paddingVertical: sc(7),
   },
   matchBtnText: { fontSize: sc(13), fontWeight: '700', color: '#333' },
-  notifBtn:     { position: 'relative', width: sc(36), height: sc(36), justifyContent: 'center', alignItems: 'center' },
+  notifBtn: {
+    position: 'relative', width: sc(38), height: sc(38),
+    justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#F0F4FA',
+    borderRadius: sc(19),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   notifDot: {
     position: 'absolute', top: 4, right: 4,
     width: sc(8), height: sc(8), borderRadius: sc(4),

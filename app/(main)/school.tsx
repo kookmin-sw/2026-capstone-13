@@ -112,15 +112,14 @@ export default function SchoolScreen() {
     try {
       const res = await api.get('/meals');
       const data: MealData[] = res.data.data ?? [];
-      setMeals(data);
-      if (data.length > 0) {
-        const dates = [...new Set(data.map((m) => m.mealDate))].sort();
-        if (!selectedDate || !dates.includes(selectedDate)) setSelectedDate(dates[0]);
-        if (!selectedCafeteria) {
-          const ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)'];
-          const first = ORDER.find((name) => data.some((m) => m.cafeteriaKo === name));
-          setSelectedCafeteria(first ?? data[0].cafeteriaKo);
-        }
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todayMeals = data.filter((m) => m.mealDate === todayStr);
+      setMeals(todayMeals);
+      setSelectedDate(todayStr);
+      if (todayMeals.length > 0 && !selectedCafeteria) {
+        const ORDER = ['한울식당(법학관 지하1층)', '학생식당(복지관 1층)', '교직원식당(복지관 1층)'];
+        const first = ORDER.find((name) => todayMeals.some((m) => m.cafeteriaKo === name));
+        setSelectedCafeteria(first ?? todayMeals[0].cafeteriaKo);
       }
     } catch (e) {
       // 실패 시 빈 목록 유지
@@ -137,20 +136,6 @@ export default function SchoolScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     Promise.all([fetchNotices(), fetchMeals()]).finally(() => setRefreshing(false));
-  };
-
-  // 날짜 목록
-  const dateList = [...new Set(meals.map((m) => m.mealDate))].sort();
-
-  const formatDateTab = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    const dayName = days[d.getDay()];
-    const label = diff === 0 ? '오늘' : diff === 1 ? '내일' : `${d.getMonth() + 1}/${d.getDate()}`;
-    return { label, dayName };
   };
 
   // 선택 날짜 기준 식당 목록 (K-Bob+ 제외)
@@ -182,6 +167,68 @@ export default function SchoolScreen() {
         ))}
       </View>
 
+      {/* ── 공지사항 카테고리 + 검색바 (상단 고정) ── */}
+      {activeTab === 'NOTICE' && (
+        <View style={s.noticeFixedHeader}>
+          <View style={s.noticeTopRow}>
+            <View>
+              <TouchableOpacity
+                style={s.categoryPickerBtn}
+                onPress={() => setNoticeCategoryOpen((v) => !v)}
+                activeOpacity={0.8}
+              >
+                <Text style={s.categoryPickerText}>{noticeCategory}</Text>
+                <Ionicons name={noticeCategoryOpen ? 'chevron-up' : 'chevron-down'} size={14} color={BLUE} />
+              </TouchableOpacity>
+              {noticeCategoryOpen && (
+                <>
+                  <TouchableOpacity
+                    style={s.categoryOverlay}
+                    onPress={() => setNoticeCategoryOpen(false)}
+                    activeOpacity={1}
+                  />
+                  <View style={s.categoryDropdown}>
+                    {['전체', '학사', '비자', '장학', '행사/취업', '학생지원', '정부초청'].map((cat, idx, arr) => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={[
+                          s.categoryDropdownItem,
+                          noticeCategory === cat && s.categoryDropdownItemActive,
+                          idx < arr.length - 1 && s.categoryDropdownItemBorder,
+                        ]}
+                        onPress={() => { setNoticeCategory(cat); setNoticeCategoryOpen(false); }}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[s.categoryDropdownText, noticeCategory === cat && s.categoryDropdownTextActive]}>
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+            </View>
+            <View style={s.noticeSearchBar}>
+              <Ionicons name="search-outline" size={15} color={T2} />
+              <TextInput
+                ref={noticeSearchRef}
+                style={s.noticeSearchInput}
+                placeholder="공지사항 검색"
+                placeholderTextColor={T2}
+                value={noticeSearch}
+                onChangeText={setNoticeSearch}
+                returnKeyType="search"
+              />
+              {noticeSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setNoticeSearch('')}>
+                  <Ionicons name="close-circle" size={16} color={T2} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      )}
+
       <ScrollView
         style={s.scroll}
         showsVerticalScrollIndicator={false}
@@ -201,25 +248,6 @@ export default function SchoolScreen() {
               </View>
             ) : (
               <>
-                {/* 날짜 탭 */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.dateTabs}>
-                  {dateList.map((date) => {
-                    const { label, dayName } = formatDateTab(date);
-                    const isSelected = selectedDate === date;
-                    return (
-                      <TouchableOpacity
-                        key={date}
-                        style={[s.dateTab, isSelected && s.dateTabActive]}
-                        onPress={() => { setSelectedDate(date); setSelectedCafeteria(null); }}
-                        activeOpacity={0.75}
-                      >
-                        <Text style={[s.dateTabLabel, isSelected && s.dateTabLabelActive]}>{label}</Text>
-                        <Text style={[s.dateTabDay, isSelected && s.dateTabDayActive]}>{dayName}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-
               <View style={s.sectionCard}>
                 {/* 식당 선택 - < 이름 > 방식 */}
                 {cafeteriaList.length > 0 && (() => {
@@ -228,19 +256,17 @@ export default function SchoolScreen() {
                   return (
                     <View style={s.cafeteriaTabWrap}>
                       <TouchableOpacity
-                        onPress={() => setSelectedCafeteria(cafeteriaList[Math.max(0, currentIdx - 1)])}
-                        disabled={currentIdx === 0}
+                        onPress={() => setSelectedCafeteria(cafeteriaList[(currentIdx - 1 + cafeteriaList.length) % cafeteriaList.length])}
                         style={s.cafeteriaArrowBtn}
                       >
-                        <Ionicons name="chevron-back" size={20} color={currentIdx === 0 ? T2 : T1} />
+                        <Ionicons name="chevron-back" size={20} color={T1} />
                       </TouchableOpacity>
                       <Text style={s.cafeteriaTabName} numberOfLines={1}>{translatedName}</Text>
                       <TouchableOpacity
-                        onPress={() => setSelectedCafeteria(cafeteriaList[Math.min(cafeteriaList.length - 1, currentIdx + 1)])}
-                        disabled={currentIdx === cafeteriaList.length - 1}
+                        onPress={() => setSelectedCafeteria(cafeteriaList[(currentIdx + 1) % cafeteriaList.length])}
                         style={s.cafeteriaArrowBtn}
                       >
-                        <Ionicons name="chevron-forward" size={20} color={currentIdx === cafeteriaList.length - 1 ? T2 : T1} />
+                        <Ionicons name="chevron-forward" size={20} color={T1} />
                       </TouchableOpacity>
                     </View>
                   );
@@ -271,70 +297,7 @@ export default function SchoolScreen() {
 
         {/* ── 공지사항 콘텐츠 ── */}
         {activeTab === 'NOTICE' && (
-          <View style={{ zIndex: 10 }}>
-            {/* 카테고리 선택 + 검색 버튼 */}
-            <View style={s.noticeTopRow}>
-              <View>
-                <TouchableOpacity
-                  style={s.categoryPickerBtn}
-                  onPress={() => setNoticeCategoryOpen((v) => !v)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={s.categoryPickerText}>{noticeCategory}</Text>
-                  <Ionicons name={noticeCategoryOpen ? 'chevron-up' : 'chevron-down'} size={14} color={BLUE} />
-                </TouchableOpacity>
-                {noticeCategoryOpen && (
-                  <View style={s.categoryDropdown}>
-                    {['전체', '학사', '비자', '장학', '행사/취업', '학생지원', '정부초청'].map((cat) => (
-                      <TouchableOpacity
-                        key={cat}
-                        style={[s.categoryDropdownItem, noticeCategory === cat && s.categoryDropdownItemActive]}
-                        onPress={() => { setNoticeCategory(cat); setNoticeCategoryOpen(false); }}
-                        activeOpacity={0.75}
-                      >
-                        <Text style={[s.categoryDropdownText, noticeCategory === cat && s.categoryDropdownTextActive]}>
-                          {cat}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-              <TouchableOpacity
-                style={s.searchIconBtn}
-                onPress={() => {
-                  setNoticeSearchVisible((v) => {
-                    if (v) { setNoticeSearch(''); }
-                    else { setTimeout(() => noticeSearchRef.current?.focus(), 100); }
-                    return !v;
-                  });
-                }}
-              >
-                <Ionicons name={noticeSearchVisible ? 'close-outline' : 'search-outline'} size={20} color={BLUE} />
-              </TouchableOpacity>
-            </View>
-
-            {/* 검색창 */}
-            {noticeSearchVisible && (
-              <View style={s.noticeSearchBar}>
-                <Ionicons name="search-outline" size={15} color={T2} />
-                <TextInput
-                  ref={noticeSearchRef}
-                  style={s.noticeSearchInput}
-                  placeholder="공지사항 검색"
-                  placeholderTextColor={T2}
-                  value={noticeSearch}
-                  onChangeText={setNoticeSearch}
-                  returnKeyType="search"
-                />
-                {noticeSearch.length > 0 && (
-                  <TouchableOpacity onPress={() => setNoticeSearch('')}>
-                    <Ionicons name="close-circle" size={16} color={T2} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
+          <View>
             {noticesLoading ? (
               <ActivityIndicator color={BLUE} style={{ marginTop: 60 }} />
             ) : notices.length === 0 ? (
@@ -417,7 +380,7 @@ export default function SchoolScreen() {
           </View>
         )}
 
-        {activeTab === 'CAFETERIA' && <View style={{ height: 40 }} />}
+        {activeTab === 'CAFETERIA' && <View style={{ height: 100 }} />}
       </ScrollView>
     </View>
   );
@@ -482,7 +445,7 @@ const s = StyleSheet.create({
 
   // ── 스크롤 ──
   scroll:        { flex: 1 },
-  scrollContent: { padding: sc(16), gap: sc(12) },
+  scrollContent: { padding: sc(16), paddingTop: sc(6), gap: sc(12) },
 
   // ── Section Card ──
   sectionCard: {
@@ -531,12 +494,20 @@ const s = StyleSheet.create({
     fontWeight: '400',
   },
 
+  // ── 공지사항 상단 고정 헤더 ──
+  noticeFixedHeader: {
+    backgroundColor: BG,
+    paddingHorizontal: sc(16),
+    paddingVertical: sc(10),
+    borderBottomWidth: 1,
+    borderBottomColor: DIV,
+    zIndex: 10,
+  },
+
   // ── 카테고리 선택 ──
   noticeTopRow: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
-    paddingRight: sc(4), marginBottom: sc(2),
-    marginTop: -sc(12),
     zIndex: 10,
   },
   categoryPickerBtn: {
@@ -547,20 +518,26 @@ const s = StyleSheet.create({
   categoryPickerText: { fontSize: sc(13), color: BLUE, fontWeight: '700' },
   categoryDropdown: {
     position: 'absolute',
-    top: sc(40),
+    top: sc(33),
     left: 0,
     backgroundColor: '#fff',
-    borderRadius: sc(12),
+    borderRadius: sc(6),
     borderWidth: 1,
     borderColor: '#E5EAF5',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: sc(4) },
-    shadowOpacity: 0.12,
-    shadowRadius: sc(12),
-    elevation: 8,
-    minWidth: sc(130),
+    shadowOffset: { width: 0, height: sc(6) },
+    shadowOpacity: 0.1,
+    shadowRadius: sc(16),
+    elevation: 10,
+    minWidth: sc(140),
+    maxHeight: sc(240),
     zIndex: 100,
     overflow: 'hidden',
+  },
+  categoryOverlay: {
+    position: 'absolute',
+    top: -1000, left: -1000, right: -1000, bottom: -1000,
+    zIndex: 99,
   },
   categoryDropdownItem: {
     paddingHorizontal: sc(16), paddingVertical: sc(11),
@@ -568,14 +545,20 @@ const s = StyleSheet.create({
   categoryDropdownItemActive: {
     backgroundColor: BLUE_L,
   },
+  categoryDropdownItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F2F6',
+  },
   categoryDropdownText: { fontSize: sc(14), color: T1, fontWeight: '500' },
   categoryDropdownTextActive: { color: BLUE, fontWeight: '700' },
   searchIconBtn: { padding: sc(6) },
   noticeSearchBar: {
+    flex: 1,
     flexDirection: 'row', alignItems: 'center', gap: sc(8),
     backgroundColor: '#F4F6FB', borderRadius: sc(12),
     paddingHorizontal: sc(12), paddingVertical: sc(8),
-    marginBottom: sc(8),
+    marginLeft: sc(8),
+    marginRight: sc(4),
   },
   noticeSearchInput: { flex: 1, fontSize: sc(14), color: T1, padding: 0 },
 
@@ -585,10 +568,12 @@ const s = StyleSheet.create({
     borderRadius: sc(16),
     borderWidth: 1, borderColor: '#F0F2F6',
     flexDirection: 'row',
+    overflow: 'hidden',
+    marginBottom: sc(5),
     shadowColor: '#000', shadowOffset: { width: 0, height: sc(1) },
     shadowOpacity: 0.05, shadowRadius: sc(4), elevation: 2,
   },
-  noticeBar:     { width: sc(5), borderRadius: sc(16), flexShrink: 0 },
+  noticeBar:     { width: sc(5), flexShrink: 0 },
   noticeContent: { flex: 1, paddingHorizontal: sc(14), paddingVertical: sc(12), gap: sc(6) },
 
   noticeHeaderRow:     { flexDirection: 'row', alignItems: 'center', gap: sc(6) },

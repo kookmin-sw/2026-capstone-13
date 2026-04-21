@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { s as sc } from '../utils/scale';
 import { useNotificationStore } from '../stores/notificationStore';
+import { useAuthStore } from '../stores/authStore';
 import type { AppNotification } from '../types';
 
 const BLUE    = '#3B6FE8';
@@ -19,15 +20,15 @@ const T3      = '#6B9DF0';
 const ORANGE  = '#F97316';
 const WHITE   = '#FFFFFF';
 
-function formatTime(createdAt: string): string {
+function formatTime(createdAt: string, isKo: boolean): string {
   const utc = createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z';
   const diff = Date.now() - new Date(utc).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1)  return '방금 전';
-  if (m < 60) return `${m}분 전`;
+  if (m < 1)  return isKo ? '방금 전' : 'Just now';
+  if (m < 60) return isKo ? `${m}분 전` : `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
+  if (h < 24) return isKo ? `${h}시간 전` : `${h}h ago`;
+  return isKo ? `${Math.floor(h / 24)}일 전` : `${Math.floor(h / 24)}d ago`;
 }
 
 function getAgeInHours(createdAt: string): number {
@@ -40,7 +41,7 @@ function notifIcon(type: AppNotification['type']): { name: React.ComponentProps<
     case 'COMMENT':              return { name: 'chatbubble',        color: BLUE,      bg: BLUE_L };
     case 'REPLY':                return { name: 'chatbubbles',       color: T3,        bg: BLUE_L };
     case 'LIKE':                 return { name: 'heart',             color: '#EF4444', bg: '#FEE2E2' };
-    case 'HELP_OFFER':           return { name: 'hand-left',         color: '#10B981', bg: '#D1FAE5' };
+    case 'HELP_OFFER':           return { name: 'checkmark-circle',  color: '#10B981', bg: '#D1FAE5' };
     case 'HELP_COMPLETED':       return { name: 'checkmark-circle',  color: '#10B981', bg: '#D1FAE5' };
     case 'REVIEW_REQUEST':       return { name: 'star-outline',      color: ORANGE,    bg: '#FFF7ED' };
     case 'REVIEW_RECEIVED':      return { name: 'star',              color: ORANGE,    bg: '#FFF7ED' };
@@ -51,12 +52,12 @@ function notifIcon(type: AppNotification['type']): { name: React.ComponentProps<
 }
 
 // 알림 타입별 액션 버튼 표시 여부
-function getActionButton(type: AppNotification['type']): { label: string; style: 'primary' | 'secondary' | 'danger' | null } {
+function getActionButton(type: AppNotification['type'], isKo: boolean): { label: string; style: 'primary' | 'secondary' | 'danger' | null } {
   switch (type) {
-    case 'HELP_OFFER':          return { label: '확인하기', style: 'primary' };
-    case 'REVIEW_REQUEST':      return { label: '후기 작성', style: 'primary' };
-    case 'STUDENT_ID_APPROVED': return { label: '확인됨', style: 'secondary' };
-    case 'STUDENT_ID_REJECTED': return { label: '재제출', style: 'danger' };
+    case 'HELP_OFFER':          return { label: isKo ? '확인하기' : 'View', style: 'primary' };
+    case 'REVIEW_REQUEST':      return { label: isKo ? '후기 작성' : 'Write Review', style: 'primary' };
+    case 'STUDENT_ID_APPROVED': return { label: isKo ? '확인됨' : 'Confirmed', style: 'secondary' };
+    case 'STUDENT_ID_REJECTED': return { label: isKo ? '재제출' : 'Resubmit', style: 'danger' };
     default:                    return { label: '', style: null };
   }
 }
@@ -66,6 +67,8 @@ type Section = { title: string; data: AppNotification[] };
 export default function NotificationsScreen() {
   const router = useRouter();
   const { notifications, loading, fetchNotifications, markAsRead, markAllAsRead, deleteAll } = useNotificationStore();
+  const user = useAuthStore((s) => s.user);
+  const isKo = user?.preferredLanguage === 'ko';
 
   useEffect(() => {
     fetchNotifications();
@@ -89,12 +92,12 @@ export default function NotificationsScreen() {
     }
 
     const result: Section[] = [];
-    if (today.length)     result.push({ title: '오늘',      data: today });
-    if (yesterday.length) result.push({ title: '어제',      data: yesterday });
-    if (week.length)      result.push({ title: '최근 7일',  data: week });
-    if (older.length)     result.push({ title: '이전',      data: older });
+    if (today.length)     result.push({ title: isKo ? '오늘'     : 'Today',        data: today });
+    if (yesterday.length) result.push({ title: isKo ? '어제'     : 'Yesterday',    data: yesterday });
+    if (week.length)      result.push({ title: isKo ? '최근 7일' : 'Last 7 Days',  data: week });
+    if (older.length)     result.push({ title: isKo ? '이전'     : 'Older',        data: older });
     return result;
-  }, [notifications]);
+  }, [notifications, isKo]);
 
   const handleNavigate = async (item: AppNotification) => {
     await markAsRead(item.id);
@@ -105,7 +108,7 @@ export default function NotificationsScreen() {
 
   const renderItem = ({ item }: { item: AppNotification }) => {
     const icon   = notifIcon(item.type);
-    const action = getActionButton(item.type);
+    const action = getActionButton(item.type, isKo);
     const canNavigate = item.referenceId != null;
 
     return (
@@ -124,7 +127,7 @@ export default function NotificationsScreen() {
         {/* 중앙: 텍스트 */}
         <View style={s.itemBody}>
           <Text style={s.itemText} numberOfLines={2}>{item.message}</Text>
-          <Text style={s.itemTime}>{formatTime(item.createdAt)}</Text>
+          <Text style={s.itemTime}>{formatTime(item.createdAt, isKo)}</Text>
         </View>
 
         {/* 오른쪽: 액션 버튼 or 썸네일 자리 */}
@@ -171,7 +174,7 @@ export default function NotificationsScreen() {
 
         {unreadCount > 0 ? (
           <TouchableOpacity onPress={markAllAsRead} style={s.headerAction}>
-            <Text style={s.allRead}>모두 읽음</Text>
+            <Text style={s.allRead}>{isKo ? '모두 읽음' : 'Mark all read'}</Text>
           </TouchableOpacity>
         ) : (
           <View style={{ width: sc(64) }} />
@@ -182,7 +185,7 @@ export default function NotificationsScreen() {
       {unreadCount > 0 && (
         <View style={s.unreadBanner}>
           <View style={s.unreadDotSmall} />
-          <Text style={s.unreadBannerText}>읽지 않은 알림 {unreadCount}개</Text>
+          <Text style={s.unreadBannerText}>{isKo ? `읽지 않은 알림 ${unreadCount}개` : `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}`}</Text>
         </View>
       )}
 
@@ -191,8 +194,8 @@ export default function NotificationsScreen() {
       ) : sections.length === 0 ? (
         <View style={s.empty}>
           <Ionicons name="notifications-off-outline" size={sc(48)} color={BORDER} />
-          <Text style={s.emptyTitle}>알림이 없습니다</Text>
-          <Text style={s.emptySubtitle}>새로운 소식이 생기면 알려드릴게요</Text>
+          <Text style={s.emptyTitle}>{isKo ? '알림이 없습니다' : 'No notifications'}</Text>
+          <Text style={s.emptySubtitle}>{isKo ? '새로운 소식이 생기면 알려드릴게요' : "We'll notify you when something new arrives"}</Text>
         </View>
       ) : (
         <SectionList
@@ -267,7 +270,7 @@ const s = StyleSheet.create({
   // 알림 아이템
   item: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: sc(16),
     paddingVertical: sc(13),
     gap: sc(12),
@@ -307,7 +310,7 @@ const s = StyleSheet.create({
   actionBtn: {
     paddingHorizontal: sc(14),
     paddingVertical: sc(7),
-    borderRadius: sc(10),
+    borderRadius: sc(20),
     flexShrink: 0,
     minWidth: sc(72),
     alignItems: 'center',
