@@ -146,7 +146,11 @@ public class HelpRequestService {
         HelpRequestResponse result = HelpRequestResponse.from(helpRequestRepository.save(req));
 
         // 요청자(유학생)에게 매칭 알림 발송
-        String message = helper.getNickname() + "님이 '" + truncate(req.getTitle(), 15) + "' 도움 요청을 수락했어요.";
+        User requester = req.getRequester();
+        boolean requesterIsKo = "ko".equals(requester.getPreferredLanguage());
+        String message = requesterIsKo
+                ? helper.getNickname() + "님이 '" + truncate(req.getTitle(), 15) + "' 도움 요청을 수락했어요."
+                : helper.getNickname() + " accepted your help request '" + truncate(req.getTitle(), 15) + "'.";
         notificationService.createNotification(
                 req.getRequester().getId(),
                 Notification.NotificationType.HELP_OFFER,
@@ -195,9 +199,13 @@ public class HelpRequestService {
             userRepository.incrementHelpCount(helper.getId());
 
             // 요청자에게 리뷰 안내 알림
-            String reviewMsg = "'" + truncate(req.getTitle(), 15) + "' 도움이 완료됐어요. " + helper.getNickname() + "님에게 리뷰를 남겨보세요!";
+            User reqUser = req.getRequester();
+            boolean reqIsKo = "ko".equals(reqUser.getPreferredLanguage());
+            String reviewMsg = reqIsKo
+                    ? "'" + truncate(req.getTitle(), 15) + "' 도움이 완료됐어요.\n" + helper.getNickname() + "님에게 리뷰를 남겨보세요!"
+                    : "Help for '" + truncate(req.getTitle(), 15) + "' is done.\nLeave a review for " + helper.getNickname() + "!";
             notificationService.createNotification(
-                    req.getRequester().getId(),
+                    reqUser.getId(),
                     Notification.NotificationType.REVIEW_REQUEST,
                     reviewMsg,
                     req.getId(),
@@ -205,7 +213,10 @@ public class HelpRequestService {
             );
 
             // helper에게 도움 완료 알림
-            String completedMsg = "'" + truncate(req.getTitle(), 15) + "' 도움이 완료됐어요. 수고하셨습니다!";
+            boolean helperIsKo = "ko".equals(helper.getPreferredLanguage());
+            String completedMsg = helperIsKo
+                    ? "'" + truncate(req.getTitle(), 15) + "' 도움이 완료됐어요.\n수고하셨습니다!"
+                    : "Help for '" + truncate(req.getTitle(), 15) + "' is complete.\nGreat job!";
             notificationService.createNotification(
                     helper.getId(),
                     Notification.NotificationType.HELP_COMPLETED,

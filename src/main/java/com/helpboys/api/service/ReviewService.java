@@ -79,7 +79,10 @@ public class ReviewService {
         }
 
         // reviewee에게 리뷰 수신 알림
-        String message = reviewer.getNickname() + "님이 '" + truncate(helpRequest.getTitle(), 15) + "'에 대한 리뷰를 남겨주셨어요.";
+        boolean revieweeIsKo = "ko".equals(reviewee.getPreferredLanguage());
+        String message = revieweeIsKo
+                ? reviewer.getNickname() + "님이 '" + truncate(helpRequest.getTitle(), 15) + "'에 대한 리뷰를 남겨주셨어요."
+                : reviewer.getNickname() + " left a review for '" + truncate(helpRequest.getTitle(), 15) + "'.";
         notificationService.createNotification(
                 reviewee.getId(),
                 Notification.NotificationType.REVIEW_RECEIVED,

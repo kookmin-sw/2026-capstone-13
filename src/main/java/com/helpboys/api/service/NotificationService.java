@@ -71,17 +71,30 @@ public class NotificationService {
 
         // FCM 푸시 알림 전송
         if (recipient.getFcmToken() != null) {
-            String title = switch (type) {
-                case COMMENT -> "새 댓글";
-                case REPLY -> "새 대댓글";
-                case LIKE -> "좋아요";
-                case HELP_OFFER -> "도움 제안";
-                case REVIEW_REQUEST -> "리뷰 작성 요청";
-                case REVIEW_RECEIVED -> "새 리뷰";
-                case HELP_COMPLETED -> "도움 완료";
-                case STUDENT_ID_APPROVED -> "학생증 인증 승인";
-                case STUDENT_ID_REJECTED -> "학생증 인증 거절";
-            };
+            boolean isKorean = "ko".equals(recipient.getPreferredLanguage());
+            String title = isKorean
+                ? switch (type) {
+                    case COMMENT -> "새 댓글";
+                    case REPLY -> "새 대댓글";
+                    case LIKE -> "좋아요";
+                    case HELP_OFFER -> "도움 제안";
+                    case REVIEW_REQUEST -> "리뷰 작성 요청";
+                    case REVIEW_RECEIVED -> "새 리뷰";
+                    case HELP_COMPLETED -> "도움 완료";
+                    case STUDENT_ID_APPROVED -> "학생증 인증 승인";
+                    case STUDENT_ID_REJECTED -> "학생증 인증 거절";
+                }
+                : switch (type) {
+                    case COMMENT -> "New Comment";
+                    case REPLY -> "New Reply";
+                    case LIKE -> "New Like";
+                    case HELP_OFFER -> "Help Offer";
+                    case REVIEW_REQUEST -> "Review Request";
+                    case REVIEW_RECEIVED -> "New Review";
+                    case HELP_COMPLETED -> "Help Completed";
+                    case STUDENT_ID_APPROVED -> "Student ID Approved";
+                    case STUDENT_ID_REJECTED -> "Student ID Rejected";
+                };
             fcmService.sendPush(recipient.getFcmToken(), title, message);
         }
     }

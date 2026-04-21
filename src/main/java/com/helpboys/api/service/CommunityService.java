@@ -126,8 +126,10 @@ public class CommunityService {
         // 내 글이 아닌 경우 게시글 작성자에게 알림
         if (!post.getAuthor().getId().equals(userId)) {
             try {
-                String message = author.getNickname() + "님이 '" +
-                        truncate(post.getTitle(), 15) + "' 에 댓글을 달았어요.";
+                boolean postAuthorIsKo = "ko".equals(post.getAuthor().getPreferredLanguage());
+                String message = postAuthorIsKo
+                        ? author.getNickname() + "님이 '" + truncate(post.getTitle(), 15) + "' 에 댓글을 달았어요."
+                        : author.getNickname() + " commented on '" + truncate(post.getTitle(), 15) + "'.";
                 notificationService.createNotification(
                         post.getAuthor().getId(),
                         Notification.NotificationType.COMMENT,
@@ -163,8 +165,10 @@ public class CommunityService {
             // 내 글이 아닌 경우 게시글 작성자에게 알림
             if (!post.getAuthor().getId().equals(userId)) {
                 try {
-                    String message = user.getNickname() + "님이 '" +
-                            truncate(post.getTitle(), 15) + "' 글을 좋아해요.";
+                    boolean postAuthorIsKo = "ko".equals(post.getAuthor().getPreferredLanguage());
+                    String message = postAuthorIsKo
+                            ? user.getNickname() + "님이 '" + truncate(post.getTitle(), 15) + "' 글을 좋아해요."
+                            : user.getNickname() + " liked your post '" + truncate(post.getTitle(), 15) + "'.";
                     notificationService.createNotification(
                             post.getAuthor().getId(),
                             Notification.NotificationType.LIKE,
@@ -238,7 +242,10 @@ public class CommunityService {
         // 내 댓글이 아닌 경우 원댓글 작성자에게 알림
         if (!parent.getAuthor().getId().equals(userId)) {
             try {
-                String message = author.getNickname() + "님이 회원님의 댓글에 답글을 달았어요.";
+                boolean parentAuthorIsKo = "ko".equals(parent.getAuthor().getPreferredLanguage());
+                String message = parentAuthorIsKo
+                        ? author.getNickname() + "님이 회원님의 댓글에 답글을 달았어요."
+                        : author.getNickname() + " replied to your comment.";
                 notificationService.createNotification(
                         parent.getAuthor().getId(),
                         Notification.NotificationType.REPLY,
