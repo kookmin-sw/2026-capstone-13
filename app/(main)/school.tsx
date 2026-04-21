@@ -358,19 +358,10 @@ export default function SchoolScreen() {
                   onPress={() => setExpandedNotice(expandedNotice === notice.id ? null : notice.id)}
                   activeOpacity={0.85}
                 >
-                  {/* 왼쪽 컬러 바 */}
-                  <View style={[s.noticeBar, { backgroundColor: CATEGORY_COLOR[notice.categoryName] ?? '#9CA3AF' }]} />
-
                   <View style={s.noticeContent}>
                     <View style={s.noticeHeaderRow}>
-                      <View style={[
-                        s.noticeCategoryBadge,
-                        { backgroundColor: (CATEGORY_COLOR[notice.categoryName] ?? '#9CA3AF') + '22' },
-                      ]}>
-                        <Text style={[
-                          s.noticeCategoryText,
-                          { color: CATEGORY_COLOR[notice.categoryName] ?? '#9CA3AF' },
-                        ]}>
+                      <View style={[s.noticeCategoryBadge, { backgroundColor: '#9CA3AF22' }]}>
+                        <Text style={[s.noticeCategoryText, { color: '#9CA3AF' }]}>
                           {CATEGORY_TRANSLATIONS[langCode]?.[notice.categoryName] ?? notice.categoryName}
                         </Text>
                       </View>
