@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -80,22 +81,20 @@ public class DirectChatService {
                 .filter(r -> {
                     boolean iLeftByUser1 = r.getUser1().getId().equals(userId) && r.isLeftByUser1();
                     boolean iLeftByUser2 = r.getUser2().getId().equals(userId) && r.isLeftByUser2();
-                    if (iLeftByUser1 || iLeftByUser2) return false;
-                    // 차단 유저 제외 후 메시지 없으면 목록에서 숨김
-                    return !messageRepository
-                            .findByRoomExcludingOrderByCreatedAtDesc(r.getId(), excludeIds, PageRequest.of(0, 1))
-                            .isEmpty();
+                    return !iLeftByUser1 && !iLeftByUser2;
                 })
                 .map(r -> {
                     DirectChatMessage last = messageRepository
                             .findByRoomExcludingOrderByCreatedAtDesc(r.getId(), excludeIds, PageRequest.of(0, 1))
                             .stream().findFirst().orElse(null);
+                    if (last == null) return null;
                     long unread = messageRepository.countUnreadMessagesExcluding(r.getId(), userId, excludeIds);
                     return DirectChatRoomResponse.from(r, userId,
-                            last != null ? last.getContent() : null,
-                            last != null ? last.getCreatedAt().toString() : null,
+                            last.getContent(),
+                            last.getCreatedAt().toString(),
                             unread);
                 })
+                .filter(Objects::nonNull)
                 .sorted((a, b) -> {
                     if (a.getLastMessageTime() == null) return 1;
                     if (b.getLastMessageTime() == null) return -1;
