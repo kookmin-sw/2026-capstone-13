@@ -416,6 +416,8 @@ async def crawl_meals():
         return JSONResponse(status_code=500, content={"success": False, "message": f"식단 수집 실패: {str(e)}", "data": None})
 
 
+SUPPORTED_SUBTITLE_LANGS = {"ko", "en", "ja", "zh-Hans", "ru", "mn", "vi"}
+
 # ── 실시간 자막 WebSocket ─────────────────────────────────
 @app.websocket("/ws/speech")
 async def websocket_speech(websocket: WebSocket):
@@ -423,7 +425,8 @@ async def websocket_speech(websocket: WebSocket):
     client = websocket.client
     print(f"[WebSocket] 연결됨: {client}")
 
-    language = None
+    language = None        # 내 언어 (STT용)
+    target_language = None # 상대방 언어 (번역 목적어)
 
     try:
         while True:
@@ -435,11 +438,16 @@ async def websocket_speech(websocket: WebSocket):
                     config = json.loads(message["text"])
                     if "language" in config:
                         language = config["language"]
-                        print(f"[WebSocket] 언어 설정: {language}")
-                        await websocket.send_text(json.dumps({
-                            "type": "config_ack",
-                            "language": language
-                        }))
+                        print(f"[WebSocket] 내 언어: {language}")
+                    if "target_language" in config:
+                        tl = config["target_language"]
+                        target_language = tl if tl in SUPPORTED_SUBTITLE_LANGS else "en"
+                        print(f"[WebSocket] 번역 목적어: {target_language}")
+                    await websocket.send_text(json.dumps({
+                        "type": "config_ack",
+                        "language": language,
+                        "target_language": target_language,
+                    }))
                 except json.JSONDecodeError:
                     pass
 
@@ -447,10 +455,24 @@ async def websocket_speech(websocket: WebSocket):
             elif "bytes" in message and message["bytes"]:
                 audio_data = message["bytes"]
                 result = speech_service.transcribe_audio(audio_data, language)
+                original_text = result.get("text", "")
+
+                translated_text = ""
+                if original_text and target_language and target_language != language:
+                    try:
+                        tr = await translation_service.translate_text(
+                            original_text, target_language, language
+                        )
+                        translated_text = tr.get("translated", "")
+                    except Exception as e:
+                        print(f"[WebSocket] 번역 실패: {e}")
+
                 await websocket.send_text(json.dumps({
                     "type": "transcript",
-                    "text": result.get("text", ""),
+                    "text": original_text,
+                    "translated": translated_text,
                     "language": result.get("language", "unknown"),
+                    "target_language": target_language,
                     "mode": result.get("mode", "dummy"),
                 }, ensure_ascii=False))
 
