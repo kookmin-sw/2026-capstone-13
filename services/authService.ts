@@ -101,3 +101,7 @@ export const uploadProfileImage = async (imageUri: string): Promise<ApiResponse<
   });
   return response.data;
 };
+
+export const updateFcmToken = async (fcmToken: string): Promise<void> => {
+  await api.patch('/users/fcm-token', { fcmToken });
+};

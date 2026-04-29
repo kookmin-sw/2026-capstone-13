@@ -12,7 +12,6 @@ import { useBannerStore } from '../../stores/bannerStore';
 import { getMyRequests, getHelpedRequests } from '../../services/helpService';
 import { getChatRooms } from '../../services/chatService';
 import { getDirectChatRooms } from '../../services/directChatService';
-import { getNotifications } from '../../services/notificationService';
 import InAppBanner from '../../components/InAppBanner';
 import CustomTabBar from '../../components/CustomTabBar';
 
@@ -25,7 +24,6 @@ export default function MainLayout() {
   const { showBanner } = useBannerStore();
   const router = useRouter();
   const globalClientRef = useRef<Client | null>(null);
-  const lastNotificationIdRef = useRef<number | null>(null);
   // 채팅방별 파트너 정보 캐시 (roomId → room info)
   const roomCacheRef = useRef<Record<number, { requestTitle: string; partnerNickname: string; partnerProfileImage?: string; requestStatus: string; requesterId: string }>>({});
 
@@ -224,35 +222,6 @@ export default function MainLayout() {
       globalClientRef.current?.deactivate();
       globalClientRef.current = null;
     };
-  }, [user?.id]);
-
-  // 백엔드 알림 폴링 → 새 알림 배너 표시
-  useEffect(() => {
-    if (!user) return;
-
-    const poll = async () => {
-      try {
-        const data = await getNotifications(0, 5);
-        if (data.length === 0) return;
-        const latestId = data[0].id;
-        if (lastNotificationIdRef.current === null) {
-          lastNotificationIdRef.current = latestId;
-          return;
-        }
-        const prevId = lastNotificationIdRef.current;
-        const newNotifs = data.filter((n) => n.id > prevId && !n.isRead);
-        newNotifs.slice().reverse().forEach((n) => {
-          showBanner({ type: 'notification', title: '알림', body: n.message });
-        });
-        if (newNotifs.length > 0) {
-          lastNotificationIdRef.current = latestId;
-        }
-      } catch {}
-    };
-
-    poll();
-    const interval = setInterval(poll, 30000);
-    return () => clearInterval(interval);
   }, [user?.id]);
 
   return (

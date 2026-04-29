@@ -12,10 +12,12 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthStore } from '../stores/authStore';
 import { useAppPermissions } from '../hooks/useAppPermissions';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 export default function RootLayout() {
   const { user, isLoading, loadUser } = useAuthStore();
   useAppPermissions();
+  usePushNotifications(user?.id);
   const segments = useSegments();
   const router = useRouter();
   const firstSegment = segments[0];

@@ -2,7 +2,7 @@
   "expo": {
     "name": "도와줘코리안",
     "slug": "helpboys",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "helpboys",
@@ -41,6 +41,13 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#4A90D9"
+        }
+      ],
       [
         "expo-splash-screen",
         {
