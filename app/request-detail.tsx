@@ -218,6 +218,9 @@ export default function RequestDetailScreen() {
   };
 
   const goToChatRoom = () => {
+    const partnerUserId = user?.userType === 'KOREAN'
+      ? item.requester.id
+      : (item.helper?.id ?? item.requester.id);
     router.push({
       pathname: '/chatroom',
       params: {
@@ -228,6 +231,7 @@ export default function RequestDetailScreen() {
           : (item.helper?.nickname ?? ''),
         requestStatus: item.status,
         requesterId: item.requester.id,
+        partnerUserId: String(partnerUserId),
       },
     });
   };
@@ -271,6 +275,7 @@ export default function RequestDetailScreen() {
                     partnerNickname: item.requester.nickname,
                     requestStatus: 'MATCHED',
                     requesterId: item.requester.id,
+                    partnerUserId: String(item.requester.id),
                   },
                 });
               } else {

@@ -1,7 +1,7 @@
 // 메인 탭 네비게이션 레이아웃
 import { useEffect, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Alert, View, StyleSheet } from 'react-native';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
@@ -22,6 +22,7 @@ export default function MainLayout() {
   const { unreadCount, incrementUnread, setUnreadCount } = useChatStore();
   const { user } = useAuthStore();
   const { showBanner } = useBannerStore();
+  const router = useRouter();
   const globalClientRef = useRef<Client | null>(null);
   // 채팅방별 파트너 정보 캐시 (roomId → room info)
   const roomCacheRef = useRef<Record<number, { requestTitle: string; partnerNickname: string; partnerProfileImage?: string; requestStatus: string; requesterId: string }>>({});
@@ -109,7 +110,31 @@ export default function MainLayout() {
               if (!mounted) return;
               try {
                 const msg = JSON.parse(frame.body);
-                if (msg.content?.startsWith('SYS_LEAVE:') || msg.content?.startsWith('SYS_CALL_')) return;
+                if (msg.content?.startsWith('SYS_LEAVE:')) return;
+                if (msg.content?.startsWith('SYS_CALL_VIDEO:') || msg.content?.startsWith('SYS_CALL_VOICE:')) {
+                  const { activeChatroomId } = useChatStore.getState();
+                  if (msg.senderId === user?.id || activeChatroomId === roomId) return;
+                  const isVideo = msg.content.startsWith('SYS_CALL_VIDEO:');
+                  const callerNickname = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const isKo = user?.preferredLanguage === 'ko';
+                  Alert.alert(
+                    isVideo ? '📹 영상통화' : '📞 음성통화',
+                    isKo
+                      ? `${callerNickname}님이 ${isVideo ? '영상' : '음성'}통화를 요청했습니다.`
+                      : `${callerNickname} is calling you (${isVideo ? 'video' : 'voice'}).`,
+                    [
+                      { text: isKo ? '거절' : 'Decline', style: 'cancel' },
+                      {
+                        text: isKo ? '수락' : 'Accept',
+                        onPress: () => router.push({
+                          pathname: '/videocall',
+                          params: { roomId: String(roomId), partnerNickname: callerNickname, voiceOnly: isVideo ? 'false' : 'true' },
+                        }),
+                      },
+                    ]
+                  );
+                  return;
+                }
                 const { activeChatroomId } = useChatStore.getState();
                 if (msg.senderId !== user.id && activeChatroomId !== roomId) {
                   incrementUnread();
@@ -137,6 +162,31 @@ export default function MainLayout() {
               try {
                 const msg = JSON.parse(frame.body);
                 if (msg.type === 'READ') return;
+                if (msg.content?.startsWith('SYS_LEAVE:')) return;
+                if (msg.content?.startsWith('SYS_CALL_VIDEO:') || msg.content?.startsWith('SYS_CALL_VOICE:')) {
+                  const { activeChatroomId } = useChatStore.getState();
+                  if (msg.senderId === user?.id || activeChatroomId === roomId) return;
+                  const isVideo = msg.content.startsWith('SYS_CALL_VIDEO:');
+                  const callerNickname = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const isKo = user?.preferredLanguage === 'ko';
+                  Alert.alert(
+                    isVideo ? '📹 영상통화' : '📞 음성통화',
+                    isKo
+                      ? `${callerNickname}님이 ${isVideo ? '영상' : '음성'}통화를 요청했습니다.`
+                      : `${callerNickname} is calling you (${isVideo ? 'video' : 'voice'}).`,
+                    [
+                      { text: isKo ? '거절' : 'Decline', style: 'cancel' },
+                      {
+                        text: isKo ? '수락' : 'Accept',
+                        onPress: () => router.push({
+                          pathname: '/videocall',
+                          params: { roomId: String(roomId), partnerNickname: callerNickname, voiceOnly: isVideo ? 'false' : 'true' },
+                        }),
+                      },
+                    ]
+                  );
+                  return;
+                }
                 const { activeChatroomId } = useChatStore.getState();
                 if (msg.senderId !== user.id && activeChatroomId !== roomId) {
                   incrementUnread();
