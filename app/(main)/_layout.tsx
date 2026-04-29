@@ -110,6 +110,11 @@ export default function MainLayout() {
               if (!mounted) return;
               try {
                 const msg = JSON.parse(frame.body);
+                if (msg.type === 'READ') return;
+                if (msg.type === 'UNREAD_UPDATE') {
+                  useChatStore.getState().setRoomUnreadCount(roomId, msg.unreadCount ?? 0);
+                  return;
+                }
                 if (msg.content?.startsWith('SYS_LEAVE:')) return;
                 if (msg.content?.startsWith('SYS_CALL_VIDEO:') || msg.content?.startsWith('SYS_CALL_VOICE:')) {
                   const { activeChatroomId } = useChatStore.getState();
@@ -162,6 +167,10 @@ export default function MainLayout() {
               try {
                 const msg = JSON.parse(frame.body);
                 if (msg.type === 'READ') return;
+                if (msg.type === 'UNREAD_UPDATE') {
+                  useChatStore.getState().setRoomUnreadCount(roomId, msg.unreadCount ?? 0);
+                  return;
+                }
                 if (msg.content?.startsWith('SYS_LEAVE:')) return;
                 if (msg.content?.startsWith('SYS_CALL_VIDEO:') || msg.content?.startsWith('SYS_CALL_VOICE:')) {
                   const { activeChatroomId } = useChatStore.getState();

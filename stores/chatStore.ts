@@ -7,6 +7,8 @@ interface ChatState {
   activeChatroomId: number | null;
   // 유저별 나간 방 목록: { "userId": [roomId, ...] }
   leftRooms: Record<string, number[]>;
+  // 방별 안읽음 카운트 (UNREAD_UPDATE 실시간 반영용)
+  roomUnreadCounts: Record<number, number>;
   incrementUnread: () => void;
   setUnreadCount: (count: number) => void;
   clearUnread: () => void;
@@ -14,6 +16,8 @@ interface ChatState {
   leaveRoom: (roomId: number, userId: number) => void;
   rejoinRoom: (roomId: number, userId: number) => void;
   hasLeft: (roomId: number, userId: number) => boolean;
+  setRoomUnreadCount: (roomId: number, count: number) => void;
+  initRoomUnreadCounts: (counts: Record<number, number>) => void;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -22,6 +26,7 @@ export const useChatStore = create<ChatState>()(
       unreadCount: 0,
       activeChatroomId: null,
       leftRooms: {},
+      roomUnreadCounts: {},
       incrementUnread: () => set((state) => ({ unreadCount: state.unreadCount + 1 })),
       setUnreadCount: (count) => set({ unreadCount: count }),
       clearUnread: () => set({ unreadCount: 0 }),
@@ -46,6 +51,9 @@ export const useChatStore = create<ChatState>()(
         const key = String(userId);
         return (get().leftRooms[key] ?? []).includes(roomId);
       },
+      setRoomUnreadCount: (roomId, count) =>
+        set((state) => ({ roomUnreadCounts: { ...state.roomUnreadCounts, [roomId]: count } })),
+      initRoomUnreadCounts: (counts) => set({ roomUnreadCounts: counts }),
     }),
     {
       name: 'chat-store',

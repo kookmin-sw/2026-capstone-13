@@ -8,6 +8,7 @@ export interface ChatMessageDto {
   senderId: number;
   senderNickname: string;
   content: string;
+  isRead?: boolean;
   originalLanguage?: string;
   translatedContent?: string;
   culturalNote?: string;
