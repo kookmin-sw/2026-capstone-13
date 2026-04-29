@@ -32,12 +32,12 @@ export default function RootLayout() {
     if (isLoading) return;
     if (!user) return;
 
-    const inMain = firstSegment === '(main)';
+    const inAuth = firstSegment === '(auth)';
     const inProfileSetup = firstSegment === 'profile-setup';
 
     if (isNewUser && !inProfileSetup) {
       router.replace('/profile-setup');
-    } else if (!isNewUser && !inMain) {
+    } else if (!isNewUser && inAuth) {
       router.replace('/(main)/home');
     }
   }, [user, isLoading, isNewUser, firstSegment]);
