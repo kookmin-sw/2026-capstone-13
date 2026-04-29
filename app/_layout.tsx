@@ -44,9 +44,8 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
         <Stack.Screen name="index" />
-        <Stack.Screen name="splash" />
         <Stack.Screen name="language-setup" />
         <Stack.Screen name="profile-setup" />
         <Stack.Screen name="(auth)" />

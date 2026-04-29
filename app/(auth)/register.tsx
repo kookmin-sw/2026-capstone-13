@@ -157,7 +157,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [nickname, setNickname] = useState('');
-  const [isForeigner, setIsForeigner] = useState<boolean | null>(initialIsForeigner);
+  const isForeigner = initialIsForeigner;
   const [userType, setUserType] = useState<UserType | null>(initialIsForeigner === false ? 'KOREAN' : null);
   const [nationality, setNationality] = useState<string | null>(null);
   const [showNationalityModal, setShowNationalityModal] = useState(false);
@@ -176,6 +176,15 @@ export default function RegisterScreen() {
   const [verifyingCode, setVerifyingCode] = useState(false);
 
   const selectedNationality = NATIONALITIES.find((n) => n.code === nationality);
+  const isValidEmail = /^[^\s@]+@kookmin\.ac\.kr$/.test(email.trim());
+  const isFormComplete = emailVerified &&
+    !!nickname.trim() &&
+    !!password.trim() &&
+    !!passwordConfirm.trim() &&
+    termsAgreed &&
+    privacyAgreed &&
+    (isForeigner === false || (!!userType && !!nationality)) &&
+    !!major;
 
   const handleSendCode = async () => {
     if (!email.trim()) {
@@ -274,115 +283,35 @@ export default function RegisterScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/login')}>
-            <Text style={styles.backButton}>← 뒤로</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>회원가입</Text>
-          <Text style={styles.subtitle}>도와줘코리안에 가입하세요</Text>
-        </View>
-
-        {/* 사용자 유형 선택 */}
-        <Text style={styles.label}>사용자 유형</Text>
-        <View style={styles.typeContainer}>
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              isForeigner === true && styles.typeButtonActive,
-            ]}
-            onPress={() => {
-              setIsForeigner(true);
-              setUserType(null);
-              setNationality(null);
-            }}
-          >
-            <Text style={styles.typeEmoji}>🌍</Text>
-            <Text style={[styles.typeText, isForeigner === true && styles.typeTextActive]}>
-              외국인
-            </Text>
-            <Text style={styles.typeDesc}>도움을 요청합니다</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              isForeigner === false && styles.typeButtonActive,
-            ]}
-            onPress={() => {
-              setIsForeigner(false);
-              setUserType('KOREAN');
-              setNationality(null);
-            }}
-          >
-            <Text style={styles.typeEmoji}>🇰🇷</Text>
-            <Text style={[styles.typeText, isForeigner === false && styles.typeTextActive]}>
-              한국인 학생
-            </Text>
-            <Text style={styles.typeDesc}>도움을 제공합니다</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* 외국인 선택 시 유학생/교환학생 서브 선택 */}
+      <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/login')}>
+        <Ionicons name="arrow-back" size={s(24)} color={BLUE} />
+      </TouchableOpacity>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isForeigner === false && { paddingTop: s(150) }]}>
+        {/* 유학생 / 교환학생 선택 (외국인만) */}
         {isForeigner === true && (
-          <View style={styles.subTypeContainer}>
-            <TouchableOpacity
-              style={[styles.subTypeButton, userType === 'INTERNATIONAL' && styles.subTypeButtonActive]}
-              onPress={() => setUserType('INTERNATIONAL')}
-            >
-              <Text style={[styles.subTypeText, userType === 'INTERNATIONAL' && styles.subTypeTextActive]}>
-                📚 유학생
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.subTypeButton, userType === 'EXCHANGE' && styles.subTypeButtonActive]}
-              onPress={() => setUserType('EXCHANGE')}
-            >
-              <Text style={[styles.subTypeText, userType === 'EXCHANGE' && styles.subTypeTextActive]}>
-                ✈️ 교환학생
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* 국적 선택 (외국인 선택 시에만 표시) */}
-        {(userType === 'INTERNATIONAL' || userType === 'EXCHANGE') && (
-          <View style={styles.nationalityContainer}>
-            <Text style={styles.label}>국적</Text>
-            <TouchableOpacity
-              style={styles.nationalitySelector}
-              onPress={() => setShowNationalityModal(true)}
-            >
-              {selectedNationality ? (
-                <Text style={styles.nationalitySelectorValue}>
-                  {selectedNationality.flag} {selectedNationality.label}
+          <>
+            <Text style={[styles.label, { marginBottom: s(4) }]}>유형 선택</Text>
+            <View style={styles.subTypeContainer}>
+              <TouchableOpacity
+                style={[styles.subTypeButton, userType === 'INTERNATIONAL' && styles.subTypeButtonActive]}
+                onPress={() => setUserType(userType === 'INTERNATIONAL' ? null : 'INTERNATIONAL')}
+              >
+                <Text style={[styles.subTypeText, userType === 'INTERNATIONAL' && styles.subTypeTextActive]}>
+                  유학생
                 </Text>
-              ) : (
-                <Text style={styles.nationalitySelectorPlaceholder}>국적을 선택하세요</Text>
-              )}
-              <Ionicons name="chevron-down" size={18} color="#AABBCC" />
-            </TouchableOpacity>
-          </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.subTypeButton, userType === 'EXCHANGE' && styles.subTypeButtonActive]}
+                onPress={() => setUserType(userType === 'EXCHANGE' ? null : 'EXCHANGE')}
+              >
+                <Text style={[styles.subTypeText, userType === 'EXCHANGE' && styles.subTypeTextActive]}>
+                  교환학생
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </>
         )}
 
-        {/* 전공 선택 (사용자 유형 선택 시에만 표시) */}
-        {userType !== null && (
-          <View style={styles.nationalityContainer}>
-            <Text style={styles.label}>전공학과</Text>
-            <TouchableOpacity
-              style={styles.nationalitySelector}
-              onPress={() => setShowMajorModal(true)}
-            >
-              {major ? (
-                <Text style={styles.nationalitySelectorValue}>{major}</Text>
-              ) : (
-                <Text style={styles.nationalitySelectorPlaceholder}>전공학과를 선택하세요</Text>
-              )}
-              <Ionicons name="chevron-down" size={18} color="#AABBCC" />
-            </TouchableOpacity>
-          </View>
-        )}
 
         {/* 전공 선택 모달 */}
         <Modal
@@ -478,11 +407,11 @@ export default function RegisterScreen() {
 
         {/* 입력 폼 */}
         <View style={styles.form}>
-          <Text style={styles.label}>이메일 (학교 이메일 필수)</Text>
+          <Text style={styles.label}>국민대학교 이메일</Text>
           <View style={styles.emailRow}>
             <TextInput
-              style={[styles.input, styles.emailInput, emailVerified && styles.inputVerified]}
-              placeholder="example@university.ac.kr"
+              style={[styles.input, styles.emailInput, email && styles.inputActive, emailVerified && styles.inputVerified]}
+              placeholder="example@kookmin.ac.kr"
               placeholderTextColor="#AABBCC"
               value={email}
               onChangeText={(v) => { setEmail(v); setEmailVerified(false); setCodeSent(false); setVerificationCode(''); }}
@@ -497,15 +426,11 @@ export default function RegisterScreen() {
               </View>
             ) : (
               <TouchableOpacity
-                style={[styles.codeButton, sendingCode && styles.disabledButton]}
+                style={[styles.codeButton, isValidEmail && { borderColor: BLUE }, sendingCode && styles.disabledButton]}
                 onPress={handleSendCode}
                 disabled={sendingCode}
               >
-                {sendingCode ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.codeButtonText}>{codeSent ? '재발송' : '인증번호 받기'}</Text>
-                )}
+                <Text style={[styles.codeButtonText, isValidEmail && styles.codeButtonTextActive]}>{codeSent ? '재발송' : '인증번호 받기'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -513,7 +438,7 @@ export default function RegisterScreen() {
           {codeSent && !emailVerified && (
             <View style={styles.otpRow}>
               <TextInput
-                style={[styles.input, styles.otpInput]}
+                style={[styles.input, styles.otpInput, verificationCode && styles.inputActive]}
                 placeholder="인증번호 6자리"
                 placeholderTextColor="#AABBCC"
                 value={verificationCode}
@@ -522,23 +447,55 @@ export default function RegisterScreen() {
                 maxLength={6}
               />
               <TouchableOpacity
-                style={[styles.codeButton, verifyingCode && styles.disabledButton]}
+                style={[styles.codeButton, verificationCode.length === 6 && { borderColor: BLUE }, verifyingCode && styles.disabledButton]}
                 onPress={handleVerifyCode}
                 disabled={verifyingCode}
               >
-                {verifyingCode ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.codeButtonText}>확인</Text>
-                )}
+                <Text style={[styles.codeButtonText, verificationCode.length === 6 && styles.codeButtonTextActive]}>확인</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          <Text style={styles.label}>닉네임</Text>
+          <View style={styles.halfRow}>
+            {isForeigner === true && (
+              <View style={styles.halfItem}>
+                <Text style={styles.label}>국적</Text>
+                <TouchableOpacity
+                  style={[styles.nationalitySelector, nationality && styles.inputActive]}
+                  onPress={() => setShowNationalityModal(true)}
+                >
+                  {selectedNationality ? (
+                    <Text style={styles.nationalitySelectorValue}>
+                      {selectedNationality.flag} {selectedNationality.label}
+                    </Text>
+                  ) : (
+                    <Text style={styles.nationalitySelectorPlaceholder}>국적</Text>
+                  )}
+                  <Ionicons name="chevron-down" size={18} color="#AABBCC" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={isForeigner === true ? styles.halfItem : styles.fullItem}>
+              <Text style={styles.label}>전공학과</Text>
+              <TouchableOpacity
+                style={[styles.nationalitySelector, major && styles.inputActive]}
+                onPress={() => setShowMajorModal(true)}
+              >
+                {major ? (
+                  <Text style={styles.nationalitySelectorValue} numberOfLines={1}>{major}</Text>
+                ) : (
+                  <Text style={styles.nationalitySelectorPlaceholder}>전공</Text>
+                )}
+                <Ionicons name="chevron-down" size={18} color="#AABBCC" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Text style={styles.label}>이름</Text>
           <TextInput
-            style={styles.input}
-            placeholder="닉네임을 입력하세요"
+            style={[styles.input, nickname && styles.inputActive]}
+            placeholder="이름을 입력하세요"
             placeholderTextColor="#AABBCC"
             value={nickname}
             onChangeText={setNickname}
@@ -546,7 +503,7 @@ export default function RegisterScreen() {
 
           <Text style={styles.label}>비밀번호</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, password && styles.inputActive]}
             placeholder="6자 이상 입력하세요"
             placeholderTextColor="#AABBCC"
             value={password}
@@ -556,13 +513,15 @@ export default function RegisterScreen() {
 
           <Text style={styles.label}>비밀번호 확인</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, passwordConfirm && styles.inputActive]}
             placeholder="비밀번호를 다시 입력하세요"
             placeholderTextColor="#AABBCC"
             value={passwordConfirm}
             onChangeText={setPasswordConfirm}
             secureTextEntry
           />
+
+          <View style={styles.divider} />
 
           {/* 약관 동의 */}
           <View style={styles.agreeSection}>
@@ -593,9 +552,9 @@ export default function RegisterScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.registerButton, (isLoading || !emailVerified || !termsAgreed || !privacyAgreed) && styles.disabledButton]}
+            style={[styles.registerButton, (!isFormComplete || isLoading) && styles.disabledButton]}
             onPress={handleRegister}
-            disabled={isLoading || !emailVerified || !termsAgreed || !privacyAgreed}
+            disabled={!isFormComplete || isLoading}
           >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
@@ -698,97 +657,71 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  backBtn: {
+    position: 'absolute',
+    top: s(56),
+    left: s(20),
+    zIndex: 10,
+    width: s(40),
+    height: s(40),
+    borderRadius: s(20),
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   scrollContent: {
     padding: s(32),
-    paddingTop: s(60),
-  },
-  header: {
-    marginBottom: s(32),
-  },
-  backButton: {
-    fontSize: s(16),
-    color: BLUE,
-    marginBottom: s(16),
-  },
-  title: {
-    fontSize: s(28),
-    fontWeight: '800',
-    color: '#0C1C3C',
-    marginBottom: s(4),
-  },
-  subtitle: {
-    fontSize: s(14),
-    color: '#6B7FA3',
+    paddingTop: s(100),
   },
   label: {
-    fontSize: s(14),
-    fontWeight: '600',
+    fontSize: s(17),
+    fontWeight: '700',
     color: '#0C1C3C',
     marginBottom: s(8),
     marginTop: s(16),
   },
-  typeContainer: {
-    flexDirection: 'row',
-    gap: s(12),
-  },
-  typeButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: s(12),
-    padding: s(16),
-    alignItems: 'center',
-    borderWidth: s(2),
-    borderColor: '#D4E4FF',
-  },
-  typeButtonActive: {
-    borderColor: BLUE,
-    backgroundColor: BLUE_L,
-  },
-  typeEmoji: {
-    fontSize: s(32),
-    marginBottom: s(8),
-  },
-  typeText: {
-    fontSize: s(16),
-    fontWeight: '700',
-    color: '#0C1C3C',
-    marginBottom: s(4),
-  },
-  typeTextActive: {
-    color: BLUE,
-  },
-  typeDesc: {
-    fontSize: s(12),
-    color: '#6B7FA3',
-  },
   subTypeContainer: {
     flexDirection: 'row',
     gap: s(12),
-    marginTop: s(12),
+    marginTop: s(4),
   },
   subTypeButton: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: s(10),
-    paddingVertical: s(12),
+    paddingVertical: s(16),
     alignItems: 'center',
     borderWidth: s(2),
     borderColor: '#D4E4FF',
   },
   subTypeButtonActive: {
     borderColor: BLUE,
-    backgroundColor: BLUE_L,
   },
   subTypeText: {
     fontSize: s(15),
     fontWeight: '600',
-    color: '#0C1C3C',
+    color: '#6B7FA3',
   },
   subTypeTextActive: {
     color: BLUE,
   },
   nationalityContainer: {
     marginTop: s(4),
+  },
+  halfRow: {
+    flexDirection: 'row',
+    gap: s(12),
+  },
+  halfItem: {
+    flex: 1,
+  },
+  fullItem: {
+    flex: 1,
   },
   nationalitySelector: {
     flexDirection: 'row',
@@ -813,15 +746,20 @@ const styles = StyleSheet.create({
   // 모달
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
   },
   modalSheet: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: s(20),
-    borderTopRightRadius: s(20),
+    borderTopLeftRadius: s(36),
+    borderTopRightRadius: s(36),
     maxHeight: '60%',
     paddingBottom: Platform.OS === 'ios' ? s(32) : s(16),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 20,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -879,6 +817,9 @@ const styles = StyleSheet.create({
     borderWidth: s(1),
     borderColor: '#D4E4FF',
   },
+  inputActive: {
+    borderColor: BLUE,
+  },
   inputVerified: {
     borderColor: '#22c55e',
     backgroundColor: '#f0fdf4',
@@ -901,18 +842,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   codeButton: {
-    backgroundColor: BLUE,
+    backgroundColor: '#FFFFFF',
     borderRadius: s(12),
     paddingHorizontal: s(14),
     paddingVertical: s(14),
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: s(90),
+    borderWidth: s(1.5),
+    borderColor: '#9AAABF',
+  },
+  codeButtonInactive: {
+    borderColor: '#9AAABF',
   },
   codeButtonText: {
-    color: '#FFFFFF',
+    color: '#9AAABF',
     fontSize: s(13),
     fontWeight: '700',
+  },
+  codeButtonTextActive: {
+    color: BLUE,
   },
   verifiedTag: {
     flexDirection: 'row',
@@ -934,12 +883,17 @@ const styles = StyleSheet.create({
     marginTop: s(24),
   },
   disabledButton: {
-    opacity: 0.6,
+    backgroundColor: '#9AAABF',
   },
   registerButtonText: {
     color: '#FFFFFF',
     fontSize: s(18),
     fontWeight: '700',
+  },
+  divider: {
+    height: s(1),
+    backgroundColor: '#E8F0FB',
+    marginTop: s(24),
   },
   agreeSection: {
     marginTop: s(20),

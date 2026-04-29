@@ -1,5 +1,6 @@
 // 회원가입 - 사용자 유형 선택 첫 화면
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { s } from '../../utils/scale';
 
@@ -8,56 +9,62 @@ const BLUE_L = '#EEF4FF';
 
 export default function RegisterTypeScreen() {
   const router = useRouter();
+  const [selected, setSelected] = useState<'foreigner' | 'korean' | null>(null);
 
-  const handleSelect = (isForeigner: boolean) => {
-    router.push({ pathname: '/(auth)/register', params: { isForeigner: isForeigner ? '1' : '0' } });
+  const handleNext = () => {
+    if (!selected) return;
+    router.push({ pathname: '/(auth)/register', params: { isForeigner: selected === 'foreigner' ? '1' : '0' } });
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.inner}>
-        {/* 뒤로가기 */}
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backText}>← 뒤로</Text>
-        </TouchableOpacity>
-
-        {/* 상단 텍스트 */}
-        <View style={styles.topSection}>
-          <Text style={styles.emoji}>👋</Text>
-          <Text style={styles.title}>어떤 분이신가요?</Text>
-          <Text style={styles.subtitle}>도와줘코리안에 가입하기 위해{'\n'}먼저 유형을 선택해주세요</Text>
-        </View>
-
         {/* 선택 버튼 */}
         <View style={styles.cardSection}>
-          <TouchableOpacity style={styles.card} onPress={() => handleSelect(true)} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={[styles.card, selected === 'foreigner' && styles.cardSelected]}
+            onPress={() => setSelected(selected === 'foreigner' ? null : 'foreigner')}
+            activeOpacity={0.85}
+          >
             <View style={[styles.iconWrap, { backgroundColor: BLUE_L }]}>
-              <Text style={styles.cardEmoji}>🌍</Text>
+              <Image source={require('../../logo/international.png')} style={styles.cardLogo} resizeMode="contain" />
             </View>
             <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>외국인 유학생</Text>
-              <Text style={styles.cardDesc}>한국 생활에서 도움이 필요해요</Text>
+              <Text style={[styles.cardTitle, selected === 'foreigner' && styles.cardTitleSelected]}>외국인 유학생</Text>
+              <Text style={[styles.cardDesc, selected === 'foreigner' && styles.cardDescSelected]}>한국 생활에서 도움이 필요해요</Text>
             </View>
-            <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.card} onPress={() => handleSelect(false)} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={[styles.card, selected === 'korean' && styles.cardSelected]}
+            onPress={() => setSelected(selected === 'korean' ? null : 'korean')}
+            activeOpacity={0.85}
+          >
             <View style={[styles.iconWrap, { backgroundColor: BLUE_L }]}>
-              <Text style={styles.cardEmoji}>🇰🇷</Text>
+              <Image source={require('../../logo/korean.png')} style={styles.cardLogo} resizeMode="contain" />
             </View>
             <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>한국인 학생</Text>
-              <Text style={styles.cardDesc}>외국인 친구들에게 도움을 줄게요</Text>
+              <Text style={[styles.cardTitle, selected === 'korean' && styles.cardTitleSelected]}>한국인 학생</Text>
+              <Text style={[styles.cardDesc, selected === 'korean' && styles.cardDescSelected]}>외국인 친구들에게 도움을 줄게요</Text>
             </View>
-            <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
         </View>
 
-        {/* 하단 로그인 링크 */}
-        <View style={styles.loginRow}>
-          <Text style={styles.loginText}>이미 계정이 있으신가요? </Text>
-          <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
-            <Text style={styles.loginLink}>로그인</Text>
+        {/* 하단 영역 */}
+        <View style={styles.bottomSection}>
+          <View style={styles.loginRow}>
+            <Text style={styles.loginText}>이미 계정이 있으신가요? </Text>
+            <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
+              <Text style={styles.loginLink}>로그인</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.nextBtn, !selected && styles.nextBtnDisabled]}
+            onPress={handleNext}
+            activeOpacity={selected ? 0.85 : 1}
+          >
+            <Text style={[styles.nextBtnText, !selected && styles.nextBtnTextDisabled]}>다음 단계로</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -75,38 +82,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: s(28),
     paddingTop: s(20),
   },
-  backBtn: {
-    marginBottom: s(24),
-  },
-  backText: {
-    fontSize: s(16),
-    color: BLUE,
-    fontWeight: '600',
-  },
-  topSection: {
-    alignItems: 'center',
-    marginTop: s(32),
-    marginBottom: s(52),
-  },
-  emoji: {
-    fontSize: s(56),
-    marginBottom: s(20),
-  },
-  title: {
-    fontSize: s(28),
-    fontWeight: '800',
-    color: '#0C1C3C',
-    marginBottom: s(12),
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: s(15),
-    color: '#6B7FA3',
-    textAlign: 'center',
-    lineHeight: s(22),
-  },
+
   cardSection: {
+    flex: 1,
     gap: s(16),
+    justifyContent: 'center',
   },
   card: {
     flexDirection: 'row',
@@ -116,48 +96,80 @@ const styles = StyleSheet.create({
     paddingVertical: s(20),
     paddingHorizontal: s(20),
     borderWidth: s(1.5),
-    borderColor: '#D4E4FF',
+    borderColor: '#C8D4E8',
     gap: s(16),
-    shadowColor: '#3B6FE8',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
+  cardSelected: {
+    backgroundColor: '#FFFFFF',
+    borderColor: BLUE,
+    borderWidth: s(2.5),
+  },
   iconWrap: {
-    width: s(52),
-    height: s(52),
-    borderRadius: s(14),
+    width: s(64),
+    height: s(64),
+    borderRadius: s(16),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardEmoji: {
-    fontSize: s(28),
+  cardLogo: {
+    width: s(46),
+    height: s(46),
   },
   cardText: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: s(17),
+    fontSize: s(19),
     fontWeight: '700',
     color: '#0C1C3C',
     marginBottom: s(4),
   },
+  cardTitleSelected: {
+    color: BLUE,
+  },
   cardDesc: {
-    fontSize: s(13),
+    fontSize: s(14),
     color: '#6B7FA3',
   },
-  arrow: {
-    fontSize: s(22),
+  cardDescSelected: {
+    color: '#6B7FA3',
+  },
+  checkmark: {
+    fontSize: s(20),
     color: BLUE,
     fontWeight: '700',
+  },
+  bottomSection: {
+    marginTop: 'auto',
+    paddingBottom: s(32),
+    gap: s(20),
+  },
+  nextBtn: {
+    backgroundColor: BLUE,
+    borderRadius: s(14),
+    paddingVertical: s(20),
+    alignItems: 'center',
+  },
+  nextBtnDisabled: {
+    backgroundColor: '#9AAABF',
+  },
+  nextBtnText: {
+    fontSize: s(18),
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  nextBtnTextDisabled: {
+    color: '#FFFFFF',
   },
   loginRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 'auto',
-    paddingBottom: s(32),
   },
   loginText: {
     fontSize: s(14),
