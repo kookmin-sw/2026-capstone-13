@@ -95,6 +95,11 @@ public class User {
     @Builder.Default
     private boolean isDeleted = false;
 
+    // 최초 프로필 설정 완료 여부
+    @Column(name = "is_profile_setup", nullable = false)
+    @Builder.Default
+    private boolean isProfileSetup = false;
+
     // 이용약관 동의 시각
     @Column(name = "terms_agreed_at")
     private LocalDateTime termsAgreedAt;
