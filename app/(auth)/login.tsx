@@ -104,7 +104,7 @@ export default function LoginScreen() {
         {/* 회원가입 링크 */}
         <View style={styles.registerRow}>
           <Text style={styles.registerText}>계정이 없으신가요? </Text>
-          <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+          <TouchableOpacity onPress={() => router.push('/(auth)/register-type')}>
             <Text style={styles.registerHighlight}>가입하기</Text>
           </TouchableOpacity>
         </View>
