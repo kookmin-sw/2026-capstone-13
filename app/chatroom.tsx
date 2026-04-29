@@ -57,6 +57,22 @@ function todayLabel(isKo: boolean): string {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+function formatLastSeen(iso: string | null, isKo: boolean): string {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso.includes('Z') || iso.includes('+') ? iso : iso + 'Z');
+    const diffMin = Math.floor((Date.now() - d.getTime()) / 60000);
+    if (diffMin < 1) return isKo ? '방금 전 접속' : 'Active just now';
+    if (diffMin < 60) return isKo ? `${diffMin}분 전 접속` : `Active ${diffMin}m ago`;
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return isKo ? `${diffHour}시간 전 접속` : `Active ${diffHour}h ago`;
+    const diffDay = Math.floor(diffHour / 24);
+    return isKo ? `${diffDay}일 전 접속` : `Active ${diffDay}d ago`;
+  } catch {
+    return '';
+  }
+}
+
 export default function ChatRoomScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -69,6 +85,7 @@ export default function ChatRoomScreen() {
     requesterId?: string;
     roomUnreadCount?: string;
     isDirect?: string;
+    partnerUserId?: string;
   }>();
 
   const roomId = Number(params.roomId);
@@ -78,7 +95,10 @@ export default function ChatRoomScreen() {
   const isRequester = user?.id === Number(params.requesterId);
   const isDirect = params.isDirect === 'true';
   const isKo = user?.preferredLanguage === 'ko';
+  const partnerUserId = params.partnerUserId ? Number(params.partnerUserId) : null;
   const [partnerImgError, setPartnerImgError] = useState(false);
+  const [partnerOnline, setPartnerOnline] = useState<boolean | null>(null);
+  const [partnerLastSeen, setPartnerLastSeen] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
   const [input, setInput] = useState('');
@@ -166,6 +186,19 @@ export default function ChatRoomScreen() {
         onConnect: () => {
           if (!mounted) return;
           setIsConnected(true);
+
+          // 파트너 접속 상태 구독
+          if (partnerUserId) {
+            client.subscribe(`/topic/presence/${partnerUserId}`, (frame) => {
+              if (!mounted) return;
+              try {
+                const data = JSON.parse(frame.body);
+                setPartnerOnline(data.online === true);
+                setPartnerLastSeen(data.lastSeenAt ?? null);
+              } catch {}
+            });
+          }
+
           const topic = isDirect ? `/topic/direct/${roomId}` : `/topic/chat/${roomId}`;
           client.subscribe(topic, (frame) => {
             try {
@@ -641,6 +674,15 @@ export default function ChatRoomScreen() {
 
         <View style={styles.headerCenter}>
           <Text style={styles.headerName}>{partnerNickname}</Text>
+          {partnerOnline === true && (
+            <View style={styles.headerOnlineRow}>
+              <View style={styles.headerOnlineDot} />
+              <Text style={styles.headerOnlineText}>{isKo ? '접속 중' : 'Online'}</Text>
+            </View>
+          )}
+          {partnerOnline === false && partnerLastSeen && (
+            <Text style={styles.headerLastSeen}>{formatLastSeen(partnerLastSeen, isKo)}</Text>
+          )}
         </View>
 
         <View style={styles.headerActions}>
@@ -888,8 +930,16 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   headerCenter: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: s(10),
+    flex: 1, flexDirection: 'column', justifyContent: 'center',
   },
+  headerOnlineRow: {
+    flexDirection: 'row', alignItems: 'center', gap: s(4), marginTop: s(2),
+  },
+  headerOnlineDot: {
+    width: s(7), height: s(7), borderRadius: s(4), backgroundColor: '#22C55E',
+  },
+  headerOnlineText: { fontSize: s(11), color: '#22C55E', fontWeight: '600' },
+  headerLastSeen: { fontSize: s(11), color: '#A8C8FA', marginTop: s(2) },
   headerAvatar: {
     width: s(42), height: s(42), borderRadius: s(21),
     backgroundColor: PRIMARY,

@@ -206,6 +206,7 @@ export default function ChatScreen() {
         partnerProfileImage: toAbsoluteUrl(room.partnerProfileImage) ?? '',
         requestStatus: room.status,
         requesterId,
+        partnerUserId: String(room.partnerId),
         roomUnreadCount: String(room.unreadCount ?? 0),
       },
     });
@@ -219,6 +220,7 @@ export default function ChatScreen() {
         requestTitle: room.partnerNickname,
         partnerNickname: room.partnerNickname,
         partnerProfileImage: toAbsoluteUrl(room.partnerProfileImage) ?? '',
+        partnerUserId: String(room.partnerId),
         isDirect: 'true',
         roomUnreadCount: String(room.unreadCount ?? 0),
       },
