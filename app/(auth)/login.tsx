@@ -8,13 +8,17 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
+  Image,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../stores/authStore';
 import { Colors } from '../../constants/colors';
+
+const BLUE = '#3B6FE8';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -33,7 +37,6 @@ export default function LoginScreen() {
     if (success) {
       router.replace('/(main)/home');
     } else {
-      // 최신 에러는 store에서 직접 읽어야 stale closure를 피할 수 있음
       const currentError = useAuthStore.getState().error;
       Alert.alert('로그인 실패', currentError ?? '로그인에 실패했습니다.');
       clearError();
@@ -41,16 +44,16 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+    <View style={styles.container}>
       <View style={styles.content}>
-        {/* 로고 영역 */}
+        {/* 로고 */}
         <View style={styles.logoContainer}>
-          <Text style={styles.logoEmoji}>🇰🇷</Text>
-          <Text style={styles.title}>도와줘코리안</Text>
-          <Text style={styles.subtitle}>유학생과 한국인 학생을 연결합니다</Text>
+          <Image
+            source={require('../../logo/logo2.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         {/* 입력 폼 */}
@@ -86,63 +89,93 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 회원가입 링크 */}
-        <TouchableOpacity
-          style={styles.registerLink}
-          onPress={() => router.push('/(auth)/register')}
-        >
-          <Text style={styles.registerText}>
-            계정이 없으신가요? <Text style={styles.registerHighlight}>회원가입</Text>
-          </Text>
+        {/* 구분선 */}
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>또는</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* 비밀번호 찾기 */}
+        <TouchableOpacity style={styles.forgotPassword}>
+          <Text style={styles.forgotPasswordText}>비밀번호를 잊으셨나요?</Text>
         </TouchableOpacity>
 
-        {/* 개발용 테스트 계정 */}
-        <View style={styles.testContainer}>
-          <Text style={styles.testLabel}>개발용 테스트</Text>
-          <View style={styles.testButtons}>
-            <TouchableOpacity
-              style={[styles.testButton, styles.testButtonInternational]}
-              onPress={async () => {
-                const success = await login({
-                  email: 'sang020531@naver.com',
-                  password: 'sang3036828@',
-                });
-                if (success) {
-                  router.replace('/(main)/home');
-                } else {
-                  Alert.alert('실패', '외국인 테스트 계정 로그인 실패');
-                }
-              }}
-            >
-              <Text style={styles.testButtonText}>🌍 외국인 계정</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.testButton, styles.testButtonKorean]}
-              onPress={async () => {
-                const success = await login({
-                  email: 'sang020531@kookmin.ac.kr',
-                  password: 'sang3036828@',
-                });
-                if (success) {
-                  router.replace('/(main)/home');
-                } else {
-                  Alert.alert('실패', '한국인 테스트 계정 로그인 실패');
-                }
-              }}
-            >
-              <Text style={styles.testButtonText}>🇰🇷 한국인 계정</Text>
-            </TouchableOpacity>
-          </View>
+        {/* 회원가입 링크 */}
+        <View style={styles.registerRow}>
+          <Text style={styles.registerText}>계정이 없으신가요? </Text>
+          <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+            <Text style={styles.registerHighlight}>가입하기</Text>
+          </TouchableOpacity>
+        </View>
+
+      </View>
+
+      {/* 개발용 테스트 계정 - 하단 고정 */}
+      <View style={styles.testContainer}>
+        <Text style={styles.testLabel}>개발용 테스트</Text>
+        <View style={styles.testTopButtons}>
+          <TouchableOpacity
+            style={styles.testButtonFirst}
+            onPress={async () => {
+              await AsyncStorage.removeItem('languageSelected');
+              useAuthStore.setState({ languageSelected: false });
+              router.replace('/splash');
+            }}
+          >
+            <Text style={styles.testButtonFirstText}>🚀 첫 입장하기</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.testButtonNew}
+            onPress={() => router.push('/profile-setup')}
+          >
+            <Text style={styles.testButtonNewText}>👤 신규사용자</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.testButtons}>
+          <TouchableOpacity
+            style={[styles.testButton, styles.testButtonInternational]}
+            onPress={async () => {
+              const success = await login({
+                email: 'sang020531@naver.com',
+                password: 'sang3036828@',
+              });
+              if (success) {
+                router.replace('/(main)/home');
+              } else {
+                Alert.alert('실패', '외국인 테스트 계정 로그인 실패');
+              }
+            }}
+          >
+            <Text style={styles.testButtonText}>🌍 외국인 계정</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.testButton, styles.testButtonKorean]}
+            onPress={async () => {
+              const success = await login({
+                email: 'sang020531@kookmin.ac.kr',
+                password: 'sang3036828@',
+              });
+              if (success) {
+                router.replace('/(main)/home');
+              } else {
+                Alert.alert('실패', '한국인 테스트 계정 로그인 실패');
+              }
+            }}
+          >
+            <Text style={styles.testButtonText}>🇰🇷 한국인 계정</Text>
+          </TouchableOpacity>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </View>
+    </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
   },
   content: {
     flex: 1,
@@ -151,64 +184,88 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: s(48),
+    marginBottom: s(36),
   },
-  logoEmoji: {
-    fontSize: s(64),
-    marginBottom: s(16),
-  },
-  title: {
-    fontSize: s(32),
-    fontWeight: '800',
-    color: Colors.primary,
-    marginBottom: s(8),
-  },
-  subtitle: {
-    fontSize: s(14),
-    color: Colors.textSecondary,
+  logo: {
+    width: s(180),
+    height: s(100),
   },
   form: {
-    gap: s(16),
+    gap: s(10),
   },
   input: {
-    backgroundColor: Colors.surface,
-    borderRadius: s(12),
-    paddingHorizontal: s(16),
-    paddingVertical: s(14),
-    fontSize: s(16),
+    backgroundColor: '#FFFFFF',
+    borderRadius: s(8),
+    paddingHorizontal: s(18),
+    paddingVertical: s(13),
+    fontSize: s(17),
     color: Colors.textPrimary,
-    borderWidth: s(1),
+    borderWidth: 1,
     borderColor: Colors.border,
   },
   loginButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: s(12),
-    paddingVertical: s(16),
+    backgroundColor: BLUE,
+    borderRadius: s(8),
+    paddingVertical: s(14),
     alignItems: 'center',
-    marginTop: s(8),
+    marginTop: s(4),
+    opacity: 0.85,
   },
   disabledButton: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   loginButtonText: {
     color: Colors.textWhite,
     fontSize: s(18),
-    fontWeight: '700',
+    fontWeight: '600',
   },
-  registerLink: {
-    marginTop: s(24),
+  dividerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginVertical: s(20),
+    gap: s(10),
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  dividerText: {
+    fontSize: s(13),
+    color: Colors.textLight,
+  },
+  forgotPassword: {
+    alignItems: 'center',
+    marginBottom: s(16),
+  },
+  forgotPasswordText: {
+    fontSize: s(13),
+    color: BLUE,
+    fontWeight: '500',
+  },
+  registerRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: s(16),
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    marginTop: s(4),
   },
   registerText: {
     fontSize: s(14),
     color: Colors.textSecondary,
   },
   registerHighlight: {
-    color: Colors.primary,
+    fontSize: s(14),
+    color: BLUE,
     fontWeight: '700',
   },
   testContainer: {
-    marginTop: s(24),
+    position: 'absolute',
+    bottom: s(32),
+    left: 0,
+    right: 0,
     alignItems: 'center',
     gap: s(10),
   },
@@ -226,10 +283,40 @@ const styles = StyleSheet.create({
     paddingVertical: s(10),
     borderRadius: s(10),
     alignItems: 'center',
-    borderWidth: s(1),
+    borderWidth: 1,
+  },
+  testTopButtons: {
+    flexDirection: 'row',
+    gap: s(10),
+  },
+  testButtonFirst: {
+    paddingHorizontal: s(20),
+    paddingVertical: s(9),
+    borderRadius: s(20),
+    borderWidth: 1,
+    borderColor: BLUE,
+    backgroundColor: '#EEF4FF',
+  },
+  testButtonFirstText: {
+    fontSize: s(12),
+    fontWeight: '600',
+    color: BLUE,
+  },
+  testButtonNew: {
+    paddingHorizontal: s(20),
+    paddingVertical: s(9),
+    borderRadius: s(20),
+    borderWidth: 1,
+    borderColor: '#10B981',
+    backgroundColor: '#ECFDF5',
+  },
+  testButtonNewText: {
+    fontSize: s(12),
+    fontWeight: '600',
+    color: '#10B981',
   },
   testButtonInternational: {
-    borderColor: Colors.primary,
+    borderColor: BLUE,
     backgroundColor: '#EBF5FF',
   },
   testButtonKorean: {

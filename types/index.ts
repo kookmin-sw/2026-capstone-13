@@ -35,6 +35,7 @@ export interface User {
   emailVerified?: boolean;
   studentIdVerified?: boolean;
   studentIdStatus?: 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  isProfileSetup?: boolean;
 }
 
 // 로그인 요청

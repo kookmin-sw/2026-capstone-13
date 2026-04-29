@@ -1,6 +1,7 @@
 // 인증 상태 관리 (Zustand)
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '../types';
 import { login as loginApi, register as registerApi, getMyProfile, uploadProfileImage, deleteProfileImage, updateBio as updateBioApi, updateProfileDetail as updateProfileDetailApi } from '../services/authService';
 
@@ -20,6 +21,8 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   isGuest: boolean;
+  isNewUser: boolean;        // 회원가입 후 첫 로그인 여부
+  languageSelected: boolean; // 언어 설정 완료 여부
 
   // 액션
   login: (data: LoginRequest) => Promise<boolean>;
@@ -33,6 +36,8 @@ interface AuthState {
   updateProfileImage: (imageUri: string) => Promise<boolean>;
   updateBio: (bio: string) => Promise<void>;
   updateProfileDetail: (data: UpdateProfileRequest) => Promise<void>;
+  setIsNewUser: (value: boolean) => void;
+  setLanguageSelected: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -40,6 +45,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,  // 앱 시작 시 loadUser 완료 전까지 true로 유지
   error: null,
   isGuest: false,
+  isNewUser: false,
+  languageSelected: false,
 
   // 로그인
   login: async (data: LoginRequest) => {
@@ -67,7 +74,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const response = await registerApi(data);
       if (response.success) {
-        set({ isLoading: false });
+        set({ isLoading: false, isNewUser: true });
         return true;
       } else {
         set({ error: response.message, isLoading: false });
@@ -89,15 +96,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   // 앱 시작 시 저장된 토큰으로 사용자 정보 로드
   loadUser: async () => {
     try {
-      const token = await SecureStore.getItemAsync('accessToken');
+      const [token, langDone] = await Promise.all([
+        SecureStore.getItemAsync('accessToken'),
+        AsyncStorage.getItem('languageSelected'),
+      ]);
+      const languageSelected = langDone === 'true';
+
       if (!token) {
-        set({ isLoading: false });
+        set({ isLoading: false, languageSelected });
         return;
       }
 
       const response = await getMyProfile();
       if (response.success) {
-        set({ user: { ...response.data, profileImage: toAbsoluteUrl(response.data.profileImage) }, isLoading: false });
+        set({ user: { ...response.data, profileImage: toAbsoluteUrl(response.data.profileImage) }, isLoading: false, languageSelected });
       } else {
         throw new Error(response.message);
       }
@@ -115,6 +127,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   loginAsTestKorean: () => set({ isGuest: false, user: { id: 2, email: 'korean@test.com', nickname: '테스트한국인', userType: 'KOREAN', university: '국민대학교', rating: 0, helpCount: 0, createdAt: '' } }),
 
   clearError: () => set({ error: null }),
+
+  setIsNewUser: (value: boolean) => set({ isNewUser: value }),
+
+  setLanguageSelected: async () => {
+    await AsyncStorage.setItem('languageSelected', 'true');
+    set({ languageSelected: true });
+  },
 
   // 자기소개 수정 (로컬 즉시 반영 후 서버 동기화)
   updateBio: async (bio: string) => {
