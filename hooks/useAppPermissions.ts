@@ -41,7 +41,14 @@ async function requestAllPermissions() {
     '갤러리 접근 권한',
     '프로필 사진이나 커뮤니티 게시글에 사진을 업로드하려면 갤러리 접근 권한이 필요합니다.',
   );
-  await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (Platform.OS === 'android') {
+    const permission = Number(Platform.Version) >= 33
+      ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
+      : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+    await PermissionsAndroid.request(permission);
+  } else {
+    await ImagePicker.requestMediaLibraryPermissionsAsync();
+  }
 }
 
 export function useAppPermissions() {
