@@ -13,6 +13,7 @@ import lombok.*;
  *  - answer         : 수신자 → 발신자 (SDP answer)
  *  - ice-candidate  : 양방향 (ICE 후보 교환)
  *  - call-end       : 양방향 (통화 종료)
+ *  - subtitle       : 번역된 자막 텍스트 relay
  */
 @Getter
 @Setter
@@ -43,4 +44,7 @@ public class CallSignalDto {
     private String candidate;
     private String sdpMid;
     private Integer sdpMLineIndex;
+
+    // 번역 자막 (subtitle 시 사용)
+    private String subtitleText;
 }

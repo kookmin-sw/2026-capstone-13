@@ -20,11 +20,19 @@ public class ChatRoomResponse {
     private String lastMessage;    // 마지막 메시지 내용 (없으면 null)
     private String lastMessageTime;
     private long unreadCount;      // 내가 안 읽은 메시지 수 (뱃지)
+    private String partnerPreferredLanguage; // 상대방 번역 수신 언어 (한국인=ko, 외국인=preferredLanguage)
 
     public static ChatRoomResponse from(HelpRequest req, Long myUserId, String lastMessage, String lastMessageTime, long unreadCount) {
         User partner = req.getRequester().getId().equals(myUserId)
                 ? req.getHelper()
                 : req.getRequester();
+
+        String partnerLang = null;
+        if (partner != null) {
+            partnerLang = partner.getUserType() == User.UserType.KOREAN
+                    ? "ko"
+                    : partner.getPreferredLanguage();
+        }
 
         return ChatRoomResponse.builder()
                 .id(req.getId())
@@ -36,6 +44,7 @@ public class ChatRoomResponse {
                 .lastMessage(lastMessage)
                 .lastMessageTime(lastMessageTime)
                 .unreadCount(unreadCount)
+                .partnerPreferredLanguage(partnerLang)
                 .build();
     }
 }
