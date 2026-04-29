@@ -32,6 +32,7 @@ public class UserResponse {
     private boolean studentIdVerified;
     private String studentIdStatus;
     private String lastSeenAt;
+    private boolean isProfileSetup;
 
     // 타인 프로필 조회용 (이메일 제외)
     public static UserResponse fromPublic(User user) {
@@ -56,6 +57,7 @@ public class UserResponse {
                 .studentIdVerified(user.isStudentIdVerified())
                 .studentIdStatus(user.getStudentIdStatus().name())
                 .lastSeenAt(user.getLastSeenAt() != null ? user.getLastSeenAt().toString() : null)
+                .isProfileSetup(user.isProfileSetup())
                 .build();
     }
 
@@ -83,6 +85,7 @@ public class UserResponse {
                 .studentIdVerified(user.isStudentIdVerified())
                 .studentIdStatus(user.getStudentIdStatus().name())
                 .lastSeenAt(user.getLastSeenAt() != null ? user.getLastSeenAt().toString() : null)
+                .isProfileSetup(user.isProfileSetup())
                 .build();
     }
 }

@@ -8,6 +8,10 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:helpboys}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+      idle-timeout: 30000
 
   # 파일 업로드 크기 제한
   servlet:
