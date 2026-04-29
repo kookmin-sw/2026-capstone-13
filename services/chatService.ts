@@ -24,6 +24,7 @@ export interface ChatRoomResponse {
   lastMessage: string | null;
   lastMessageTime: string | null;
   unreadCount: number;
+  partnerPreferredLanguage?: string;
 }
 
 // 내 채팅방 목록 조회 (마지막 메시지 포함)

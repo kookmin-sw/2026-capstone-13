@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Client } from '@stomp/stompjs';
+import * as SecureStore from 'expo-secure-store';
 import { getAgoraToken } from '../services/agoraService';
 import {
   createAgoraRtcEngine,
@@ -26,6 +28,8 @@ import { Audio } from 'expo-av';
 const PRIMARY = '#4F46E5';
 const AGORA_APP_ID = process.env.EXPO_PUBLIC_AGORA_APP_ID ?? '';
 const WS_SPEECH_URL = process.env.EXPO_PUBLIC_AI_WS_URL ?? 'ws://localhost:8001';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080/api';
+const WS_URL = BASE_URL.replace(/^http/, 'ws').replace(/\/api$/, '') + '/ws-native';
 
 interface Transcript {
   id: string;
@@ -40,11 +44,17 @@ export default function VideoCallScreen() {
     partnerNickname: string;
     language?: string;
     voiceOnly?: string;
+    myUserId?: string;
+    partnerUserId?: string;
+    targetLanguage?: string;
   }>();
 
   const partnerNickname = params.partnerNickname ?? '상대방';
   const myLanguage = params.language ?? 'ko-KR';
   const isVoiceOnly = params.voiceOnly === 'true';
+  const myUserId = params.myUserId ? Number(params.myUserId) : null;
+  const partnerUserId = params.partnerUserId ? Number(params.partnerUserId) : null;
+  const targetLanguage = params.targetLanguage ?? 'en';
   const channelName = `room_${params.roomId}`;
 
   const [isMuted, setIsMuted] = useState(false);
@@ -60,6 +70,7 @@ export default function VideoCallScreen() {
   const engineRef = useRef<IRtcEngine | null>(null);
   const eventHandlerRef = useRef<IRtcEngineEventHandler | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const stompRef = useRef<Client | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const isStreamingRef = useRef<boolean>(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -195,24 +206,58 @@ export default function VideoCallScreen() {
     engineRef.current?.switchCamera();
   };
 
-  // WebSocket 연결 (자막용)
+  // STOMP 연결 (번역 자막 relay용)
+  const connectStomp = useCallback(async () => {
+    if (!myUserId) return;
+    const token = await SecureStore.getItemAsync('accessToken');
+    const client = new Client({
+      webSocketFactory: () => new WebSocket(WS_URL),
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+      forceBinaryWSFrames: true,
+      appendMissingNULLonIncoming: true,
+      heartbeatIncoming: 0,
+      heartbeatOutgoing: 0,
+      reconnectDelay: 5000,
+      onConnect: () => {
+        client.subscribe(`/topic/call/${myUserId}`, (frame) => {
+          try {
+            const msg = JSON.parse(frame.body);
+            if (msg.type === 'subtitle' && msg.subtitleText) {
+              setTranscripts((prev) => [...prev, {
+                id: Date.now().toString(),
+                text: msg.subtitleText as string,
+                language: targetLanguage,
+              }].slice(-3));
+            }
+          } catch {
+            // 파싱 오류 무시
+          }
+        });
+      },
+    });
+    client.activate();
+    stompRef.current = client;
+  }, [myUserId, targetLanguage]);
+
+  // WebSocket 연결 (AI 자막용)
   const connectWebSocket = useCallback(() => {
     const ws = new WebSocket(WS_SPEECH_URL);
     ws.onopen = () => {
       setIsConnected(true);
-      ws.send(JSON.stringify({ language: myLanguage }));
+      ws.send(JSON.stringify({ language: myLanguage, target_language: targetLanguage }));
     };
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data as string);
-        if (data.type === 'transcript' && data.text) {
-          setTranscripts((prev) => {
-            const updated = [...prev, {
-              id: Date.now().toString(),
-              text: data.text as string,
-              language: data.language as string,
-            }];
-            return updated.slice(-3);
+        if (data.type === 'transcript' && data.translated && partnerUserId && stompRef.current?.connected) {
+          stompRef.current.publish({
+            destination: '/app/call/signal',
+            body: JSON.stringify({
+              type: 'subtitle',
+              fromUserId: myUserId,
+              toUserId: partnerUserId,
+              subtitleText: data.translated,
+            }),
           });
         }
       } catch {
@@ -222,7 +267,7 @@ export default function VideoCallScreen() {
     ws.onclose = () => setIsConnected(false);
     ws.onerror = () => setIsConnected(false);
     wsRef.current = ws;
-  }, [myLanguage]);
+  }, [myLanguage, targetLanguage, myUserId, partnerUserId]);
 
   // 자막 스트리밍 시작
   const startStreaming = async () => {
@@ -232,6 +277,7 @@ export default function VideoCallScreen() {
       return;
     }
     await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+    await connectStomp();
     connectWebSocket();
     isStreamingRef.current = true;
     setIsStreaming(true);
@@ -268,6 +314,8 @@ export default function VideoCallScreen() {
     recordingRef.current = null;
     wsRef.current?.close();
     wsRef.current = null;
+    stompRef.current?.deactivate();
+    stompRef.current = null;
     setIsConnected(false);
   };
 

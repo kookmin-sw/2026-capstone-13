@@ -69,6 +69,8 @@ export default function ChatRoomScreen() {
     requesterId?: string;
     roomUnreadCount?: string;
     isDirect?: string;
+    partnerId?: string;
+    partnerPreferredLanguage?: string;
   }>();
 
   const roomId = Number(params.roomId);
@@ -78,6 +80,8 @@ export default function ChatRoomScreen() {
   const isRequester = user?.id === Number(params.requesterId);
   const isDirect = params.isDirect === 'true';
   const isKo = user?.preferredLanguage === 'ko';
+  const partnerId = params.partnerId ? Number(params.partnerId) : null;
+  const partnerPreferredLanguage = params.partnerPreferredLanguage ?? 'en';
   const [partnerImgError, setPartnerImgError] = useState(false);
 
   const [messages, setMessages] = useState<ChatMessageDto[]>([]);
@@ -195,6 +199,9 @@ export default function ChatRoomScreen() {
                           roomId: String(roomId),
                           partnerNickname: callerNickname,
                           voiceOnly: isVideo ? 'false' : 'true',
+                          myUserId: String(user?.id ?? ''),
+                          partnerUserId: String(partnerId ?? ''),
+                          targetLanguage: partnerPreferredLanguage,
                         },
                       }),
                     },
@@ -433,7 +440,14 @@ export default function ChatRoomScreen() {
           }
           router.push({
             pathname: '/videocall',
-            params: { roomId: String(roomId), partnerNickname, voiceOnly: 'true' },
+            params: {
+              roomId: String(roomId),
+              partnerNickname,
+              voiceOnly: 'true',
+              myUserId: String(user?.id ?? ''),
+              partnerUserId: String(partnerId ?? ''),
+              targetLanguage: partnerPreferredLanguage,
+            },
           });
         },
       },
@@ -465,7 +479,14 @@ export default function ChatRoomScreen() {
           }
           router.push({
             pathname: '/videocall',
-            params: { roomId: String(roomId), partnerNickname, voiceOnly: 'false' },
+            params: {
+              roomId: String(roomId),
+              partnerNickname,
+              voiceOnly: 'false',
+              myUserId: String(user?.id ?? ''),
+              partnerUserId: String(partnerId ?? ''),
+              targetLanguage: partnerPreferredLanguage,
+            },
           });
         },
       },

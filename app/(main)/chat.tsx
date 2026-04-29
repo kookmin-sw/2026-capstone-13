@@ -156,6 +156,8 @@ export default function ChatScreen() {
             requestStatus: 'IN_PROGRESS',
             requesterId: String(myId),
             roomUnreadCount: String(room.unreadCount ?? 0),
+            partnerId: String(room.partnerId ?? ''),
+            partnerPreferredLanguage: room.partnerPreferredLanguage ?? 'en',
           },
         });
         fetchData();
@@ -207,6 +209,8 @@ export default function ChatScreen() {
         requestStatus: room.status,
         requesterId,
         roomUnreadCount: String(room.unreadCount ?? 0),
+        partnerId: String(room.partnerId ?? ''),
+        partnerPreferredLanguage: room.partnerPreferredLanguage ?? 'en',
       },
     });
   };
