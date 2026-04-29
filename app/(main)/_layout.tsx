@@ -1,7 +1,7 @@
 // 메인 탭 네비게이션 레이아웃
 import { useEffect, useRef } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Alert, View, StyleSheet } from 'react-native';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
@@ -12,6 +12,7 @@ import { useBannerStore } from '../../stores/bannerStore';
 import { getMyRequests, getHelpedRequests } from '../../services/helpService';
 import { getChatRooms } from '../../services/chatService';
 import { getDirectChatRooms } from '../../services/directChatService';
+import { getNotifications } from '../../services/notificationService';
 import InAppBanner from '../../components/InAppBanner';
 import CustomTabBar from '../../components/CustomTabBar';
 
@@ -22,7 +23,9 @@ export default function MainLayout() {
   const { unreadCount, incrementUnread, setUnreadCount } = useChatStore();
   const { user } = useAuthStore();
   const { showBanner } = useBannerStore();
+  const router = useRouter();
   const globalClientRef = useRef<Client | null>(null);
+  const lastNotificationIdRef = useRef<number | null>(null);
   // 채팅방별 파트너 정보 캐시 (roomId → room info)
   const roomCacheRef = useRef<Record<number, { requestTitle: string; partnerNickname: string; partnerProfileImage?: string; requestStatus: string; requesterId: string }>>({});
 
@@ -109,7 +112,31 @@ export default function MainLayout() {
               if (!mounted) return;
               try {
                 const msg = JSON.parse(frame.body);
-                if (msg.content?.startsWith('SYS_LEAVE:') || msg.content?.startsWith('SYS_CALL_')) return;
+                if (msg.content?.startsWith('SYS_LEAVE:')) return;
+                if (msg.content?.startsWith('SYS_CALL_VIDEO:') || msg.content?.startsWith('SYS_CALL_VOICE:')) {
+                  const { activeChatroomId } = useChatStore.getState();
+                  if (msg.senderId === user?.id || activeChatroomId === roomId) return;
+                  const isVideo = msg.content.startsWith('SYS_CALL_VIDEO:');
+                  const callerNickname = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const isKo = user?.preferredLanguage === 'ko';
+                  Alert.alert(
+                    isVideo ? '📹 영상통화' : '📞 음성통화',
+                    isKo
+                      ? `${callerNickname}님이 ${isVideo ? '영상' : '음성'}통화를 요청했습니다.`
+                      : `${callerNickname} is calling you (${isVideo ? 'video' : 'voice'}).`,
+                    [
+                      { text: isKo ? '거절' : 'Decline', style: 'cancel' },
+                      {
+                        text: isKo ? '수락' : 'Accept',
+                        onPress: () => router.push({
+                          pathname: '/videocall',
+                          params: { roomId: String(roomId), partnerNickname: callerNickname, voiceOnly: isVideo ? 'false' : 'true' },
+                        }),
+                      },
+                    ]
+                  );
+                  return;
+                }
                 const { activeChatroomId } = useChatStore.getState();
                 if (msg.senderId !== user.id && activeChatroomId !== roomId) {
                   incrementUnread();
@@ -137,6 +164,31 @@ export default function MainLayout() {
               try {
                 const msg = JSON.parse(frame.body);
                 if (msg.type === 'READ') return;
+                if (msg.content?.startsWith('SYS_LEAVE:')) return;
+                if (msg.content?.startsWith('SYS_CALL_VIDEO:') || msg.content?.startsWith('SYS_CALL_VOICE:')) {
+                  const { activeChatroomId } = useChatStore.getState();
+                  if (msg.senderId === user?.id || activeChatroomId === roomId) return;
+                  const isVideo = msg.content.startsWith('SYS_CALL_VIDEO:');
+                  const callerNickname = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const isKo = user?.preferredLanguage === 'ko';
+                  Alert.alert(
+                    isVideo ? '📹 영상통화' : '📞 음성통화',
+                    isKo
+                      ? `${callerNickname}님이 ${isVideo ? '영상' : '음성'}통화를 요청했습니다.`
+                      : `${callerNickname} is calling you (${isVideo ? 'video' : 'voice'}).`,
+                    [
+                      { text: isKo ? '거절' : 'Decline', style: 'cancel' },
+                      {
+                        text: isKo ? '수락' : 'Accept',
+                        onPress: () => router.push({
+                          pathname: '/videocall',
+                          params: { roomId: String(roomId), partnerNickname: callerNickname, voiceOnly: isVideo ? 'false' : 'true' },
+                        }),
+                      },
+                    ]
+                  );
+                  return;
+                }
                 const { activeChatroomId } = useChatStore.getState();
                 if (msg.senderId !== user.id && activeChatroomId !== roomId) {
                   incrementUnread();
@@ -172,6 +224,35 @@ export default function MainLayout() {
       globalClientRef.current?.deactivate();
       globalClientRef.current = null;
     };
+  }, [user?.id]);
+
+  // 백엔드 알림 폴링 → 새 알림 배너 표시
+  useEffect(() => {
+    if (!user) return;
+
+    const poll = async () => {
+      try {
+        const data = await getNotifications(0, 5);
+        if (data.length === 0) return;
+        const latestId = data[0].id;
+        if (lastNotificationIdRef.current === null) {
+          lastNotificationIdRef.current = latestId;
+          return;
+        }
+        const prevId = lastNotificationIdRef.current;
+        const newNotifs = data.filter((n) => n.id > prevId && !n.isRead);
+        newNotifs.slice().reverse().forEach((n) => {
+          showBanner({ type: 'notification', title: '알림', body: n.message });
+        });
+        if (newNotifs.length > 0) {
+          lastNotificationIdRef.current = latestId;
+        }
+      } catch {}
+    };
+
+    poll();
+    const interval = setInterval(poll, 30000);
+    return () => clearInterval(interval);
   }, [user?.id]);
 
   return (
