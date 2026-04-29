@@ -99,7 +99,7 @@ export default function ChatScreen() {
   const [searchQuery, setSearchQuery]     = useState('');
   const searchInputRef = useRef<TextInput>(null);
 
-  const { setUnreadCount, hasLeft, rejoinRoom } = useChatStore();
+  const { setUnreadCount, hasLeft, rejoinRoom, roomUnreadCounts, initRoomUnreadCounts } = useChatStore();
   const myId = Number(user?.id);
 
   const fetchData = useCallback(async () => {
@@ -120,6 +120,14 @@ export default function ChatScreen() {
           ? directRes.value.data.filter((r) => !hasLeft(r.id, myId)).reduce((sum, r) => sum + (r.unreadCount ?? 0), 0)
           : 0;
         setUnreadCount(helpUnread + directUnread);
+
+        // 방별 안읽음 카운트 스토어 초기화
+        const counts: Record<number, number> = {};
+        data.forEach((r) => { counts[r.id] = r.unreadCount ?? 0; });
+        if (directRes.status === 'fulfilled' && directRes.value.success) {
+          directRes.value.data.forEach((r) => { counts[r.id] = r.unreadCount ?? 0; });
+        }
+        initRoomUnreadCounts(counts);
       }
       if (directRes.status === 'fulfilled' && directRes.value.success) {
         setDirectRooms(directRes.value.data);
@@ -264,13 +272,13 @@ export default function ChatScreen() {
     ALL: 0,
     DIRECT: directRooms
       .filter((r) => !hasLeft(r.id, myId))
-      .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0),
+      .reduce((sum, r) => sum + (roomUnreadCounts[r.id] ?? r.unreadCount ?? 0), 0),
     IN_PROGRESS: requests
       .filter((r) => !hasLeft(r.id, myId) && (r.status === 'IN_PROGRESS' || r.status === 'WAITING' || r.status === 'MATCHED'))
-      .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0),
+      .reduce((sum, r) => sum + (roomUnreadCounts[r.id] ?? r.unreadCount ?? 0), 0),
     COMPLETED: requests
       .filter((r) => !hasLeft(r.id, myId) && r.status === 'COMPLETED')
-      .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0),
+      .reduce((sum, r) => sum + (roomUnreadCounts[r.id] ?? r.unreadCount ?? 0), 0),
   };
 
   // 섹션 헤더 포함 리스트 데이터
@@ -394,9 +402,9 @@ export default function ChatScreen() {
               </View>
               <View style={s.itemBottom}>
                 <Text style={s.itemPreview} numberOfLines={1}>{room.lastMessage ?? '채팅을 시작해보세요'}</Text>
-                {room.unreadCount > 0 && (
+                {(roomUnreadCounts[room.id] ?? room.unreadCount) > 0 && (
                   <View style={s.unreadBadge}>
-                    <Text style={s.unreadText}>{room.unreadCount > 99 ? '99+' : room.unreadCount}</Text>
+                    <Text style={s.unreadText}>{(roomUnreadCounts[room.id] ?? room.unreadCount) > 99 ? '99+' : (roomUnreadCounts[room.id] ?? room.unreadCount)}</Text>
                   </View>
                 )}
               </View>
@@ -468,9 +476,9 @@ export default function ChatScreen() {
                     ? '상대방이 채팅방을 나갔습니다'
                     : (room.lastMessage ?? room.title)}
               </Text>
-              {room.unreadCount > 0 && !isActioning && (
+              {(roomUnreadCounts[room.id] ?? room.unreadCount) > 0 && !isActioning && (
                 <View style={s.unreadBadge}>
-                  <Text style={s.unreadText}>{room.unreadCount > 99 ? '99+' : room.unreadCount}</Text>
+                  <Text style={s.unreadText}>{(roomUnreadCounts[room.id] ?? room.unreadCount) > 99 ? '99+' : (roomUnreadCounts[room.id] ?? room.unreadCount)}</Text>
                 </View>
               )}
             </View>

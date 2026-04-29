@@ -855,7 +855,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F0F4FA' },
-  scrollContent: { paddingTop: Platform.OS === 'ios' ? sc(75) : sc(48), paddingBottom: sc(40) },
+  scrollContent: { paddingTop: Platform.OS === 'ios' ? sc(75) : sc(48), paddingBottom: sc(110) },
 
   // ── 상단 바 ──
   topBar: {

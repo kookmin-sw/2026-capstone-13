@@ -205,8 +205,13 @@ export default function ChatRoomScreen() {
               const msg = JSON.parse(frame.body);
               if (!mounted) return;
 
-              // READ 등 컨트롤 이벤트는 채팅 메시지 목록에 추가하지 않음
-              if (msg.type === 'READ') return;
+              // READ 이벤트: 내가 보낸 메시지 읽음 처리
+              if (msg.type === 'READ') {
+                setMessages((prev) =>
+                  prev.map((m) => m.senderId === user?.id ? { ...m, isRead: true } : m)
+                );
+                return;
+              }
 
               // 통화 요청 메시지 처리 (수신자만)
               if (msg.content?.startsWith(SYS_CALL_VOICE) || msg.content?.startsWith(SYS_CALL_VIDEO)) {
@@ -631,7 +636,12 @@ export default function ChatRoomScreen() {
                 {msg.content}
               </Text>
             </View>
-            <Text style={[styles.msgTime, !isMine && styles.msgTimeOther]}>{formatTime(msg.createdAt)}</Text>
+            <View style={styles.msgMeta}>
+              {isMine && msg.isRead === false && (
+                <Text style={styles.unreadMark}>1</Text>
+              )}
+              <Text style={[styles.msgTime, !isMine && styles.msgTimeOther]}>{formatTime(msg.createdAt)}</Text>
+            </View>
           </View>
           {/* 번역 텍스트 */}
           {translateEnabled && !isMine && !!msg.translatedContent && (
@@ -1079,6 +1089,8 @@ const styles = StyleSheet.create({
   bubbleText:     { fontSize: s(16), color: '#0C1C3C', lineHeight: s(22) },
   bubbleTextMine: { color: '#FFFFFF' },
 
+  msgMeta:      { alignItems: 'flex-end', gap: s(2), justifyContent: 'flex-end' },
+  unreadMark:   { fontSize: s(11), color: '#F59E0B', fontWeight: '800' },
   msgTime:      { fontSize: s(12), color: '#A8C8FA', paddingBottom: s(2) },
   msgTimeOther: {},
 
