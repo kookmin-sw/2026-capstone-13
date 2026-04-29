@@ -31,6 +31,7 @@ public class UserResponse {
     private boolean emailVerified;
     private boolean studentIdVerified;
     private String studentIdStatus;
+    private String lastSeenAt;
 
     // 타인 프로필 조회용 (이메일 제외)
     public static UserResponse fromPublic(User user) {
@@ -54,6 +55,7 @@ public class UserResponse {
                 .nationality(user.getNationality())
                 .studentIdVerified(user.isStudentIdVerified())
                 .studentIdStatus(user.getStudentIdStatus().name())
+                .lastSeenAt(user.getLastSeenAt() != null ? user.getLastSeenAt().toString() : null)
                 .build();
     }
 
@@ -80,6 +82,7 @@ public class UserResponse {
                 .emailVerified(user.isEmailVerified())
                 .studentIdVerified(user.isStudentIdVerified())
                 .studentIdStatus(user.getStudentIdStatus().name())
+                .lastSeenAt(user.getLastSeenAt() != null ? user.getLastSeenAt().toString() : null)
                 .build();
     }
 }
