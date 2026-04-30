@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { sendVerificationCode, verifyEmailCode, resetPassword } from '../services/authService';
+import { sendVerificationCode, resetPassword } from '../services/authService';
 import { useAuthStore } from '../stores/authStore';
 import { s } from '../utils/scale';
 
@@ -108,7 +108,7 @@ export default function ChangePasswordScreen() {
     }
   };
 
-  const handleVerifyCode = async () => {
+  const handleVerifyCode = () => {
     if (code.trim().length < 4) {
       Alert.alert('알림', '인증코드를 입력해주세요.');
       return;
@@ -117,21 +117,9 @@ export default function ChangePasswordScreen() {
       Alert.alert('알림', '인증 시간이 만료됐습니다. 코드를 재전송해주세요.');
       return;
     }
-    setLoading(true);
-    try {
-      const res = await verifyEmailCode(email.trim(), code.trim());
-      if (res.success) {
-        clearInterval(timerRef.current!);
-        setTimerActive(false);
-        setStep('password');
-      } else {
-        Alert.alert('오류', '인증코드가 올바르지 않습니다.');
-      }
-    } catch {
-      Alert.alert('오류', '서버 오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
+    clearInterval(timerRef.current!);
+    setTimerActive(false);
+    setStep('password');
   };
 
   const handleChangePassword = async () => {
@@ -153,17 +141,14 @@ export default function ChangePasswordScreen() {
       } else {
         Alert.alert('오류', res.message ?? '비밀번호 변경에 실패했습니다.');
       }
-    } catch {
-      Alert.alert('오류', '서버 오류가 발생했습니다.');
+    } catch (e: unknown) {
+      const err = e as { response?: { status?: number; data?: { message?: string } } };
+      const status = err?.response?.status;
+      const msg = err?.response?.data?.message;
+      Alert.alert('오류', `${status ? `[${status}] ` : ''}${msg ?? '서버 오류가 발생했습니다.'}`);
     } finally {
       setLoading(false);
     }
-  };
-
-  const stepTitles: Record<Step, string> = {
-    email: '비밀번호 재설정',
-    code: '인증코드 입력',
-    password: '새 비밀번호 설정',
   };
 
   const stepSubtitles: Record<Step, string> = {
