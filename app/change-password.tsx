@@ -18,7 +18,6 @@ import { useAuthStore } from '../stores/authStore';
 import { s } from '../utils/scale';
 
 const BLUE = '#3B6FE8';
-const BLUE_L = '#EEF4FF';
 const T1 = '#0C1C3C';
 const T2 = '#6B7280';
 const BG = '#F8FAFF';
@@ -353,11 +352,13 @@ const styles = StyleSheet.create({
   stepItem: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   stepDot: {
     width: s(28), height: s(28), borderRadius: s(14),
-    backgroundColor: BORDER, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: SURFACE,
+    borderWidth: 2, borderColor: BORDER,
+    justifyContent: 'center', alignItems: 'center',
   },
-  stepDotActive: { backgroundColor: BLUE },
-  stepDotDone: { backgroundColor: '#22C55E' },
-  stepDotText: { fontSize: s(12), fontWeight: '700', color: T2 },
+  stepDotActive: { borderColor: BLUE },
+  stepDotDone: { backgroundColor: '#22C55E', borderColor: '#22C55E' },
+  stepDotText: { fontSize: s(12), fontWeight: '700', color: T1 },
   stepLine: { flex: 1, height: 2, backgroundColor: BORDER, marginHorizontal: s(4) },
   stepLineDone: { backgroundColor: '#22C55E' },
 
