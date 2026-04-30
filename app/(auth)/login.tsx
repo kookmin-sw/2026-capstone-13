@@ -157,7 +157,7 @@ export default function LoginScreen() {
                 <View style={styles.dividerLine} />
               </View>
 
-              <TouchableOpacity style={styles.forgotPassword}>
+              <TouchableOpacity style={styles.forgotPassword} onPress={() => router.push('/change-password')}>
                 <Text style={styles.forgotPasswordText}>비밀번호를 잊으셨나요?</Text>
               </TouchableOpacity>
 
