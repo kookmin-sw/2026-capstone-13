@@ -27,6 +27,20 @@ export default function AccountSettingsScreen() {
   const router = useRouter();
   const { logout } = useAuthStore();
 
+  const handleLogout = () => {
+    Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '로그아웃',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          router.replace('/(auth)/login');
+        },
+      },
+    ]);
+  };
+
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -94,6 +108,15 @@ export default function AccountSettingsScreen() {
           <Ionicons name="ban-outline" size={20} color={T1} />
           <Text style={[styles.menuItemText, { color: T1 }]}>차단 관리</Text>
           <Ionicons name="chevron-forward" size={18} color={T2} style={styles.menuChevron} />
+        </TouchableOpacity>
+        <View style={styles.menuDivider} />
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="log-out-outline" size={20} color={T1} />
+          <Text style={[styles.menuItemText, { color: T1 }]}>로그아웃</Text>
         </TouchableOpacity>
       </View>
 

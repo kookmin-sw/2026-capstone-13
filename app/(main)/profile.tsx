@@ -49,12 +49,12 @@ const COLOR_MALE   = '#0EA5E9';
 const COLOR_FEMALE = '#DB2777';
 
 const LANGUAGES = [
-  { code: 'en',      label: '🇺🇸 English' },
-  { code: 'ja',      label: '🇯🇵 日本語' },
-  { code: 'zh-Hans', label: '🇨🇳 中文(简体)' },
-  { code: 'ru',      label: '🇷🇺 Русский' },
-  { code: 'mn',      label: '🇲🇳 Монгол' },
-  { code: 'vi',      label: '🇻🇳 Tiếng Việt' },
+  { code: 'en',      label: 'English' },
+  { code: 'ja',      label: '日本語' },
+  { code: 'zh-Hans', label: '中文(简体)' },
+  { code: 'ru',      label: 'Русский' },
+  { code: 'mn',      label: 'Монгол' },
+  { code: 'vi',      label: 'Tiếng Việt' },
 ];
 
 interface ProfileDetail {
@@ -71,18 +71,19 @@ const EMPTY_DETAIL: ProfileDetail = { bio: '', gender: '', age: '', major: '', m
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout, updateProfileImage, updateProfileDetail, loadUser } = useAuthStore();
+  const { user, updateProfileImage, updateProfileDetail, loadUser } = useAuthStore();
   const { helpHistory, fetchHelpHistory } = useHelpHistoryStore();
   const { fetchMyRequests, myRequests } = useHelpRequestStore();
   const [imageMenuVisible, setImageMenuVisible] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
-  const { monthlyGoal, setMonthlyGoal } = useGoalStore();
+  const { monthlyGoal, setMonthlyGoal, loadMonthlyGoal } = useGoalStore();
 
   const isKorean = user?.userType === 'KOREAN';
 
   useEffect(() => {
     loadUser();
     if (isKorean) {
+      loadMonthlyGoal();
       fetchHelpHistory();
       getHelpedRequests().then(res => {
         if (res.success) {
@@ -227,19 +228,6 @@ export default function ProfileScreen() {
       preferredLanguage: profileInput.preferredLanguage,
     });
     setProfileModalVisible(false);
-  };
-
-  const handleLogout = () => {
-    Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '로그아웃', style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/(auth)/login');
-        },
-      },
-    ]);
   };
 
   const handleDeleteImage = () => {
@@ -463,11 +451,6 @@ export default function ProfileScreen() {
         ))}
       </View>
 
-      {/* ── 로그아웃 ── */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.8}>
-        <Text style={styles.logoutText}>로그아웃</Text>
-      </TouchableOpacity>
-
       {/* 프로필 사진 변경 모달 */}
       <Modal transparent animationType="fade" visible={imageMenuVisible} onRequestClose={() => setImageMenuVisible(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setImageMenuVisible(false)}>
@@ -509,152 +492,154 @@ export default function ProfileScreen() {
       <Modal transparent={false} animationType="slide" visible={profileModalVisible} onRequestClose={() => setProfileModalVisible(false)}>
         <KeyboardAvoidingView style={styles.profileModalFull} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
-          {/* 헤더 - 절대 위치 버튼들 */}
-          <TouchableOpacity style={styles.profileCloseBtn} onPress={() => setProfileModalVisible(false)} activeOpacity={0.7}>
-            <Ionicons name="close" size={24} color={T1} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.profileSaveFloatBtn} onPress={handleSaveProfile} activeOpacity={0.7}>
-            <Text style={styles.profileModalSaveBtn}>저장</Text>
-          </TouchableOpacity>
+          {/* 헤더 */}
+          <View style={styles.profileModalHeader}>
+            <TouchableOpacity style={styles.profileCloseBtn} onPress={() => setProfileModalVisible(false)} activeOpacity={0.7}>
+              <Ionicons name="chevron-back" size={24} color={T1} />
+            </TouchableOpacity>
+            <View style={{ width: sc(40) }} />
+            <TouchableOpacity style={styles.profileSaveFloatBtn} onPress={handleSaveProfile} activeOpacity={0.7}>
+              <Text style={styles.profileModalSaveBtn}>저장</Text>
+            </TouchableOpacity>
+          </View>
 
           <ScrollView style={styles.profileScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.profileScrollContent} keyboardShouldPersistTaps="handled">
 
-              {/* 1. 프로필 사진 */}
-              <View style={styles.photoMainWrap}>
-                <View style={styles.photoMainBox}>
-                  <TouchableOpacity style={{ flex: 1 }} onPress={() => setImageMenuVisible(true)} activeOpacity={0.8}>
-                    {user?.profileImage?.trim() && !imageLoadError ? (
-                      <Image
-                        source={{ uri: user.profileImage }}
-                        style={styles.photoMainImage}
-                        onError={() => setImageLoadError(true)}
-                      />
-                    ) : (
-                      <View style={styles.photoMainPlaceholder}>
-                        <Ionicons name="person" size={sc(40)} color="#CCCCCC" />
-                      </View>
-                    )}
+              {/* 페이지 타이틀 */}
+              <Text style={[styles.profileModalTitle, { marginBottom: sc(50), marginTop: -sc(35) }]}>프로필 수정</Text>
+
+              {/* 1. 프로필 사진 + 이름/학과 */}
+              <View style={styles.photoRowWrap}>
+                <View style={styles.photoMainWrap}>
+                  <View style={styles.photoMainBox}>
+                    <TouchableOpacity style={{ flex: 1 }} onPress={() => setImageMenuVisible(true)} activeOpacity={0.8}>
+                      {user?.profileImage?.trim() && !imageLoadError ? (
+                        <Image
+                          source={{ uri: user.profileImage }}
+                          style={styles.photoMainImage}
+                          onError={() => setImageLoadError(true)}
+                        />
+                      ) : (
+                        <View style={styles.photoMainPlaceholder}>
+                          <Ionicons name="person" size={sc(40)} color="#CCCCCC" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity style={styles.photoCameraBtn} onPress={() => setImageMenuVisible(true)} activeOpacity={0.8}>
+                    <Ionicons name="camera" size={sc(16)} color="#fff" />
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.photoCameraBtn} onPress={() => setImageMenuVisible(true)} activeOpacity={0.8}>
-                  <Ionicons name="camera" size={sc(16)} color="#fff" />
-                </TouchableOpacity>
+                <View style={styles.photoInfoCol}>
+                  <View style={[styles.photoInfoLine, { alignSelf: 'flex-start', paddingRight: sc(16) }]}>
+                    <Text style={styles.photoInfoName}>{user?.nickname ?? '-'}</Text>
+                  </View>
+                </View>
               </View>
 
               <View style={styles.editSectionDivider} />
 
-              {/* 2. 내 소개 */}
+              {/* 2. 한줄 소개 */}
               <Text style={styles.editSectionTitle}>한줄 소개</Text>
               <TextInput
-                style={styles.editTextarea}
+                style={[styles.editTextarea, profileInput.bio && { borderColor: BLUE, borderWidth: sc(2) }]}
                 value={profileInput.bio}
                 onChangeText={(text) => setProfileInput((prev) => ({ ...prev, bio: text }))}
                 placeholder={'간단히 나를 소개해보세요.\n소개말이 있으면 호감도가 올라가요.'}
-                placeholderTextColor={BLUE_MID}
+                placeholderTextColor="#9AAABF"
                 multiline
+                scrollEnabled={false}
                 maxLength={100}
-                textAlignVertical="top"
+                textAlignVertical="center"
               />
 
               <View style={styles.editSectionDivider} />
 
-              {/* 3. 기본 정보 */}
-              <Text style={styles.editSectionTitle}>기본 정보</Text>
-
-              {/* 성별 */}
-
-              <View style={[styles.editFieldWrap, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: sc(12) }]}>
-                <Text style={[styles.editFieldLabel, { marginBottom: 0, marginTop: sc(6), fontSize: sc(16) }]}>성별</Text>
-                <View style={styles.chipRow}>
-                  {[{ label: '남성', value: '남자' }, { label: '여성', value: '여자' }].map(({ label, value }) => {
-                    const isSelected = profileInput.gender === value;
-                    const isLocked = !!user?.gender;
-                    return (
-                      <TouchableOpacity
-                        key={value}
-                        style={[styles.optionChip, isSelected && styles.optionChipActive]}
-                        onPress={() => {
-                          if (isLocked) return;
-                          setProfileInput((prev) => ({ ...prev, gender: value }));
-                        }}
-                        activeOpacity={isLocked ? 1 : 0.8}
-                      >
-                        <Text style={[styles.optionChipText, isSelected && styles.optionChipTextActive]}>{label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+              {/* 3. 성별 */}
+              <Text style={styles.editSectionTitle}>성별</Text>
+              <View style={[styles.genderRow, { marginTop: sc(8) }]}>
+                {[{ label: '남성', value: '남자' }, { label: '여성', value: '여자' }].map(({ label, value }) => {
+                  const isSelected = profileInput.gender === value;
+                  const isLocked = !!user?.gender;
+                  return (
+                    <TouchableOpacity
+                      key={value}
+                      style={[styles.genderBtn, isSelected && styles.genderBtnActive]}
+                      onPress={() => {
+                        if (isLocked) return;
+                        setProfileInput((prev) => ({ ...prev, gender: value }));
+                      }}
+                      activeOpacity={isLocked ? 1 : 0.8}
+                    >
+                      <Text style={[styles.genderBtnText, isSelected && styles.genderBtnTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               <View style={styles.editSectionDivider} />
 
-              {/* 나이 */}
-              <View style={[styles.editFieldWrap, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-                <Text style={[styles.editFieldLabel, { marginBottom: 0, fontSize: sc(16) }]}>나이</Text>
-                <TouchableOpacity
-                  style={[styles.editInput, { marginLeft: sc(12), paddingHorizontal: sc(10) }]}
-                  onPress={handleOpenBirthModal}
-                  activeOpacity={0.8}
-                >
-                  <Text style={{ color: profileInput.age ? T1 : BLUE_MID, fontSize: sc(15) }}>
-                    {profileInput.age ? `${birthYear}년 ${birthMonth}월 ${birthDay}일 (만 ${profileInput.age}세)` : '생년월일을 선택하세요'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              {/* 4. 나이 */}
+              <Text style={styles.editSectionTitle}>나이</Text>
+              <TouchableOpacity
+                style={[styles.editInput, { marginTop: sc(8) }, profileInput.age ? { borderColor: BLUE, borderWidth: sc(2) } : {}]}
+                onPress={handleOpenBirthModal}
+                activeOpacity={0.8}
+              >
+                <Text style={{ color: profileInput.age ? T1 : '#9AAABF', fontSize: sc(15) }}>
+                  {profileInput.age ? `${birthYear}년 ${birthMonth}월 ${birthDay}일 (만 ${profileInput.age}세)` : '생년월일을 선택하세요'}
+                </Text>
+              </TouchableOpacity>
 
               <View style={styles.editSectionDivider} />
 
-              {/* 학과 */}
-              <View style={styles.editFieldWrap}>
+              {/* 5. 학과 */}
+              <Text style={styles.editSectionTitle}>학과</Text>
+              <TouchableOpacity
+                style={[styles.editInput, { marginTop: sc(8) }, isKorean && { backgroundColor: BORDER, opacity: 0.7 }]}
+                onPress={() => {
+                  if (isKorean) {
+                    Alert.alert('학생증 인증 필요', '한국인 학생은 학생증 인증 후 전공을 변경할 수 있습니다.');
+                    return;
+                  }
+                  setShowMajorList((v) => !v);
+                }}
+                activeOpacity={0.8}
+              >
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={[styles.editFieldLabel, { marginBottom: 0, fontSize: sc(16) }]}>학과</Text>
-                  <TouchableOpacity
-                    style={[styles.editInput, { marginLeft: sc(12), alignSelf: 'flex-end', minWidth: sc(160), maxWidth: sc(200), paddingHorizontal: sc(10) }, isKorean && { backgroundColor: BORDER, opacity: 0.7 }]}
-                    onPress={() => {
-                      if (isKorean) {
-                        Alert.alert('학생증 인증 필요', '한국인 학생은 학생증 인증 후 전공을 변경할 수 있습니다.');
-                        return;
-                      }
-                      setShowMajorList((v) => !v);
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Text style={{ color: profileInput.major ? T1 : BLUE_MID, fontSize: sc(15) }}>
-                        {profileInput.major || '학과를 선택하세요'}
-                      </Text>
-                      {isKorean
-                        ? <Ionicons name="lock-closed-outline" size={16} color={BLUE_MID} />
-                        : <Ionicons name={showMajorList ? 'chevron-up' : 'chevron-down'} size={16} color={BLUE_MID} />
-                      }
-                    </View>
-                  </TouchableOpacity>
+                  <Text style={{ color: profileInput.major ? T1 : '#9AAABF', fontSize: sc(15) }}>
+                    {profileInput.major || '학과를 선택하세요'}
+                  </Text>
+                  {isKorean
+                    ? <Ionicons name="lock-closed-outline" size={16} color={BLUE_MID} />
+                    : <Ionicons name={showMajorList ? 'chevron-up' : 'chevron-down'} size={16} color={BLUE_MID} />
+                  }
                 </View>
-                {isKorean && (
-                  <Text style={{ fontSize: sc(11), color: BLUE_MID, marginTop: sc(4), textAlign: 'right' }}>학생증 인증 후 변경 가능합니다.</Text>
-                )}
-                {showMajorList && !isKorean && (
-                  <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: sc(12), marginTop: sc(4), overflow: 'hidden' }}>
-                    {MAJORS.map((item) => (
-                      <TouchableOpacity
-                        key={item}
-                        style={{ paddingHorizontal: sc(14), paddingVertical: sc(11), backgroundColor: profileInput.major === item ? BLUE_L : '#fff', borderBottomWidth: 1, borderBottomColor: BORDER }}
-                        onPress={() => { setProfileInput((prev) => ({ ...prev, major: item })); setShowMajorList(false); }}
-                      >
-                        <Text style={{ fontSize: sc(14), color: profileInput.major === item ? BLUE : T1, fontWeight: profileInput.major === item ? '700' : '400' }}>
-                          {item}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
+              </TouchableOpacity>
+              {isKorean && (
+                <Text style={{ fontSize: sc(11), color: BLUE_MID, marginTop: sc(4) }}>학생증 인증 후 변경 가능합니다.</Text>
+              )}
+              {showMajorList && !isKorean && (
+                <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: sc(12), marginTop: sc(4), overflow: 'hidden' }}>
+                  {MAJORS.map((item) => (
+                    <TouchableOpacity
+                      key={item}
+                      style={{ paddingHorizontal: sc(14), paddingVertical: sc(11), backgroundColor: profileInput.major === item ? BLUE_L : '#fff', borderBottomWidth: 1, borderBottomColor: BORDER }}
+                      onPress={() => { setProfileInput((prev) => ({ ...prev, major: item })); setShowMajorList(false); }}
+                    >
+                      <Text style={{ fontSize: sc(14), color: profileInput.major === item ? BLUE : T1, fontWeight: profileInput.major === item ? '700' : '400' }}>
+                        {item}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
               <View style={styles.editSectionDivider} />
 
-              {/* 번역 언어 */}
+              {/* 6. 번역 언어 */}
               <Text style={styles.editSectionTitle}>번역 언어</Text>
-              <View style={[styles.chipRow, { marginTop: sc(12) }]}>
+              <View style={[styles.chipRow, { marginTop: sc(8) }]}>
                 {LANGUAGES.map((lang) => (
                   <TouchableOpacity
                     key={lang.code}
@@ -671,13 +656,24 @@ export default function ProfileScreen() {
 
               <View style={styles.editSectionDivider} />
 
-              {/* 취미 */}
-              <View style={[styles.editRowBetween, { marginBottom: sc(12) }]}>
-                <Text style={styles.editSectionTitle}>취미</Text>
+              {/* 7. 키워드 */}
+              <View style={[styles.editRowBetween, { marginBottom: sc(8) }]}>
+                <Text style={styles.editSectionTitle}>키워드</Text>
                 <Text style={styles.editOptional}>({profileInput.hobbies.length}/5)</Text>
               </View>
+              {profileInput.hobbies.length < 5 && (
+                <TextInput
+                  style={[styles.hobbyInputField, profileInput.hobbies.length > 0 && { borderColor: BLUE, borderWidth: sc(2) }]}
+                  value={hobbyInput}
+                  onChangeText={setHobbyInput}
+                  onSubmitEditing={handleAddHobby}
+                  placeholder="나를 표현할 수 있는 단어를 입력해주세요!"
+                  returnKeyType="done"
+                  placeholderTextColor="#9AAABF"
+                />
+              )}
               {profileInput.hobbies.length > 0 && (
-                <View style={styles.hobbyTagList}>
+                <View style={[styles.hobbyTagList, { marginTop: sc(10) }]}>
                   {profileInput.hobbies.map((h, i) => (
                     <View key={h} style={styles.hobbyTagEdit}>
                       <Text style={styles.hobbyTagEditText}>#{h}</Text>
@@ -686,22 +682,6 @@ export default function ProfileScreen() {
                       </TouchableOpacity>
                     </View>
                   ))}
-                </View>
-              )}
-              {profileInput.hobbies.length < 5 && (
-                <View style={styles.hobbyInputRow}>
-                  <TextInput
-                    style={styles.hobbyInputField}
-                    value={hobbyInput}
-                    onChangeText={setHobbyInput}
-                    onSubmitEditing={handleAddHobby}
-                    placeholder="취미를 입력하세요"
-                    returnKeyType="done"
-                    placeholderTextColor={BLUE_MID}
-                  />
-                  <TouchableOpacity style={styles.hobbyAddButton} onPress={handleAddHobby} activeOpacity={0.8}>
-                    <Text style={styles.hobbyAddButtonText}>추가</Text>
-                  </TouchableOpacity>
                 </View>
               )}
               <View style={{ height: sc(32) }} />
@@ -1201,18 +1181,6 @@ const styles = StyleSheet.create({
   },
   menuText: { flex: 1, fontSize: sc(15), color: T1, fontWeight: '600' },
 
-  logoutButton: {
-    marginHorizontal: sc(16), marginTop: sc(4),
-    padding: sc(15), borderRadius: sc(14),
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#EF4444',
-    shadowColor: '#000', shadowOffset: { width: 0, height: sc(2) },
-    shadowOpacity: 0.08, shadowRadius: sc(8), elevation: 3,
-  },
-  logoutText: { fontSize: sc(15), fontWeight: '700', color: '#EF4444' },
-
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
@@ -1271,42 +1239,53 @@ const styles = StyleSheet.create({
   profileModalFull: {
     flex: 1, backgroundColor: '#fff',
   },
+  profileModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: sc(16),
+    paddingTop: Platform.OS === 'ios' ? sc(56) : sc(20),
+    paddingBottom: sc(12),
+    backgroundColor: 'transparent',
+    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100,
+  },
+  profileModalTitle: {
+    fontSize: sc(22), fontWeight: '800', color: T1,
+    textAlign: 'center',
+  },
   profileCloseBtn: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? sc(56) : sc(24),
-    left: sc(16),
-    zIndex: 100,
     width: sc(40), height: sc(40), borderRadius: sc(20),
     backgroundColor: '#fff',
     justifyContent: 'center', alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15, shadowRadius: sc(8), elevation: 5,
+    shadowOpacity: 0.12, shadowRadius: sc(6), elevation: 4,
   },
   profileSaveFloatBtn: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? sc(56) : sc(24),
-    right: sc(16),
-    zIndex: 100,
-    paddingHorizontal: sc(18), paddingVertical: sc(10),
-    borderRadius: sc(20),
+    paddingHorizontal: sc(16), paddingVertical: sc(10), borderRadius: sc(20),
     backgroundColor: '#fff',
     justifyContent: 'center', alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15, shadowRadius: sc(8), elevation: 5,
+    shadowOpacity: 0.12, shadowRadius: sc(6), elevation: 4,
   },
-  profileModalSaveBtn: { fontSize: sc(16), fontWeight: '800', color: BLUE },
+  profileModalSaveBtn: { fontSize: sc(18), fontWeight: '800', color: BLUE },
 
   profileScroll:        { flex: 1 },
-  profileScrollContent: { paddingHorizontal: sc(16), paddingTop: sc(100), paddingBottom: sc(16) },
+  profileScrollContent: { paddingHorizontal: sc(28), paddingTop: Platform.OS === 'ios' ? sc(100) : sc(60), paddingBottom: sc(16) },
+
+  photoRowWrap: { flexDirection: 'row', alignItems: 'center', gap: sc(16), marginBottom: sc(4) },
+  photoInfoCol: { flex: 1, justifyContent: 'center', gap: sc(10) },
+  photoInfoLine: { borderBottomWidth: 1, borderBottomColor: '#D4E4FF', paddingBottom: sc(6) },
+  photoInfoName: { fontSize: sc(26), fontWeight: '800', color: T1 },
+  photoInfoMajor: { fontSize: sc(14), fontWeight: '500', color: '#6B7FA3' },
 
   editSection: {
     backgroundColor: '#fff', borderRadius: sc(20), padding: sc(16),
     shadowColor: '#000', shadowOffset: { width: 0, height: sc(4) },
     shadowOpacity: 0.12, shadowRadius: sc(12), elevation: 6,
   },
-  editSectionTitle:   { fontSize: sc(18), fontWeight: '800', color: T1 },
+  editSectionTitle:   { fontSize: sc(17), fontWeight: '700', color: T1, marginBottom: sc(8), marginTop: sc(8) },
   editDivider:        { height: 1, backgroundColor: '#D4E4FF', marginTop: sc(10), marginBottom: sc(12) },
-  editSectionDivider: { height: 1, backgroundColor: '#D4E4FF', marginVertical: sc(20) },
+  editSectionDivider: { height: sc(1), backgroundColor: '#E8F0FB', marginVertical: sc(14) },
   editSectionSub:     { fontSize: sc(13), color: BLUE_MID, marginBottom: sc(12) },
   editOptional:       { fontSize: sc(13), fontWeight: '500', color: BLUE_MID },
   editRowBetween:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -1315,24 +1294,23 @@ const styles = StyleSheet.create({
   editFieldLabel: { fontSize: sc(13), fontWeight: '700', color: T1, marginBottom: sc(8) },
   editInput: {
     fontSize: sc(15), color: T1,
-    paddingVertical: sc(12), paddingHorizontal: sc(14),
-    borderWidth: 1, borderColor: '#D4E4FF', borderRadius: sc(12), backgroundColor: '#F0F4FA',
+    paddingVertical: sc(14), paddingHorizontal: sc(16),
+    borderWidth: sc(1), borderColor: '#D4E4FF', borderRadius: sc(12), backgroundColor: '#FFFFFF',
   },
   editTextarea: {
     fontSize: sc(15), color: T1,
-    marginTop: sc(10),
-    paddingVertical: sc(14), paddingHorizontal: sc(14),
-    borderWidth: 1, borderColor: '#D4E4FF', borderRadius: sc(12), backgroundColor: '#F0F4FA',
-    height: sc(56), lineHeight: sc(22), textAlignVertical: 'top',
+    paddingVertical: sc(14), paddingHorizontal: sc(16),
+    borderWidth: sc(1), borderColor: '#D4E4FF', borderRadius: sc(12), backgroundColor: '#FFFFFF',
+    height: sc(44), textAlignVertical: 'center',
   },
 
   chipRow:             { flexDirection: 'row', flexWrap: 'wrap', gap: sc(8) },
   optionChip: {
     paddingHorizontal: sc(18), paddingVertical: sc(10),
-    borderRadius: sc(20), borderWidth: 1.5, borderColor: '#D4E4FF', backgroundColor: '#F0F4FA',
+    borderRadius: sc(8), borderWidth: 1, borderColor: '#D4E4FF', backgroundColor: '#FFFFFF',
   },
-  optionChipActive:     { borderColor: BLUE, backgroundColor: BLUE_L },
-  optionChipText:       { fontSize: sc(13), fontWeight: '600', color: BLUE_MID },
+  optionChipActive:     { borderColor: BLUE, borderWidth: sc(1.5) },
+  optionChipText:       { fontSize: sc(13), fontWeight: '600', color: '#6B7FA3' },
   optionChipTextActive: { color: BLUE, fontWeight: '700' },
 
   profileFooter: {
@@ -1363,7 +1341,16 @@ const styles = StyleSheet.create({
     fontSize: sc(14), color: T1,
   },
 
-  genderRow: { flexDirection: 'row', gap: sc(10) },
+  genderRow: { flexDirection: 'row', gap: sc(12) },
+  genderBtn: {
+    flex: 1, paddingVertical: sc(14),
+    alignItems: 'center',
+    borderWidth: sc(1), borderColor: '#D4E4FF', borderRadius: sc(12),
+    backgroundColor: '#FFFFFF',
+  },
+  genderBtnActive: { borderColor: BLUE, borderWidth: sc(2) },
+  genderBtnText: { fontSize: sc(15), fontWeight: '600', color: '#6B7FA3' },
+  genderBtnTextActive: { color: BLUE, fontWeight: '700' },
   genderButton: {
     flex: 1, paddingVertical: sc(12), borderRadius: sc(12),
     alignItems: 'center', backgroundColor: BLUE_BG,
@@ -1377,9 +1364,9 @@ const styles = StyleSheet.create({
   hobbyCount: { fontSize: sc(12), color: BLUE_MID, fontWeight: '500' },
   hobbyTagList: { flexDirection: 'row', flexWrap: 'wrap', gap: sc(6), marginBottom: sc(10) },
   hobbyTagEdit: {
-    flexDirection: 'row', alignItems: 'center', gap: sc(4),
-    backgroundColor: BLUE_L, borderRadius: sc(20),
-    paddingHorizontal: sc(10), paddingVertical: sc(5),
+    flexDirection: 'row', alignItems: 'center', gap: sc(6),
+    backgroundColor: BLUE_L, borderRadius: sc(10),
+    paddingHorizontal: sc(14), paddingVertical: sc(10),
     borderWidth: 1, borderColor: BORDER,
   },
   hobbyTagEditText: { fontSize: sc(12), color: BLUE, fontWeight: '700' },
@@ -1394,16 +1381,18 @@ const styles = StyleSheet.create({
 
   hobbyInputRow: { flexDirection: 'row', gap: sc(8) },
   hobbyInputField: {
-    flex: 1, backgroundColor: BLUE_BG, borderRadius: sc(12),
-    borderWidth: 1, borderColor: BORDER,
-    paddingHorizontal: sc(14), paddingVertical: sc(12),
-    fontSize: sc(14), color: T1,
+    flex: 1, backgroundColor: '#FFFFFF', borderRadius: sc(12),
+    borderWidth: sc(1), borderColor: '#D4E4FF',
+    paddingHorizontal: sc(16), paddingVertical: sc(14),
+    fontSize: sc(15), color: T1,
   },
   hobbyAddButton: {
-    paddingHorizontal: sc(16), paddingVertical: sc(12), borderRadius: sc(12),
-    backgroundColor: BLUE, justifyContent: 'center',
+    width: sc(52), height: sc(52), borderRadius: sc(26),
+    backgroundColor: '#FFFFFF',
+    borderWidth: sc(1), borderColor: '#D4E4FF',
+    justifyContent: 'center', alignItems: 'center',
   },
-  hobbyAddButtonText: { fontSize: sc(14), color: '#FFFFFF', fontWeight: '700' },
+  hobbyAddButtonText: { fontSize: sc(20), color: BLUE, fontWeight: '700' },
 
   studentIdApproved: {
     flexDirection: 'row', alignItems: 'center', gap: sc(8),

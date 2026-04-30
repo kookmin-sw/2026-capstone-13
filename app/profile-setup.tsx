@@ -218,14 +218,15 @@ export default function ProfileSetupScreen() {
         {/* 한줄 소개 */}
         <Text style={styles.sectionTitle}>한줄 소개</Text>
         <TextInput
-          style={[styles.textarea, profileInput.bio && { borderColor: BLUE }]}
+          style={[styles.textarea, profileInput.bio && { borderColor: BLUE, borderWidth: sc(2) }]}
           value={profileInput.bio}
           onChangeText={(text) => setProfileInput((prev) => ({ ...prev, bio: text }))}
           placeholder={'간단히 나를 소개해보세요.\n소개말이 있으면 호감도가 올라가요.'}
           placeholderTextColor="#9AAABF"
           multiline
+          scrollEnabled={false}
           maxLength={100}
-          textAlignVertical="top"
+          textAlignVertical="center"
         />
 
         <View style={styles.divider} />
@@ -257,20 +258,15 @@ export default function ProfileSetupScreen() {
           <Text style={{ fontSize: sc(13), fontWeight: '500', color: BLUE_MID }}>({profileInput.hobbies.length}/5)</Text>
         </View>
         {profileInput.hobbies.length < 5 && (
-          <View style={styles.hobbyInputRow}>
-            <TextInput
-              style={[styles.hobbyInputField, profileInput.hobbies.length > 0 && { borderColor: BLUE }]}
-              value={hobbyInput}
-              onChangeText={setHobbyInput}
-              onSubmitEditing={handleAddHobby}
-              placeholder="나를 표현할 수 있는 단어를 입력해주세요!"
-              returnKeyType="done"
-              placeholderTextColor="#9AAABF"
-            />
-            <TouchableOpacity style={[styles.hobbyAddButton, profileInput.hobbies.length > 0 && { borderColor: BLUE }]} onPress={handleAddHobby} activeOpacity={0.8}>
-              <Text style={[styles.hobbyAddButtonText, profileInput.hobbies.length > 0 && { color: BLUE }]}>+</Text>
-            </TouchableOpacity>
-          </View>
+          <TextInput
+            style={[styles.hobbyInputField, profileInput.hobbies.length > 0 && { borderColor: BLUE, borderWidth: sc(2) }]}
+            value={hobbyInput}
+            onChangeText={setHobbyInput}
+            onSubmitEditing={handleAddHobby}
+            placeholder="나를 표현할 수 있는 단어를 입력해주세요!"
+            returnKeyType="done"
+            placeholderTextColor="#9AAABF"
+          />
         )}
         {profileInput.hobbies.length > 0 && (
           <View style={[styles.hobbyTagList, { marginTop: sc(10) }]}>
@@ -443,7 +439,7 @@ const styles = StyleSheet.create({
     fontSize: sc(15), color: T1,
     paddingVertical: sc(14), paddingHorizontal: sc(16),
     borderWidth: sc(1), borderColor: '#D4E4FF', borderRadius: sc(12), backgroundColor: '#FFFFFF',
-    height: sc(44), lineHeight: sc(22), textAlignVertical: 'top',
+    height: sc(44), textAlignVertical: 'center',
   },
   editInput: {
     flex: 1,
@@ -470,7 +466,7 @@ const styles = StyleSheet.create({
     borderWidth: sc(1), borderColor: '#D4E4FF', borderRadius: sc(12),
     backgroundColor: '#FFFFFF',
   },
-  genderBtnActive: { borderColor: BLUE },
+  genderBtnActive: { borderColor: BLUE, borderWidth: sc(2) },
   genderBtnText: { fontSize: sc(15), fontWeight: '600', color: '#6B7FA3' },
   genderBtnTextActive: { color: BLUE, fontWeight: '700' },
   fixedField: {

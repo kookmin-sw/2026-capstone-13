@@ -25,14 +25,14 @@ const BLUE = '#3B6FE8';
 const BLUE_L = '#EEF4FF';
 
 const LANGUAGES = [
-  { code: 'en', flag: '🇺🇸', native: 'English', image: require('../../logo/usa.webp') },
-  { code: 'ko', flag: '🇰🇷', native: '한국어', image: require('../../logo/korea.png') },
-  { code: 'zh', flag: '🇨🇳', native: '中文 (简体)', image: require('../../logo/china.avif') },
-  { code: 'ja', flag: '🇯🇵', native: '日本語', image: require('../../logo/japan.png') },
-  { code: 'vi', flag: '🇻🇳', native: 'Tiếng Việt', image: require('../../logo/vietnam.jpg') },
-  { code: 'mn', flag: '🇲🇳', native: 'Монгол хэл', image: require('../../logo/mongolia.jpg') },
-  { code: 'uz', flag: '🇺🇿', native: 'Oʻzbek tili', image: require('../../logo/uzbekistan.jpg') },
-  { code: 'th', flag: '🇹🇭', native: 'ภาษาไทย', image: require('../../logo/thailand.png') },
+  { code: 'en', flag: '🇺🇸', native: 'English', selectLabel: 'Select Language', image: require('../../logo/usa.webp') },
+  { code: 'ko', flag: '🇰🇷', native: '한국어', selectLabel: '언어 선택', image: require('../../logo/korea.png') },
+  { code: 'zh', flag: '🇨🇳', native: '中文 (简体)', selectLabel: '选择语言', image: require('../../logo/china.avif') },
+  { code: 'ja', flag: '🇯🇵', native: '日本語', selectLabel: '言語選択', image: require('../../logo/japan.png') },
+  { code: 'vi', flag: '🇻🇳', native: 'Tiếng Việt', selectLabel: 'Chọn ngôn ngữ', image: require('../../logo/vietnam.jpg') },
+  { code: 'mn', flag: '🇲🇳', native: 'Монгол хэл', selectLabel: 'Хэл сонгох', image: require('../../logo/mongolia.jpg') },
+  { code: 'uz', flag: '🇺🇿', native: 'Oʻzbek tili', selectLabel: 'Tilni tanlang', image: require('../../logo/uzbekistan.jpg') },
+  { code: 'th', flag: '🇹🇭', native: 'ภาษาไทย', selectLabel: 'เลือกภาษา', image: require('../../logo/thailand.png') },
 ];
 
 export default function LoginScreen() {
@@ -112,15 +112,17 @@ export default function LoginScreen() {
           easing: Easing.out(Easing.back(1.4)),
           useNativeDriver: true,
         }),
+      ]),
+      Animated.delay(500),
+      Animated.parallel([
         Animated.timing(topBarOpacity, {
           toValue: 1,
-          duration: 400,
+          duration: 420,
           easing: ease,
           useNativeDriver: true,
         }),
+        Animated.stagger(0, staggerAnims),
       ]),
-      Animated.delay(500),
-      Animated.stagger(0, staggerAnims),
     ]).start();
   }, []);
 
@@ -320,7 +322,7 @@ export default function LoginScreen() {
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalSheet}>
-                <Text style={styles.modalTitle}>언어 선택 / Select Language</Text>
+                <Text style={styles.modalTitle}>{currentLang.selectLabel}</Text>
                 {LANGUAGES.map((item) => {
                   const isSelected = selectedLang === item.code;
                   return (
@@ -370,9 +372,9 @@ const styles = StyleSheet.create({
     paddingTop: s(12),
   },
   langButton: {
-    width: s(44),
-    height: s(44),
-    borderRadius: s(22),
+    width: s(34),
+    height: s(34),
+    borderRadius: s(17),
     backgroundColor: 'transparent',
     borderWidth: 1.5,
     borderColor: '#D0D0D0',
@@ -381,13 +383,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   langButtonImage: {
-    width: s(44),
-    height: s(44),
-    borderRadius: s(22),
+    width: s(56),
+    height: s(56),
+    borderRadius: s(28),
   },
   langButtonFlag: {
-    fontSize: s(38),
-    lineHeight: s(44),
+    fontSize: s(26),
+    lineHeight: s(32),
     textAlign: 'center',
   },
   content: {
@@ -395,6 +397,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: s(32),
     paddingBottom: s(40),
+    marginTop: s(40),
   },
   logoContainer: {
     alignItems: 'center',

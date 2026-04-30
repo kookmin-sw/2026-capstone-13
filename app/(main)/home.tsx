@@ -481,7 +481,7 @@ const goTo = (item: HelpRequest) =>
                 <Text style={[s.viewTabText, viewMode === 'list' && s.viewTabTextOn]}>도움 목록 보기</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ display: viewMode === 'card' ? 'flex' : 'none', marginLeft: 6, marginBottom: 24 }}>
+            <View style={{ display: viewMode === 'card' ? 'flex' : 'none', marginLeft: 6, marginBottom: 24, marginTop: -10 }}>
               <KoreanAccountCardStack
                 requests={requests.filter(r => r.status === 'WAITING')}
                 onAccept={(card) => goTo(card)}
