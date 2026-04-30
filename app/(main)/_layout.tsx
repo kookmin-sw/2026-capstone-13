@@ -211,6 +211,7 @@ export default function MainLayout() {
                       partnerProfileImage: roomInfo.partnerProfileImage,
                       requestStatus: 'DIRECT',
                       requesterId: '',
+                      isDirect: true,
                     } : undefined,
                   });
                 }

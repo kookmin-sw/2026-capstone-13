@@ -117,6 +117,7 @@ export default function ChatRoomScreen() {
   const clientRef = useRef<Client | null>(null);
   const listRef = useRef<FlatList>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const lastReadAtRef = useRef<number>(0);
 
   // 이전 메시지 조회
   const loadHistory = useCallback(async () => {
@@ -207,6 +208,7 @@ export default function ChatRoomScreen() {
 
               // READ 이벤트: 내가 보낸 메시지 읽음 처리
               if (msg.type === 'READ') {
+                lastReadAtRef.current = Date.now();
                 setMessages((prev) =>
                   prev.map((m) => m.senderId === user?.id ? { ...m, isRead: true } : m)
                 );
@@ -264,7 +266,10 @@ export default function ChatRoomScreen() {
                          m.createdAt === msg.createdAt
                 );
                 if (isDuplicate) return prev;
-                return [...prev, msg];
+                // 내가 보낸 메시지이고 READ 이벤트가 최근 10초 내에 왔으면 읽음 처리
+                const isMyMsg = msg.senderId === user?.id;
+                const readRecently = isMyMsg && Date.now() - lastReadAtRef.current < 10000;
+                return [...prev, readRecently ? { ...msg, isRead: true } : msg];
               });
               setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 100);
             } catch {
