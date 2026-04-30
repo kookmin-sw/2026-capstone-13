@@ -165,7 +165,12 @@ public class DirectChatService {
                 try {
                     String preview = dto.getContent() != null && dto.getContent().length() > 50
                             ? dto.getContent().substring(0, 50) + "…" : dto.getContent();
-                    fcmService.sendPush(receiver.getFcmToken(), sender.getNickname(), preview);
+                    fcmService.sendPushWithData(receiver.getFcmToken(), sender.getNickname(), preview,
+                            Map.of(
+                                "type", "DM_CHAT",
+                                "roomId", String.valueOf(room.getId()),
+                                "senderId", String.valueOf(sender.getId())
+                            ));
                 } catch (Exception e) {
                     log.warn("[FCM] DM 푸시 전송 실패: {}", e.getMessage());
                 }
