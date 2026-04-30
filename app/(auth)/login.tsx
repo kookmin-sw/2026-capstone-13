@@ -167,46 +167,46 @@ export default function LoginScreen() {
                   <Text style={styles.registerHighlight}>가입하기</Text>
                 </TouchableOpacity>
               </View>
-            </Animated.View>
-          </View>
 
-          {/* 개발용 테스트 계정 */}
-          <View style={styles.testContainer}>
-            <Text style={styles.testLabel}>개발용 테스트</Text>
-            <View style={styles.testButtons}>
-              <TouchableOpacity
-                style={[styles.testButton, styles.testButtonInternational]}
-                onPress={async () => {
-                  const success = await login({
-                    email: 'sang020531@naver.com',
-                    password: 'sang3036828@',
-                  });
-                  if (success) {
-                    router.replace('/(main)/home');
-                  } else {
-                    Alert.alert('실패', '외국인 테스트 계정 로그인 실패');
-                  }
-                }}
-              >
-                <Text style={styles.testButtonText}>🌍 외국인 계정</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.testButton, styles.testButtonKorean]}
-                onPress={async () => {
-                  const success = await login({
-                    email: 'sang020531@kookmin.ac.kr',
-                    password: 'sang3036828@',
-                  });
-                  if (success) {
-                    router.replace('/(main)/home');
-                  } else {
-                    Alert.alert('실패', '한국인 테스트 계정 로그인 실패');
-                  }
-                }}
-              >
-                <Text style={styles.testButtonText}>🇰🇷 한국인 계정</Text>
-              </TouchableOpacity>
-            </View>
+              {/* 개발용 테스트 계정 */}
+              <View style={styles.testContainer}>
+                <Text style={styles.testLabel}>개발용 테스트</Text>
+                <View style={styles.testButtons}>
+                  <TouchableOpacity
+                    style={[styles.testButton, styles.testButtonInternational]}
+                    onPress={async () => {
+                      const success = await login({
+                        email: 'sang020531@naver.com',
+                        password: 'sang3036828@',
+                      });
+                      if (success) {
+                        router.replace('/(main)/home');
+                      } else {
+                        Alert.alert('실패', '외국인 테스트 계정 로그인 실패');
+                      }
+                    }}
+                  >
+                    <Text style={styles.testButtonText}>🌍 외국인 계정</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.testButton, styles.testButtonKorean]}
+                    onPress={async () => {
+                      const success = await login({
+                        email: 'sang020531@kookmin.ac.kr',
+                        password: 'sang3036828@',
+                      });
+                      if (success) {
+                        router.replace('/(main)/home');
+                      } else {
+                        Alert.alert('실패', '한국인 테스트 계정 로그인 실패');
+                      }
+                    }}
+                  >
+                    <Text style={styles.testButtonText}>🇰🇷 한국인 계정</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Animated.View>
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: s(32),
-    paddingBottom: s(120),
+    paddingBottom: s(40),
   },
   logoContainer: {
     alignItems: 'center',
@@ -364,12 +364,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   testContainer: {
-    position: 'absolute',
-    bottom: s(32),
-    left: 0,
-    right: 0,
     alignItems: 'center',
-    gap: s(10),
+    gap: s(8),
+    marginTop: s(16),
   },
   testLabel: {
     fontSize: s(11),
