@@ -69,6 +69,7 @@ export default function InAppBanner() {
           partnerProfileImage: current.roomParams?.partnerProfileImage ?? '',
           requestStatus: current.roomParams?.requestStatus ?? '',
           requesterId: current.roomParams?.requesterId ?? '',
+          isDirect: current.roomParams?.isDirect ? 'true' : 'false',
         },
       });
     } else if (current.type === 'notification') {
