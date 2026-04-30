@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +21,7 @@ import { s } from '../utils/scale';
 const BLUE = '#3B6FE8';
 const T1 = '#0C1C3C';
 const T2 = '#6B7280';
-const BG = '#F8FAFF';
+const BG = '#FFFFFF';
 const SURFACE = '#FFFFFF';
 const BORDER = '#D0E0F8';
 const DANGER = '#EF4444';
@@ -166,9 +167,9 @@ export default function ChangePasswordScreen() {
   };
 
   const stepSubtitles: Record<Step, string> = {
-    email: '가입하신 학교 이메일로\n인증코드를 전송합니다.',
-    code: `${email}로 전송된\n6자리 코드를 입력해주세요.`,
-    password: '새로 사용할 비밀번호를\n입력해주세요.',
+    email: '비밀번호 재설정을 위해 가입한 이메일 주소를 입력해주세요.',
+    code: `이메일로 전송된 인증코드를 입력해주세요.`,
+    password: '새로 사용할 비밀번호를 입력해주세요.',
   };
 
   return (
@@ -179,14 +180,13 @@ export default function ChangePasswordScreen() {
       <View style={styles.container}>
         {/* 헤더 */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={24} color={T1} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{stepTitles[step]}</Text>
-          <View style={{ width: 40 }} />
-        </View>
-
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+              <Ionicons name="chevron-back" size={24} color={T1} />
+            </TouchableOpacity>
+            <Image source={require('../logo/logo2.png')} style={styles.logo} resizeMode="contain" />
+            <View style={{ width: 40 }} />
+          </View>
           {/* 스텝 인디케이터 */}
           <View style={styles.stepRow}>
             {(['email', 'code', 'password'] as Step[]).map((s, i) => (
@@ -194,27 +194,24 @@ export default function ChangePasswordScreen() {
                 <View style={[styles.stepDot, step === s && styles.stepDotActive,
                   (step === 'code' && s === 'email') || (step === 'password' && s !== 'password') ? styles.stepDotDone : null
                 ]}>
-                  {((step === 'code' && s === 'email') || (step === 'password' && s !== 'password')) ? (
-                    <Ionicons name="checkmark" size={12} color="#fff" />
-                  ) : (
-                    <Text style={styles.stepDotText}>{i + 1}</Text>
-                  )}
+                  <Text style={styles.stepDotText}>{i + 1}</Text>
                 </View>
                 {i < 2 && <View style={[styles.stepLine, (step === 'code' && s === 'email') || (step === 'password') ? styles.stepLineDone : null]} />}
               </View>
             ))}
           </View>
+          <Text style={[styles.forgotText, step !== 'email' && { opacity: 0 }]}>비밀번호를 잊으셨나요?</Text>
+          <Text style={styles.subtitle} numberOfLines={1} adjustsFontSizeToFit>{stepSubtitles[step]}</Text>
+        </View>
 
-          {/* 부제목 */}
-          <Text style={styles.subtitle}>{stepSubtitles[step]}</Text>
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
 
           {/* Step 1: 이메일 */}
           {step === 'email' && (
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>학교 이메일</Text>
               <TextInput
                 style={styles.input}
-                placeholder="학교 이메일을 입력하세요"
+                placeholder="이메일 주소"
                 placeholderTextColor={T2}
                 value={email}
                 onChangeText={setEmail}
@@ -223,9 +220,9 @@ export default function ChangePasswordScreen() {
                 autoCorrect={false}
               />
               <TouchableOpacity
-                style={[styles.primaryBtn, loading && styles.btnDisabled]}
+                style={[styles.primaryBtn, !(/^[^\s@]+@kookmin\.ac\.kr$/.test(email)) && styles.btnGray, loading && styles.btnDisabled]}
                 onPress={handleSendCode}
-                disabled={loading}
+                disabled={loading || !(/^[^\s@]+@kookmin\.ac\.kr$/.test(email))}
                 activeOpacity={0.8}
               >
                 {loading ? (
@@ -241,7 +238,6 @@ export default function ChangePasswordScreen() {
           {step === 'code' && (
             <View style={styles.fieldGroup}>
               <View style={styles.codeHeader}>
-                <Text style={styles.label}>인증코드</Text>
                 <Text style={[styles.timer, timeLeft < 60 && styles.timerWarning]}>
                   {formatTime(timeLeft)}
                 </Text>
@@ -259,9 +255,9 @@ export default function ChangePasswordScreen() {
                 <Text style={styles.expiredText}>인증 시간이 만료됐습니다.</Text>
               )}
               <TouchableOpacity
-                style={[styles.primaryBtn, (loading || timeLeft === 0) && timeLeft !== 0 ? styles.btnDisabled : null, timeLeft === 0 && styles.btnDisabled]}
+                style={[styles.primaryBtn, (code.trim().length < 6) && styles.btnGray, (loading || timeLeft === 0) && styles.btnDisabled]}
                 onPress={handleVerifyCode}
-                disabled={loading || timeLeft === 0}
+                disabled={loading || timeLeft === 0 || code.trim().length < 6}
                 activeOpacity={0.8}
               >
                 {loading ? (
@@ -284,7 +280,6 @@ export default function ChangePasswordScreen() {
           {/* Step 3: 새 비밀번호 */}
           {step === 'password' && (
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>새 비밀번호</Text>
               <TextInput
                 style={styles.input}
                 placeholder="새 비밀번호 (6자 이상)"
@@ -293,10 +288,10 @@ export default function ChangePasswordScreen() {
                 onChangeText={setNewPassword}
                 secureTextEntry
               />
-              <Text style={[styles.label, { marginTop: s(12) }]}>새 비밀번호 확인</Text>
               <TextInput
                 style={[
                   styles.input,
+                  { marginTop: s(6) },
                   confirmPassword.length > 0 && newPassword !== confirmPassword && styles.inputError,
                 ]}
                 placeholder="비밀번호를 다시 입력하세요"
@@ -309,9 +304,9 @@ export default function ChangePasswordScreen() {
                 <Text style={styles.errorText}>비밀번호가 일치하지 않습니다.</Text>
               )}
               <TouchableOpacity
-                style={[styles.primaryBtn, { marginTop: s(20) }, loading && styles.btnDisabled]}
+                style={[styles.primaryBtn, { marginTop: s(20) }, (newPassword.length < 6 || confirmPassword !== newPassword) && styles.btnGray, loading && styles.btnDisabled]}
                 onPress={handleChangePassword}
-                disabled={loading}
+                disabled={loading || newPassword.length < 6 || confirmPassword !== newPassword}
                 activeOpacity={0.8}
               >
                 {loading ? (
@@ -332,41 +327,58 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1, backgroundColor: BG },
   header: {
+    flexDirection: 'column',
+    paddingHorizontal: s(16),
+    paddingTop: Platform.OS === 'ios' ? s(64) : s(28),
+    paddingBottom: s(32),
+    backgroundColor: SURFACE,
+    borderBottomWidth: 0,
+  },
+  headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: s(16),
-    paddingTop: Platform.OS === 'ios' ? s(56) : s(20),
-    paddingBottom: s(12),
-    backgroundColor: SURFACE,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    marginBottom: s(32),
   },
-  backBtn: { width: s(40), height: s(40), justifyContent: 'center' },
+  backBtn: {
+    width: s(40), height: s(40),
+    justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: s(20),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   headerTitle: { fontSize: s(17), fontWeight: '700', color: T1 },
+  logo: { width: s(120), height: s(40), alignSelf: 'center', marginTop: s(12) },
+  forgotText: { fontSize: s(20), fontWeight: '700', color: T1, textAlign: 'center', marginTop: s(44) },
 
-  body: { padding: s(24), gap: s(8) },
+  body: { padding: s(24), paddingTop: s(8), gap: s(8) },
 
   // 스텝 인디케이터
-  stepRow: { flexDirection: 'row', alignItems: 'center', marginBottom: s(24) },
-  stepItem: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: s(24) },
+  stepItem: { flexDirection: 'row', alignItems: 'center' },
   stepDot: {
-    width: s(28), height: s(28), borderRadius: s(14),
+    width: s(40), height: s(40), borderRadius: s(20),
     backgroundColor: SURFACE,
     borderWidth: 2, borderColor: BORDER,
     justifyContent: 'center', alignItems: 'center',
   },
   stepDotActive: { borderColor: BLUE },
-  stepDotDone: { backgroundColor: '#22C55E', borderColor: '#22C55E' },
-  stepDotText: { fontSize: s(12), fontWeight: '700', color: T1 },
-  stepLine: { flex: 1, height: 2, backgroundColor: BORDER, marginHorizontal: s(4) },
-  stepLineDone: { backgroundColor: '#22C55E' },
+  stepDotDone: { borderColor: BLUE },
+  stepDotText: { fontSize: s(16), fontWeight: '700', color: T1 },
+  stepLine: { width: s(80), height: 2, backgroundColor: BORDER, marginHorizontal: 0 },
+  stepLineDone: { backgroundColor: '#3B6FE8' },
 
   subtitle: {
-    fontSize: s(14),
-    color: T2,
-    lineHeight: s(22),
-    marginBottom: s(20),
+    fontSize: s(20),
+    color: T1,
+    fontWeight: '700',
+    marginTop: s(8),
+    marginBottom: s(0),
+    textAlign: 'center',
   },
 
   // 폼
@@ -385,7 +397,7 @@ const styles = StyleSheet.create({
   inputError: { borderColor: DANGER },
 
   // 인증코드 헤더
-  codeHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  codeHeader: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
   timer: { fontSize: s(15), fontWeight: '700', color: BLUE },
   timerWarning: { color: DANGER },
   expiredText: { fontSize: s(12), color: DANGER, marginTop: s(2) },
@@ -395,12 +407,13 @@ const styles = StyleSheet.create({
   primaryBtn: {
     backgroundColor: BLUE,
     borderRadius: s(12),
-    paddingVertical: s(15),
+    paddingVertical: s(18),
     alignItems: 'center',
     marginTop: s(8),
   },
   btnDisabled: { opacity: 0.5 },
-  primaryBtnText: { color: '#fff', fontSize: s(16), fontWeight: '700' },
+  btnGray: { backgroundColor: '#D1D5DB' },
+  primaryBtnText: { color: '#fff', fontSize: s(18), fontWeight: '700' },
   resendBtn: { alignItems: 'center', paddingVertical: s(12) },
-  resendBtnText: { fontSize: s(13), color: BLUE, fontWeight: '600' },
+  resendBtnText: { fontSize: s(15), color: BLUE, fontWeight: '600' },
 });
