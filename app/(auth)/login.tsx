@@ -15,6 +15,7 @@ import {
   Modal,
   SafeAreaView,
   Animated,
+  Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
@@ -24,14 +25,14 @@ const BLUE = '#3B6FE8';
 const BLUE_L = '#EEF4FF';
 
 const LANGUAGES = [
-  { code: 'en', flag: '🇺🇸', native: 'English' },
-  { code: 'ko', flag: '🇰🇷', native: '한국어' },
-  { code: 'zh', flag: '🇨🇳', native: '中文 (简体)' },
-  { code: 'ja', flag: '🇯🇵', native: '日本語' },
-  { code: 'vi', flag: '🇻🇳', native: 'Tiếng Việt' },
-  { code: 'mn', flag: '🇲🇳', native: 'Монгол хэл' },
-  { code: 'uz', flag: '🇺🇿', native: 'Oʻzbek tili' },
-  { code: 'th', flag: '🇹🇭', native: 'ภาษาไทย' },
+  { code: 'en', flag: '🇺🇸', native: 'English', image: require('../../logo/usa.webp') },
+  { code: 'ko', flag: '🇰🇷', native: '한국어', image: require('../../logo/korea.png') },
+  { code: 'zh', flag: '🇨🇳', native: '中文 (简体)', image: require('../../logo/china.avif') },
+  { code: 'ja', flag: '🇯🇵', native: '日本語', image: require('../../logo/japan.png') },
+  { code: 'vi', flag: '🇻🇳', native: 'Tiếng Việt', image: require('../../logo/vietnam.jpg') },
+  { code: 'mn', flag: '🇲🇳', native: 'Монгол хэл', image: require('../../logo/mongolia.jpg') },
+  { code: 'uz', flag: '🇺🇿', native: 'Oʻzbek tili', image: require('../../logo/uzbekistan.jpg') },
+  { code: 'th', flag: '🇹🇭', native: 'ภาษาไทย', image: require('../../logo/thailand.png') },
 ];
 
 export default function LoginScreen() {
@@ -44,12 +45,31 @@ export default function LoginScreen() {
   const [selectedLang, setSelectedLang] = useState('en');
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const formOpacity = useRef(new Animated.Value(0)).current;
-  const formTranslateY = useRef(new Animated.Value(s(16))).current;
+  const logoScale = useRef(new Animated.Value(0.88)).current;
   const topBarOpacity = useRef(new Animated.Value(0)).current;
 
+  const s0opacity = useRef(new Animated.Value(0)).current;
+  const s0ty = useRef(new Animated.Value(s(22))).current;
+  const s1opacity = useRef(new Animated.Value(0)).current;
+  const s1ty = useRef(new Animated.Value(s(22))).current;
+  const s2opacity = useRef(new Animated.Value(0)).current;
+  const s2ty = useRef(new Animated.Value(s(22))).current;
+  const s3opacity = useRef(new Animated.Value(0)).current;
+  const s3ty = useRef(new Animated.Value(s(22))).current;
+  const s4opacity = useRef(new Animated.Value(0)).current;
+  const s4ty = useRef(new Animated.Value(s(22))).current;
+
+  const stagger = [
+    { opacity: s0opacity, translateY: s0ty },
+    { opacity: s1opacity, translateY: s1ty },
+    { opacity: s2opacity, translateY: s2ty },
+    { opacity: s3opacity, translateY: s3ty },
+    { opacity: s4opacity, translateY: s4ty },
+  ];
+
+  const ease = Easing.out(Easing.cubic);
+
   useEffect(() => {
-    // 이미 로그인된 경우 바로 이동
     if (user) {
       if (!user.isProfileSetup) {
         router.replace('/profile-setup');
@@ -59,16 +79,48 @@ export default function LoginScreen() {
       return;
     }
 
-    Animated.sequence([
-      // 로고 페이드인
-      Animated.timing(logoOpacity, { toValue: 1, duration: 700, useNativeDriver: true }),
-      Animated.delay(400),
-      // 폼 + 상단 버튼 등장
+    const staggerAnims = stagger.map((item, i) =>
       Animated.parallel([
-        Animated.timing(formOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.timing(formTranslateY, { toValue: 0, duration: 400, useNativeDriver: true }),
-        Animated.timing(topBarOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(item.opacity, {
+          toValue: 1,
+          duration: 420,
+          delay: i * 70,
+          easing: ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(item.translateY, {
+          toValue: 0,
+          duration: 420,
+          delay: i * 70,
+          easing: ease,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(logoOpacity, {
+          toValue: 1,
+          duration: 550,
+          easing: ease,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoScale, {
+          toValue: 1,
+          duration: 550,
+          easing: Easing.out(Easing.back(1.4)),
+          useNativeDriver: true,
+        }),
+        Animated.timing(topBarOpacity, {
+          toValue: 1,
+          duration: 400,
+          easing: ease,
+          useNativeDriver: true,
+        }),
       ]),
+      Animated.delay(500),
+      Animated.stagger(0, staggerAnims),
     ]).start();
   }, []);
 
@@ -101,13 +153,22 @@ export default function LoginScreen() {
               onPress={() => setLangModalVisible(true)}
               activeOpacity={0.7}
             >
-              <Text style={styles.langButtonFlag}>{currentLang.flag}</Text>
+              {currentLang.image ? (
+                <Image source={currentLang.image} style={styles.langButtonImage} resizeMode="cover" />
+              ) : (
+                <Text style={styles.langButtonFlag}>{currentLang.flag}</Text>
+              )}
             </TouchableOpacity>
           </Animated.View>
 
           <View style={styles.content}>
             {/* 로고 */}
-            <Animated.View style={[styles.logoContainer, { opacity: logoOpacity }]}>
+            <Animated.View
+              style={[
+                styles.logoContainer,
+                { opacity: logoOpacity, transform: [{ scale: logoScale }] },
+              ]}
+            >
               <Image
                 source={require('../../logo/logo2.png')}
                 style={styles.logo}
@@ -115,9 +176,12 @@ export default function LoginScreen() {
               />
             </Animated.View>
 
-            {/* 폼 */}
+            {/* 폼 - 각 요소 stagger */}
             <Animated.View
-              style={{ opacity: formOpacity, transform: [{ translateY: formTranslateY }] }}
+              style={{
+                opacity: stagger[0].opacity,
+                transform: [{ translateY: stagger[0].translateY }],
+              }}
             >
               <View style={styles.form}>
                 <TextInput
@@ -137,20 +201,34 @@ export default function LoginScreen() {
                   onChangeText={setPassword}
                   secureTextEntry
                 />
-
-                <TouchableOpacity
-                  style={[styles.loginButton, isLoading && styles.disabledButton]}
-                  onPress={handleLogin}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color={Colors.textWhite} />
-                  ) : (
-                    <Text style={styles.loginButtonText}>로그인</Text>
-                  )}
-                </TouchableOpacity>
               </View>
+            </Animated.View>
 
+            <Animated.View
+              style={{
+                opacity: stagger[1].opacity,
+                transform: [{ translateY: stagger[1].translateY }],
+              }}
+            >
+              <TouchableOpacity
+                style={[styles.loginButton, isLoading && styles.disabledButton]}
+                onPress={handleLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color={Colors.textWhite} />
+                ) : (
+                  <Text style={styles.loginButtonText}>로그인</Text>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+
+            <Animated.View
+              style={{
+                opacity: stagger[2].opacity,
+                transform: [{ translateY: stagger[2].translateY }],
+              }}
+            >
               <View style={styles.dividerRow}>
                 <View style={styles.dividerLine} />
                 <Text style={styles.dividerText}>또는</Text>
@@ -160,14 +238,28 @@ export default function LoginScreen() {
               <TouchableOpacity style={styles.forgotPassword}>
                 <Text style={styles.forgotPasswordText}>비밀번호를 잊으셨나요?</Text>
               </TouchableOpacity>
+            </Animated.View>
 
+            <Animated.View
+              style={{
+                opacity: stagger[3].opacity,
+                transform: [{ translateY: stagger[3].translateY }],
+              }}
+            >
               <View style={styles.registerRow}>
                 <Text style={styles.registerText}>계정이 없으신가요? </Text>
                 <TouchableOpacity onPress={() => router.push('/(auth)/register-type')}>
                   <Text style={styles.registerHighlight}>가입하기</Text>
                 </TouchableOpacity>
               </View>
+            </Animated.View>
 
+            <Animated.View
+              style={{
+                opacity: stagger[4].opacity,
+                transform: [{ translateY: stagger[4].translateY }],
+              }}
+            >
               <View style={styles.testTopButtons}>
                 <TouchableOpacity
                   style={styles.testButtonNew}
@@ -211,8 +303,8 @@ export default function LoginScreen() {
                   <Text style={styles.testButtonText}>🇰🇷 한국인 계정</Text>
                 </TouchableOpacity>
               </View>
-
             </Animated.View>
+
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -241,7 +333,11 @@ export default function LoginScreen() {
                       }}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.modalFlag}>{item.flag}</Text>
+                      {item.image ? (
+                        <Image source={item.image} style={styles.modalFlagImage} resizeMode="cover" />
+                      ) : (
+                        <Text style={styles.modalFlag}>{item.flag}</Text>
+                      )}
                       <Text style={[styles.modalItemText, isSelected && styles.modalItemTextSelected]}>
                         {item.native}
                       </Text>
@@ -277,12 +373,22 @@ const styles = StyleSheet.create({
     width: s(44),
     height: s(44),
     borderRadius: s(22),
-    backgroundColor: '#F0F0F0',
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: '#D0D0D0',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  langButtonImage: {
+    width: s(44),
+    height: s(44),
+    borderRadius: s(22),
   },
   langButtonFlag: {
-    fontSize: s(32),
+    fontSize: s(38),
+    lineHeight: s(44),
+    textAlign: 'center',
   },
   content: {
     flex: 1,
@@ -316,7 +422,7 @@ const styles = StyleSheet.create({
     borderRadius: s(8),
     paddingVertical: s(14),
     alignItems: 'center',
-    marginTop: s(4),
+    marginTop: s(10),
     opacity: 0.85,
   },
   disabledButton: {
@@ -446,6 +552,11 @@ const styles = StyleSheet.create({
   modalItemSelected: {
     borderColor: BLUE,
     backgroundColor: BLUE_L,
+  },
+  modalFlagImage: {
+    width: s(28),
+    height: s(28),
+    borderRadius: s(14),
   },
   modalFlag: {
     fontSize: s(20),
