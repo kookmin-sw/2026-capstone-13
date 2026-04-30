@@ -56,6 +56,7 @@ export default function RootLayout() {
         <Stack.Screen name="search" />
         <Stack.Screen name="my-requests" />
         <Stack.Screen name="my-help-history" />
+        <Stack.Screen name="change-password" />
       </Stack>
       <StatusBar style="dark" />
     </GestureHandlerRootView>

@@ -74,8 +74,18 @@ export default function AccountSettingsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* 차단 관리 섹션 */}
+      {/* 계정 관리 섹션 */}
       <View style={styles.section}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push('/change-password')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="lock-closed-outline" size={20} color={T1} />
+          <Text style={[styles.menuItemText, { color: T1 }]}>비밀번호 변경</Text>
+          <Ionicons name="chevron-forward" size={18} color={T2} style={styles.menuChevron} />
+        </TouchableOpacity>
+        <View style={styles.menuDivider} />
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => router.push('/blocked-users')}
@@ -188,6 +198,11 @@ const styles = StyleSheet.create({
   },
   menuChevron: {
     marginLeft: 'auto',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: BORDER,
+    marginHorizontal: s(16),
   },
   withdrawBox: {
     borderTopWidth: s(1),

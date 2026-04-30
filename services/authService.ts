@@ -105,3 +105,17 @@ export const uploadProfileImage = async (imageUri: string): Promise<ApiResponse<
 export const updateFcmToken = async (fcmToken: string): Promise<void> => {
   await api.patch('/users/fcm-token', { fcmToken });
 };
+
+// 비밀번호 재설정
+export const resetPassword = async (
+  email: string,
+  code: string,
+  newPassword: string
+): Promise<ApiResponse<null>> => {
+  const response = await api.post<ApiResponse<null>>('/auth/reset-password', {
+    email,
+    code,
+    newPassword,
+  });
+  return response.data;
+};
