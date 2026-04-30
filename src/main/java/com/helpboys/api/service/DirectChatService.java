@@ -166,8 +166,9 @@ public class DirectChatService {
                     String preview = dto.getContent() != null && dto.getContent().length() > 50
                             ? dto.getContent().substring(0, 50) + "…" : dto.getContent();
                     fcmService.sendPushWithData(receiver.getFcmToken(), sender.getNickname(), preview,
+                            "chat",
                             Map.of(
-                                "type", "DM_CHAT",
+                                "type", "direct_chat",
                                 "roomId", String.valueOf(room.getId()),
                                 "senderId", String.valueOf(sender.getId())
                             ));
