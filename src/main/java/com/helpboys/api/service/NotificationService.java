@@ -96,10 +96,11 @@ public class NotificationService {
                     case STUDENT_ID_REJECTED -> "Student ID Rejected";
                 };
             java.util.Map<String, String> data = new java.util.HashMap<>();
-            data.put("type", type.name());
+            data.put("type", "notification");
+            data.put("notificationType", type.name());
             if (referenceId != null) data.put("referenceId", String.valueOf(referenceId));
             if (referenceType != null) data.put("referenceType", referenceType.name());
-            fcmService.sendPushWithData(recipient.getFcmToken(), title, message, data);
+            fcmService.sendPushWithData(recipient.getFcmToken(), title, message, "notifications", data);
         }
     }
 

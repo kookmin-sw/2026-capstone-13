@@ -175,8 +175,9 @@ public class ChatService {
                     ? content.substring(0, 50) + "…"
                     : content;
             fcmService.sendPushWithData(receiver.getFcmToken(), senderNickname, preview,
+                    "chat",
                     Map.of(
-                        "type", "HELP_CHAT",
+                        "type", "chat",
                         "roomId", String.valueOf(roomId),
                         "senderId", String.valueOf(senderId)
                     ));

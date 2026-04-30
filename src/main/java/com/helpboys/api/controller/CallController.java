@@ -83,8 +83,9 @@ public class
                             receiver.getFcmToken(),
                             callerName,
                             "전화가 왔습니다",
+                            "calls",
                             Map.of(
-                                "type", "CALL_INVITE",
+                                "type", "call",
                                 "fromUserId", String.valueOf(signal.getFromUserId()),
                                 "roomId", signal.getRoomId() != null ? String.valueOf(signal.getRoomId()) : ""
                             )
