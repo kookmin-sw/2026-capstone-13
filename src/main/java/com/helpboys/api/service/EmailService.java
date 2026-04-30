@@ -101,4 +101,20 @@ public class EmailService {
     public void deleteVerification(String email) {
         verificationRepository.deleteByEmail(email);
     }
+
+    // 비밀번호 재설정용: verify-code로 이미 인증된 코드 확인 후 무효화
+    @Transactional
+    public boolean verifyCodeForPasswordReset(String email, String code) {
+        Optional<EmailVerification> opt =
+                verificationRepository.findTopByEmailOrderByCreatedAtDesc(email);
+
+        if (opt.isEmpty()) return false;
+
+        EmailVerification v = opt.get();
+        if (!v.getCode().equals(code)) return false;
+        if (v.getCreatedAt().plusMinutes(10).isBefore(LocalDateTime.now())) return false;
+
+        verificationRepository.delete(v);
+        return true;
+    }
 }
