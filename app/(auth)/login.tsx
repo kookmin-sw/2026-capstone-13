@@ -167,54 +167,43 @@ export default function LoginScreen() {
                   <Text style={styles.registerHighlight}>가입하기</Text>
                 </TouchableOpacity>
               </View>
-            </Animated.View>
-          </View>
 
-          {/* 개발용 테스트 계정 */}
-          <View style={styles.testContainer}>
-            <Text style={styles.testLabel}>개발용 테스트</Text>
-            <View style={styles.testTopButtons}>
-              <TouchableOpacity
-                style={styles.testButtonNew}
-                onPress={() => router.push('/profile-setup')}
-              >
-                <Text style={styles.testButtonNewText}>👤 신규사용자</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.testButtons}>
-              <TouchableOpacity
-                style={[styles.testButton, styles.testButtonInternational]}
-                onPress={async () => {
-                  const success = await login({
-                    email: 'sang020531@naver.com',
-                    password: 'sang3036828@',
-                  });
-                  if (success) {
-                    router.replace('/(main)/home');
-                  } else {
-                    Alert.alert('실패', '외국인 테스트 계정 로그인 실패');
-                  }
-                }}
-              >
-                <Text style={styles.testButtonText}>🌍 외국인 계정</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.testButton, styles.testButtonKorean]}
-                onPress={async () => {
-                  const success = await login({
-                    email: 'sang020531@kookmin.ac.kr',
-                    password: 'sang3036828@',
-                  });
-                  if (success) {
-                    router.replace('/(main)/home');
-                  } else {
-                    Alert.alert('실패', '한국인 테스트 계정 로그인 실패');
-                  }
-                }}
-              >
-                <Text style={styles.testButtonText}>🇰🇷 한국인 계정</Text>
-              </TouchableOpacity>
-            </View>
+              <View style={styles.testButtons}>
+                <TouchableOpacity
+                  style={[styles.testButton, styles.testButtonInternational]}
+                  onPress={async () => {
+                    const success = await login({
+                      email: 'sang020531@naver.com',
+                      password: 'sang3036828@',
+                    });
+                    if (success) {
+                      router.replace('/(main)/home');
+                    } else {
+                      Alert.alert('실패', '외국인 테스트 계정 로그인 실패');
+                    }
+                  }}
+                >
+                  <Text style={styles.testButtonText}>🌍 외국인 계정</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.testButton, styles.testButtonKorean]}
+                  onPress={async () => {
+                    const success = await login({
+                      email: 'sang020531@kookmin.ac.kr',
+                      password: 'sang3036828@',
+                    });
+                    if (success) {
+                      router.replace('/(main)/home');
+                    } else {
+                      Alert.alert('실패', '한국인 테스트 계정 로그인 실패');
+                    }
+                  }}
+                >
+                  <Text style={styles.testButtonText}>🇰🇷 한국인 계정</Text>
+                </TouchableOpacity>
+              </View>
+
+            </Animated.View>
           </View>
         </View>
       </TouchableWithoutFeedback>
@@ -371,22 +360,10 @@ const styles = StyleSheet.create({
     color: BLUE,
     fontWeight: '700',
   },
-  testContainer: {
-    position: 'absolute',
-    bottom: s(32),
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    gap: s(10),
-  },
-  testLabel: {
-    fontSize: s(11),
-    color: Colors.textLight,
-    letterSpacing: 1,
-  },
   testButtons: {
     flexDirection: 'row',
     gap: s(10),
+    marginTop: s(8),
   },
   testButton: {
     flex: 1,
@@ -394,23 +371,6 @@ const styles = StyleSheet.create({
     borderRadius: s(10),
     alignItems: 'center',
     borderWidth: 1,
-  },
-  testTopButtons: {
-    flexDirection: 'row',
-    gap: s(10),
-  },
-  testButtonNew: {
-    paddingHorizontal: s(20),
-    paddingVertical: s(9),
-    borderRadius: s(20),
-    borderWidth: 1,
-    borderColor: '#10B981',
-    backgroundColor: '#ECFDF5',
-  },
-  testButtonNewText: {
-    fontSize: s(12),
-    fontWeight: '600',
-    color: '#10B981',
   },
   testButtonInternational: {
     borderColor: BLUE,
