@@ -168,44 +168,41 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* 개발용 테스트 계정 */}
-              <View style={styles.testContainer}>
-                <Text style={styles.testLabel}>개발용 테스트</Text>
-                <View style={styles.testButtons}>
-                  <TouchableOpacity
-                    style={[styles.testButton, styles.testButtonInternational]}
-                    onPress={async () => {
-                      const success = await login({
-                        email: 'sang020531@naver.com',
-                        password: 'sang3036828@',
-                      });
-                      if (success) {
-                        router.replace('/(main)/home');
-                      } else {
-                        Alert.alert('실패', '외국인 테스트 계정 로그인 실패');
-                      }
-                    }}
-                  >
-                    <Text style={styles.testButtonText}>🌍 외국인 계정</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.testButton, styles.testButtonKorean]}
-                    onPress={async () => {
-                      const success = await login({
-                        email: 'sang020531@kookmin.ac.kr',
-                        password: 'sang3036828@',
-                      });
-                      if (success) {
-                        router.replace('/(main)/home');
-                      } else {
-                        Alert.alert('실패', '한국인 테스트 계정 로그인 실패');
-                      }
-                    }}
-                  >
-                    <Text style={styles.testButtonText}>🇰🇷 한국인 계정</Text>
-                  </TouchableOpacity>
-                </View>
+              <View style={styles.testButtons}>
+                <TouchableOpacity
+                  style={[styles.testButton, styles.testButtonInternational]}
+                  onPress={async () => {
+                    const success = await login({
+                      email: 'sang020531@naver.com',
+                      password: 'sang3036828@',
+                    });
+                    if (success) {
+                      router.replace('/(main)/home');
+                    } else {
+                      Alert.alert('실패', '외국인 테스트 계정 로그인 실패');
+                    }
+                  }}
+                >
+                  <Text style={styles.testButtonText}>🌍 외국인 계정</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.testButton, styles.testButtonKorean]}
+                  onPress={async () => {
+                    const success = await login({
+                      email: 'sang020531@kookmin.ac.kr',
+                      password: 'sang3036828@',
+                    });
+                    if (success) {
+                      router.replace('/(main)/home');
+                    } else {
+                      Alert.alert('실패', '한국인 테스트 계정 로그인 실패');
+                    }
+                  }}
+                >
+                  <Text style={styles.testButtonText}>🇰🇷 한국인 계정</Text>
+                </TouchableOpacity>
               </View>
+
             </Animated.View>
           </View>
         </View>
@@ -363,19 +360,10 @@ const styles = StyleSheet.create({
     color: BLUE,
     fontWeight: '700',
   },
-  testContainer: {
-    alignItems: 'center',
-    gap: s(8),
-    marginTop: s(16),
-  },
-  testLabel: {
-    fontSize: s(11),
-    color: Colors.textLight,
-    letterSpacing: 1,
-  },
   testButtons: {
     flexDirection: 'row',
     gap: s(10),
+    marginTop: s(8),
   },
   testButton: {
     flex: 1,
