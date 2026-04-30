@@ -426,7 +426,6 @@ const styles = StyleSheet.create({
     paddingVertical: s(14),
     alignItems: 'center',
     marginTop: s(10),
-    opacity: 0.85,
   },
   disabledButton: {
     opacity: 0.5,
