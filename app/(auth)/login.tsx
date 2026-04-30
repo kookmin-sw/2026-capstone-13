@@ -173,14 +173,6 @@ export default function LoginScreen() {
           {/* 개발용 테스트 계정 */}
           <View style={styles.testContainer}>
             <Text style={styles.testLabel}>개발용 테스트</Text>
-            <View style={styles.testTopButtons}>
-              <TouchableOpacity
-                style={styles.testButtonNew}
-                onPress={() => router.push('/profile-setup')}
-              >
-                <Text style={styles.testButtonNewText}>👤 신규사용자</Text>
-              </TouchableOpacity>
-            </View>
             <View style={styles.testButtons}>
               <TouchableOpacity
                 style={[styles.testButton, styles.testButtonInternational]}
@@ -290,7 +282,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: s(32),
-    paddingBottom: s(40),
+    paddingBottom: s(120),
   },
   logoContainer: {
     alignItems: 'center',
@@ -394,23 +386,6 @@ const styles = StyleSheet.create({
     borderRadius: s(10),
     alignItems: 'center',
     borderWidth: 1,
-  },
-  testTopButtons: {
-    flexDirection: 'row',
-    gap: s(10),
-  },
-  testButtonNew: {
-    paddingHorizontal: s(20),
-    paddingVertical: s(9),
-    borderRadius: s(20),
-    borderWidth: 1,
-    borderColor: '#10B981',
-    backgroundColor: '#ECFDF5',
-  },
-  testButtonNewText: {
-    fontSize: s(12),
-    fontWeight: '600',
-    color: '#10B981',
   },
   testButtonInternational: {
     borderColor: BLUE,
