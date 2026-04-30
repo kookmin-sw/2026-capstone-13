@@ -3,6 +3,7 @@ package com.helpboys.api.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -18,16 +19,24 @@ public class FcmService {
 
     private final RestTemplate restTemplate;
 
+    @Async
     public void sendPush(String expoToken, String title, String body) {
-        sendPushWithData(expoToken, title, body, "notifications", Map.of());
+        doSend(expoToken, title, body, "notifications", Map.of());
     }
 
+    @Async
     public void sendPushWithData(String expoToken, String title, String body, Map<String, String> data) {
-        sendPushWithData(expoToken, title, body, "notifications", data);
+        doSend(expoToken, title, body, "notifications", data);
     }
 
+    @Async
     public void sendPushWithData(String expoToken, String title, String body,
                                   String channelId, Map<String, String> data) {
+        doSend(expoToken, title, body, channelId, data);
+    }
+
+    private void doSend(String expoToken, String title, String body,
+                        String channelId, Map<String, String> data) {
         if (expoToken == null || expoToken.isBlank()) {
             return;
         }
