@@ -174,7 +174,12 @@ public class ChatService {
             String preview = content != null && content.length() > 50
                     ? content.substring(0, 50) + "…"
                     : content;
-            fcmService.sendPush(receiver.getFcmToken(), senderNickname, preview);
+            fcmService.sendPushWithData(receiver.getFcmToken(), senderNickname, preview,
+                    Map.of(
+                        "type", "HELP_CHAT",
+                        "roomId", String.valueOf(roomId),
+                        "senderId", String.valueOf(senderId)
+                    ));
         } catch (Exception e) {
             log.warn("[FCM] 채팅 푸시 전송 실패: {}", e.getMessage());
         }

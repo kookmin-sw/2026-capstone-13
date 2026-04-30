@@ -5,7 +5,10 @@ import com.helpboys.api.dto.CallSignalDto;
 import com.helpboys.api.entity.User;
 import com.helpboys.api.repository.UserRepository;
 import com.helpboys.api.service.ChatService;
+import com.helpboys.api.service.FcmService;
 import com.helpboys.api.util.JwtUtil;
+
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +39,7 @@ public class
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
     private final ChatService chatService;
+    private final FcmService fcmService;
     private final JwtUtil jwtUtil;
 
     /**
@@ -68,6 +72,26 @@ public class
         log.info("[WebRTC] type={} from={} to={} room={}",
                 signal.getType(), signal.getFromUserId(),
                 signal.getToUserId(), signal.getRoomId());
+
+        // call-invite 시 수신자가 앱 밖에 있어도 알림 받도록 FCM 푸시 전송
+        if ("call-invite".equals(signal.getType())) {
+            userRepository.findById(signal.getToUserId()).ifPresent(receiver -> {
+                if (receiver.getFcmToken() != null) {
+                    String callerName = signal.getCallerNickname() != null
+                            ? signal.getCallerNickname() : "상대방";
+                    fcmService.sendPushWithData(
+                            receiver.getFcmToken(),
+                            callerName,
+                            "전화가 왔습니다",
+                            Map.of(
+                                "type", "CALL_INVITE",
+                                "fromUserId", String.valueOf(signal.getFromUserId()),
+                                "roomId", signal.getRoomId() != null ? String.valueOf(signal.getRoomId()) : ""
+                            )
+                    );
+                }
+            });
+        }
 
         // 상대방 개인 채널로 시그널 전달
         messagingTemplate.convertAndSend(

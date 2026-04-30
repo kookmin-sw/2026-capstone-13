@@ -7,6 +7,8 @@ import com.google.firebase.messaging.Notification;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+
 @Slf4j
 @Service
 public class FcmService {
@@ -19,6 +21,10 @@ public class FcmService {
      * @param body      알림 내용
      */
     public void sendPush(String fcmToken, String title, String body) {
+        sendPushWithData(fcmToken, title, body, Map.of());
+    }
+
+    public void sendPushWithData(String fcmToken, String title, String body, Map<String, String> data) {
         if (fcmToken == null || fcmToken.isBlank()) {
             return;
         }
@@ -27,14 +33,14 @@ public class FcmService {
             return;
         }
         try {
-            Message message = Message.builder()
+            Message.Builder builder = Message.builder()
                     .setToken(fcmToken)
                     .setNotification(Notification.builder()
                             .setTitle(title)
                             .setBody(body)
-                            .build())
-                    .build();
-            String response = FirebaseMessaging.getInstance().send(message);
+                            .build());
+            data.forEach(builder::putData);
+            String response = FirebaseMessaging.getInstance().send(builder.build());
             log.info("[FCM] 푸시 전송 성공: {}", response);
         } catch (Exception e) {
             log.warn("[FCM] 푸시 전송 실패: {}", e.getMessage());
