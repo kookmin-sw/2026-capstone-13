@@ -324,6 +324,15 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
+    // 비밀번호 재설정 (이메일 인증 완료 후)
+    @Transactional
+    public void resetPassword(String email, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessException("가입된 계정이 없습니다.", HttpStatus.NOT_FOUND));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
     // 회원 탈퇴 (소프트 삭제 + 개인정보 익명화)
     @Transactional
     public void deleteAccount(Long userId, String password) {
