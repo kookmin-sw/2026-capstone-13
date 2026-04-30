@@ -681,7 +681,7 @@ const s = StyleSheet.create({
   tabBadgeTextOn:  { color: BLUE },
 
   // ── List ──
-  list:      { paddingVertical: 0 },
+  list:      { paddingVertical: 0, paddingBottom: sc(110) },
   separator: { height: 0 },
 
   // ── Section label ──
