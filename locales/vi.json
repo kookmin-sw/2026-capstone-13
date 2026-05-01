@@ -163,7 +163,8 @@
       "food": "Ăn uống",
       "academic": "Học thuật",
       "other": "Khác"
-    }
+    },
+    "noRequestsDesc": "Hãy thử từ khóa khác"
   },
   "community": {
     "title": "Cộng đồng",
@@ -298,5 +299,43 @@
     "tryAgain": "Vui lòng thử lại.",
     "imageUploadFailed": "Tải ảnh lên thất bại.",
     "permissionDenied": "Không có quyền."
+  },
+  "registerType": {
+    "foreigner": "Sinh viên quốc tế",
+    "foreignerDesc": "Tôi cần giúp đỡ khi sống ở Hàn Quốc",
+    "korean": "Sinh viên Hàn Quốc",
+    "koreanDesc": "Tôi muốn giúp đỡ bạn bè quốc tế"
+  },
+  "myHistory": {
+    "title": "Lịch sử hỗ trợ",
+    "completedCount": "Đã hoàn thành: {{count}}",
+    "empty": "Không có lịch sử hỗ trợ đã hoàn thành",
+    "emptyDesc": "Hãy thử đáp lại yêu cầu hỗ trợ của sinh viên!"
+  },
+  "myRequests": {
+    "title": "Yêu cầu hỗ trợ của tôi",
+    "total": "Tổng cộng: {{count}}",
+    "active": "Đang tuyển: {{count}}",
+    "completed": "Hoàn thành: {{count}}",
+    "empty": "Chưa có yêu cầu hỗ trợ",
+    "emptyDesc": "Tạo yêu cầu từ màn hình chính nhé!",
+    "goWrite": "Yêu cầu hỗ trợ"
+  },
+  "reviews": {
+    "title": "Quản lý đánh giá",
+    "totalCount": "Tổng {{count}} đánh giá",
+    "noComment": "Không có nội dung đánh giá",
+    "helpRequest": "Yêu cầu hỗ trợ",
+    "empty": "Chưa nhận được đánh giá nào"
+  },
+  "search": {
+    "placeholder": "Tìm kiếm yêu cầu hỗ trợ",
+    "modeTitle": "Tiêu đề",
+    "modeTitleContent": "Tiêu đề + Nội dung",
+    "noResults": "Không có kết quả tìm kiếm",
+    "noResultsDesc": "Hãy thử từ khóa khác",
+    "prompt": "Bạn cần loại hỗ trợ nào?",
+    "promptDesc": "Nhập từ khóa để tìm yêu cầu hỗ trợ",
+    "resultCount": "{{count}} kết quả"
   }
 }

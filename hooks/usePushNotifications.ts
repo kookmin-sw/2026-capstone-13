@@ -85,8 +85,6 @@ function navigateFromNotification(router: ReturnType<typeof useRouter>, data: Pu
 
 export function usePushNotifications(userId: number | string | null | undefined) {
   const router = useRouter();
-  const notificationListener = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const responseListener = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handledRef = useRef<string | null>(null);
 
   // 토큰 등록

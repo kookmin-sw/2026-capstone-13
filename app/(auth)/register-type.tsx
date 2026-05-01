@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { s } from '../../utils/scale';
 
 const BLUE = '#3B6FE8';
@@ -9,6 +10,7 @@ const BLUE_L = '#EEF4FF';
 
 export default function RegisterTypeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<'foreigner' | 'korean' | null>(null);
 
   const handleNext = () => {
@@ -30,8 +32,8 @@ export default function RegisterTypeScreen() {
               <Image source={require('../../logo/international.png')} style={styles.cardLogo} resizeMode="contain" />
             </View>
             <View style={styles.cardText}>
-              <Text style={[styles.cardTitle, selected === 'foreigner' && styles.cardTitleSelected]}>외국인 유학생</Text>
-              <Text style={[styles.cardDesc, selected === 'foreigner' && styles.cardDescSelected]}>한국 생활에서 도움이 필요해요</Text>
+              <Text style={[styles.cardTitle, selected === 'foreigner' && styles.cardTitleSelected]}>{t('registerType.foreigner')}</Text>
+              <Text style={[styles.cardDesc, selected === 'foreigner' && styles.cardDescSelected]}>{t('registerType.foreignerDesc')}</Text>
             </View>
           </TouchableOpacity>
 
@@ -44,8 +46,8 @@ export default function RegisterTypeScreen() {
               <Image source={require('../../logo/korean.png')} style={styles.cardLogo} resizeMode="contain" />
             </View>
             <View style={styles.cardText}>
-              <Text style={[styles.cardTitle, selected === 'korean' && styles.cardTitleSelected]}>한국인 학생</Text>
-              <Text style={[styles.cardDesc, selected === 'korean' && styles.cardDescSelected]}>외국인 친구들에게 도움을 줄게요</Text>
+              <Text style={[styles.cardTitle, selected === 'korean' && styles.cardTitleSelected]}>{t('registerType.korean')}</Text>
+              <Text style={[styles.cardDesc, selected === 'korean' && styles.cardDescSelected]}>{t('registerType.koreanDesc')}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -53,9 +55,9 @@ export default function RegisterTypeScreen() {
         {/* 하단 영역 */}
         <View style={styles.bottomSection}>
           <View style={styles.loginRow}>
-            <Text style={styles.loginText}>이미 계정이 있으신가요? </Text>
+            <Text style={styles.loginText}>{t('auth.hasAccount')} </Text>
             <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
-              <Text style={styles.loginLink}>로그인</Text>
+              <Text style={styles.loginLink}>{t('auth.login')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -64,7 +66,7 @@ export default function RegisterTypeScreen() {
             onPress={handleNext}
             activeOpacity={selected ? 0.85 : 1}
           >
-            <Text style={[styles.nextBtnText, !selected && styles.nextBtnTextDisabled]}>다음 단계로</Text>
+            <Text style={[styles.nextBtnText, !selected && styles.nextBtnTextDisabled]}>{t('common.next')}</Text>
           </TouchableOpacity>
         </View>
       </View>

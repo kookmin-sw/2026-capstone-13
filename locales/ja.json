@@ -163,7 +163,8 @@
       "food": "食事",
       "academic": "学業",
       "other": "その他"
-    }
+    },
+    "noRequestsDesc": "別のキーワードで検索してください"
   },
   "community": {
     "title": "コミュニティ",
@@ -298,5 +299,43 @@
     "tryAgain": "もう一度お試しください。",
     "imageUploadFailed": "画像のアップロードに失敗しました。",
     "permissionDenied": "権限がありません。"
+  },
+  "registerType": {
+    "foreigner": "外国人留学生",
+    "foreignerDesc": "韓国生活でサポートが必要です",
+    "korean": "韓国人学生",
+    "koreanDesc": "外国人の友達を助けたいです"
+  },
+  "myHistory": {
+    "title": "サポート履歴",
+    "completedCount": "完了: {{count}}件",
+    "empty": "完了したサポート履歴がありません",
+    "emptyDesc": "留学生のサポート依頼に応えてみましょう！"
+  },
+  "myRequests": {
+    "title": "サポート依頼一覧",
+    "total": "全体: {{count}}件",
+    "active": "募集中: {{count}}件",
+    "completed": "完了: {{count}}件",
+    "empty": "まだサポート依頼がありません",
+    "emptyDesc": "ホーム画面からサポート依頼を作成しましょう！",
+    "goWrite": "サポートを依頼する"
+  },
+  "reviews": {
+    "title": "レビュー管理",
+    "totalCount": "合計{{count}}件のレビュー",
+    "noComment": "レビュー内容なし",
+    "helpRequest": "サポート依頼",
+    "empty": "まだレビューがありません"
+  },
+  "search": {
+    "placeholder": "サポート依頼を検索",
+    "modeTitle": "タイトル",
+    "modeTitleContent": "タイトル＋内容",
+    "noResults": "検索結果がありません",
+    "noResultsDesc": "別のキーワードで検索してください",
+    "prompt": "どんなサポートが必要ですか？",
+    "promptDesc": "キーワードを入力するとサポート依頼が見つかります",
+    "resultCount": "{{count}}件の検索結果"
   }
 }

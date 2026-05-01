@@ -149,7 +149,8 @@
     "title": "요청",
     "myRequests": "내 요청",
     "myHelpHistory": "내 도움 내역",
-    "noRequests": "요청이 없습니다.",
+    "noRequests": "도움 요청이 없습니다",
+    "noRequestsDesc": "새로운 요청이 등록되면 여기에 표시됩니다",
     "noHistory": "도움 내역이 없습니다.",
     "writeReview": "리뷰 작성",
     "reviewWritten": "리뷰 작성 완료",
@@ -298,5 +299,43 @@
     "tryAgain": "다시 시도해 주세요.",
     "imageUploadFailed": "이미지 업로드에 실패했습니다.",
     "permissionDenied": "권한이 없습니다."
+  },
+  "registerType": {
+    "foreigner": "외국인 유학생",
+    "foreignerDesc": "한국 생활에서 도움이 필요해요",
+    "korean": "한국인 학생",
+    "koreanDesc": "외국인 친구들에게 도움을 줄게요"
+  },
+  "myHistory": {
+    "title": "내 도움 내역",
+    "completedCount": "완료 {{count}}건",
+    "empty": "완료된 도움 내역이 없어요",
+    "emptyDesc": "유학생들의 도움 요청에 응해보세요!"
+  },
+  "myRequests": {
+    "title": "내 도움 요청",
+    "total": "전체 {{count}}건",
+    "active": "모집중 {{count}}건",
+    "completed": "완료 {{count}}건",
+    "empty": "아직 작성한 도움 요청이 없어요",
+    "emptyDesc": "홈 화면에서 도움 요청을 작성해보세요!",
+    "goWrite": "도움 요청하기"
+  },
+  "reviews": {
+    "title": "후기 관리",
+    "totalCount": "총 {{count}}개의 후기",
+    "noComment": "후기 내용 없음",
+    "helpRequest": "도움 요청",
+    "empty": "아직 받은 후기가 없어요"
+  },
+  "search": {
+    "placeholder": "도움 요청 검색",
+    "modeTitle": "제목",
+    "modeTitleContent": "제목 + 내용",
+    "noResults": "검색 결과가 없습니다",
+    "noResultsDesc": "다른 키워드로 검색해보세요",
+    "prompt": "어떤 도움이 필요하신가요?",
+    "promptDesc": "키워드를 입력하면 도움 요청을 찾아드려요",
+    "resultCount": "검색 결과 {{count}}건"
   }
 }

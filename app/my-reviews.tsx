@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { s as sc } from '../utils/scale';
 import { useAuthStore } from '../stores/authStore';
 import { getMyReviews, type ReviewResponse } from '../services/reviewService';
@@ -61,6 +62,7 @@ function Stars({ rating }: { rating: number }) {
 }
 
 function ReviewCard({ item }: { item: ReviewResponse }) {
+  const { t } = useTranslation();
   const [imgError, setImgError] = useState(false);
   const profileUri = toAbsoluteUrl(item.reviewer.profileImage);
 
@@ -80,12 +82,12 @@ function ReviewCard({ item }: { item: ReviewResponse }) {
         <Text style={s.time}>{formatTime(item.createdAt)}</Text>
       </View>
       <Text style={s.helpTitle} numberOfLines={1}>
-        <Ionicons name="document-text-outline" size={11} color={T2} /> {item.helpRequestTitle ?? '도움 요청'}
+        <Ionicons name="document-text-outline" size={11} color={T2} /> {item.helpRequestTitle ?? t('reviews.helpRequest')}
       </Text>
       {item.comment ? (
         <Text style={s.comment}>{item.comment}</Text>
       ) : (
-        <Text style={s.noComment}>후기 내용 없음</Text>
+        <Text style={s.noComment}>{t('reviews.noComment')}</Text>
       )}
     </View>
   );
@@ -93,6 +95,7 @@ function ReviewCard({ item }: { item: ReviewResponse }) {
 
 export default function MyReviewsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +118,7 @@ export default function MyReviewsScreen() {
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={20} color={T1} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>후기 관리</Text>
+        <Text style={s.headerTitle}>{t('profile.reviewManagement')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -131,7 +134,7 @@ export default function MyReviewsScreen() {
               <View style={s.summary}>
                 <Text style={s.summaryRating}>{avgRating}</Text>
                 <Ionicons name="star" size={20} color={ORANGE} />
-                <Text style={s.summaryCount}>총 {reviews.length}개의 후기</Text>
+                <Text style={s.summaryCount}>{t('reviews.totalCount', { count: reviews.length })}</Text>
               </View>
             ) : null
           }
@@ -140,7 +143,7 @@ export default function MyReviewsScreen() {
           ListEmptyComponent={
             <View style={s.empty}>
               <Ionicons name="star-outline" size={48} color={T2} />
-              <Text style={s.emptyTitle}>아직 받은 후기가 없어요</Text>
+              <Text style={s.emptyTitle}>{t('reviews.empty')}</Text>
             </View>
           }
         />

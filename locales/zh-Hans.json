@@ -163,7 +163,8 @@
       "food": "餐饮",
       "academic": "学业",
       "other": "其他"
-    }
+    },
+    "noRequestsDesc": "请尝试其他关键词"
   },
   "community": {
     "title": "社区",
@@ -298,5 +299,43 @@
     "tryAgain": "请重试。",
     "imageUploadFailed": "图片上传失败。",
     "permissionDenied": "权限不足。"
+  },
+  "registerType": {
+    "foreigner": "外国留学生",
+    "foreignerDesc": "需要在韩国生活方面的帮助",
+    "korean": "韩国学生",
+    "koreanDesc": "我想帮助外国朋友"
+  },
+  "myHistory": {
+    "title": "我的帮助记录",
+    "completedCount": "已完成: {{count}}件",
+    "empty": "没有已完成的帮助记录",
+    "emptyDesc": "试着回应留学生的帮助请求吧！"
+  },
+  "myRequests": {
+    "title": "我的帮助请求",
+    "total": "总计: {{count}}件",
+    "active": "招募中: {{count}}件",
+    "completed": "已完成: {{count}}件",
+    "empty": "还没有帮助请求",
+    "emptyDesc": "在主页创建帮助请求吧！",
+    "goWrite": "请求帮助"
+  },
+  "reviews": {
+    "title": "评价管理",
+    "totalCount": "共{{count}}条评价",
+    "noComment": "无评价内容",
+    "helpRequest": "帮助请求",
+    "empty": "还没有收到评价"
+  },
+  "search": {
+    "placeholder": "搜索帮助请求",
+    "modeTitle": "标题",
+    "modeTitleContent": "标题＋内容",
+    "noResults": "没有搜索结果",
+    "noResultsDesc": "请尝试其他关键词",
+    "prompt": "您需要什么帮助？",
+    "promptDesc": "输入关键词即可找到帮助请求",
+    "resultCount": "{{count}}个结果"
   }
 }

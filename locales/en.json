@@ -163,7 +163,8 @@
       "food": "Food",
       "academic": "Academic",
       "other": "Other"
-    }
+    },
+    "noRequestsDesc": "Try a different keyword"
   },
   "community": {
     "title": "Community",
@@ -298,5 +299,43 @@
     "tryAgain": "Please try again.",
     "imageUploadFailed": "Image upload failed.",
     "permissionDenied": "Permission denied."
+  },
+  "registerType": {
+    "foreigner": "International Student",
+    "foreignerDesc": "I need help living in Korea",
+    "korean": "Korean Student",
+    "koreanDesc": "I want to help international friends"
+  },
+  "myHistory": {
+    "title": "My Help History",
+    "completedCount": "Completed: {{count}}",
+    "empty": "No completed help history",
+    "emptyDesc": "Try responding to help requests from international students!"
+  },
+  "myRequests": {
+    "title": "My Help Requests",
+    "total": "Total: {{count}}",
+    "active": "Active: {{count}}",
+    "completed": "Completed: {{count}}",
+    "empty": "No help requests yet",
+    "emptyDesc": "Create a help request from the home screen!",
+    "goWrite": "Request Help"
+  },
+  "reviews": {
+    "title": "Review Management",
+    "totalCount": "{{count}} reviews total",
+    "noComment": "No review content",
+    "helpRequest": "Help Request",
+    "empty": "No reviews received yet"
+  },
+  "search": {
+    "placeholder": "Search help requests",
+    "modeTitle": "Title",
+    "modeTitleContent": "Title + Content",
+    "noResults": "No search results",
+    "noResultsDesc": "Try a different keyword",
+    "prompt": "What kind of help do you need?",
+    "promptDesc": "Enter a keyword to find help requests",
+    "resultCount": "{{count}} results"
   }
 }
