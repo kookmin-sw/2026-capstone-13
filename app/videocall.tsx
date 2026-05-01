@@ -453,7 +453,7 @@ export default function VideoCallScreen() {
           style={[styles.controlBtn, isMuted && styles.controlBtnActive]}
           onPress={handleMute}
         >
-          <Ionicons name={isMuted ? 'mic-off' : 'mic'} size={24} color="#FFFFFF" />
+          <Ionicons name={isMuted ? 'mic-off' : 'mic'} size={22} color="#FFFFFF" />
           <Text style={styles.controlLabel}>{isMuted ? '해제' : '음소거'}</Text>
         </TouchableOpacity>
 
@@ -462,7 +462,7 @@ export default function VideoCallScreen() {
           style={[styles.controlBtn, isSpeaker && styles.controlBtnActive]}
           onPress={handleSpeaker}
         >
-          <Ionicons name={isSpeaker ? 'volume-high' : 'volume-mute'} size={24} color="#FFFFFF" />
+          <Ionicons name={isSpeaker ? 'volume-high' : 'volume-mute'} size={22} color="#FFFFFF" />
           <Text style={styles.controlLabel}>{isSpeaker ? '스피커' : '이어폰'}</Text>
         </TouchableOpacity>
 
@@ -476,13 +476,13 @@ export default function VideoCallScreen() {
             if (!next) setTranscripts([]);
           }}
         >
-          <Ionicons name={isConnected ? 'text' : 'text-outline'} size={24} color="#FFFFFF" />
+          <Ionicons name={isConnected ? 'text' : 'text-outline'} size={22} color="#FFFFFF" />
           <Text style={styles.controlLabel}>{isStreaming ? '자막중지' : '자막'}</Text>
         </TouchableOpacity>
 
         {/* 통화 종료 */}
         <TouchableOpacity style={styles.endCallBtn} onPress={handleEndCall}>
-          <Ionicons name="call" size={28} color="#FFFFFF" />
+          <Ionicons name="call" size={24} color="#FFFFFF" />
           <Text style={styles.controlLabel}>종료</Text>
         </TouchableOpacity>
 
@@ -492,7 +492,7 @@ export default function VideoCallScreen() {
             style={[styles.controlBtn, isCameraOff && styles.controlBtnActive]}
             onPress={handleCameraToggle}
           >
-            <Ionicons name={isCameraOff ? 'videocam-off' : 'videocam'} size={24} color="#FFFFFF" />
+            <Ionicons name={isCameraOff ? 'videocam-off' : 'videocam'} size={22} color="#FFFFFF" />
             <Text style={styles.controlLabel}>{isCameraOff ? '켜기' : '카메라'}</Text>
           </TouchableOpacity>
         )}
@@ -500,7 +500,7 @@ export default function VideoCallScreen() {
         {/* 전면/후면 전환 (영상통화 + 카메라 켜진 경우만) */}
         {!isVoiceOnly && !isCameraOff && (
           <TouchableOpacity style={styles.controlBtn} onPress={handleSwitchCamera}>
-            <Ionicons name="camera-reverse" size={24} color="#FFFFFF" />
+            <Ionicons name="camera-reverse" size={22} color="#FFFFFF" />
             <Text style={styles.controlLabel}>전환</Text>
           </TouchableOpacity>
         )}
@@ -640,20 +640,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-evenly',
     alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === 'ios' ? 48 : 32,
-    paddingTop: 20,
+    paddingHorizontal: 8,
+    paddingBottom: Platform.OS === 'ios' ? 44 : 28,
+    paddingTop: 16,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   controlBtn: {
     alignItems: 'center',
     gap: 4,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
   },
@@ -662,9 +661,9 @@ const styles = StyleSheet.create({
   endCallBtn: {
     alignItems: 'center',
     gap: 4,
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#EF4444',
     justifyContent: 'center',
   },
