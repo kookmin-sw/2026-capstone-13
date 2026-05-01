@@ -460,5 +460,26 @@
     "duration": "所要時間",
     "location": "場所",
     "language": "言語"
+  },
+  "changePassword": {
+    "notice": "お知らせ",
+    "enterEmail": "メールアドレスを入力してください。",
+    "sendFailed": "認証コードの送信に失敗しました。",
+    "emailNotFound": "登録されていないメールアドレスか、サーバーエラーが発生しました。",
+    "resendFailed": "再送信に失敗しました。",
+    "enterCode": "認証コードを入力してください。",
+    "codeExpired": "認証時間が切れました。コードを再送信してください。",
+    "passwordTooShort": "パスワードは6文字以上である必要があります。",
+    "passwordMismatch": "パスワードが一致しません。",
+    "done": "完了",
+    "passwordChanged": "パスワードが変更されました。",
+    "changeFailed": "パスワードの変更に失敗しました。",
+    "subtitleEmail": "パスワードのリセットに使用したメールアドレスを入力してください。",
+    "subtitleCode": "メールに送信された認証コードを入力してください。",
+    "subtitlePassword": "新しいパスワードを入力してください。",
+    "codePlaceholder": "6桁の認証コードを入力",
+    "newPasswordPlaceholder": "新しいパスワード（6文字以上）",
+    "confirmPasswordPlaceholder": "パスワードを再入力してください",
+    "resend": "認証コードを再送信"
   }
 }

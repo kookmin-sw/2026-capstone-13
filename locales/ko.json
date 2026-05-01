@@ -460,5 +460,26 @@
     "duration": "소요 시간",
     "location": "장소",
     "language": "언어"
+  },
+  "changePassword": {
+    "notice": "알림",
+    "enterEmail": "이메일을 입력해주세요.",
+    "sendFailed": "인증코드 전송에 실패했습니다.",
+    "emailNotFound": "가입되지 않은 이메일이거나 서버 오류가 발생했습니다.",
+    "resendFailed": "재전송에 실패했습니다.",
+    "enterCode": "인증코드를 입력해주세요.",
+    "codeExpired": "인증 시간이 만료됐습니다. 코드를 재전송해주세요.",
+    "passwordTooShort": "비밀번호는 6자 이상이어야 합니다.",
+    "passwordMismatch": "비밀번호가 일치하지 않습니다.",
+    "done": "완료",
+    "passwordChanged": "비밀번호가 변경됐습니다.",
+    "changeFailed": "비밀번호 변경에 실패했습니다.",
+    "subtitleEmail": "비밀번호 재설정을 위해 가입한 이메일 주소를 입력해주세요.",
+    "subtitleCode": "이메일로 전송된 인증코드를 입력해주세요.",
+    "subtitlePassword": "새로 사용할 비밀번호를 입력해주세요.",
+    "codePlaceholder": "인증코드 6자리 입력",
+    "newPasswordPlaceholder": "새 비밀번호 (6자 이상)",
+    "confirmPasswordPlaceholder": "비밀번호를 다시 입력하세요",
+    "resend": "인증코드 재전송"
   }
 }

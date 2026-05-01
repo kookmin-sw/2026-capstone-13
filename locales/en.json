@@ -460,5 +460,26 @@
     "duration": "Duration",
     "location": "Location",
     "language": "Language"
+  },
+  "changePassword": {
+    "notice": "Notice",
+    "enterEmail": "Please enter your email address.",
+    "sendFailed": "Failed to send verification code.",
+    "emailNotFound": "Email not registered or a server error occurred.",
+    "resendFailed": "Failed to resend.",
+    "enterCode": "Please enter the verification code.",
+    "codeExpired": "Verification time expired. Please resend the code.",
+    "passwordTooShort": "Password must be at least 6 characters.",
+    "passwordMismatch": "Passwords do not match.",
+    "done": "Done",
+    "passwordChanged": "Password has been changed.",
+    "changeFailed": "Failed to change password.",
+    "subtitleEmail": "Enter the email address you used to register.",
+    "subtitleCode": "Enter the verification code sent to your email.",
+    "subtitlePassword": "Enter your new password.",
+    "codePlaceholder": "Enter 6-digit verification code",
+    "newPasswordPlaceholder": "New password (min. 6 characters)",
+    "confirmPasswordPlaceholder": "Re-enter your password",
+    "resend": "Resend Code"
   }
 }

@@ -460,5 +460,26 @@
     "duration": "所需时间",
     "location": "地点",
     "language": "语言"
+  },
+  "changePassword": {
+    "notice": "提示",
+    "enterEmail": "请输入您的电子邮件地址。",
+    "sendFailed": "发送验证码失败。",
+    "emailNotFound": "邮箱未注册或发生服务器错误。",
+    "resendFailed": "重新发送失败。",
+    "enterCode": "请输入验证码。",
+    "codeExpired": "验证时间已过期。请重新发送验证码。",
+    "passwordTooShort": "密码必须至少6个字符。",
+    "passwordMismatch": "密码不匹配。",
+    "done": "完成",
+    "passwordChanged": "密码已更改。",
+    "changeFailed": "密码更改失败。",
+    "subtitleEmail": "请输入您注册时使用的电子邮件地址。",
+    "subtitleCode": "请输入发送到您邮箱的验证码。",
+    "subtitlePassword": "请输入新密码。",
+    "codePlaceholder": "输入6位验证码",
+    "newPasswordPlaceholder": "新密码（至少6个字符）",
+    "confirmPasswordPlaceholder": "请再次输入密码",
+    "resend": "重新发送验证码"
   }
 }

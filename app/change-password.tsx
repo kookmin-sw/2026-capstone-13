@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { sendVerificationCode, resetPassword } from '../services/authService';
 import { useAuthStore } from '../stores/authStore';
 import { s } from '../utils/scale';
@@ -32,6 +33,7 @@ type Step = 'email' | 'code' | 'password';
 
 export default function ChangePasswordScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
 
   const [step, setStep] = useState<Step>('email');
@@ -72,7 +74,7 @@ export default function ChangePasswordScreen() {
 
   const handleSendCode = async () => {
     if (!email.trim()) {
-      Alert.alert('알림', '이메일을 입력해주세요.');
+      Alert.alert(t('changePassword.notice'), t('changePassword.enterEmail'));
       return;
     }
     setLoading(true);
@@ -82,10 +84,10 @@ export default function ChangePasswordScreen() {
         setStep('code');
         startTimer();
       } else {
-        Alert.alert('오류', res.message ?? '인증코드 전송에 실패했습니다.');
+        Alert.alert(t('common.error'), res.message ?? t('changePassword.sendFailed'));
       }
     } catch {
-      Alert.alert('오류', '가입되지 않은 이메일이거나 서버 오류가 발생했습니다.');
+      Alert.alert(t('common.error'), t('changePassword.emailNotFound'));
     } finally {
       setLoading(false);
     }
@@ -99,10 +101,10 @@ export default function ChangePasswordScreen() {
         setCode('');
         startTimer();
       } else {
-        Alert.alert('오류', res.message ?? '재전송에 실패했습니다.');
+        Alert.alert(t('common.error'), res.message ?? t('changePassword.resendFailed'));
       }
     } catch {
-      Alert.alert('오류', '서버 오류가 발생했습니다.');
+      Alert.alert(t('common.error'), t('errors.serverError'));
     } finally {
       setLoading(false);
     }
@@ -110,11 +112,11 @@ export default function ChangePasswordScreen() {
 
   const handleVerifyCode = () => {
     if (code.trim().length < 4) {
-      Alert.alert('알림', '인증코드를 입력해주세요.');
+      Alert.alert(t('changePassword.notice'), t('changePassword.enterCode'));
       return;
     }
     if (timeLeft === 0) {
-      Alert.alert('알림', '인증 시간이 만료됐습니다. 코드를 재전송해주세요.');
+      Alert.alert(t('changePassword.notice'), t('changePassword.codeExpired'));
       return;
     }
     clearInterval(timerRef.current!);
@@ -124,37 +126,37 @@ export default function ChangePasswordScreen() {
 
   const handleChangePassword = async () => {
     if (newPassword.length < 6) {
-      Alert.alert('알림', '비밀번호는 6자 이상이어야 합니다.');
+      Alert.alert(t('changePassword.notice'), t('changePassword.passwordTooShort'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('알림', '비밀번호가 일치하지 않습니다.');
+      Alert.alert(t('changePassword.notice'), t('changePassword.passwordMismatch'));
       return;
     }
     setLoading(true);
     try {
       const res = await resetPassword(email.trim(), code.trim(), newPassword);
       if (res.success) {
-        Alert.alert('완료', '비밀번호가 변경됐습니다.', [
-          { text: '확인', onPress: () => router.back() },
+        Alert.alert(t('changePassword.done'), t('changePassword.passwordChanged'), [
+          { text: t('common.confirm'), onPress: () => router.back() },
         ]);
       } else {
-        Alert.alert('오류', res.message ?? '비밀번호 변경에 실패했습니다.');
+        Alert.alert(t('common.error'), res.message ?? t('changePassword.changeFailed'));
       }
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { message?: string } } };
       const status = err?.response?.status;
       const msg = err?.response?.data?.message;
-      Alert.alert('오류', `${status ? `[${status}] ` : ''}${msg ?? '서버 오류가 발생했습니다.'}`);
+      Alert.alert(t('common.error'), `${status ? `[${status}] ` : ''}${msg ?? t('errors.serverError')}`);
     } finally {
       setLoading(false);
     }
   };
 
   const stepSubtitles: Record<Step, string> = {
-    email: '비밀번호 재설정을 위해 가입한 이메일 주소를 입력해주세요.',
-    code: `이메일로 전송된 인증코드를 입력해주세요.`,
-    password: '새로 사용할 비밀번호를 입력해주세요.',
+    email: t('changePassword.subtitleEmail'),
+    code: t('changePassword.subtitleCode'),
+    password: t('changePassword.subtitlePassword'),
   };
 
   return (
@@ -185,7 +187,7 @@ export default function ChangePasswordScreen() {
               </View>
             ))}
           </View>
-          <Text style={[styles.forgotText, step !== 'email' && { opacity: 0 }]}>비밀번호를 잊으셨나요?</Text>
+          <Text style={[styles.forgotText, step !== 'email' && { opacity: 0 }]}>{t('auth.forgotPassword')}</Text>
           <Text style={styles.subtitle} numberOfLines={1} adjustsFontSizeToFit>{stepSubtitles[step]}</Text>
         </View>
 
@@ -196,7 +198,7 @@ export default function ChangePasswordScreen() {
             <View style={styles.fieldGroup}>
               <TextInput
                 style={styles.input}
-                placeholder="이메일 주소"
+                placeholder={t('auth.email')}
                 placeholderTextColor={T2}
                 value={email}
                 onChangeText={setEmail}
@@ -213,7 +215,7 @@ export default function ChangePasswordScreen() {
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.primaryBtnText}>인증코드 전송</Text>
+                  <Text style={styles.primaryBtnText}>{t('auth.sendCode')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -229,7 +231,7 @@ export default function ChangePasswordScreen() {
               </View>
               <TextInput
                 style={styles.input}
-                placeholder="인증코드 6자리 입력"
+                placeholder={t('changePassword.codePlaceholder')}
                 placeholderTextColor={T2}
                 value={code}
                 onChangeText={setCode}
@@ -237,7 +239,7 @@ export default function ChangePasswordScreen() {
                 maxLength={6}
               />
               {timeLeft === 0 && (
-                <Text style={styles.expiredText}>인증 시간이 만료됐습니다.</Text>
+                <Text style={styles.expiredText}>{t('changePassword.codeExpired')}</Text>
               )}
               <TouchableOpacity
                 style={[styles.primaryBtn, (code.trim().length < 6) && styles.btnGray, (loading || timeLeft === 0) && styles.btnDisabled]}
@@ -248,7 +250,7 @@ export default function ChangePasswordScreen() {
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.primaryBtnText}>확인</Text>
+                  <Text style={styles.primaryBtnText}>{t('common.confirm')}</Text>
                 )}
               </TouchableOpacity>
               <TouchableOpacity
@@ -257,7 +259,7 @@ export default function ChangePasswordScreen() {
                 disabled={loading}
                 activeOpacity={0.7}
               >
-                <Text style={styles.resendBtnText}>인증코드 재전송</Text>
+                <Text style={styles.resendBtnText}>{t('changePassword.resend')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -267,7 +269,7 @@ export default function ChangePasswordScreen() {
             <View style={styles.fieldGroup}>
               <TextInput
                 style={styles.input}
-                placeholder="새 비밀번호 (6자 이상)"
+                placeholder={t('changePassword.newPasswordPlaceholder')}
                 placeholderTextColor={T2}
                 value={newPassword}
                 onChangeText={setNewPassword}
@@ -279,14 +281,14 @@ export default function ChangePasswordScreen() {
                   { marginTop: s(6) },
                   confirmPassword.length > 0 && newPassword !== confirmPassword && styles.inputError,
                 ]}
-                placeholder="비밀번호를 다시 입력하세요"
+                placeholder={t('changePassword.confirmPasswordPlaceholder')}
                 placeholderTextColor={T2}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
               />
               {confirmPassword.length > 0 && newPassword !== confirmPassword && (
-                <Text style={styles.errorText}>비밀번호가 일치하지 않습니다.</Text>
+                <Text style={styles.errorText}>{t('changePassword.passwordMismatch')}</Text>
               )}
               <TouchableOpacity
                 style={[styles.primaryBtn, { marginTop: s(20) }, (newPassword.length < 6 || confirmPassword !== newPassword) && styles.btnGray, loading && styles.btnDisabled]}
@@ -297,7 +299,7 @@ export default function ChangePasswordScreen() {
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.primaryBtnText}>비밀번호 변경</Text>
+                  <Text style={styles.primaryBtnText}>{t('auth.changePassword')}</Text>
                 )}
               </TouchableOpacity>
             </View>

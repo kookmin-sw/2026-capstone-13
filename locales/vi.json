@@ -460,5 +460,26 @@
     "duration": "Thời gian cần thiết",
     "location": "Địa điểm",
     "language": "Ngôn ngữ"
+  },
+  "changePassword": {
+    "notice": "Thông báo",
+    "enterEmail": "Vui lòng nhập địa chỉ email của bạn.",
+    "sendFailed": "Gửi mã xác minh thất bại.",
+    "emailNotFound": "Email chưa đăng ký hoặc có lỗi máy chủ.",
+    "resendFailed": "Gửi lại thất bại.",
+    "enterCode": "Vui lòng nhập mã xác minh.",
+    "codeExpired": "Thời gian xác minh đã hết. Vui lòng gửi lại mã.",
+    "passwordTooShort": "Mật khẩu phải có ít nhất 6 ký tự.",
+    "passwordMismatch": "Mật khẩu không khớp.",
+    "done": "Hoàn thành",
+    "passwordChanged": "Mật khẩu đã được thay đổi.",
+    "changeFailed": "Đổi mật khẩu thất bại.",
+    "subtitleEmail": "Nhập địa chỉ email bạn đã dùng để đăng ký.",
+    "subtitleCode": "Nhập mã xác minh được gửi đến email của bạn.",
+    "subtitlePassword": "Nhập mật khẩu mới của bạn.",
+    "codePlaceholder": "Nhập mã xác minh 6 chữ số",
+    "newPasswordPlaceholder": "Mật khẩu mới (tối thiểu 6 ký tự)",
+    "confirmPasswordPlaceholder": "Nhập lại mật khẩu",
+    "resend": "Gửi lại mã"
   }
 }
