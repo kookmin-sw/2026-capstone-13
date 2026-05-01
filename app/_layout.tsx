@@ -1,7 +1,7 @@
 // 루트 레이아웃 - 인증 상태에 따라 화면 분기
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, TextInput } from 'react-native';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, type Href } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthStore } from '../stores/authStore';
@@ -11,14 +11,17 @@ import { initI18n } from '../i18n';
 import PermissionsModal from '../components/PermissionsModal';
 
 // 사용자 폰트 크기 설정과 무관하게 앱 내 폰트 크기 고정
-if (Text.defaultProps == null) Text.defaultProps = {};
-Text.defaultProps.allowFontScaling = false;
-if (TextInput.defaultProps == null) TextInput.defaultProps = {};
-TextInput.defaultProps.allowFontScaling = false;
+const AppText = Text as typeof Text & { defaultProps?: { allowFontScaling?: boolean } };
+const AppTextInput = TextInput as typeof TextInput & { defaultProps?: { allowFontScaling?: boolean } };
+if (AppText.defaultProps == null) AppText.defaultProps = {};
+AppText.defaultProps.allowFontScaling = false;
+if (AppTextInput.defaultProps == null) AppTextInput.defaultProps = {};
+AppTextInput.defaultProps.allowFontScaling = false;
 
 export default function RootLayout() {
   const { user, isLoading, isNewUser, loadUser } = useAuthStore();
   const { modalVisible, handleConfirm } = useAppPermissions();
+  const [isI18nReady, setIsI18nReady] = useState(false);
   usePushNotifications(user?.id);
   const segments = useSegments();
   const router = useRouter();
@@ -26,23 +29,28 @@ export default function RootLayout() {
 
   // 앱 시작 시 i18n 초기화 후 사용자 정보 로드
   useEffect(() => {
-    initI18n().then(() => loadUser());
-  }, []);
+    initI18n()
+      .then(() => loadUser())
+      .finally(() => setIsI18nReady(true));
+  }, [loadUser]);
 
   // 로그인 완료 후 isNewUser이면 프로필 설정으로 이동
   useEffect(() => {
+    if (!isI18nReady) return;
     if (isLoading) return;
     if (!user) return;
 
     const inAuth = firstSegment === '(auth)';
-    const inProfileSetup = firstSegment === 'profile-setup';
+    const inProfileSetup = String(firstSegment) === 'profile-setup';
 
     if (isNewUser && !inProfileSetup) {
-      router.replace('/profile-setup');
+      router.replace('/profile-setup' as Href);
     } else if (!isNewUser && inAuth) {
       router.replace('/(main)/home');
     }
-  }, [user, isLoading, isNewUser, firstSegment]);
+  }, [user, isLoading, isNewUser, firstSegment, isI18nReady, router]);
+
+  if (!isI18nReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
