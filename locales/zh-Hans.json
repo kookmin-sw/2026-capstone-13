@@ -209,7 +209,13 @@
     "reportHate": "仇恨言论",
     "reportInappropriate": "不当内容",
     "reportFraud": "欺诈/虚假信息",
-    "reportOther": "其他"
+    "reportOther": "其他",
+    "board_INFO": "自由版",
+    "board_QUESTION": "本地版",
+    "board_CHAT": "聚会版",
+    "board_CULTURE": "跳蚤市场",
+    "post": "帖子",
+    "replyPlaceholder": "回复@{{author}}..."
   },
   "school": {
     "title": "校园生活",

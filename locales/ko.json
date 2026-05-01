@@ -209,7 +209,13 @@
     "reportHate": "욕설/혐오 표현",
     "reportInappropriate": "부적절한 내용",
     "reportFraud": "사기/허위 정보",
-    "reportOther": "기타"
+    "reportOther": "기타",
+    "board_INFO": "자유게시판",
+    "board_QUESTION": "로컬게시판",
+    "board_CHAT": "모임게시판",
+    "board_CULTURE": "장터게시판",
+    "post": "게시글",
+    "replyPlaceholder": "@{{author}}에게 답글..."
   },
   "school": {
     "title": "학교생활",

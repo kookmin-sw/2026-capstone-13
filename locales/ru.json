@@ -209,7 +209,13 @@
     "reportHate": "Язык ненависти",
     "reportInappropriate": "Неприемлемый контент",
     "reportFraud": "Мошенничество/дезинформация",
-    "reportOther": "Другое"
+    "reportOther": "Другое",
+    "board_INFO": "Общий форум",
+    "board_QUESTION": "Местный форум",
+    "board_CHAT": "Встречи",
+    "board_CULTURE": "Маркетплейс",
+    "post": "Пост",
+    "replyPlaceholder": "Ответить @{{author}}..."
   },
   "school": {
     "title": "Студенческая жизнь",

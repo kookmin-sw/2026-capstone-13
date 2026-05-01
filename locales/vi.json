@@ -209,7 +209,13 @@
     "reportHate": "Ngôn ngữ thù địch",
     "reportInappropriate": "Nội dung không phù hợp",
     "reportFraud": "Lừa đảo/Thông tin sai",
-    "reportOther": "Khác"
+    "reportOther": "Khác",
+    "board_INFO": "Bảng tự do",
+    "board_QUESTION": "Bảng địa phương",
+    "board_CHAT": "Bảng gặp gỡ",
+    "board_CULTURE": "Chợ online",
+    "post": "Bài đăng",
+    "replyPlaceholder": "Trả lời @{{author}}..."
   },
   "school": {
     "title": "Cuộc sống campus",

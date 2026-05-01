@@ -209,7 +209,13 @@
     "reportHate": "Hate speech",
     "reportInappropriate": "Inappropriate content",
     "reportFraud": "Fraud/Misinformation",
-    "reportOther": "Other"
+    "reportOther": "Other",
+    "board_INFO": "General",
+    "board_QUESTION": "Local",
+    "board_CHAT": "Meetup",
+    "board_CULTURE": "Marketplace",
+    "post": "Post",
+    "replyPlaceholder": "Reply to @{{author}}..."
   },
   "school": {
     "title": "Campus Life",

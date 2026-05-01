@@ -15,6 +15,7 @@ import { reportContent } from '../services/reportService';
 import * as Haptics from 'expo-haptics';
 import { getOrCreateDirectRoom } from '../services/directChatService';
 import { useAuthStore } from '../stores/authStore';
+import { useTranslation } from 'react-i18next';
 import { useCommunityStore } from '../stores/communityStore';
 
 const BLUE    = '#3B6FE8';
@@ -26,9 +27,6 @@ const T2      = '#A8C8FA';
 const T3      = '#6B9DF0';
 const ORANGE  = '#F97316';
 
-const CATEGORY_LABEL: Record<string, string> = {
-  INFO: '자유게시판', QUESTION: '로컬게시판', CHAT: '모임게시판', CULTURE: '장터게시판',
-};
 
 const AVATAR_COLORS = ['#3B6FE8', '#6B9DF0', '#A8C8FA', '#5B8DEF', '#4A7CE0'];
 const SERVER_BASE_URL = 'https://backend-production-0a6f.up.railway.app';
@@ -45,15 +43,17 @@ function toAbsoluteUrl(path?: string): string | null {
   return SERVER_BASE_URL + path;
 }
 
-function formatTime(createdAt: string): string {
+type TFunction = (key: string, opts?: Record<string, unknown>) => string;
+
+function formatTime(createdAt: string, t: TFunction): string {
   const utc = createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z';
   const diff = Date.now() - new Date(utc).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1)  return '방금 전';
-  if (m < 60) return `${m}분 전`;
+  if (m < 1)  return t('time.justNow');
+  if (m < 60) return t('time.minutesAgo', { m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
+  if (h < 24) return t('time.hoursAgo', { h });
+  return t('time.daysAgo', { d: Math.floor(h / 24) });
 }
 
 
@@ -62,6 +62,7 @@ export default function CommunityPostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuthStore();
+  const { t } = useTranslation();
 
   const [post, setPost] = useState<CommunityPostDetailDto | null>(null);
   const [isLiked, setIsLiked] = useState(false);
@@ -94,7 +95,13 @@ export default function CommunityPostScreen() {
   const currentScrollY = useRef<number>(0);
 
 
-  const REPORT_REASONS = ['스팸/광고', '욕설/혐오 표현', '부적절한 내용', '사기/허위 정보', '기타'];
+  const REPORT_REASONS = [
+    t('community.reportSpam'),
+    t('community.reportHate'),
+    t('community.reportInappropriate'),
+    t('community.reportFraud'),
+    t('community.reportOther'),
+  ];
 
   const reportPanResponder = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -108,15 +115,15 @@ export default function CommunityPostScreen() {
   })).current;
 
   const handleReport = async () => {
-    if (!reportReason) { Alert.alert('신고 사유를 선택해주세요.'); return; }
+    if (!reportReason) { Alert.alert(t('community.selectReportReason')); return; }
     if (!post?.authorId) return;
     try {
       await reportContent({ targetUserId: post.authorId, targetType: 'POST', targetId: post.id, reason: reportReason });
       setReportVisible(false);
       setReportReason('');
-      Alert.alert('신고 완료', '신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+      Alert.alert(t('community.reportDone'), t('community.reportDoneMsg'));
     } catch {
-      Alert.alert('오류', '신고에 실패했습니다.');
+      Alert.alert(t('common.error'), t('community.reportFailed'));
     }
   };
 
@@ -240,9 +247,9 @@ export default function CommunityPostScreen() {
   if (!post) {
     return (
       <View style={s.notFound}>
-        <Text style={s.notFoundText}>게시글을 찾을 수 없어요.</Text>
+        <Text style={s.notFoundText}>{t('community.postNotFound')}</Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={s.backLink}>돌아가기</Text>
+          <Text style={s.backLink}>{t('common.back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -261,16 +268,16 @@ export default function CommunityPostScreen() {
 
   const handleDelete = () => {
     setMenuVisible(false);
-    Alert.alert('삭제 확인', '게시글을 삭제하시겠어요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('community.deleteConfirm'), t('community.deletePostMsg'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           try {
             await deleteCommunityPost(post.id);
             router.back();
           } catch {
-            Alert.alert('오류', '삭제에 실패했습니다.');
+            Alert.alert(t('common.error'), t('community.deleteFailed'));
           }
         },
       },
@@ -278,10 +285,10 @@ export default function CommunityPostScreen() {
   };
 
   const handleDeleteComment = (commentId: number) => {
-    Alert.alert('댓글 삭제', '댓글을 삭제하시겠어요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('community.deleteComment'), t('community.deleteCommentMsg'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           try {
             await deleteCommunityComment(commentId);
@@ -291,8 +298,8 @@ export default function CommunityPostScreen() {
               commentList: prev.commentList.filter((c) => c.id !== commentId),
             } : prev);
           } catch (e: any) {
-            const msg = e?.response?.data?.message ?? e?.message ?? '삭제에 실패했습니다.';
-            Alert.alert('오류', msg);
+            const msg = e?.response?.data?.message ?? e?.message ?? t('community.deleteFailed');
+            Alert.alert(t('common.error'), msg);
           }
         },
       },
@@ -307,10 +314,10 @@ export default function CommunityPostScreen() {
       if (res.success && res.data) {
         setStoreTranslation(post!.id, res.data);
       } else {
-        Alert.alert('번역 실패', res.message ?? '번역에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        Alert.alert(t('chatroom.translationFailed'), res.message ?? t('chatroom.translationError'));
       }
     } catch {
-      Alert.alert('번역 실패', '번역 서버에 연결할 수 없습니다.');
+      Alert.alert(t('chatroom.translationFailed'), t('chatroom.translationServerError'));
     } finally {
       setTranslating(false);
     }
@@ -339,10 +346,10 @@ export default function CommunityPostScreen() {
       if (res.success && res.data) {
         setCommentTranslations((prev) => ({ ...prev, [commentId]: res.data.content }));
       } else {
-        Alert.alert('번역 실패', res.message ?? '번역에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        Alert.alert(t('chatroom.translationFailed'), res.message ?? t('chatroom.translationError'));
       }
     } catch {
-      Alert.alert('번역 실패', '번역 서버에 연결할 수 없습니다.');
+      Alert.alert(t('chatroom.translationFailed'), t('chatroom.translationServerError'));
     } finally {
       setTranslatingComments((prev) => ({ ...prev, [commentId]: false }));
     }
@@ -407,12 +414,12 @@ export default function CommunityPostScreen() {
                 <View style={s.menuSheet}>
                   <TouchableOpacity style={s.menuItem} onPress={handleEdit}>
                     <Ionicons name="pencil-outline" size={18} color={T1} />
-                    <Text style={s.menuItemText}>수정</Text>
+                    <Text style={s.menuItemText}>{t('common.edit')}</Text>
                   </TouchableOpacity>
                   <View style={s.menuDivider} />
                   <TouchableOpacity style={s.menuItem} onPress={handleDelete}>
                     <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                    <Text style={[s.menuItemText, { color: '#EF4444' }]}>삭제</Text>
+                    <Text style={[s.menuItemText, { color: '#EF4444' }]}>{t('common.delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </Pressable>
@@ -430,18 +437,18 @@ export default function CommunityPostScreen() {
                     setOtherMenuVisible(false);
                     if (!post.authorId) return;
                     Alert.alert(
-                      '차단하기',
-                      `${post.author}님을 차단하시겠어요?\n차단한 사용자의 글과 메시지가 보이지 않습니다.`,
+                      t('community.block'),
+                      t('community.blockMsg', { name: post.author }),
                       [
-                        { text: '취소', style: 'cancel' },
+                        { text: t('common.cancel'), style: 'cancel' },
                         {
-                          text: '차단', style: 'destructive',
+                          text: t('community.blockConfirm'), style: 'destructive',
                           onPress: async () => {
                             try {
                               await blockUser(post.authorId!);
                               router.back();
                             } catch {
-                              Alert.alert('오류', '차단에 실패했습니다.');
+                              Alert.alert(t('common.error'), t('community.blockFailed'));
                             }
                           },
                         },
@@ -449,7 +456,7 @@ export default function CommunityPostScreen() {
                     );
                   }}>
                     <Ionicons name="ban-outline" size={18} color="#EF4444" />
-                    <Text style={[s.menuItemText, { color: '#EF4444' }]}>차단하기</Text>
+                    <Text style={[s.menuItemText, { color: '#EF4444' }]}>{t('community.block')}</Text>
                   </TouchableOpacity>
                   <View style={s.menuDivider} />
                   <TouchableOpacity style={s.menuItem} onPress={() => {
@@ -457,7 +464,7 @@ export default function CommunityPostScreen() {
                     setOtherMenuVisible(false);
                   }}>
                     <Ionicons name="alert-circle-outline" size={18} color="#EF4444" />
-                    <Text style={[s.menuItemText, { color: '#EF4444' }]}>신고하기</Text>
+                    <Text style={[s.menuItemText, { color: '#EF4444' }]}>{t('community.report')}</Text>
                   </TouchableOpacity>
                 </View>
               </Pressable>
@@ -479,7 +486,7 @@ export default function CommunityPostScreen() {
       >
         <View style={s.postWrap}>
           {/* 카테고리 텍스트 */}
-          <Text style={s.catLabel}>{CATEGORY_LABEL[post.category]} 게시글</Text>
+          <Text style={s.catLabel}>{t(`community.board_${post.category}`)} {t('community.post')}</Text>
 
           {/* 작성자 정보 */}
           <TouchableOpacity
@@ -497,7 +504,7 @@ export default function CommunityPostScreen() {
               <Text style={s.authorName}>{post.author}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: sc(12) }}>
                 <Text style={s.authorSub}>{post.authorMajor || post.university}</Text>
-                <Text style={s.postTime}>{formatTime(post.createdAt)}</Text>
+                <Text style={s.postTime}>{formatTime(post.createdAt, t)}</Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -567,10 +574,10 @@ export default function CommunityPostScreen() {
 
         {/* 댓글 목록 */}
         <View style={s.commentSection} onLayout={(e) => { commentSectionY.current = e.nativeEvent.layout.y; }}>
-          <Text style={s.commentSectionTitle}>댓글 ({comments.length})</Text>
+          <Text style={s.commentSectionTitle}>{t('community.commentCount', { count: comments.length })}</Text>
           {comments.length === 0 ? (
             <View style={s.noComment}>
-              <Text style={s.noCommentText}>첫 댓글을 달아보세요!</Text>
+              <Text style={s.noCommentText}>{t('community.firstComment')}</Text>
             </View>
           ) : (
             <>
@@ -630,7 +637,7 @@ export default function CommunityPostScreen() {
                       >
                         <Text style={s.commentAuthor}>{c.author}</Text>
                       </TouchableOpacity>
-                      <Text style={s.commentTime}>{formatTime(c.createdAt)}</Text>
+                      <Text style={s.commentTime}>{formatTime(c.createdAt, t)}</Text>
                       <TouchableOpacity
                         style={s.commentHeartBtn}
                         onPress={() => {
@@ -665,7 +672,7 @@ export default function CommunityPostScreen() {
                         {translatingComments[c.id]
                           ? <ActivityIndicator size="small" color={BLUE} />
                           : <Text style={[s.commentTranslateText, commentTranslations[c.id] !== undefined && s.commentTranslateTextActive]}>
-                              {commentTranslations[c.id] !== undefined ? '원문 보기' : '번역 보기'}
+                              {commentTranslations[c.id] !== undefined ? t('community.showOriginal') : t('community.showTranslation')}
                             </Text>
                         }
                       </TouchableOpacity>
@@ -674,7 +681,7 @@ export default function CommunityPostScreen() {
                           {loadingReplies[c.id]
                             ? <ActivityIndicator size="small" color={BLUE} />
                             : <Text style={s.replyToggleText}>
-                                {expandedReplies[c.id] ? '답글 숨기기' : `답글 ${c.replyCount}개 더 보기`}
+                                {expandedReplies[c.id] ? t('community.hideReplies') : t('community.showReplies', { count: c.replyCount })}
                               </Text>
                           }
                         </TouchableOpacity>
@@ -695,7 +702,7 @@ export default function CommunityPostScreen() {
                     <View style={s.commentBody}>
                       <View style={s.commentMeta}>
                         <Text style={s.commentAuthor}>{r.author}</Text>
-                        <Text style={s.commentTime}>{formatTime(r.createdAt)}</Text>
+                        <Text style={s.commentTime}>{formatTime(r.createdAt, t)}</Text>
                       </View>
                       <Text style={s.commentContent}>{r.content}</Text>
                     </View>
@@ -718,7 +725,7 @@ export default function CommunityPostScreen() {
             <View style={s.likersHandleWrap} {...handlePanResponder.panHandlers}>
               <View style={s.likersHandle} />
             </View>
-            <Text style={s.likersTitle}>좋아요 {post?.likes ?? 0}개</Text>
+            <Text style={s.likersTitle}>{t('community.likeCount', { count: post?.likes ?? 0 })}</Text>
             <View style={s.likersDivider} />
             {likersLoading
               ? <ActivityIndicator color={BLUE} style={{ marginTop: sc(30) }} />
@@ -746,7 +753,7 @@ export default function CommunityPostScreen() {
                       </View>
                     </TouchableOpacity>
                   )}
-                  ListEmptyComponent={<Text style={s.likersEmpty}>아직 좋아요가 없습니다</Text>}
+                  ListEmptyComponent={<Text style={s.likersEmpty}>{t('community.noLikes')}</Text>}
                 />
             }
           </View>
@@ -760,7 +767,7 @@ export default function CommunityPostScreen() {
             <View style={s.reportHandleWrap} {...reportPanResponder.panHandlers}>
               <View style={s.reportHandle} />
             </View>
-            <Text style={s.reportTitle}>신고하기</Text>
+            <Text style={s.reportTitle}>{t('community.report')}</Text>
             <View style={s.reportDivider} />
             {REPORT_REASONS.map((reason) => (
               <TouchableOpacity key={reason} style={s.reportItem} activeOpacity={0.7} onPress={() => setReportReason(reason)}>
@@ -773,10 +780,10 @@ export default function CommunityPostScreen() {
             <View style={s.reportDivider} />
             <View style={s.reportBtnRow}>
               <TouchableOpacity style={s.reportCancelBtn} onPress={() => { setReportVisible(false); setReportReason(''); }}>
-                <Text style={s.reportCancelText}>취소</Text>
+                <Text style={s.reportCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.reportSubmitBtn, !reportReason && s.reportSubmitBtnOff]} onPress={handleReport}>
-                <Text style={s.reportSubmitText}>신고하기</Text>
+                <Text style={s.reportSubmitText}>{t('community.report')}</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -798,7 +805,7 @@ export default function CommunityPostScreen() {
         <TextInput
           ref={inputRef}
           style={s.commentInput}
-          placeholder={replyTarget ? `@${replyTarget.author}에게 답글...` : ''}
+          placeholder={replyTarget ? t('community.replyPlaceholder', { author: replyTarget.author }) : ''}
           placeholderTextColor={T2}
           value={commentText}
           onChangeText={(t) => { setCommentText(t); if (!t) setReplyTarget(null); }}

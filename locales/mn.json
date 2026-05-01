@@ -209,7 +209,13 @@
     "reportHate": "Үзэн ядалтын яриа",
     "reportInappropriate": "Тохиромжгүй агуулга",
     "reportFraud": "Залилан/Худал мэдээлэл",
-    "reportOther": "Бусад"
+    "reportOther": "Бусад",
+    "board_INFO": "Чөлөөт самбар",
+    "board_QUESTION": "Орон нутгийн самбар",
+    "board_CHAT": "Уулзалтын самбар",
+    "board_CULTURE": "Зах зээлийн самбар",
+    "post": "Нийтлэл",
+    "replyPlaceholder": "@{{author}}-д хариу бичих..."
   },
   "school": {
     "title": "Кампусын амьдрал",

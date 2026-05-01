@@ -209,7 +209,13 @@
     "reportHate": "ヘイトスピーチ",
     "reportInappropriate": "不適切なコンテンツ",
     "reportFraud": "詐欺/虚偽情報",
-    "reportOther": "その他"
+    "reportOther": "その他",
+    "board_INFO": "自由掲示板",
+    "board_QUESTION": "ローカル掲示板",
+    "board_CHAT": "集まり掲示板",
+    "board_CULTURE": "マーケット掲示板",
+    "post": "投稿",
+    "replyPlaceholder": "@{{author}}さんへ返信..."
   },
   "school": {
     "title": "キャンパスライフ",
