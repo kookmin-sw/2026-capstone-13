@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/authStore';
 import { s } from '../utils/scale';
 
@@ -13,21 +14,22 @@ const PILL_HEIGHT = 52;
 
 type TabConfig = {
   name: string;
-  label: string;
+  labelKey: string;
   icon: keyof typeof Ionicons.glyphMap;
   activeIcon: keyof typeof Ionicons.glyphMap;
 };
 
 const TAB_CONFIG: TabConfig[] = [
-  { name: 'home',      label: '홈',      icon: 'home-outline',        activeIcon: 'home'        },
-  { name: 'school',    label: '학교',    icon: 'school-outline',      activeIcon: 'school'      },
-  { name: 'community', label: '커뮤니티', icon: 'people-outline',      activeIcon: 'people'      },
-  { name: 'chat',      label: '채팅',    icon: 'chatbubbles-outline',  activeIcon: 'chatbubbles' },
-  { name: 'profile',   label: '프로필',  icon: 'person-outline',       activeIcon: 'person'      },
+  { name: 'home',      labelKey: 'nav.home',      icon: 'home-outline',        activeIcon: 'home'        },
+  { name: 'school',    labelKey: 'nav.school',    icon: 'school-outline',      activeIcon: 'school'      },
+  { name: 'community', labelKey: 'nav.community', icon: 'people-outline',      activeIcon: 'people'      },
+  { name: 'chat',      labelKey: 'nav.chat',      icon: 'chatbubbles-outline',  activeIcon: 'chatbubbles' },
+  { name: 'profile',   labelKey: 'nav.profile',   icon: 'person-outline',       activeIcon: 'person'      },
 ];
 
 export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { user } = useAuthStore();
+  const { t } = useTranslation();
   const isKorean = user?.userType === 'KOREAN';
 
   const visibleRoutes = state.routes.filter((route) => {
@@ -127,7 +129,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
               )}
             </View>
             <Text style={[styles.label, isFocused && styles.labelActive]}>
-              {tabCfg.label}
+              {t(tabCfg.labelKey)}
             </Text>
           </TouchableOpacity>
         );

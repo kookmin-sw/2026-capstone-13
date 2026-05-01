@@ -18,6 +18,7 @@ import {
   Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { Colors } from '../../constants/colors';
 
@@ -37,6 +38,7 @@ const LANGUAGES = [
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { login, isLoading, clearError, user } = useAuthStore();
 
   const [email, setEmail] = useState('');
@@ -128,7 +130,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('알림', '이메일과 비밀번호를 입력해주세요.');
+      Alert.alert(t('common.confirm'), t('auth.enterEmailPassword'));
       return;
     }
 
@@ -137,7 +139,7 @@ export default function LoginScreen() {
       router.replace('/(main)/home');
     } else {
       const currentError = useAuthStore.getState().error;
-      Alert.alert('로그인 실패', currentError ?? '로그인에 실패했습니다.');
+      Alert.alert(t('auth.loginFailed'), currentError ?? t('auth.loginError'));
       clearError();
     }
   };
@@ -188,7 +190,7 @@ export default function LoginScreen() {
               <View style={styles.form}>
                 <TextInput
                   style={styles.input}
-                  placeholder="이메일"
+                  placeholder={t('auth.email')}
                   placeholderTextColor={Colors.textLight}
                   value={email}
                   onChangeText={setEmail}
@@ -197,7 +199,7 @@ export default function LoginScreen() {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="비밀번호"
+                  placeholder={t('auth.password')}
                   placeholderTextColor={Colors.textLight}
                   value={password}
                   onChangeText={setPassword}
@@ -220,7 +222,7 @@ export default function LoginScreen() {
                 {isLoading ? (
                   <ActivityIndicator color={Colors.textWhite} />
                 ) : (
-                  <Text style={styles.loginButtonText}>로그인</Text>
+                  <Text style={styles.loginButtonText}>{t('auth.login')}</Text>
                 )}
               </TouchableOpacity>
             </Animated.View>
@@ -233,12 +235,12 @@ export default function LoginScreen() {
             >
               <View style={styles.dividerRow}>
                 <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>또는</Text>
+                <Text style={styles.dividerText}>{t('common.or')}</Text>
                 <View style={styles.dividerLine} />
               </View>
 
               <TouchableOpacity style={styles.forgotPassword} onPress={() => router.push('/change-password')}>
-                <Text style={styles.forgotPasswordText}>비밀번호를 잊으셨나요?</Text>
+                <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
               </TouchableOpacity>
             </Animated.View>
 
@@ -249,9 +251,9 @@ export default function LoginScreen() {
               }}
             >
               <View style={styles.registerRow}>
-                <Text style={styles.registerText}>계정이 없으신가요? </Text>
+                <Text style={styles.registerText}>{t('auth.noAccount')}</Text>
                 <TouchableOpacity onPress={() => router.push('/(auth)/register-type')}>
-                  <Text style={styles.registerHighlight}>가입하기</Text>
+                  <Text style={styles.registerHighlight}>{t('auth.register')}</Text>
                 </TouchableOpacity>
               </View>
             </Animated.View>

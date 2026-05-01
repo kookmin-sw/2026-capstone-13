@@ -16,6 +16,7 @@ import {
 import { deleteAccount } from '../services/authService';
 import { useAuthStore } from '../stores/authStore';
 import { s } from '../utils/scale';
+import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_FLAGS, type SupportedLanguage } from '../i18n';
 
 const PRIMARY = '#3B6FE8';
@@ -28,6 +29,7 @@ const BORDER = '#E5E7EB';
 
 export default function AccountSettingsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { logout, user, setAppLanguage } = useAuthStore();
   const [langModalVisible, setLangModalVisible] = useState(false);
   const currentLang = (user?.preferredLanguage as SupportedLanguage | undefined) ?? 'ko';
@@ -38,10 +40,10 @@ export default function AccountSettingsScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('auth.logout'), t('auth.logoutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '로그아웃',
+        text: t('auth.logout'),
         style: 'destructive',
         onPress: async () => {
           await logout();
@@ -57,16 +59,16 @@ export default function AccountSettingsScreen() {
 
   const handleWithdraw = () => {
     if (!password.trim()) {
-      Alert.alert('알림', '비밀번호를 입력해주세요.');
+      Alert.alert(t('common.confirm'), t('settings.enterPassword'));
       return;
     }
     Alert.alert(
-      '정말 탈퇴하시겠습니까?',
-      '탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.',
+      t('settings.withdrawConfirm'),
+      t('settings.withdrawWarning'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '탈퇴',
+          text: t('settings.withdraw'),
           style: 'destructive',
           onPress: confirmWithdraw,
         },
@@ -81,7 +83,7 @@ export default function AccountSettingsScreen() {
       await logout();
       router.replace('/');
     } catch {
-      Alert.alert('탈퇴 실패', '비밀번호가 올바르지 않거나 오류가 발생했습니다.');
+      Alert.alert(t('settings.withdrawFailed'), t('settings.withdrawFailedDesc'));
     } finally {
       setLoading(false);
     }
@@ -94,7 +96,7 @@ export default function AccountSettingsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={T1} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>계정 설정</Text>
+        <Text style={styles.headerTitle}>{t('settings.accountSettings')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -106,7 +108,7 @@ export default function AccountSettingsScreen() {
           activeOpacity={0.7}
         >
           <Ionicons name="language-outline" size={20} color={T1} />
-          <Text style={[styles.menuItemText, { color: T1 }]}>언어 설정</Text>
+          <Text style={[styles.menuItemText, { color: T1 }]}>{t('settings.language')}</Text>
           <Text style={styles.menuItemValue}>
             {LANGUAGE_FLAGS[currentLang]} {LANGUAGE_LABELS[currentLang]}
           </Text>
@@ -119,7 +121,7 @@ export default function AccountSettingsScreen() {
           activeOpacity={0.7}
         >
           <Ionicons name="lock-closed-outline" size={20} color={T1} />
-          <Text style={[styles.menuItemText, { color: T1 }]}>비밀번호 변경</Text>
+          <Text style={[styles.menuItemText, { color: T1 }]}>{t('settings.changePassword')}</Text>
           <Ionicons name="chevron-forward" size={18} color={T2} style={styles.menuChevron} />
         </TouchableOpacity>
         <View style={styles.menuDivider} />
@@ -129,7 +131,7 @@ export default function AccountSettingsScreen() {
           activeOpacity={0.7}
         >
           <Ionicons name="ban-outline" size={20} color={T1} />
-          <Text style={[styles.menuItemText, { color: T1 }]}>차단 관리</Text>
+          <Text style={[styles.menuItemText, { color: T1 }]}>{t('settings.blockedUsers')}</Text>
           <Ionicons name="chevron-forward" size={18} color={T2} style={styles.menuChevron} />
         </TouchableOpacity>
         <View style={styles.menuDivider} />
@@ -139,7 +141,7 @@ export default function AccountSettingsScreen() {
           activeOpacity={0.7}
         >
           <Ionicons name="log-out-outline" size={20} color={T1} />
-          <Text style={[styles.menuItemText, { color: T1 }]}>로그아웃</Text>
+          <Text style={[styles.menuItemText, { color: T1 }]}>{t('settings.logout')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -157,7 +159,7 @@ export default function AccountSettingsScreen() {
         >
           <View style={styles.langModalSheet}>
             <View style={styles.langModalHeader}>
-              <Text style={styles.langModalTitle}>언어 선택</Text>
+              <Text style={styles.langModalTitle}>{t('settings.selectLanguage')}</Text>
               <TouchableOpacity onPress={() => setLangModalVisible(false)}>
                 <Ionicons name="close" size={24} color={T1} />
               </TouchableOpacity>
@@ -195,7 +197,7 @@ export default function AccountSettingsScreen() {
           activeOpacity={0.7}
         >
           <Ionicons name="person-remove-outline" size={20} color={DANGER} />
-          <Text style={styles.menuItemText}>계정 탈퇴</Text>
+          <Text style={styles.menuItemText}>{t('settings.deleteAccount')}</Text>
           <Ionicons
             name={showConfirm ? 'chevron-up' : 'chevron-down'}
             size={18}
@@ -206,13 +208,11 @@ export default function AccountSettingsScreen() {
 
         {showConfirm && (
           <View style={styles.withdrawBox}>
-            <Text style={styles.withdrawDesc}>
-              탈퇴 시 모든 데이터(도움 내역, 채팅, 게시글 등)가 영구 삭제되며 복구할 수 없습니다.
-            </Text>
-            <Text style={styles.withdrawLabel}>비밀번호 확인</Text>
+            <Text style={styles.withdrawDesc}>{t('settings.deleteAccountDesc')}</Text>
+            <Text style={styles.withdrawLabel}>{t('settings.passwordConfirm')}</Text>
             <TextInput
               style={styles.passwordInput}
-              placeholder="현재 비밀번호를 입력하세요"
+              placeholder={t('settings.enterPassword')}
               placeholderTextColor={T2}
               value={password}
               onChangeText={setPassword}
@@ -228,7 +228,7 @@ export default function AccountSettingsScreen() {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.withdrawBtnText}>탈퇴하기</Text>
+                <Text style={styles.withdrawBtnText}>{t('settings.withdraw')}</Text>
               )}
             </TouchableOpacity>
           </View>
