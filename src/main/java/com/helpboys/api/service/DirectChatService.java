@@ -163,15 +163,31 @@ public class DirectChatService {
 
             if (receiver.getFcmToken() != null) {
                 try {
-                    String preview = dto.getContent() != null && dto.getContent().length() > 50
-                            ? dto.getContent().substring(0, 50) + "…" : dto.getContent();
-                    fcmService.sendPushWithData(receiver.getFcmToken(), sender.getNickname(), preview,
-                            "chat",
-                            Map.of(
-                                "type", "direct_chat",
-                                "roomId", String.valueOf(room.getId()),
-                                "senderId", String.valueOf(sender.getId())
-                            ));
+                    String content = dto.getContent();
+                    if (content != null && (content.startsWith("SYS_CALL_VOICE:") || content.startsWith("SYS_CALL_VIDEO:"))) {
+                        boolean isVideo = content.startsWith("SYS_CALL_VIDEO:");
+                        fcmService.sendPushWithData(receiver.getFcmToken(), sender.getNickname(),
+                                isVideo ? "영상통화가 왔습니다" : "음성통화가 왔습니다",
+                                "calls",
+                                Map.of(
+                                    "type", "call",
+                                    "roomId", String.valueOf(room.getId()),
+                                    "fromUserId", String.valueOf(sender.getId()),
+                                    "callerNickname", sender.getNickname(),
+                                    "voiceOnly", isVideo ? "false" : "true",
+                                    "isDirect", "true"
+                                ));
+                    } else {
+                        String preview = content != null && content.length() > 50
+                                ? content.substring(0, 50) + "…" : content;
+                        fcmService.sendPushWithData(receiver.getFcmToken(), sender.getNickname(), preview,
+                                "chat",
+                                Map.of(
+                                    "type", "direct_chat",
+                                    "roomId", String.valueOf(room.getId()),
+                                    "senderId", String.valueOf(sender.getId())
+                                ));
+                    }
                 } catch (Exception e) {
                     log.warn("[FCM] DM 푸시 전송 실패: {}", e.getMessage());
                 }

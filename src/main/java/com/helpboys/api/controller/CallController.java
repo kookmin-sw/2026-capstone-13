@@ -87,7 +87,9 @@ public class
                             Map.of(
                                 "type", "call",
                                 "fromUserId", String.valueOf(signal.getFromUserId()),
-                                "roomId", signal.getRoomId() != null ? String.valueOf(signal.getRoomId()) : ""
+                                "roomId", signal.getRoomId() != null ? String.valueOf(signal.getRoomId()) : "",
+                                "callerNickname", callerName,
+                                "voiceOnly", "false"
                             )
                     );
                 }

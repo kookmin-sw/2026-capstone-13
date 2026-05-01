@@ -171,6 +171,21 @@ public class ChatService {
                     : room.getRequester();
             if (receiver == null || receiver.getFcmToken() == null) return;
 
+            if (content != null && (content.startsWith("SYS_CALL_VOICE:") || content.startsWith("SYS_CALL_VIDEO:"))) {
+                boolean isVideo = content.startsWith("SYS_CALL_VIDEO:");
+                fcmService.sendPushWithData(receiver.getFcmToken(), senderNickname,
+                        isVideo ? "영상통화가 왔습니다" : "음성통화가 왔습니다",
+                        "calls",
+                        Map.of(
+                            "type", "call",
+                            "roomId", String.valueOf(roomId),
+                            "fromUserId", String.valueOf(senderId),
+                            "callerNickname", senderNickname,
+                            "voiceOnly", isVideo ? "false" : "true"
+                        ));
+                return;
+            }
+
             String preview = content != null && content.length() > 50
                     ? content.substring(0, 50) + "…"
                     : content;
