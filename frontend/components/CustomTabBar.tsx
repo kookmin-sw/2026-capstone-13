@@ -1,0 +1,210 @@
+import { Ionicons } from '@expo/vector-icons';
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useRef, useState } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '../stores/authStore';
+import { s } from '../utils/scale';
+
+const ACTIVE_BG = '#3B6FE8';
+const INACTIVE_COLOR = '#999999';
+const PILL_WIDTH = 76;
+const PILL_WIDTH_INTERNATIONAL = 62;
+const PILL_HEIGHT = 52;
+
+type TabConfig = {
+  name: string;
+  labelKey: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  activeIcon: keyof typeof Ionicons.glyphMap;
+};
+
+const TAB_CONFIG: TabConfig[] = [
+  { name: 'home',      labelKey: 'nav.home',      icon: 'home-outline',        activeIcon: 'home'        },
+  { name: 'school',    labelKey: 'nav.school',    icon: 'school-outline',      activeIcon: 'school'      },
+  { name: 'community', labelKey: 'nav.community', icon: 'people-outline',      activeIcon: 'people'      },
+  { name: 'chat',      labelKey: 'nav.chat',      icon: 'chatbubbles-outline',  activeIcon: 'chatbubbles' },
+  { name: 'profile',   labelKey: 'nav.profile',   icon: 'person-outline',       activeIcon: 'person'      },
+];
+
+export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const { user } = useAuthStore();
+  const { t } = useTranslation();
+  const isKorean = user?.userType === 'KOREAN';
+
+  const visibleRoutes = state.routes.filter((route) => {
+    if (descriptors[route.key].options.href === null) return false;
+    if (isKorean && route.name === 'school') return false;
+    return true;
+  });
+
+  const focusedVisibleIndex = visibleRoutes.findIndex(
+    (r) => r.key === state.routes[state.index]?.key,
+  );
+
+  const pillWidth = isKorean ? PILL_WIDTH : PILL_WIDTH_INTERNATIONAL;
+
+  const [tabLayouts, setTabLayouts] = useState<Record<number, { x: number; width: number }>>({});
+  const pillX = useRef(new Animated.Value(13)).current;
+  const pillXRef = useRef(0);
+  const tabCount = visibleRoutes.length;
+
+  const getPillX = (layouts: Record<number, { x: number; width: number }>, index: number) => {
+    const layout = layouts[index];
+    if (!layout) return null;
+    return layout.x + (layout.width - pillWidth) / 2;
+  };
+
+  const handleLayout = (i: number, x: number, width: number) => {
+    setTabLayouts((prev) => {
+      const next = { ...prev, [i]: { x, width } };
+      if (Object.keys(next).length === tabCount) {
+        const toX = getPillX(next, focusedVisibleIndex);
+        if (toX !== null) {
+          pillX.setValue(toX);
+          pillXRef.current = toX;
+        }
+      }
+      return next;
+    });
+  };
+
+  const onTabPress = (index: number, routeName: string, routeKey: string) => {
+    const isFocused = index === focusedVisibleIndex;
+    const event = navigation.emit({ type: 'tabPress', target: routeKey, canPreventDefault: true });
+    if (!isFocused && !event.defaultPrevented) {
+      const toX = getPillX(tabLayouts, index);
+      if (toX !== null) {
+        Animated.spring(pillX, {
+          toValue: toX,
+          useNativeDriver: true,
+          friction: 7,
+          tension: 55,
+        }).start();
+        pillXRef.current = toX;
+      }
+      navigation.navigate(routeName);
+    }
+  };
+
+  const currentRouteName = state.routes[state.index]?.name;
+  if (currentRouteName === 'write') return null;
+
+  return (
+    <View style={styles.container}>
+      <Animated.View
+        style={[styles.activePill, { width: pillWidth, transform: [{ translateX: pillX }] }]}
+        pointerEvents="none"
+      />
+
+      {visibleRoutes.map((route, i) => {
+        const tabCfg = TAB_CONFIG.find((t) => t.name === route.name);
+        if (!tabCfg) return null;
+
+        const isFocused = i === focusedVisibleIndex;
+        const options = descriptors[route.key].options;
+        const badge = (options as { tabBarBadge?: number }).tabBarBadge;
+
+        return (
+          <TouchableOpacity
+            key={route.key}
+            style={styles.tab}
+            onPress={() => onTabPress(i, route.name, route.key)}
+            activeOpacity={0.8}
+            onLayout={(e) => {
+              const { x, width } = e.nativeEvent.layout;
+              handleLayout(i, x, width);
+            }}
+          >
+            <View style={styles.iconWrap}>
+              <Ionicons
+                name={isFocused ? tabCfg.activeIcon : tabCfg.icon}
+                size={24}
+                color={isFocused ? '#fff' : INACTIVE_COLOR}
+              />
+              {badge != null && badge > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.label, isFocused && styles.labelActive]}>
+              {t(tabCfg.labelKey)}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
+    borderRadius: s(40),
+    paddingVertical: s(8),
+    paddingHorizontal: s(8),
+    alignItems: 'center',
+    borderWidth: s(1),
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: s(8) },
+    shadowOpacity: 0.15,
+    shadowRadius: s(24),
+    elevation: 16,
+  },
+  activePill: {
+    position: 'absolute',
+    alignSelf: 'center',
+    left: 0,
+    width: PILL_WIDTH,
+    height: PILL_HEIGHT,
+    borderRadius: s(26),
+    backgroundColor: ACTIVE_BG,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: s(3),
+    paddingVertical: s(6),
+    zIndex: 1,
+  },
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: s(11),
+    fontWeight: '700',
+    color: INACTIVE_COLOR,
+  },
+  labelActive: {
+    color: '#fff',
+    fontWeight: '800',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    backgroundColor: '#EF4444',
+    borderRadius: s(9),
+    minWidth: s(16),
+    height: s(16),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: s(3),
+    borderWidth: s(1.5),
+    borderColor: '#fff',
+  },
+  badgeText: {
+    fontSize: s(9),
+    fontWeight: '800',
+    color: '#fff',
+  },
+});

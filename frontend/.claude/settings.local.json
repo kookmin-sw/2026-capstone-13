@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \":*)",
+      "WebSearch",
+      "WebFetch(domain:www.data.go.kr)",
+      "WebFetch(domain:kosis.kr)",
+      "WebFetch(domain:kess.kedi.re.kr)",
+      "Bash(curl -s -X POST https://backend-production-0a6f.up.railway.app/api/auth/register -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"test123@test.com\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"test1234\"\"\"\",\"\"\"\"nickname\"\"\"\":\"\"\"\"테스트유저\"\"\"\",\"\"\"\"userType\"\"\"\":\"\"\"\"KOREAN\"\"\"\",\"\"\"\"university\"\"\"\":\"\"\"\"국민대학교\"\"\"\"}')",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s -X POST https://backend-production-0a6f.up.railway.app/api/auth/register -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"test123@test.com\"\",\"\"password\"\":\"\"test1234\"\",\"\"nickname\"\":\"\"테스트유저\"\",\"\"userType\"\":\"\"KOREAN\"\",\"\"university\"\":\"\"국민대학교\"\"}')",
+      "Bash(curl -s -v -X POST https://backend-production-0a6f.up.railway.app/api/auth/register -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"test123@test.com\"\",\"\"password\"\":\"\"test1234\"\",\"\"nickname\"\":\"\"테스트유저\"\",\"\"userType\"\":\"\"KOREAN\"\",\"\"university\"\":\"\"국민대학교\"\"}')",
+      "Bash(find /c/Users/sang0/OneDrive/Desktop/backend/src -name application*.properties -o -name application*.yml)",
+      "Bash(xargs ls:*)",
+      "Bash(railway --version)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx expo:*)",
+      "Bash(grep -r \"notice\\\\|공지\\\\|announcement\\\\|crawl\\\\|크롤\" c:/Users/sang0/OneDrive/Desktop/frontend-main --include=*.ts --include=*.tsx)",
+      "Bash(grep -E \"\\\\.tsx?$\")",
+      "Read(//c/Users/sang0/Downloads/**)",
+      "Read(//tmp/**)",
+      "Bash(xargs grep:*)",
+      "Bash(node -e ':*)",
+      "Bash(curl -s \"https://backend-production-0a6f.up.railway.app/api/users/list/koreans\" -H \"Content-Type: application/json\")",
+      "Bash(curl -v \"https://backend-production-0a6f.up.railway.app/api/users/list/koreans\")",
+      "Bash(curl -v \"https://backend-production-0a6f.up.railway.app/api/users/list/koreans\" -H \"Authorization: Bearer test\")",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://backend-production-0a6f.up.railway.app/api/auth/login\" -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"test@test.com\",\"password\":\"test1234\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://backend-production-0a6f.up.railway.app/api/users/list/koreans\" -H \"Authorization: Bearer dummy_token_to_test_routing\")",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://backend-production-0a6f.up.railway.app/api/users/999999\" -H \"Authorization: Bearer dummy\")",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://backend-production-0a6f.up.railway.app/api/auth/register\" -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"testcheck@test.com\",\"password\":\"test1234\",\"nickname\":\"테스트\",\"userType\":\"KOREAN\",\"university\":\"테스트대학\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://backend-production-0a6f.up.railway.app/api/auth/register\" -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"uniquetest123456@example.com\",\"password\":\"test1234\",\"nickname\":\"테스트유저\",\"userType\":\"INTERNATIONAL\",\"university\":\"한국외국어대학교\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://backend-production-0a6f.up.railway.app/api/auth/register\" -X POST -H \"Content-Type: application/json\" -d '{\"email\":\"uniquetest123456@example.com\",\"password\":\"test1234\",\"nickname\":\"테스트유저\",\"userType\":\"KOREAN\",\"university\":\"한국외국어대학교\"}')",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://backend-production-0a6f.up.railway.app/actuator/health\")",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://backend-production-0a6f.up.railway.app/api/auth/register\" -X POST -H \"Content-Type: application/json\" -d \"{\\\\\"email\\\\\":\\\\\"debugtest_$\\(date +%s\\)@example.com\\\\\",\\\\\"password\\\\\":\\\\\"test1234\\\\\",\\\\\"nickname\\\\\":\\\\\"디버그유저\\\\\",\\\\\"userType\\\\\":\\\\\"KOREAN\\\\\",\\\\\"university\\\\\":\\\\\"테스트대\\\\\"}\")",
+      "Bash(git stash:*)",
+      "Bash(git pull:*)",
+      "Bash(railway status:*)",
+      "Bash(npm install:*)",
+      "Bash(railway whoami:*)",
+      "Bash(railway login:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(mv \"components/SwipeCardStack.tsx\" \"components/KoreanAccountCardStack.tsx\")",
+      "Bash(mv \"components/KoreanUserCardStack.tsx\" \"components/ForeignAccountCardStack.tsx\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\sang0\\.claude"
+    ]
+  }
+}
