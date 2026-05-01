@@ -18,12 +18,37 @@ import {
   createAgoraRtcEngine,
   IRtcEngine,
   IRtcEngineEventHandler,
+  IAudioFrameObserver,
+  RawAudioFrameOpModeType,
   RtcSurfaceView,
   ChannelProfileType,
   ClientRoleType,
   VideoSourceType,
 } from 'react-native-agora';
-import { Audio } from 'expo-av';
+
+// WAV 헤더 + PCM 데이터를 합쳐 ArrayBuffer로 반환
+const buildWavBuffer = (pcm: Uint8Array, sampleRate: number, channels: number): ArrayBuffer => {
+  const bps = 16;
+  const wav = new Uint8Array(44 + pcm.length);
+  const v = new DataView(wav.buffer);
+  [0x52,0x49,0x46,0x46].forEach((b,i) => v.setUint8(i,b));        // "RIFF"
+  v.setUint32(4, 36 + pcm.length, true);
+  [0x57,0x41,0x56,0x45].forEach((b,i) => v.setUint8(8+i,b));      // "WAVE"
+  [0x66,0x6D,0x74,0x20].forEach((b,i) => v.setUint8(12+i,b));     // "fmt "
+  v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true);
+  v.setUint16(22, channels, true);
+  v.setUint32(24, sampleRate, true);
+  v.setUint32(28, sampleRate * channels * bps / 8, true);
+  v.setUint16(32, channels * bps / 8, true);
+  v.setUint16(34, bps, true);
+  [0x64,0x61,0x74,0x61].forEach((b,i) => v.setUint8(36+i,b));     // "data"
+  v.setUint32(40, pcm.length, true);
+  wav.set(pcm, 44);
+  return wav.buffer;
+};
+
+const PCM_TARGET_SIZE = 16000 * 2 * 3; // 3초: 16kHz 16-bit mono
 
 const PRIMARY = '#4F46E5';
 const AGORA_APP_ID = process.env.EXPO_PUBLIC_AGORA_APP_ID ?? '';
@@ -71,8 +96,12 @@ export default function VideoCallScreen() {
   const eventHandlerRef = useRef<IRtcEngineEventHandler | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const stompRef = useRef<Client | null>(null);
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const pcmBufferRef = useRef<Uint8Array[]>([]);
+  const pcmBufferSizeRef = useRef<number>(0);
+  const pcmSampleRateRef = useRef<number>(16000);
+  const pcmChannelsRef = useRef<number>(1);
   const isStreamingRef = useRef<boolean>(false);
+  const showSubtitlesRef = useRef<boolean>(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 통화 시간 타이머
@@ -151,6 +180,35 @@ export default function VideoCallScreen() {
       engine.enableAudio();
       engine.setEnableSpeakerphone(true);
 
+      // 16kHz 모노 16-bit PCM 프레임 요청 (300ms 단위)
+      engine.setRecordingAudioFrameParameters(
+        16000, 1,
+        RawAudioFrameOpModeType.RawAudioFrameOpModeReadOnly,
+        4800
+      );
+
+      const audioObserver: IAudioFrameObserver = {
+        onRecordAudioFrame: (_channelId, audioFrame) => {
+          if (!isStreamingRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+          const pcm = audioFrame.buffer;
+          if (!pcm) { console.log('[자막] 오디오 프레임 buffer 없음'); return; }
+          if (audioFrame.samplesPerSec) pcmSampleRateRef.current = audioFrame.samplesPerSec;
+          if (audioFrame.channels) pcmChannelsRef.current = audioFrame.channels;
+          pcmBufferRef.current.push(new Uint8Array(pcm));
+          pcmBufferSizeRef.current += pcm.length;
+          if (pcmBufferSizeRef.current >= PCM_TARGET_SIZE) {
+            console.log('[자막] PCM 전송:', pcmBufferSizeRef.current, 'bytes, sr:', pcmSampleRateRef.current);
+            const combined = new Uint8Array(pcmBufferSizeRef.current);
+            let offset = 0;
+            for (const chunk of pcmBufferRef.current) { combined.set(chunk, offset); offset += chunk.length; }
+            pcmBufferRef.current = [];
+            pcmBufferSizeRef.current = 0;
+            wsRef.current.send(buildWavBuffer(combined, pcmSampleRateRef.current, pcmChannelsRef.current));
+          }
+        },
+      };
+      engine.getMediaEngine().registerAudioFrameObserver(audioObserver);
+
       if (!isVoiceOnly) {
         engine.enableVideo();
         engine.startPreview();
@@ -208,21 +266,27 @@ export default function VideoCallScreen() {
 
   // STOMP 연결 (번역 자막 relay용)
   const connectStomp = useCallback(async () => {
-    if (!myUserId) return;
+    console.log('[자막] connectStomp 시작, myUserId:', myUserId);
+    if (!myUserId) {
+      console.log('[자막] myUserId 없음 - STOMP 연결 중단');
+      return;
+    }
     const token = await SecureStore.getItemAsync('accessToken');
     const client = new Client({
       webSocketFactory: () => new WebSocket(WS_URL),
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       forceBinaryWSFrames: true,
       appendMissingNULLonIncoming: true,
-      heartbeatIncoming: 0,
-      heartbeatOutgoing: 0,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
       reconnectDelay: 5000,
       onConnect: () => {
+        console.log('[자막] STOMP 연결 성공, 구독:', `/topic/call/${myUserId}`);
         client.subscribe(`/topic/call/${myUserId}`, (frame) => {
+          console.log('[자막] STOMP 메시지 수신:', frame.body);
           try {
             const msg = JSON.parse(frame.body);
-            if (msg.type === 'subtitle' && msg.subtitleText) {
+            if (msg.type === 'subtitle' && msg.subtitleText && showSubtitlesRef.current) {
               setTranscripts((prev) => [...prev, {
                 id: Date.now().toString(),
                 text: msg.subtitleText as string,
@@ -234,22 +298,43 @@ export default function VideoCallScreen() {
           }
         });
       },
+      onDisconnect: () => console.log('[자막] STOMP 연결 끊김'),
+      onStompError: (frame) => console.log('[자막] STOMP 오류:', frame.headers['message']),
     });
     client.activate();
     stompRef.current = client;
   }, [myUserId, targetLanguage]);
 
+  // 통화 시작 시 자동으로 STOMP 구독 (자막 수신 대기)
+  useEffect(() => {
+    if (!myUserId) return;
+    connectStomp();
+    return () => {
+      stompRef.current?.deactivate();
+      stompRef.current = null;
+    };
+  }, [myUserId, connectStomp]);
+
+
   // WebSocket 연결 (AI 자막용)
   const connectWebSocket = useCallback(() => {
+    console.log('[자막] AI WebSocket 연결 시도:', WS_SPEECH_URL);
     const ws = new WebSocket(WS_SPEECH_URL);
     ws.onopen = () => {
+      console.log('[자막] AI WebSocket 연결 성공, language:', myLanguage, 'target:', targetLanguage);
       setIsConnected(true);
       ws.send(JSON.stringify({ language: myLanguage, target_language: targetLanguage }));
+    };
+    ws.onerror = (e) => {
+      console.log('[자막] AI WebSocket 오류:', e);
+      setIsConnected(false);
     };
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data as string);
+        console.log('[자막] AI 응답:', JSON.stringify(data));
         if (data.type === 'transcript' && data.translated && partnerUserId && stompRef.current?.connected) {
+          console.log('[자막] STOMP 전송 → partnerUserId:', partnerUserId, '내용:', data.translated);
           stompRef.current.publish({
             destination: '/app/call/signal',
             body: JSON.stringify({
@@ -269,59 +354,28 @@ export default function VideoCallScreen() {
     wsRef.current = ws;
   }, [myLanguage, targetLanguage, myUserId, partnerUserId]);
 
-  // 자막 스트리밍 시작
-  const startStreaming = async () => {
-    const { granted } = await Audio.requestPermissionsAsync();
-    if (!granted) {
-      Alert.alert('권한 필요', '마이크 권한을 허용해주세요.');
-      return;
-    }
-    await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-    await connectStomp();
+  // 채널 입장 시 자동으로 오디오 스트리밍 시작 (자막 버튼과 무관)
+  useEffect(() => {
+    if (!isJoined) return;
     connectWebSocket();
     isStreamingRef.current = true;
-    setIsStreaming(true);
-
-    const loopRecording = async () => {
-      while (isStreamingRef.current) {
-        if (recordingRef.current) {
-          await recordingRef.current.stopAndUnloadAsync().catch(() => {});
-          recordingRef.current = null;
-        }
-        const { recording } = await Audio.Recording.createAsync(
-          Audio.RecordingOptionsPresets.HIGH_QUALITY
-        );
-        recordingRef.current = recording;
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        await recording.stopAndUnloadAsync().catch(() => {});
-        recordingRef.current = null;
-        const uri = recording.getURI();
-        if (!uri || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) continue;
-        const response = await fetch(uri);
-        const arrayBuffer = await response.arrayBuffer();
-        wsRef.current.send(arrayBuffer);
-      }
-    };
-
-    loopRecording();
-  };
+  }, [isJoined, connectWebSocket]);
 
   // 자막 스트리밍 중지
-  const stopStreaming = async () => {
+  const stopStreaming = () => {
     isStreamingRef.current = false;
     setIsStreaming(false);
-    await recordingRef.current?.stopAndUnloadAsync().catch(() => {});
-    recordingRef.current = null;
+    pcmBufferRef.current = [];
+    pcmBufferSizeRef.current = 0;
     wsRef.current?.close();
     wsRef.current = null;
-    stompRef.current?.deactivate();
-    stompRef.current = null;
     setIsConnected(false);
+    setTranscripts([]);
   };
 
   // 통화 종료
-  const handleEndCall = async () => {
-    await stopStreaming();
+  const handleEndCall = () => {
+    stopStreaming();
     router.back();
   };
 
@@ -416,7 +470,12 @@ export default function VideoCallScreen() {
         {/* 자막 */}
         <TouchableOpacity
           style={[styles.controlBtn, isStreaming && styles.controlBtnActive]}
-          onPress={isStreaming ? stopStreaming : startStreaming}
+          onPress={() => {
+            const next = !isStreaming;
+            showSubtitlesRef.current = next;
+            setIsStreaming(next);
+            if (!next) setTranscripts([]);
+          }}
         >
           <Ionicons name={isConnected ? 'text' : 'text-outline'} size={24} color="#FFFFFF" />
           <Text style={styles.controlLabel}>{isStreaming ? '자막중지' : '자막'}</Text>

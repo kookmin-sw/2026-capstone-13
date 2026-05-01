@@ -218,20 +218,21 @@ export default function RequestDetailScreen() {
   };
 
   const goToChatRoom = () => {
-    const partnerUserId = user?.userType === 'KOREAN'
-      ? item.requester.id
-      : (item.helper?.id ?? item.requester.id);
+    const isKorean = user?.userType === 'KOREAN';
+    const partnerUserId = isKorean ? item.requester.id : (item.helper?.id ?? item.requester.id);
+    const partnerPreferredLanguage = isKorean
+      ? (item.requester.preferredLanguage ?? 'en')
+      : (item.helper?.preferredLanguage ?? 'en');
     router.push({
       pathname: '/chatroom',
       params: {
         roomId: item.id,
         requestTitle: item.title,
-        partnerNickname: user?.userType === 'KOREAN'
-          ? item.requester.nickname
-          : (item.helper?.nickname ?? ''),
+        partnerNickname: isKorean ? item.requester.nickname : (item.helper?.nickname ?? ''),
         requestStatus: item.status,
         requesterId: item.requester.id,
         partnerUserId: String(partnerUserId),
+        partnerPreferredLanguage,
       },
     });
   };
@@ -276,6 +277,7 @@ export default function RequestDetailScreen() {
                     requestStatus: 'MATCHED',
                     requesterId: item.requester.id,
                     partnerUserId: String(item.requester.id),
+                    partnerPreferredLanguage: item.requester.preferredLanguage ?? 'en',
                   },
                 });
               } else {

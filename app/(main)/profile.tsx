@@ -198,7 +198,7 @@ export default function ProfileScreen() {
       major: user?.major ?? '',
       mbti: user?.mbti ?? '',
       hobbies: userHobbies,
-      preferredLanguage: user?.preferredLanguage ?? 'en',
+      preferredLanguage: isKorean ? 'ko' : (user?.preferredLanguage ?? 'en'),
     });
     setHobbyInput('');
     setProfileModalVisible(true);
@@ -227,7 +227,7 @@ export default function ProfileScreen() {
       major: profileInput.major,
       mbti: profileInput.mbti,
       hobbies: profileInput.hobbies.join(','),
-      preferredLanguage: profileInput.preferredLanguage,
+      preferredLanguage: isKorean ? 'ko' : profileInput.preferredLanguage,
     });
     setProfileModalVisible(false);
   };
@@ -639,22 +639,26 @@ export default function ProfileScreen() {
 
               <View style={styles.editSectionDivider} />
 
-              {/* 6. 번역 언어 */}
-              <Text style={styles.editSectionTitle}>{t('profile.languageSection')}</Text>
-              <View style={[styles.chipRow, { marginTop: sc(8) }]}>
-                {LANGUAGES.map((lang) => (
-                  <TouchableOpacity
-                    key={lang.code}
-                    style={[styles.optionChip, profileInput.preferredLanguage === lang.code && styles.optionChipActive]}
-                    onPress={() => setProfileInput((prev) => ({ ...prev, preferredLanguage: lang.code }))}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.optionChipText, profileInput.preferredLanguage === lang.code && styles.optionChipTextActive]}>
-                      {lang.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              {/* 번역 언어 (외국인만 표시) */}
+              {!isKorean && (
+                <>
+                  <Text style={styles.editSectionTitle}>{t('profile.languageSection')}</Text>
+                  <View style={[styles.chipRow, { marginTop: sc(8) }]}>
+                    {LANGUAGES.map((lang) => (
+                      <TouchableOpacity
+                        key={lang.code}
+                        style={[styles.optionChip, profileInput.preferredLanguage === lang.code && styles.optionChipActive]}
+                        onPress={() => setProfileInput((prev) => ({ ...prev, preferredLanguage: lang.code }))}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.optionChipText, profileInput.preferredLanguage === lang.code && styles.optionChipTextActive]}>
+                          {lang.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
 
               <View style={styles.editSectionDivider} />
 
