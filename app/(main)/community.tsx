@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getInitial } from '../../utils/getInitial';
 import {
   ActivityIndicator,
@@ -43,10 +44,6 @@ const BG       = '#F4F6FB';
 
 type FilterCategory = 'ALL' | PostCategory;
 
-const CATEGORY_LABEL: Record<PostCategory, string> = {
-  INFO: '자유게시판', QUESTION: '로컬게시판', CHAT: '모임게시판', CULTURE: '장터게시판',
-};
-
 const CATEGORY_COLOR: Record<PostCategory, string> = {
   INFO: BLUE, QUESTION: ORANGE, CHAT: T3, CULTURE: '#8B5CF6',
 };
@@ -58,16 +55,14 @@ const CATEGORY_BG: Record<PostCategory, string> = {
 // 카테고리 홈 메뉴 정의
 const CATEGORY_MENU: {
   key: PostCategory | 'ALL';
-  label: string;
-  desc: string;
   icon: string;
   color: string;
   bg: string;
 }[] = [
-  { key: 'INFO',     label: '자유게시판', desc: '자유롭게 이야기해요',  icon: 'chatbubbles-outline', color: BLUE, bg: BLUE_L },
-  { key: 'QUESTION', label: '로컬게시판', desc: '우리 지역 이야기',    icon: 'location-outline',    color: BLUE, bg: BLUE_L },
-  { key: 'CHAT',     label: '모임게시판', desc: '같이 만나요',         icon: 'people-outline',      color: BLUE, bg: BLUE_L },
-  { key: 'CULTURE',  label: '장터게시판', desc: '사고 팔고 나눠요',    icon: 'storefront-outline',  color: BLUE, bg: BLUE_L },
+  { key: 'INFO',     icon: 'chatbubbles-outline', color: BLUE, bg: BLUE_L },
+  { key: 'QUESTION', icon: 'location-outline',    color: BLUE, bg: BLUE_L },
+  { key: 'CHAT',     icon: 'people-outline',      color: BLUE, bg: BLUE_L },
+  { key: 'CULTURE',  icon: 'storefront-outline',  color: BLUE, bg: BLUE_L },
 ];
 
 const AVATAR_COLORS = ['#F0A040', '#F06060', BLUE, '#90C4F0', '#A0A8B0'];
@@ -85,21 +80,32 @@ function toAbsoluteUrl(path?: string): string | null {
   return SERVER_BASE_URL + path;
 }
 
-function formatTime(createdAt: string): string {
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+function boardLabel(category: FilterCategory, t: Translate): string {
+  return category === 'ALL' ? t('community.title') : t(`community.board_${category}`);
+}
+
+function boardDescription(category: FilterCategory, t: Translate): string {
+  return category === 'ALL' ? t('community.boardGenericDesc') : t(`community.boardDesc_${category}`);
+}
+
+function formatTime(createdAt: string, t: Translate): string {
   const utc = createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z';
   const diff = Date.now() - new Date(utc).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1)  return '방금 전';
-  if (m < 60) return `${m}분 전`;
+  if (m < 1)  return t('time.justNow');
+  if (m < 60) return t('time.minutesAgo', { m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
+  if (h < 24) return t('time.hoursAgo', { h });
+  return t('time.daysAgo', { d: Math.floor(h / 24) });
 }
 
 type SearchMode = 'title' | 'title+content';
 
 // ── 카테고리 홈 화면 ──────────────────────────────────────────
 function CategoryHomeScreen({ onSelect }: { onSelect: (cat: FilterCategory) => void }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -107,7 +113,7 @@ function CategoryHomeScreen({ onSelect }: { onSelect: (cat: FilterCategory) => v
     <View style={[cs.container, { paddingTop: insets.top + 10 }]}>
       {/* 헤더 */}
       <View style={cs.header}>
-        <Text style={cs.headerTitle}>커뮤니티</Text>
+        <Text style={cs.headerTitle}>{t('community.title')}</Text>
         <TouchableOpacity style={cs.writeBtn} onPress={() => router.push('/community-write')} activeOpacity={0.75}>
           <Ionicons name="pencil-outline" size={24} color={T1} />
         </TouchableOpacity>
@@ -127,8 +133,8 @@ function CategoryHomeScreen({ onSelect }: { onSelect: (cat: FilterCategory) => v
                 <Ionicons name={item.icon as never} size={22} color={item.color} />
               </View>
               <View style={cs.menuText}>
-                <Text style={cs.menuLabel}>{item.label}</Text>
-                <Text style={cs.menuDesc}>{item.desc}</Text>
+                <Text style={cs.menuLabel}>{boardLabel(item.key, t)}</Text>
+                <Text style={cs.menuDesc}>{boardDescription(item.key, t)}</Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={T2} />
             </TouchableOpacity>
@@ -150,6 +156,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
   onImageScrollEnd?: () => void;
   index?: number;
 }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuthStore();
   const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
@@ -197,7 +204,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
               </TouchableOpacity>
               {isHot && (
                 <View style={s.hotBadge}>
-                  <Text style={s.hotBadgeText}>🔥 인기</Text>
+                  <Text style={s.hotBadgeText}>{t('community.hot')}</Text>
                 </View>
               )}
             </View>
@@ -289,7 +296,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
           </TouchableOpacity>
         </View>
         <View style={s.reactionRight}>
-          <Text style={s.feedTime}>{formatTime(item.createdAt)}</Text>
+          <Text style={s.feedTime}>{formatTime(item.createdAt, t)}</Text>
         </View>
       </View>
 
@@ -311,7 +318,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
                   }}
                 >
                   <Ionicons name="pencil-outline" size={16} color={T1} />
-                  <Text style={s.menuItemText}>수정</Text>
+                  <Text style={s.menuItemText}>{t('common.edit')}</Text>
                 </TouchableOpacity>
                 <View style={s.menuDivider} />
                 <TouchableOpacity
@@ -319,17 +326,17 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
                   activeOpacity={0.7}
                   onPress={() => {
                     setMenuVisible(false);
-                    Alert.alert('게시글 삭제', '이 게시글을 삭제하시겠어요?', [
-                      { text: '취소', style: 'cancel' },
+                    Alert.alert(t('community.deletePost'), t('community.deletePostMsg'), [
+                      { text: t('common.cancel'), style: 'cancel' },
                       {
-                        text: '삭제',
+                        text: t('common.delete'),
                         style: 'destructive',
                         onPress: async () => {
                           try {
                             await deleteCommunityPost(item.id);
                             onDelete(item.id);
                           } catch {
-                            Alert.alert('오류', '삭제에 실패했습니다.');
+                            Alert.alert(t('common.error'), t('community.deleteFailed'));
                           }
                         },
                       },
@@ -337,7 +344,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
                   }}
                 >
                   <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                  <Text style={[s.menuItemText, { color: '#EF4444' }]}>삭제</Text>
+                  <Text style={[s.menuItemText, { color: '#EF4444' }]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -367,7 +374,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
                   }}
                 >
                   <Ionicons name="chatbubble-outline" size={16} color={T1} />
-                  <Text style={s.menuItemText}>채팅하기</Text>
+                  <Text style={s.menuItemText}>{t('community.chat')}</Text>
                 </TouchableOpacity>
                 <View style={s.menuDivider} />
                 <TouchableOpacity
@@ -377,19 +384,19 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
                     setMenuVisible(false);
                     if (!item.authorId) return;
                     Alert.alert(
-                      '차단하기',
-                      `${item.author}님을 차단하시겠어요?\n차단한 사용자의 글과 메시지가 보이지 않습니다.`,
+                      t('community.block'),
+                      t('community.blockMsg', { name: item.author }),
                       [
-                        { text: '취소', style: 'cancel' },
+                        { text: t('common.cancel'), style: 'cancel' },
                         {
-                          text: '차단',
+                          text: t('community.blockConfirm'),
                           style: 'destructive',
                           onPress: async () => {
                             try {
                               await blockUser(item.authorId!);
                               onBlockSuccess?.();
                             } catch {
-                              Alert.alert('오류', '차단에 실패했습니다.');
+                              Alert.alert(t('common.error'), t('community.blockFailed'));
                             }
                           },
                         },
@@ -398,7 +405,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
                   }}
                 >
                   <Ionicons name="ban-outline" size={16} color="#EF4444" />
-                  <Text style={[s.menuItemText, { color: '#EF4444' }]}>차단하기</Text>
+                  <Text style={[s.menuItemText, { color: '#EF4444' }]}>{t('community.block')}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -411,6 +418,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
 
 // ── 피드 화면 ────────────────────────────────────────────────
 function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; onCategoryChange: (cat: FilterCategory) => void }) {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuthStore();
   const insets = useSafeAreaInsets();
@@ -488,8 +496,9 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
     : categoryFiltered;
 
   const menuItem = CATEGORY_MENU.find((m) => m.key === category);
-  const headerTitle = menuItem?.label ?? '게시판';
+  const headerTitle = boardLabel(category, t);
   const headerColor = menuItem?.color ?? T1;
+  const headerDescription = boardDescription(category, t);
 
   const renderPost = useCallback(({ item, index }: { item: CommunityPostDto; index: number }) => (
     <FeedCard
@@ -519,8 +528,8 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
           !isLoading ? (
             <View style={s.empty}>
               <Text style={s.emptyEmoji}>{searchQuery ? '🔍' : '💬'}</Text>
-              <Text style={s.emptyTitle}>{searchQuery ? '검색 결과가 없습니다' : '게시글이 없습니다'}</Text>
-              <Text style={s.emptySub}>{searchQuery ? '다른 검색어로 시도해보세요' : '첫 번째 글을 작성해보세요!'}</Text>
+              <Text style={s.emptyTitle}>{searchQuery ? t('community.noSearchResults') : t('community.noPost')}</Text>
+              <Text style={s.emptySub}>{searchQuery ? t('community.tryDifferentSearch') : t('community.writeFirst')}</Text>
             </View>
           ) : null
         }
@@ -539,7 +548,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
             <TextInput
               ref={searchInputRef}
               style={s.headerSearchInput}
-              placeholder={`${headerTitle} 검색`}
+              placeholder={t('community.searchBoard', { board: headerTitle })}
               placeholderTextColor={T2}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -568,13 +577,13 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
               style={[s.modeChip, searchMode === 'title' && s.modeChipOn]}
               onPress={() => setSearchMode('title')}
             >
-              <Text style={[s.modeChipText, searchMode === 'title' && s.modeChipTextOn]}>제목</Text>
+              <Text style={[s.modeChipText, searchMode === 'title' && s.modeChipTextOn]}>{t('search.modeTitle')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.modeChip, searchMode === 'title+content' && s.modeChipOn]}
               onPress={() => setSearchMode('title+content')}
             >
-              <Text style={[s.modeChipText, searchMode === 'title+content' && s.modeChipTextOn]}>제목 + 내용</Text>
+              <Text style={[s.modeChipText, searchMode === 'title+content' && s.modeChipTextOn]}>{t('search.modeTitleContent')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -586,7 +595,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
           </View>
           <View>
             <Text style={s.boardBannerTitle}>{headerTitle}</Text>
-            <Text style={s.boardBannerDesc}>{menuItem?.desc ?? '자유롭게 이야기해보세요'}</Text>
+            <Text style={s.boardBannerDesc}>{headerDescription}</Text>
           </View>
         </View>
         {isLoading ? <ActivityIndicator size="large" color={BLUE} style={{ marginTop: 40 }} /> : null}
@@ -600,7 +609,7 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
           {/* 슬라이드 패널 */}
           <Animated.View style={[s.drawerPanel, { width: DRAWER_WIDTH, transform: [{ translateX: slideAnim }] }]}>
             <View style={[s.drawerHeader, { paddingTop: insets.top + 16 }]}>
-              <Text style={s.drawerTitle}>게시판 선택</Text>
+              <Text style={s.drawerTitle}>{t('community.selectBoard')}</Text>
               <TouchableOpacity onPress={closeDrawer} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Ionicons name="close" size={22} color={T1} />
               </TouchableOpacity>
@@ -619,8 +628,8 @@ function FeedScreen({ category, onCategoryChange }: { category: FilterCategory; 
                     <Ionicons name={item.icon as never} size={20} color={isActive ? '#fff' : item.color} />
                   </View>
                   <View style={s.drawerItemText}>
-                    <Text style={[s.drawerLabel, isActive && { color: item.color, fontWeight: '800' }]}>{item.label}</Text>
-                    <Text style={s.drawerDesc}>{item.desc}</Text>
+                    <Text style={[s.drawerLabel, isActive && { color: item.color, fontWeight: '800' }]}>{boardLabel(item.key, t)}</Text>
+                    <Text style={s.drawerDesc}>{boardDescription(item.key, t)}</Text>
                   </View>
                   {isActive && <Ionicons name="checkmark-circle" size={20} color={item.color} />}
                 </TouchableOpacity>
