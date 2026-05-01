@@ -443,7 +443,17 @@
     "noHelpHistory": "도움 내역이 없어요",
     "noPosts": "작성한 글이 없어요",
     "receivedReviews": "받은 후기",
-    "startChat": "채팅하기"
+    "startChat": "채팅하기",
+    "korea": "대한민국",
+    "tabHelp": "도움내역"
+  },
+  "blockedUsers": {
+    "title": "차단 관리",
+    "empty": "차단한 사용자가 없어요",
+    "unblock": "차단해제",
+    "unblockTitle": "차단 해제",
+    "unblockMsg": "이 사용자의 차단을 해제하시겠어요?",
+    "unblockFailed": "차단 해제에 실패했습니다."
   },
   "write": {
     "schedule": "희망 일정",

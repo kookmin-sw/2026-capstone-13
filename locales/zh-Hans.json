@@ -443,7 +443,17 @@
     "noHelpHistory": "没有帮助记录",
     "noPosts": "没有发表的帖子",
     "receivedReviews": "收到的评价",
-    "startChat": "发起聊天"
+    "startChat": "发起聊天",
+    "korea": "韩国",
+    "tabHelp": "帮助记录"
+  },
+  "blockedUsers": {
+    "title": "屏蔽管理",
+    "empty": "没有屏蔽的用户",
+    "unblock": "解除屏蔽",
+    "unblockTitle": "解除屏蔽",
+    "unblockMsg": "解除对该用户的屏蔽？",
+    "unblockFailed": "解除屏蔽失败。"
   },
   "write": {
     "schedule": "希望时间",

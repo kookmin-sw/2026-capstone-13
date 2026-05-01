@@ -443,7 +443,17 @@
     "noHelpHistory": "Không có lịch sử hỗ trợ",
     "noPosts": "Không có bài đăng",
     "receivedReviews": "Đánh giá đã nhận",
-    "startChat": "Bắt đầu chat"
+    "startChat": "Bắt đầu chat",
+    "korea": "Hàn Quốc",
+    "tabHelp": "Lịch sử hỗ trợ"
+  },
+  "blockedUsers": {
+    "title": "Quản lý chặn",
+    "empty": "Không có người dùng bị chặn",
+    "unblock": "Bỏ chặn",
+    "unblockTitle": "Bỏ chặn",
+    "unblockMsg": "Bỏ chặn người dùng này?",
+    "unblockFailed": "Bỏ chặn thất bại."
   },
   "write": {
     "schedule": "Lịch mong muốn",

@@ -443,7 +443,17 @@
     "noHelpHistory": "サポート履歴がありません",
     "noPosts": "投稿がありません",
     "receivedReviews": "受け取ったレビュー",
-    "startChat": "チャットする"
+    "startChat": "チャットする",
+    "korea": "韓国",
+    "tabHelp": "サポート履歴"
+  },
+  "blockedUsers": {
+    "title": "ブロック管理",
+    "empty": "ブロックしたユーザーがいません",
+    "unblock": "ブロック解除",
+    "unblockTitle": "ブロック解除",
+    "unblockMsg": "このユーザーのブロックを解除しますか？",
+    "unblockFailed": "ブロック解除に失敗しました。"
   },
   "write": {
     "schedule": "希望日程",

@@ -443,7 +443,17 @@
     "noHelpHistory": "No help history",
     "noPosts": "No posts yet",
     "receivedReviews": "Received Reviews",
-    "startChat": "Start Chat"
+    "startChat": "Start Chat",
+    "korea": "Korea",
+    "tabHelp": "Help History"
+  },
+  "blockedUsers": {
+    "title": "Blocked Users",
+    "empty": "No blocked users",
+    "unblock": "Unblock",
+    "unblockTitle": "Unblock User",
+    "unblockMsg": "Unblock this user?",
+    "unblockFailed": "Failed to unblock."
   },
   "write": {
     "schedule": "Schedule",
