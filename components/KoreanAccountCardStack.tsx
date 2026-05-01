@@ -18,6 +18,7 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import type { HelpRequest } from '../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -29,8 +30,6 @@ const ACCENT = '#3B6FE8';
 const SLOT_SCALE:  [number, number, number] = [1,    1,    1];
 const SLOT_PEEK_X: [number, number, number] = [0,    18,   32];
 const SLOT_PEEK_Y: [number, number, number] = [0,    0,    0];
-
-const SWIPE_THRESHOLD = 80;
 
 const GRAD_START = 0;
 const GRAD_MAX_A = 0.95;
@@ -60,14 +59,16 @@ const GRADIENT_LAYERS = Array.from({ length: GRAD_STEPS }, (_, i) => {
   );
 });
 
-function formatTime(iso: string): string {
+type TFunction = (key: string, opts?: Record<string, unknown>) => string;
+
+function formatTime(iso: string, t: TFunction): string {
   const ms = Date.now() - new Date(iso.includes('Z') ? iso : iso + 'Z').getTime();
   const m = Math.floor(ms / 60000);
-  if (m < 1)  return '방금 전';
-  if (m < 60) return `${m}분 전`;
+  if (m < 1)  return t('time.justNow');
+  if (m < 60) return t('time.minutesAgo', { m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
+  if (h < 24) return t('time.hoursAgo', { h });
+  return t('time.daysAgo', { d: Math.floor(h / 24) });
 }
 
 // card.id → 말줄임 여부 캐시 (컴포넌트 외부에서 측정 결과 보존)
@@ -75,6 +76,7 @@ const truncatedCache = new Map<string | number, boolean>();
 
 const CardContent = memo(
   function CardContent({ card, onSkip, onAccept, onCardPress }: { card: HelpRequest; onSkip?: () => void; onAccept?: () => void; onCardPress?: () => void }) {
+    const { t } = useTranslation();
     const [imgError, setImgError] = useState(false);
     const [isTruncated, setIsTruncated] = useState(() => truncatedCache.get(card.id) ?? false);
     const profileUri = card.requester.profileImage?.trim();
@@ -116,7 +118,7 @@ const CardContent = memo(
 
           <View style={styles.timeRow}>
             <Ionicons name="time-outline" size={17} color="rgba(255,255,255,0.95)" />
-            <Text style={styles.timeSmall}>{formatTime(card.createdAt)}</Text>
+            <Text style={styles.timeSmall}>{formatTime(card.createdAt, t)}</Text>
           </View>
 
           <View style={styles.bubbleWrap}>
@@ -132,7 +134,7 @@ const CardContent = memo(
                 }}
               >
                 {card.description}
-                {isTruncated && <Text style={styles.bubbleMore}>  ...더보기</Text>}
+                {isTruncated && <Text style={styles.bubbleMore}>  ...{t('home.more')}</Text>}
               </Text>
             </View>
           </View>
@@ -148,7 +150,7 @@ const CardContent = memo(
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.acceptBtn} onPress={onAccept} activeOpacity={0.75}>
             <View style={styles.pillBtn}>
-              <Text style={styles.btnLabel}>도와주기</Text>
+              <Text style={styles.btnLabel}>{t('home.helpAction')}</Text>
             </View>
           </TouchableOpacity>
         </View>

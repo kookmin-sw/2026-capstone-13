@@ -20,6 +20,7 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import type { User } from '../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -62,13 +63,6 @@ const GRADIENT_LAYERS = Array.from({ length: GRAD_STEPS }, (_, i) => {
   );
 });
 
-function getLevel(count: number): { label: string; color: string } {
-  if (count >= 31) return { label: '마스터', color: '#F97316' };
-  if (count >= 16) return { label: '전문가', color: '#8B5CF6' };
-  if (count >= 6)  return { label: '도우미', color: '#3B6FE8' };
-  return                  { label: '새싹',   color: '#22C55E' };
-}
-
 const SERVER_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api').replace('/api', '');
 
 function toAbsoluteUrl(url: string | undefined): string | undefined {
@@ -83,12 +77,12 @@ const truncatedCache = new Map<string | number, boolean>();
 // ── 카드 한 장 ─────────────────────────────────────────────
 const CardContent = memo(
   function CardContent({ user, onPress, onSkip, onProfilePress }: { user: User; onPress?: () => void; onSkip?: () => void; onProfilePress?: () => void }) {
+    const { t } = useTranslation();
     const [imgError, setImgError] = useState(false);
     const [isTruncated, setIsTruncated] = useState(() => truncatedCache.get(user.id) ?? false);
     const profileUri = toAbsoluteUrl(user.profileImage?.trim());
     const showImage  = !!profileUri && !imgError;
     const initial    = getInitial(user.nickname);
-    const lv         = getLevel(user.helpCount);
     const isVerified = user.studentIdVerified || user.studentIdStatus === 'APPROVED';
 
     return (
@@ -134,7 +128,7 @@ const CardContent = memo(
               <>
                 <Text style={styles.statsDot}>·</Text>
                 <Ionicons name="heart" size={13} color={ACCENT} />
-                <Text style={styles.statsText}>도움 {user.helpCount}회</Text>
+                <Text style={styles.statsText}>{t('requestDetail.helpCountDetail', { count: user.helpCount })}</Text>
               </>
             )}
           </View>
@@ -152,7 +146,7 @@ const CardContent = memo(
                 }}
               >
                 {user.bio ?? ''}
-                {isTruncated && <Text style={styles.bubbleMore}>  ...더보기</Text>}
+                {isTruncated && <Text style={styles.bubbleMore}>  ...{t('home.more')}</Text>}
               </Text>
             </View>
           </View>
@@ -162,7 +156,7 @@ const CardContent = memo(
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.acceptBtn} onPress={onPress} activeOpacity={0.75}>
             <View style={styles.pillBtn}>
-              <Text style={styles.btnLabel}>요청하기</Text>
+              <Text style={styles.btnLabel}>{t('home.requestAction')}</Text>
             </View>
           </TouchableOpacity>
         </View>
