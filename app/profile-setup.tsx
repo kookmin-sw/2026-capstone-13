@@ -98,7 +98,7 @@ export default function ProfileSetupScreen() {
   const canStart = profileInput.bio.trim().length > 0 && profileInput.gender.length > 0;
 
 
-  const scrollToIndex = (ref: React.RefObject<ScrollView>, index: number, animated = true) => {
+  const scrollToIndex = (ref: React.RefObject<ScrollView | null>, index: number, animated = true) => {
     ref.current?.scrollTo({ y: index * ITEM_HEIGHT, animated });
   };
 

@@ -480,7 +480,7 @@ export default function ChatRoomScreen() {
           const client = clientRef.current;
           if (client?.connected && user) {
             client.publish({
-              destination: '/app/chat/send',
+              destination: isDirect ? '/app/direct-chat/send' : '/app/chat/send',
               body: JSON.stringify({
                 roomId,
                 senderId: user.id,
@@ -520,7 +520,7 @@ export default function ChatRoomScreen() {
           const client = clientRef.current;
           if (client?.connected && user) {
             client.publish({
-              destination: '/app/chat/send',
+              destination: isDirect ? '/app/direct-chat/send' : '/app/chat/send',
               body: JSON.stringify({
                 roomId,
                 senderId: user.id,

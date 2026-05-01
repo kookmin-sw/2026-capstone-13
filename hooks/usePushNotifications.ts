@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { updateFcmToken } from '../services/authService';
+import { useAuthStore } from '../stores/authStore';
 
 // 네이티브 모듈이 없는 빌드(구 dev 빌드 등)에서 크래시 방지
 let Notifications: typeof import('expo-notifications') | null = null;
@@ -58,6 +59,9 @@ export type PushNotificationData = {
   requestStatus?: string;
   requesterId?: string;
   isDirect?: boolean;
+  fromUserId?: string;
+  callerNickname?: string;
+  voiceOnly?: string;
   postId?: number;
   commentId?: number;
 };
@@ -80,6 +84,19 @@ function navigateFromNotification(router: ReturnType<typeof useRouter>, data: Pu
     });
   } else if (data.type === 'notification') {
     router.push('/notifications');
+  } else if (data.type === 'call') {
+    if (data.roomId == null) return;
+    const myUserId = useAuthStore.getState().user?.id;
+    router.push({
+      pathname: '/videocall',
+      params: {
+        roomId: String(data.roomId),
+        partnerNickname: data.callerNickname ?? data.partnerNickname ?? '상대방',
+        voiceOnly: data.voiceOnly ?? 'false',
+        myUserId: myUserId != null ? String(myUserId) : '',
+        partnerUserId: data.fromUserId ?? '',
+      },
+    });
   }
 }
 
@@ -87,26 +104,32 @@ export function usePushNotifications(userId: number | string | null | undefined)
   const router = useRouter();
   const handledRef = useRef<string | null>(null);
 
-  // 토큰 등록
-  useEffect(() => {
+  const registerToken = useCallback(async () => {
     if (!userId || !Notifications) return;
 
-    (async () => {
-      try {
-        const { status } = await Notifications!.getPermissionsAsync();
-        if (status !== 'granted') return;
-
-        await setupNotificationChannels();
-
-        const tokenData = await Notifications!.getExpoPushTokenAsync({
-          projectId: 'a30c69f3-b2d0-48b8-8067-64da49168c78',
-        });
-        await updateFcmToken(tokenData.data);
-      } catch {
-        // 권한 거부 또는 실패 시 무시
+    try {
+      let { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        const requested = await Notifications.requestPermissionsAsync();
+        status = requested.status;
       }
-    })();
+      if (status !== 'granted') return;
+
+      await setupNotificationChannels();
+
+      const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId: 'a30c69f3-b2d0-48b8-8067-64da49168c78',
+      });
+      await updateFcmToken(tokenData.data);
+    } catch {
+      // 권한 거부 또는 실패 시 무시
+    }
   }, [userId]);
+
+  // 토큰 등록
+  useEffect(() => {
+    registerToken();
+  }, [registerToken]);
 
   // 알림 탭 리스너
   useEffect(() => {

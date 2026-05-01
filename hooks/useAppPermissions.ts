@@ -72,7 +72,9 @@ export function useAppPermissions() {
 
   const handleConfirm = async () => {
     setModalVisible(false);
-    await new Promise(resolve => InteractionManager.runAfterInteractions(resolve));
+    await new Promise<void>((resolve) => {
+      InteractionManager.runAfterInteractions(() => resolve());
+    });
     try {
       await requestAllPermissions();
       await AsyncStorage.setItem(PERMISSION_KEY, 'true');

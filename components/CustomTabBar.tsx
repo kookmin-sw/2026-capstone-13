@@ -33,7 +33,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
   const isKorean = user?.userType === 'KOREAN';
 
   const visibleRoutes = state.routes.filter((route) => {
-    if (descriptors[route.key].options.href === null) return false;
+    if ((descriptors[route.key].options as { href?: unknown }).href === null) return false;
     if (isKorean && route.name === 'school') return false;
     return true;
   });

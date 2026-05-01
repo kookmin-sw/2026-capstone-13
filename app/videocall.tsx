@@ -123,12 +123,11 @@ export default function VideoCallScreen() {
   // Android 권한 요청
   const requestAndroidPermissions = async (): Promise<boolean> => {
     if (Platform.OS !== 'android') return true;
-    const permissions: string[] = [PermissionsAndroid.PERMISSIONS.RECORD_AUDIO];
-    if (!isVoiceOnly) permissions.push(PermissionsAndroid.PERMISSIONS.CAMERA);
-    const grants = await PermissionsAndroid.requestMultiple(permissions);
-    return permissions.every(
-      (p) => grants[p] === PermissionsAndroid.RESULTS.GRANTED
-    );
+    const audio = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+    if (audio !== PermissionsAndroid.RESULTS.GRANTED) return false;
+    if (isVoiceOnly) return true;
+    const camera = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA);
+    return camera === PermissionsAndroid.RESULTS.GRANTED;
   };
 
   // Agora 초기화 및 채널 입장

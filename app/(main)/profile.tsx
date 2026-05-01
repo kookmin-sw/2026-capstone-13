@@ -142,7 +142,7 @@ export default function ProfileScreen() {
   const monthRef = useRef<ScrollView>(null);
   const dayRef = useRef<ScrollView>(null);
 
-  const scrollToIndex = (ref: React.RefObject<ScrollView>, index: number, animated = true) => {
+  const scrollToIndex = (ref: React.RefObject<ScrollView | null>, index: number, animated = true) => {
     ref.current?.scrollTo({ y: index * ITEM_HEIGHT, animated });
   };
 

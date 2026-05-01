@@ -17,7 +17,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { Colors } from '../../constants/colors';
@@ -74,7 +74,7 @@ export default function LoginScreen() {
   useEffect(() => {
     if (user) {
       if (!user.isProfileSetup) {
-        router.replace('/profile-setup');
+        router.replace('/profile-setup' as Href);
       } else {
         router.replace('/(main)/home');
       }
@@ -239,7 +239,7 @@ export default function LoginScreen() {
                 <View style={styles.dividerLine} />
               </View>
 
-              <TouchableOpacity style={styles.forgotPassword} onPress={() => router.push('/change-password')}>
+              <TouchableOpacity style={styles.forgotPassword} onPress={() => router.push('/change-password' as Href)}>
                 <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
               </TouchableOpacity>
             </Animated.View>
@@ -252,7 +252,7 @@ export default function LoginScreen() {
             >
               <View style={styles.registerRow}>
                 <Text style={styles.registerText}>{t('auth.noAccount')}</Text>
-                <TouchableOpacity onPress={() => router.push('/(auth)/register-type')}>
+                <TouchableOpacity onPress={() => router.push('/(auth)/register-type' as Href)}>
                   <Text style={styles.registerHighlight}>{t('auth.register')}</Text>
                 </TouchableOpacity>
               </View>
@@ -267,7 +267,7 @@ export default function LoginScreen() {
               <View style={styles.testTopButtons}>
                 <TouchableOpacity
                   style={styles.testButtonNew}
-                  onPress={() => router.push('/profile-setup')}
+                  onPress={() => router.push('/profile-setup' as Href)}
                 >
                   <Text style={styles.testButtonNewText}>👤 신규사용자</Text>
                 </TouchableOpacity>

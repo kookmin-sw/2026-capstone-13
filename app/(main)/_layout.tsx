@@ -27,7 +27,16 @@ export default function MainLayout() {
   const router = useRouter();
   const globalClientRef = useRef<Client | null>(null);
   // 채팅방별 파트너 정보 캐시 (roomId → room info)
-  const roomCacheRef = useRef<Record<number, { requestTitle: string; partnerNickname: string; partnerProfileImage?: string; requestStatus: string; requesterId: string }>>({});
+  const roomCacheRef = useRef<Record<number, {
+    requestTitle: string;
+    partnerNickname: string;
+    partnerProfileImage?: string;
+    requestStatus: string;
+    requesterId: string;
+    partnerId?: string;
+    partnerPreferredLanguage?: string;
+    isDirect?: boolean;
+  }>>({});
 
   // 앱 시작 시 전체 unread 합산 + 방 정보 캐시 (나간 방 제외)
   useEffect(() => {
@@ -47,6 +56,8 @@ export default function MainLayout() {
             partnerProfileImage: r.partnerProfileImage,
             requestStatus: r.status,
             requesterId: '',
+            partnerId: String(r.partnerId ?? ''),
+            partnerPreferredLanguage: r.partnerPreferredLanguage ?? 'en',
           };
         });
       }
@@ -61,6 +72,8 @@ export default function MainLayout() {
             partnerProfileImage: r.partnerProfileImage,
             requestStatus: 'DIRECT',
             requesterId: '',
+            partnerId: String(r.partnerId ?? ''),
+            isDirect: true,
           };
         });
       }
@@ -78,19 +91,22 @@ export default function MainLayout() {
       if (!mounted) return;
 
       // 활성 채팅방 ID 수집
-      const results = await Promise.allSettled([getMyRequests(), getHelpedRequests(), getDirectChatRooms()]);
+      const helpResults = await Promise.allSettled([getMyRequests(), getHelpedRequests()]);
+      const directResult = await getDirectChatRooms().then(
+        (value) => ({ status: 'fulfilled' as const, value }),
+        (reason) => ({ status: 'rejected' as const, reason }),
+      );
       if (!mounted) return;
 
       const activeRoomIds = new Set<number>();
       const directRoomIds = new Set<number>();
-      results.slice(0, 2).forEach((result) => {
+      helpResults.forEach((result) => {
         if (result.status === 'fulfilled' && result.value.success && Array.isArray(result.value.data)) {
           result.value.data
             .filter((r) => r.status === 'IN_PROGRESS' || r.status === 'MATCHED')
             .forEach((r) => activeRoomIds.add(r.id));
         }
       });
-      const directResult = results[2];
       if (directResult.status === 'fulfilled' && directResult.value.success && Array.isArray(directResult.value.data)) {
         directResult.value.data.forEach((r) => directRoomIds.add(r.id));
       }
@@ -132,7 +148,14 @@ export default function MainLayout() {
                         text: t('chat.accept'),
                         onPress: () => router.push({
                           pathname: '/videocall',
-                          params: { roomId: String(roomId), partnerNickname: callerNickname, voiceOnly: isVideo ? 'false' : 'true' },
+                          params: {
+                            roomId: String(roomId),
+                            partnerNickname: callerNickname,
+                            voiceOnly: isVideo ? 'false' : 'true',
+                            myUserId: String(user.id),
+                            partnerUserId: roomCacheRef.current[roomId]?.partnerId ?? '',
+                            targetLanguage: roomCacheRef.current[roomId]?.partnerPreferredLanguage ?? 'en',
+                          },
                         }),
                       },
                     ]
@@ -154,6 +177,8 @@ export default function MainLayout() {
                       partnerProfileImage: roomInfo.partnerProfileImage,
                       requestStatus: roomInfo.requestStatus,
                       requesterId: roomInfo.requesterId,
+                      partnerId: roomInfo.partnerId,
+                      partnerPreferredLanguage: roomInfo.partnerPreferredLanguage,
                     } : undefined,
                   });
                 }
@@ -185,7 +210,13 @@ export default function MainLayout() {
                         text: t('chat.accept'),
                         onPress: () => router.push({
                           pathname: '/videocall',
-                          params: { roomId: String(roomId), partnerNickname: callerNickname, voiceOnly: isVideo ? 'false' : 'true' },
+                          params: {
+                            roomId: String(roomId),
+                            partnerNickname: callerNickname,
+                            voiceOnly: isVideo ? 'false' : 'true',
+                            myUserId: String(user.id),
+                            partnerUserId: roomCacheRef.current[-(roomId)]?.partnerId ?? '',
+                          },
                         }),
                       },
                     ]
@@ -208,6 +239,7 @@ export default function MainLayout() {
                       requestStatus: 'DIRECT',
                       requesterId: '',
                       isDirect: true,
+                      partnerId: roomInfo.partnerId,
                     } : undefined,
                   });
                 }

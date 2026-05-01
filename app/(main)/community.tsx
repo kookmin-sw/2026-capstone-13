@@ -148,6 +148,7 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
   onBlockSuccess?: () => void;
   onImageScrollStart?: () => void;
   onImageScrollEnd?: () => void;
+  index?: number;
 }) {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -158,7 +159,6 @@ function FeedCard({ item, onPress, onLike, onDelete, onBlockSuccess, onImageScro
   const [translating, setTranslating] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
-  const moreRef = useRef<TouchableOpacity>(null);
   const { getTranslation, setTranslation } = useCommunityStore();
   const translated = getTranslation(item.id);
   const isMyPost = item.authorId !== undefined && item.authorId === user?.id;

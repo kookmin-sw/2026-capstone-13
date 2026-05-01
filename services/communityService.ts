@@ -52,6 +52,13 @@ export interface PagedResponse<T> {
   first: boolean;
 }
 
+type MaybePagedCommunityPosts = CommunityPostDto[] | PagedResponse<CommunityPostDto>;
+
+function normalizeCommunityPostList(data: MaybePagedCommunityPosts | null | undefined): CommunityPostDto[] {
+  if (!data) return [];
+  return Array.isArray(data) ? data : data.content;
+}
+
 // 게시글 이미지 업로드 (Cloudinary) - fetch 사용으로 multipart boundary 자동 처리
 export const uploadCommunityImage = async (uri: string): Promise<string> => {
   const token = await SecureStore.getItemAsync('accessToken');
@@ -83,8 +90,8 @@ export const getCommunityPosts = async (): Promise<ApiResponse<PagedResponse<Com
 
 // 특정 유저의 커뮤니티 게시글 목록
 export const getUserCommunityPosts = async (userId: number): Promise<ApiResponse<CommunityPostDto[]>> => {
-  const response = await api.get<ApiResponse<CommunityPostDto[]>>(`/community/user/${userId}`);
-  const content: CommunityPostDto[] = response.data.data?.content ?? response.data.data ?? [];
+  const response = await api.get<ApiResponse<MaybePagedCommunityPosts>>(`/community/user/${userId}`);
+  const content = normalizeCommunityPostList(response.data.data);
   return { ...response.data, data: content };
 };
 
