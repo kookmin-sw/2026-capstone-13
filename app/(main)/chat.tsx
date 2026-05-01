@@ -1,5 +1,6 @@
 // 채팅 탭: 도움 신청 수락/거절 + 채팅방 목록
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { s as sc } from '../../utils/scale';
 import { getInitial } from '../../utils/getInitial';
 import {
@@ -39,10 +40,10 @@ const GREEN    = '#22C55E';
 
 type FilterTab = 'ALL' | 'IN_PROGRESS' | 'COMPLETED' | 'DIRECT';
 
-const FILTER_TABS: { key: FilterTab; label: string }[] = [
-  { key: 'DIRECT',      label: '일반'   },
-  { key: 'IN_PROGRESS', label: '진행중' },
-  { key: 'COMPLETED',   label: '완료'   },
+const FILTER_TAB_KEYS: { key: FilterTab; labelKey: string }[] = [
+  { key: 'DIRECT',      labelKey: 'chat.filterDirect'      },
+  { key: 'IN_PROGRESS', labelKey: 'chat.filterInProgress'  },
+  { key: 'COMPLETED',   labelKey: 'home.completed'         },
 ];
 
 const AVATAR_COLORS = ['#3B6FE8', '#6B9DF0', '#A8C8FA', '#5B8DEF', '#4A7CE0'];
@@ -85,6 +86,7 @@ const pa = StyleSheet.create({
 });
 
 export default function ChatScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuthStore();
   const isInternational = user?.userType !== 'KOREAN';
@@ -99,7 +101,7 @@ export default function ChatScreen() {
   const [searchQuery, setSearchQuery]     = useState('');
   const searchInputRef = useRef<TextInput>(null);
 
-  const { setUnreadCount, hasLeft, rejoinRoom } = useChatStore();
+  const { setUnreadCount, hasLeft, rejoinRoom, roomUnreadCounts, initRoomUnreadCounts } = useChatStore();
   const myId = Number(user?.id);
 
   const fetchData = useCallback(async () => {
@@ -120,6 +122,14 @@ export default function ChatScreen() {
           ? directRes.value.data.filter((r) => !hasLeft(r.id, myId)).reduce((sum, r) => sum + (r.unreadCount ?? 0), 0)
           : 0;
         setUnreadCount(helpUnread + directUnread);
+
+        // 방별 안읽음 카운트 스토어 초기화
+        const counts: Record<number, number> = {};
+        data.forEach((r) => { counts[r.id] = r.unreadCount ?? 0; });
+        if (directRes.status === 'fulfilled' && directRes.value.success) {
+          directRes.value.data.forEach((r) => { counts[r.id] = r.unreadCount ?? 0; });
+        }
+        initRoomUnreadCounts(counts);
       }
       if (directRes.status === 'fulfilled' && directRes.value.success) {
         setDirectRooms(directRes.value.data);
@@ -162,10 +172,10 @@ export default function ChatScreen() {
         });
         fetchData();
       } else {
-        Alert.alert('실패', res.message);
+        Alert.alert(t('chat.failed'), res.message);
       }
     } catch {
-      Alert.alert('오류', '서버 오류가 발생했습니다.');
+      Alert.alert(t('common.error'), t('errors.serverError'));
     } finally {
       setActioningId(null);
     }
@@ -173,21 +183,21 @@ export default function ChatScreen() {
 
   const handleReject = (room: ChatRoomResponse) => {
     Alert.alert(
-      '도움 거절',
-      `${room.partnerNickname}님의 도움 신청을 거절하시겠어요?`,
+      t('chat.rejectHelpTitle'),
+      t('chat.rejectHelpMsg', { name: room.partnerNickname }),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '거절',
+          text: t('chat.decline'),
           style: 'destructive',
           onPress: async () => {
             setActioningId(room.id);
             try {
               const res = await rejectHelper(room.id);
               if (res.success) fetchData();
-              else Alert.alert('실패', res.message);
+              else Alert.alert(t('chat.failed'), res.message);
             } catch {
-              Alert.alert('오류', '서버 오류가 발생했습니다.');
+              Alert.alert(t('common.error'), t('errors.serverError'));
             } finally {
               setActioningId(null);
             }
@@ -268,13 +278,13 @@ export default function ChatScreen() {
     ALL: 0,
     DIRECT: directRooms
       .filter((r) => !hasLeft(r.id, myId))
-      .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0),
+      .reduce((sum, r) => sum + (roomUnreadCounts[r.id] ?? r.unreadCount ?? 0), 0),
     IN_PROGRESS: requests
       .filter((r) => !hasLeft(r.id, myId) && (r.status === 'IN_PROGRESS' || r.status === 'WAITING' || r.status === 'MATCHED'))
-      .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0),
+      .reduce((sum, r) => sum + (roomUnreadCounts[r.id] ?? r.unreadCount ?? 0), 0),
     COMPLETED: requests
       .filter((r) => !hasLeft(r.id, myId) && r.status === 'COMPLETED')
-      .reduce((sum, r) => sum + (r.unreadCount ?? 0), 0),
+      .reduce((sum, r) => sum + (roomUnreadCounts[r.id] ?? r.unreadCount ?? 0), 0),
   };
 
   // 섹션 헤더 포함 리스트 데이터
@@ -288,19 +298,19 @@ export default function ChatScreen() {
     const waiting    = visibleItems.filter(r => r.status === 'WAITING');
     const result: ListData[] = [];
     if (visibleDirectRooms.length > 0) {
-      result.push({ type: 'sectionHeader', label: `일반 ${visibleDirectRooms.length}`, id: 'sec-direct' });
+      result.push({ type: 'sectionHeader', label: `${t('chat.filterDirect')} ${visibleDirectRooms.length}`, id: 'sec-direct' });
       result.push(...visibleDirectRooms);
     }
     if (inProgress.length > 0) {
-      result.push({ type: 'sectionHeader', label: `진행중 ${inProgress.length}`, id: 'sec-progress' });
+      result.push({ type: 'sectionHeader', label: `${t('chat.filterInProgress')} ${inProgress.length}`, id: 'sec-progress' });
       result.push(...inProgress);
     }
     if (completed.length > 0) {
-      result.push({ type: 'sectionHeader', label: `완료 ${completed.length}`, id: 'sec-done' });
+      result.push({ type: 'sectionHeader', label: `${t('home.completed')} ${completed.length}`, id: 'sec-done' });
       result.push(...completed);
     }
     if (waiting.length > 0) {
-      result.push({ type: 'sectionHeader', label: `종료됨 ${waiting.length}`, id: 'sec-waiting' });
+      result.push({ type: 'sectionHeader', label: `${t('chat.statusLeft')} ${waiting.length}`, id: 'sec-waiting' });
       result.push(...waiting);
     }
     return result;
@@ -320,16 +330,16 @@ export default function ChatScreen() {
 
   const handleDelete = (item: ChatRoomResponse) => {
     Alert.alert(
-      '채팅방 나가기',
-      '채팅방 목록에서 삭제할까요?',
+      t('chat.leave'),
+      t('chat.noChats'),
       [
         {
-          text: '취소',
+          text: t('common.cancel'),
           style: 'cancel',
           onPress: () => swipeableRefs.current.get(item.id)?.close(),
         },
         {
-          text: '나가기',
+          text: t('chat.leave'),
           style: 'destructive',
           onPress: () => {
             if (user) {
@@ -347,7 +357,7 @@ export default function ChatScreen() {
   const renderRightActions = (item: ChatRoomResponse) => () => (
     <TouchableOpacity style={s.deleteAction} onPress={() => handleDelete(item)}>
       <Ionicons name="trash-outline" size={22} color="#fff" />
-      <Text style={s.deleteActionText}>나가기</Text>
+      <Text style={s.deleteActionText}>{t('chat.leave')}</Text>
     </TouchableOpacity>
   );
 
@@ -375,7 +385,7 @@ export default function ChatScreen() {
               }
             }}>
               <Ionicons name="trash-outline" size={22} color="#fff" />
-              <Text style={s.deleteActionText}>나가기</Text>
+              <Text style={s.deleteActionText}>{t('chat.leave')}</Text>
             </TouchableOpacity>
           )}
           rightThreshold={60}
@@ -394,13 +404,13 @@ export default function ChatScreen() {
                 <View style={s.itemTitleRow}>
                   <Text style={s.itemName}>{name}</Text>
                 </View>
-                <Text style={s.itemTime}>{formatTime(room.lastMessageTime ?? '')}</Text>
+                <Text style={s.itemTime}>{formatTime(room.lastMessageTime ?? '', t)}</Text>
               </View>
               <View style={s.itemBottom}>
-                <Text style={s.itemPreview} numberOfLines={1}>{room.lastMessage ?? '채팅을 시작해보세요'}</Text>
-                {room.unreadCount > 0 && (
+                <Text style={s.itemPreview} numberOfLines={1}>{room.lastMessage ?? t('chat.startMessage')}</Text>
+                {(roomUnreadCounts[room.id] ?? room.unreadCount) > 0 && (
                   <View style={s.unreadBadge}>
-                    <Text style={s.unreadText}>{room.unreadCount > 99 ? '99+' : room.unreadCount}</Text>
+                    <Text style={s.unreadText}>{(roomUnreadCounts[room.id] ?? room.unreadCount) > 99 ? '99+' : (roomUnreadCounts[room.id] ?? room.unreadCount)}</Text>
                   </View>
                 )}
               </View>
@@ -418,7 +428,7 @@ export default function ChatScreen() {
     const isWaiting      = room.status === 'WAITING';
     const isMatchPending = room.status === 'MATCHED';
 
-    const statusLabel = isCompleted ? '완료' : isWaiting ? '나감' : '진행중';
+    const statusLabel = isCompleted ? t('home.completed') : isWaiting ? t('chat.statusLeft') : t('chat.filterInProgress');
     const statusBg    = isCompleted ? '#F0F4F8' : isWaiting ? '#FEF3C7' : BLUE_L;
     const statusColor = isCompleted ? T3 : isWaiting ? '#D97706' : BLUE;
 
@@ -462,19 +472,19 @@ export default function ChatScreen() {
               <View style={s.itemTitleRow}>
                 <Text style={s.itemName}>{name}</Text>
               </View>
-              <Text style={s.itemTime}>{formatTime(room.lastMessageTime ?? '')}</Text>
+              <Text style={s.itemTime}>{formatTime(room.lastMessageTime ?? '', t)}</Text>
             </View>
             <View style={s.itemBottom}>
               <Text style={s.itemPreview} numberOfLines={1}>
                 {isMatchPending
-                  ? (isInternational ? '새 도움 신청이 도착했어요!' : '수락을 기다리고 있어요')
+                  ? (isInternational ? t('chat.newHelpArrived') : t('chat.waitingAccept'))
                   : room.lastMessage?.startsWith('SYS_LEAVE:')
-                    ? '상대방이 채팅방을 나갔습니다'
+                    ? t('chat.partnerLeft')
                     : (room.lastMessage ?? room.title)}
               </Text>
-              {room.unreadCount > 0 && !isActioning && (
+              {(roomUnreadCounts[room.id] ?? room.unreadCount) > 0 && !isActioning && (
                 <View style={s.unreadBadge}>
-                  <Text style={s.unreadText}>{room.unreadCount > 99 ? '99+' : room.unreadCount}</Text>
+                  <Text style={s.unreadText}>{(roomUnreadCounts[room.id] ?? room.unreadCount) > 99 ? '99+' : (roomUnreadCounts[room.id] ?? room.unreadCount)}</Text>
                 </View>
               )}
             </View>
@@ -486,7 +496,7 @@ export default function ChatScreen() {
                   onPress={() => handleReject(room)}
                   disabled={isActioning}
                 >
-                  <Text style={s.rejectBtnText}>거절</Text>
+                  <Text style={s.rejectBtnText}>{t('chat.decline')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[s.acceptBtn, isActioning && s.btnDisabled]}
@@ -495,7 +505,7 @@ export default function ChatScreen() {
                 >
                   {isActioning
                     ? <ActivityIndicator size="small" color="#fff" />
-                    : <Text style={s.acceptBtnText}>수락</Text>
+                    : <Text style={s.acceptBtnText}>{t('chat.accept')}</Text>
                   }
                 </TouchableOpacity>
               </View>
@@ -514,7 +524,7 @@ export default function ChatScreen() {
     <View style={s.container}>
       {/* 헤더 */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>채팅</Text>
+        <Text style={s.headerTitle}>{t('chat.title')}</Text>
         <TouchableOpacity style={s.iconBtn} onPress={openSearch}>
           <Ionicons name="search-outline" size={22} color={T3} />
         </TouchableOpacity>
@@ -528,7 +538,7 @@ export default function ChatScreen() {
             <TextInput
               ref={searchInputRef}
               style={s.searchInput}
-              placeholder="닉네임으로 검색"
+              placeholder={t('chat.searchByName')}
               placeholderTextColor={T2}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -541,14 +551,13 @@ export default function ChatScreen() {
             )}
           </View>
           <TouchableOpacity style={s.searchCancel} onPress={closeSearch}>
-            <Text style={s.searchCancelText}>취소</Text>
+            <Text style={s.searchCancelText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* 필터 탭 */}
       <View style={s.filterRow}>
-        {FILTER_TABS.map(({ key, label }) => {
+        {FILTER_TAB_KEYS.map(({ key, labelKey }) => {
           const unread = tabUnread[key];
           const isOn = filter === key;
           return (
@@ -558,7 +567,7 @@ export default function ChatScreen() {
               onPress={() => setFilter(key)}
               activeOpacity={0.8}
             >
-              <Text style={[s.chipText, isOn && s.chipTextOn]}>{label}</Text>
+              <Text style={[s.chipText, isOn && s.chipTextOn]}>{t(labelKey)}</Text>
               {unread > 0 && (
                 <View style={[s.tabBadge, isOn && s.tabBadgeOn]}>
                   <Text style={[s.tabBadgeText, isOn && s.tabBadgeTextOn]}>
@@ -575,13 +584,13 @@ export default function ChatScreen() {
       {listDataWithSections.length === 0 ? (
         <View style={s.empty}>
           <Text style={s.emptyIcon}>💬</Text>
-          <Text style={s.emptyTitle}>아직 채팅이 없어요</Text>
+          <Text style={s.emptyTitle}>{t('chat.noChatsYet')}</Text>
           <Text style={s.emptySub}>
             {filter === 'DIRECT'
-              ? '상대방 프로필에서 채팅하기를 눌러보세요!'
+              ? t('chat.emptyDirectHint')
               : isInternational
-                ? '도움 요청을 올리면 도움을 줄 분이 나타나요!'
-                : '도움 요청 목록에서 도움을 신청해보세요!'}
+                ? t('chat.emptyInternationalHint')
+                : t('chat.emptyKoreanHint')}
           </Text>
         </View>
       ) : (
@@ -607,19 +616,20 @@ export default function ChatScreen() {
   );
 }
 
-function formatTime(iso: string): string {
+type TFunction = (key: string, opts?: Record<string, unknown>) => string;
+
+function formatTime(iso: string, t: TFunction): string {
   if (!iso) return '';
-  // Railway 서버는 UTC 기준 LocalDateTime → timezone 없으면 Z 붙여서 UTC로 명시
   const utc = iso.includes('Z') || iso.includes('+') ? iso : iso + 'Z';
   const ms = new Date(utc.replace(/\.(\d+)Z/, (_, d) => '.' + (d + '000').slice(0, 3) + 'Z')).getTime();
   if (isNaN(ms)) return '';
   const diff = Date.now() - ms;
   const m = Math.floor(diff / 60000);
-  if (m < 1)  return '방금 전';
-  if (m < 60) return `${m}분 전`;
+  if (m < 1)  return t('time.justNow');
+  if (m < 60) return t('time.minutesAgo', { m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
+  if (h < 24) return t('time.hoursAgo', { h });
+  return t('time.daysAgo', { d: Math.floor(h / 24) });
 }
 
 const s = StyleSheet.create({
@@ -677,7 +687,7 @@ const s = StyleSheet.create({
   tabBadgeTextOn:  { color: BLUE },
 
   // ── List ──
-  list:      { paddingVertical: 0 },
+  list:      { paddingVertical: 0, paddingBottom: sc(110) },
   separator: { height: 0 },
 
   // ── Section label ──

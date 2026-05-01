@@ -15,12 +15,23 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
-import { Colors } from '../../constants/colors';
 import type { UserType } from '../../types';
 import { sendVerificationCode, verifyEmailCode } from '../../services/authService';
+import type { SupportedLanguage } from '../../i18n';
+
+const COUNTRY_TO_LANGUAGE: Record<string, SupportedLanguage> = {
+  JP: 'ja',
+  CN: 'zh-Hans', TW: 'zh-Hans', HK: 'zh-Hans',
+  RU: 'ru', KZ: 'ru', KG: 'ru', TJ: 'ru', TM: 'ru', UZ: 'ru',
+  MN: 'mn',
+  VN: 'vi', LA: 'vi', KH: 'vi',
+};
+
+const BLUE = '#3B6FE8';
+const BLUE_L = '#EEF4FF';
 
 const NATIONALITIES = [
   // 아시아 (동아시아)
@@ -147,13 +158,16 @@ const MAJORS = [
 export default function RegisterScreen() {
   const router = useRouter();
   const { register, isLoading } = useAuthStore();
+  const params = useLocalSearchParams<{ isForeigner?: string }>();
+
+  const initialIsForeigner = params.isForeigner === '1' ? true : params.isForeigner === '0' ? false : null;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [nickname, setNickname] = useState('');
-  const [isForeigner, setIsForeigner] = useState<boolean | null>(null);
-  const [userType, setUserType] = useState<UserType | null>(null);
+  const isForeigner = initialIsForeigner;
+  const [userType, setUserType] = useState<UserType | null>(initialIsForeigner === false ? 'KOREAN' : null);
   const [nationality, setNationality] = useState<string | null>(null);
   const [showNationalityModal, setShowNationalityModal] = useState(false);
   const [major, setMajor] = useState<string | null>(null);
@@ -171,6 +185,15 @@ export default function RegisterScreen() {
   const [verifyingCode, setVerifyingCode] = useState(false);
 
   const selectedNationality = NATIONALITIES.find((n) => n.code === nationality);
+  const isValidEmail = /^[^\s@]+@kookmin\.ac\.kr$/.test(email.trim());
+  const isFormComplete = emailVerified &&
+    !!nickname.trim() &&
+    !!password.trim() &&
+    !!passwordConfirm.trim() &&
+    termsAgreed &&
+    privacyAgreed &&
+    (isForeigner === false || (!!userType && !!nationality)) &&
+    !!major;
 
   const handleSendCode = async () => {
     if (!email.trim()) {
@@ -241,6 +264,10 @@ export default function RegisterScreen() {
       return;
     }
 
+    const preferredLanguage = nationality
+      ? (COUNTRY_TO_LANGUAGE[nationality] ?? 'en')
+      : (userType === 'KOREAN' ? 'ko' : 'en');
+
     const success = await register({
       email,
       password,
@@ -249,6 +276,7 @@ export default function RegisterScreen() {
       university: '국민대학교',
       major: major ?? undefined,
       nationality: nationality ?? undefined,
+      preferredLanguage,
       termsAgreed: true,
       privacyAgreed: true,
     });
@@ -269,115 +297,35 @@ export default function RegisterScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/login')}>
-            <Text style={styles.backButton}>← 뒤로</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>회원가입</Text>
-          <Text style={styles.subtitle}>도와줘코리안에 가입하세요</Text>
-        </View>
-
-        {/* 사용자 유형 선택 */}
-        <Text style={styles.label}>사용자 유형</Text>
-        <View style={styles.typeContainer}>
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              isForeigner === true && styles.typeButtonActive,
-            ]}
-            onPress={() => {
-              setIsForeigner(true);
-              setUserType(null);
-              setNationality(null);
-            }}
-          >
-            <Text style={styles.typeEmoji}>🌍</Text>
-            <Text style={[styles.typeText, isForeigner === true && styles.typeTextActive]}>
-              외국인
-            </Text>
-            <Text style={styles.typeDesc}>도움을 요청합니다</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              isForeigner === false && styles.typeButtonActive,
-            ]}
-            onPress={() => {
-              setIsForeigner(false);
-              setUserType('KOREAN');
-              setNationality(null);
-            }}
-          >
-            <Text style={styles.typeEmoji}>🇰🇷</Text>
-            <Text style={[styles.typeText, isForeigner === false && styles.typeTextActive]}>
-              한국인 학생
-            </Text>
-            <Text style={styles.typeDesc}>도움을 제공합니다</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* 외국인 선택 시 유학생/교환학생 서브 선택 */}
+      <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.replace('/(auth)/login')}>
+        <Ionicons name="arrow-back" size={s(24)} color={BLUE} />
+      </TouchableOpacity>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isForeigner === false && { paddingTop: s(150) }]}>
+        {/* 유학생 / 교환학생 선택 (외국인만) */}
         {isForeigner === true && (
-          <View style={styles.subTypeContainer}>
-            <TouchableOpacity
-              style={[styles.subTypeButton, userType === 'INTERNATIONAL' && styles.subTypeButtonActive]}
-              onPress={() => setUserType('INTERNATIONAL')}
-            >
-              <Text style={[styles.subTypeText, userType === 'INTERNATIONAL' && styles.subTypeTextActive]}>
-                📚 유학생
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.subTypeButton, userType === 'EXCHANGE' && styles.subTypeButtonActive]}
-              onPress={() => setUserType('EXCHANGE')}
-            >
-              <Text style={[styles.subTypeText, userType === 'EXCHANGE' && styles.subTypeTextActive]}>
-                ✈️ 교환학생
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* 국적 선택 (외국인 선택 시에만 표시) */}
-        {(userType === 'INTERNATIONAL' || userType === 'EXCHANGE') && (
-          <View style={styles.nationalityContainer}>
-            <Text style={styles.label}>국적</Text>
-            <TouchableOpacity
-              style={styles.nationalitySelector}
-              onPress={() => setShowNationalityModal(true)}
-            >
-              {selectedNationality ? (
-                <Text style={styles.nationalitySelectorValue}>
-                  {selectedNationality.flag} {selectedNationality.label}
+          <>
+            <Text style={[styles.label, { marginBottom: s(4) }]}>유형 선택</Text>
+            <View style={styles.subTypeContainer}>
+              <TouchableOpacity
+                style={[styles.subTypeButton, userType === 'INTERNATIONAL' && styles.subTypeButtonActive]}
+                onPress={() => setUserType(userType === 'INTERNATIONAL' ? null : 'INTERNATIONAL')}
+              >
+                <Text style={[styles.subTypeText, userType === 'INTERNATIONAL' && styles.subTypeTextActive]}>
+                  유학생
                 </Text>
-              ) : (
-                <Text style={styles.nationalitySelectorPlaceholder}>국적을 선택하세요</Text>
-              )}
-              <Ionicons name="chevron-down" size={18} color={Colors.textLight} />
-            </TouchableOpacity>
-          </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.subTypeButton, userType === 'EXCHANGE' && styles.subTypeButtonActive]}
+                onPress={() => setUserType(userType === 'EXCHANGE' ? null : 'EXCHANGE')}
+              >
+                <Text style={[styles.subTypeText, userType === 'EXCHANGE' && styles.subTypeTextActive]}>
+                  교환학생
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </>
         )}
 
-        {/* 전공 선택 (사용자 유형 선택 시에만 표시) */}
-        {userType !== null && (
-          <View style={styles.nationalityContainer}>
-            <Text style={styles.label}>전공학과</Text>
-            <TouchableOpacity
-              style={styles.nationalitySelector}
-              onPress={() => setShowMajorModal(true)}
-            >
-              {major ? (
-                <Text style={styles.nationalitySelectorValue}>{major}</Text>
-              ) : (
-                <Text style={styles.nationalitySelectorPlaceholder}>전공학과를 선택하세요</Text>
-              )}
-              <Ionicons name="chevron-down" size={18} color={Colors.textLight} />
-            </TouchableOpacity>
-          </View>
-        )}
 
         {/* 전공 선택 모달 */}
         <Modal
@@ -395,7 +343,7 @@ export default function RegisterScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>전공학과 선택</Text>
                 <TouchableOpacity onPress={() => setShowMajorModal(false)}>
-                  <Ionicons name="close" size={24} color={Colors.textPrimary} />
+                  <Ionicons name="close" size={24} color="#0C1C3C" />
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -410,7 +358,7 @@ export default function RegisterScreen() {
                       {item}
                     </Text>
                     {major === item && (
-                      <Ionicons name="checkmark" size={20} color={Colors.primary} style={styles.modalItemCheck} />
+                      <Ionicons name="checkmark" size={20} color={BLUE} style={styles.modalItemCheck} />
                     )}
                   </TouchableOpacity>
                 )}
@@ -436,7 +384,7 @@ export default function RegisterScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>국적 선택</Text>
                 <TouchableOpacity onPress={() => setShowNationalityModal(false)}>
-                  <Ionicons name="close" size={24} color={Colors.textPrimary} />
+                  <Ionicons name="close" size={24} color="#0C1C3C" />
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -461,7 +409,7 @@ export default function RegisterScreen() {
                       {item.label}
                     </Text>
                     {nationality === item.code && (
-                      <Ionicons name="checkmark" size={20} color={Colors.primary} style={styles.modalItemCheck} />
+                      <Ionicons name="checkmark" size={20} color={BLUE} style={styles.modalItemCheck} />
                     )}
                   </TouchableOpacity>
                 )}
@@ -473,12 +421,12 @@ export default function RegisterScreen() {
 
         {/* 입력 폼 */}
         <View style={styles.form}>
-          <Text style={styles.label}>이메일 (학교 이메일 필수)</Text>
+          <Text style={styles.label}>국민대학교 이메일</Text>
           <View style={styles.emailRow}>
             <TextInput
-              style={[styles.input, styles.emailInput, emailVerified && styles.inputVerified]}
-              placeholder="example@university.ac.kr"
-              placeholderTextColor={Colors.textLight}
+              style={[styles.input, styles.emailInput, email && styles.inputActive, emailVerified && styles.inputVerified]}
+              placeholder="example@kookmin.ac.kr"
+              placeholderTextColor="#AABBCC"
               value={email}
               onChangeText={(v) => { setEmail(v); setEmailVerified(false); setCodeSent(false); setVerificationCode(''); }}
               keyboardType="email-address"
@@ -492,15 +440,11 @@ export default function RegisterScreen() {
               </View>
             ) : (
               <TouchableOpacity
-                style={[styles.codeButton, sendingCode && styles.disabledButton]}
+                style={[styles.codeButton, isValidEmail && { borderColor: BLUE }, sendingCode && styles.disabledButton]}
                 onPress={handleSendCode}
                 disabled={sendingCode}
               >
-                {sendingCode ? (
-                  <ActivityIndicator size="small" color={Colors.textWhite} />
-                ) : (
-                  <Text style={styles.codeButtonText}>{codeSent ? '재발송' : '인증번호 받기'}</Text>
-                )}
+                <Text style={[styles.codeButtonText, isValidEmail && styles.codeButtonTextActive]}>{codeSent ? '재발송' : '인증번호 받기'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -508,42 +452,74 @@ export default function RegisterScreen() {
           {codeSent && !emailVerified && (
             <View style={styles.otpRow}>
               <TextInput
-                style={[styles.input, styles.otpInput]}
+                style={[styles.input, styles.otpInput, verificationCode && styles.inputActive]}
                 placeholder="인증번호 6자리"
-                placeholderTextColor={Colors.textLight}
+                placeholderTextColor="#AABBCC"
                 value={verificationCode}
                 onChangeText={setVerificationCode}
                 keyboardType="number-pad"
                 maxLength={6}
               />
               <TouchableOpacity
-                style={[styles.codeButton, verifyingCode && styles.disabledButton]}
+                style={[styles.codeButton, verificationCode.length === 6 && { borderColor: BLUE }, verifyingCode && styles.disabledButton]}
                 onPress={handleVerifyCode}
                 disabled={verifyingCode}
               >
-                {verifyingCode ? (
-                  <ActivityIndicator size="small" color={Colors.textWhite} />
-                ) : (
-                  <Text style={styles.codeButtonText}>확인</Text>
-                )}
+                <Text style={[styles.codeButtonText, verificationCode.length === 6 && styles.codeButtonTextActive]}>확인</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          <Text style={styles.label}>닉네임</Text>
+          <View style={styles.halfRow}>
+            {isForeigner === true && (
+              <View style={styles.halfItem}>
+                <Text style={styles.label}>국적</Text>
+                <TouchableOpacity
+                  style={[styles.nationalitySelector, nationality && styles.inputActive]}
+                  onPress={() => setShowNationalityModal(true)}
+                >
+                  {selectedNationality ? (
+                    <Text style={styles.nationalitySelectorValue}>
+                      {selectedNationality.flag} {selectedNationality.label}
+                    </Text>
+                  ) : (
+                    <Text style={styles.nationalitySelectorPlaceholder}>국적</Text>
+                  )}
+                  <Ionicons name="chevron-down" size={18} color="#AABBCC" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={isForeigner === true ? styles.halfItem : styles.fullItem}>
+              <Text style={styles.label}>전공학과</Text>
+              <TouchableOpacity
+                style={[styles.nationalitySelector, major && styles.inputActive]}
+                onPress={() => setShowMajorModal(true)}
+              >
+                {major ? (
+                  <Text style={styles.nationalitySelectorValue} numberOfLines={1}>{major}</Text>
+                ) : (
+                  <Text style={styles.nationalitySelectorPlaceholder}>전공</Text>
+                )}
+                <Ionicons name="chevron-down" size={18} color="#AABBCC" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Text style={styles.label}>이름</Text>
           <TextInput
-            style={styles.input}
-            placeholder="닉네임을 입력하세요"
-            placeholderTextColor={Colors.textLight}
+            style={[styles.input, nickname && styles.inputActive]}
+            placeholder="이름을 입력하세요"
+            placeholderTextColor="#AABBCC"
             value={nickname}
             onChangeText={setNickname}
           />
 
           <Text style={styles.label}>비밀번호</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, password && styles.inputActive]}
             placeholder="6자 이상 입력하세요"
-            placeholderTextColor={Colors.textLight}
+            placeholderTextColor="#AABBCC"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -551,13 +527,15 @@ export default function RegisterScreen() {
 
           <Text style={styles.label}>비밀번호 확인</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, passwordConfirm && styles.inputActive]}
             placeholder="비밀번호를 다시 입력하세요"
-            placeholderTextColor={Colors.textLight}
+            placeholderTextColor="#AABBCC"
             value={passwordConfirm}
             onChangeText={setPasswordConfirm}
             secureTextEntry
           />
+
+          <View style={styles.divider} />
 
           {/* 약관 동의 */}
           <View style={styles.agreeSection}>
@@ -588,12 +566,12 @@ export default function RegisterScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.registerButton, (isLoading || !emailVerified || !termsAgreed || !privacyAgreed) && styles.disabledButton]}
+            style={[styles.registerButton, (!isFormComplete || isLoading) && styles.disabledButton]}
             onPress={handleRegister}
-            disabled={isLoading || !emailVerified || !termsAgreed || !privacyAgreed}
+            disabled={!isFormComplete || isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color={Colors.textWhite} />
+              <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.registerButtonText}>가입하기</Text>
             )}
@@ -608,7 +586,7 @@ export default function RegisterScreen() {
             <View style={styles.docModalHeader}>
               <Text style={styles.docModalTitle}>이용약관</Text>
               <TouchableOpacity onPress={() => setShowTermsModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+                <Ionicons name="close" size={24} color="#0C1C3C" />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.docModalBody} showsVerticalScrollIndicator={false}>
@@ -648,7 +626,7 @@ export default function RegisterScreen() {
             <View style={styles.docModalHeader}>
               <Text style={styles.docModalTitle}>개인정보처리방침</Text>
               <TouchableOpacity onPress={() => setShowPrivacyModal(false)}>
-                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+                <Ionicons name="close" size={24} color="#0C1C3C" />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.docModalBody} showsVerticalScrollIndicator={false}>
@@ -691,132 +669,111 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#FFFFFF',
+  },
+  backBtn: {
+    position: 'absolute',
+    top: s(56),
+    left: s(20),
+    zIndex: 10,
+    width: s(40),
+    height: s(40),
+    borderRadius: s(20),
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
   },
   scrollContent: {
     padding: s(32),
-    paddingTop: s(60),
-  },
-  header: {
-    marginBottom: s(32),
-  },
-  backButton: {
-    fontSize: s(16),
-    color: Colors.primary,
-    marginBottom: s(16),
-  },
-  title: {
-    fontSize: s(28),
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: s(4),
-  },
-  subtitle: {
-    fontSize: s(14),
-    color: Colors.textSecondary,
+    paddingTop: s(100),
   },
   label: {
-    fontSize: s(14),
-    fontWeight: '600',
-    color: Colors.textPrimary,
+    fontSize: s(17),
+    fontWeight: '700',
+    color: '#0C1C3C',
     marginBottom: s(8),
     marginTop: s(16),
-  },
-  typeContainer: {
-    flexDirection: 'row',
-    gap: s(12),
-  },
-  typeButton: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: s(12),
-    padding: s(16),
-    alignItems: 'center',
-    borderWidth: s(2),
-    borderColor: Colors.border,
-  },
-  typeButtonActive: {
-    borderColor: Colors.primary,
-    backgroundColor: '#EBF5FF',
-  },
-  typeEmoji: {
-    fontSize: s(32),
-    marginBottom: s(8),
-  },
-  typeText: {
-    fontSize: s(16),
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: s(4),
-  },
-  typeTextActive: {
-    color: Colors.primary,
-  },
-  typeDesc: {
-    fontSize: s(12),
-    color: Colors.textSecondary,
   },
   subTypeContainer: {
     flexDirection: 'row',
     gap: s(12),
-    marginTop: s(12),
+    marginTop: s(4),
   },
   subTypeButton: {
     flex: 1,
-    backgroundColor: Colors.surface,
+    backgroundColor: '#FFFFFF',
     borderRadius: s(10),
-    paddingVertical: s(12),
+    paddingVertical: s(16),
     alignItems: 'center',
     borderWidth: s(2),
-    borderColor: Colors.border,
+    borderColor: '#D4E4FF',
   },
   subTypeButtonActive: {
-    borderColor: Colors.primary,
-    backgroundColor: '#EBF5FF',
+    borderColor: BLUE,
   },
   subTypeText: {
     fontSize: s(15),
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: '#6B7FA3',
   },
   subTypeTextActive: {
-    color: Colors.primary,
+    color: BLUE,
   },
   nationalityContainer: {
     marginTop: s(4),
+  },
+  halfRow: {
+    flexDirection: 'row',
+    gap: s(12),
+  },
+  halfItem: {
+    flex: 1,
+  },
+  fullItem: {
+    flex: 1,
   },
   nationalitySelector: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.surface,
+    backgroundColor: '#FFFFFF',
     borderRadius: s(12),
     paddingHorizontal: s(16),
     paddingVertical: s(14),
     borderWidth: s(1),
-    borderColor: Colors.border,
+    borderColor: '#D4E4FF',
   },
   nationalitySelectorValue: {
     fontSize: s(16),
-    color: Colors.textPrimary,
+    color: '#0C1C3C',
     fontWeight: '500',
   },
   nationalitySelectorPlaceholder: {
     fontSize: s(16),
-    color: Colors.textLight,
+    color: '#AABBCC',
   },
   // 모달
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: s(20),
-    borderTopRightRadius: s(20),
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: s(36),
+    borderTopRightRadius: s(36),
     maxHeight: '60%',
     paddingBottom: Platform.OS === 'ios' ? s(32) : s(16),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 20,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -824,12 +781,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: s(20),
     borderBottomWidth: s(1),
-    borderBottomColor: Colors.border,
+    borderBottomColor: '#D4E4FF',
   },
   modalTitle: {
     fontSize: s(17),
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#0C1C3C',
   },
   modalItem: {
     flexDirection: 'row',
@@ -839,18 +796,18 @@ const styles = StyleSheet.create({
     gap: s(12),
   },
   modalItemActive: {
-    backgroundColor: '#EBF5FF',
+    backgroundColor: BLUE_L,
   },
   modalItemFlag: {
     fontSize: s(22),
   },
   modalItemLabel: {
     fontSize: s(16),
-    color: Colors.textPrimary,
+    color: '#0C1C3C',
     flex: 1,
   },
   modalItemLabelActive: {
-    color: Colors.primary,
+    color: BLUE,
     fontWeight: '700',
   },
   modalItemCheck: {
@@ -858,21 +815,24 @@ const styles = StyleSheet.create({
   },
   modalDivider: {
     height: s(1),
-    backgroundColor: Colors.divider,
+    backgroundColor: '#D4E4FF',
     marginLeft: s(56),
   },
   form: {
     marginTop: s(8),
   },
   input: {
-    backgroundColor: Colors.surface,
+    backgroundColor: '#FFFFFF',
     borderRadius: s(12),
     paddingHorizontal: s(16),
     paddingVertical: s(14),
     fontSize: s(16),
-    color: Colors.textPrimary,
+    color: '#0C1C3C',
     borderWidth: s(1),
-    borderColor: Colors.border,
+    borderColor: '#D4E4FF',
+  },
+  inputActive: {
+    borderColor: BLUE,
   },
   inputVerified: {
     borderColor: '#22c55e',
@@ -896,18 +856,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   codeButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#FFFFFF',
     borderRadius: s(12),
     paddingHorizontal: s(14),
     paddingVertical: s(14),
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: s(90),
+    borderWidth: s(1.5),
+    borderColor: '#9AAABF',
+  },
+  codeButtonInactive: {
+    borderColor: '#9AAABF',
   },
   codeButtonText: {
-    color: Colors.textWhite,
+    color: '#9AAABF',
     fontSize: s(13),
     fontWeight: '700',
+  },
+  codeButtonTextActive: {
+    color: BLUE,
   },
   verifiedTag: {
     flexDirection: 'row',
@@ -922,19 +890,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   registerButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: BLUE,
     borderRadius: s(12),
     paddingVertical: s(16),
     alignItems: 'center',
     marginTop: s(24),
   },
   disabledButton: {
-    opacity: 0.6,
+    backgroundColor: '#9AAABF',
   },
   registerButtonText: {
-    color: Colors.textWhite,
+    color: '#FFFFFF',
     fontSize: s(18),
     fontWeight: '700',
+  },
+  divider: {
+    height: s(1),
+    backgroundColor: '#E8F0FB',
+    marginTop: s(24),
   },
   agreeSection: {
     marginTop: s(20),
@@ -950,25 +923,25 @@ const styles = StyleSheet.create({
     height: s(22),
     borderRadius: s(6),
     borderWidth: s(2),
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
+    borderColor: '#D4E4FF',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: BLUE,
+    borderColor: BLUE,
   },
   agreeText: {
     fontSize: s(14),
-    color: Colors.textPrimary,
+    color: '#0C1C3C',
   },
   agreeRequired: {
-    color: Colors.primary,
+    color: BLUE,
     fontWeight: '600',
   },
   agreeLinkText: {
-    color: Colors.primary,
+    color: BLUE,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
@@ -978,7 +951,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   docModalSheet: {
-    backgroundColor: Colors.surface,
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: s(20),
     borderTopRightRadius: s(20),
     height: '80%',
@@ -990,12 +963,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: s(20),
     borderBottomWidth: s(1),
-    borderBottomColor: Colors.border,
+    borderBottomColor: '#D4E4FF',
   },
   docModalTitle: {
     fontSize: s(17),
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#0C1C3C',
   },
   docModalBody: {
     flex: 1,
@@ -1005,25 +978,25 @@ const styles = StyleSheet.create({
   docSection: {
     fontSize: s(14),
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#0C1C3C',
     marginTop: s(20),
     marginBottom: s(6),
   },
   docText: {
     fontSize: s(13),
-    color: Colors.textSecondary,
+    color: '#6B7FA3',
     lineHeight: s(20),
   },
   docAgreeBtn: {
     marginHorizontal: s(20),
     marginTop: s(12),
-    backgroundColor: Colors.primary,
+    backgroundColor: BLUE,
     borderRadius: s(12),
     paddingVertical: s(14),
     alignItems: 'center',
   },
   docAgreeBtnText: {
-    color: Colors.textWhite,
+    color: '#FFFFFF',
     fontSize: s(15),
     fontWeight: '700',
   },

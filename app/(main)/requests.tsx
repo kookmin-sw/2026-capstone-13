@@ -10,6 +10,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Colors, CategoryLabels, MethodLabels, StatusLabels } from '../../constants/colors';
 import { getHelpRequests } from '../../services/helpService';
 import type { HelpRequest, RequestStatus } from '../../types';
@@ -23,6 +24,7 @@ const STATUS_COLORS: Record<RequestStatus, string> = {
 };
 
 export default function RequestsScreen() {
+  const { t } = useTranslation();
   const [requests, setRequests] = useState<HelpRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -90,8 +92,8 @@ export default function RequestsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>📋</Text>
-            <Text style={styles.emptyText}>도움 요청이 없습니다</Text>
-            <Text style={styles.emptySubtext}>새로운 요청이 등록되면 여기에 표시됩니다</Text>
+            <Text style={styles.emptyText}>{t('requests.noRequests')}</Text>
+            <Text style={styles.emptySubtext}>{t('requests.noRequestsDesc')}</Text>
           </View>
         }
       />

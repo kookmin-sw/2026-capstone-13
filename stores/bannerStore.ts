@@ -15,6 +15,7 @@ export interface BannerItem {
     partnerProfileImage?: string;
     requestStatus?: string;
     requesterId?: string;
+    isDirect?: boolean;
   };
 }
 

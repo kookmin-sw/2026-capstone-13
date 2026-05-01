@@ -3,12 +3,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const STREAK_KEY = 'login_streak';
 const STREAK_DATE_KEY = 'login_streak_last_date';
+const MONTHLY_GOAL_KEY = 'monthly_goal';
 const MAX_DOTS = 10;
 
 interface GoalState {
   monthlyGoal: number;
   loginStreak: number;
   setMonthlyGoal: (goal: number) => void;
+  loadMonthlyGoal: () => Promise<void>;
   checkAndUpdateStreak: () => Promise<void>;
 }
 
@@ -16,7 +18,17 @@ export const useGoalStore = create<GoalState>((set) => ({
   monthlyGoal: 0,
   loginStreak: 0,
 
-  setMonthlyGoal: (goal) => set({ monthlyGoal: goal }),
+  setMonthlyGoal: async (goal) => {
+    set({ monthlyGoal: goal });
+    await AsyncStorage.setItem(MONTHLY_GOAL_KEY, String(goal));
+  },
+
+  loadMonthlyGoal: async () => {
+    const saved = await AsyncStorage.getItem(MONTHLY_GOAL_KEY);
+    if (saved !== null) {
+      set({ monthlyGoal: parseInt(saved, 10) });
+    }
+  },
 
   checkAndUpdateStreak: async () => {
     const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"

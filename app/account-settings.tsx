@@ -4,6 +4,8 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
+  Modal,
   Platform,
   StyleSheet,
   Text,
@@ -14,6 +16,8 @@ import {
 import { deleteAccount } from '../services/authService';
 import { useAuthStore } from '../stores/authStore';
 import { s } from '../utils/scale';
+import { useTranslation } from 'react-i18next';
+import { SUPPORTED_LANGUAGES, LANGUAGE_LABELS, LANGUAGE_FLAGS, type SupportedLanguage } from '../i18n';
 
 const PRIMARY = '#3B6FE8';
 const DANGER = '#EF4444';
@@ -25,7 +29,29 @@ const BORDER = '#E5E7EB';
 
 export default function AccountSettingsScreen() {
   const router = useRouter();
-  const { logout } = useAuthStore();
+  const { t } = useTranslation();
+  const { logout, user, setAppLanguage } = useAuthStore();
+  const [langModalVisible, setLangModalVisible] = useState(false);
+  const currentLang = (user?.preferredLanguage as SupportedLanguage | undefined) ?? 'ko';
+
+  const handleLanguageSelect = async (lang: SupportedLanguage) => {
+    setLangModalVisible(false);
+    await setAppLanguage(lang);
+  };
+
+  const handleLogout = () => {
+    Alert.alert(t('auth.logout'), t('auth.logoutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('auth.logout'),
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          router.replace('/(auth)/login');
+        },
+      },
+    ]);
+  };
 
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,16 +59,16 @@ export default function AccountSettingsScreen() {
 
   const handleWithdraw = () => {
     if (!password.trim()) {
-      Alert.alert('알림', '비밀번호를 입력해주세요.');
+      Alert.alert(t('common.confirm'), t('settings.enterPassword'));
       return;
     }
     Alert.alert(
-      '정말 탈퇴하시겠습니까?',
-      '탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.',
+      t('settings.withdrawConfirm'),
+      t('settings.withdrawWarning'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '탈퇴',
+          text: t('settings.withdraw'),
           style: 'destructive',
           onPress: confirmWithdraw,
         },
@@ -57,7 +83,7 @@ export default function AccountSettingsScreen() {
       await logout();
       router.replace('/');
     } catch {
-      Alert.alert('탈퇴 실패', '비밀번호가 올바르지 않거나 오류가 발생했습니다.');
+      Alert.alert(t('settings.withdrawFailed'), t('settings.withdrawFailedDesc'));
     } finally {
       setLoading(false);
     }
@@ -70,22 +96,98 @@ export default function AccountSettingsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="chevron-back" size={24} color={T1} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>계정 설정</Text>
+        <Text style={styles.headerTitle}>{t('settings.accountSettings')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      {/* 차단 관리 섹션 */}
+      {/* 계정 관리 섹션 */}
       <View style={styles.section}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => setLangModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="language-outline" size={20} color={T1} />
+          <Text style={[styles.menuItemText, { color: T1 }]}>{t('settings.language')}</Text>
+          <Text style={styles.menuItemValue}>
+            {LANGUAGE_FLAGS[currentLang]} {LANGUAGE_LABELS[currentLang]}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={T2} style={styles.menuChevron} />
+        </TouchableOpacity>
+        <View style={styles.menuDivider} />
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push('/change-password')}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="lock-closed-outline" size={20} color={T1} />
+          <Text style={[styles.menuItemText, { color: T1 }]}>{t('settings.changePassword')}</Text>
+          <Ionicons name="chevron-forward" size={18} color={T2} style={styles.menuChevron} />
+        </TouchableOpacity>
+        <View style={styles.menuDivider} />
         <TouchableOpacity
           style={styles.menuItem}
           onPress={() => router.push('/blocked-users')}
           activeOpacity={0.7}
         >
           <Ionicons name="ban-outline" size={20} color={T1} />
-          <Text style={[styles.menuItemText, { color: T1 }]}>차단 관리</Text>
+          <Text style={[styles.menuItemText, { color: T1 }]}>{t('settings.blockedUsers')}</Text>
           <Ionicons name="chevron-forward" size={18} color={T2} style={styles.menuChevron} />
         </TouchableOpacity>
+        <View style={styles.menuDivider} />
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="log-out-outline" size={20} color={T1} />
+          <Text style={[styles.menuItemText, { color: T1 }]}>{t('settings.logout')}</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* 언어 선택 모달 */}
+      <Modal
+        visible={langModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setLangModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.langModalOverlay}
+          activeOpacity={1}
+          onPress={() => setLangModalVisible(false)}
+        >
+          <View style={styles.langModalSheet}>
+            <View style={styles.langModalHeader}>
+              <Text style={styles.langModalTitle}>{t('settings.selectLanguage')}</Text>
+              <TouchableOpacity onPress={() => setLangModalVisible(false)}>
+                <Ionicons name="close" size={24} color={T1} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={SUPPORTED_LANGUAGES}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => {
+                const isSelected = currentLang === item;
+                return (
+                  <TouchableOpacity
+                    style={[styles.langItem, isSelected && styles.langItemSelected]}
+                    onPress={() => handleLanguageSelect(item)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.langFlag}>{LANGUAGE_FLAGS[item]}</Text>
+                    <Text style={[styles.langLabel, isSelected && styles.langLabelSelected]}>
+                      {LANGUAGE_LABELS[item]}
+                    </Text>
+                    {isSelected && <Ionicons name="checkmark" size={20} color={PRIMARY} />}
+                  </TouchableOpacity>
+                );
+              }}
+              ItemSeparatorComponent={() => <View style={styles.langDivider} />}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* 탈퇴 섹션 */}
       <View style={styles.section}>
@@ -95,7 +197,7 @@ export default function AccountSettingsScreen() {
           activeOpacity={0.7}
         >
           <Ionicons name="person-remove-outline" size={20} color={DANGER} />
-          <Text style={styles.menuItemText}>계정 탈퇴</Text>
+          <Text style={styles.menuItemText}>{t('settings.deleteAccount')}</Text>
           <Ionicons
             name={showConfirm ? 'chevron-up' : 'chevron-down'}
             size={18}
@@ -106,13 +208,11 @@ export default function AccountSettingsScreen() {
 
         {showConfirm && (
           <View style={styles.withdrawBox}>
-            <Text style={styles.withdrawDesc}>
-              탈퇴 시 모든 데이터(도움 내역, 채팅, 게시글 등)가 영구 삭제되며 복구할 수 없습니다.
-            </Text>
-            <Text style={styles.withdrawLabel}>비밀번호 확인</Text>
+            <Text style={styles.withdrawDesc}>{t('settings.deleteAccountDesc')}</Text>
+            <Text style={styles.withdrawLabel}>{t('settings.passwordConfirm')}</Text>
             <TextInput
               style={styles.passwordInput}
-              placeholder="현재 비밀번호를 입력하세요"
+              placeholder={t('settings.enterPassword')}
               placeholderTextColor={T2}
               value={password}
               onChangeText={setPassword}
@@ -128,7 +228,7 @@ export default function AccountSettingsScreen() {
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.withdrawBtnText}>탈퇴하기</Text>
+                <Text style={styles.withdrawBtnText}>{t('settings.withdraw')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -189,6 +289,11 @@ const styles = StyleSheet.create({
   menuChevron: {
     marginLeft: 'auto',
   },
+  menuDivider: {
+    height: 1,
+    backgroundColor: BORDER,
+    marginHorizontal: s(16),
+  },
   withdrawBox: {
     borderTopWidth: s(1),
     borderTopColor: BORDER,
@@ -233,5 +338,67 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: s(15),
     fontWeight: '700',
+  },
+  menuItemValue: {
+    fontSize: s(13),
+    color: T2,
+    marginRight: s(4),
+  },
+  langModalOverlay: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-end',
+  },
+  langModalSheet: {
+    backgroundColor: SURFACE,
+    borderTopLeftRadius: s(20),
+    borderTopRightRadius: s(20),
+    maxHeight: '60%',
+    paddingBottom: Platform.OS === 'ios' ? s(32) : s(16),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  langModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: s(20),
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
+  },
+  langModalTitle: {
+    fontSize: s(17),
+    fontWeight: '700',
+    color: T1,
+  },
+  langItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: s(20),
+    paddingVertical: s(14),
+    gap: s(12),
+  },
+  langItemSelected: {
+    backgroundColor: '#EEF4FF',
+  },
+  langFlag: {
+    fontSize: s(22),
+  },
+  langLabel: {
+    flex: 1,
+    fontSize: s(16),
+    color: T1,
+  },
+  langLabelSelected: {
+    color: PRIMARY,
+    fontWeight: '700',
+  },
+  langDivider: {
+    height: 1,
+    backgroundColor: BORDER,
+    marginLeft: s(56),
   },
 });

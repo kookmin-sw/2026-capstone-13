@@ -9,6 +9,7 @@ import { Colors } from '../../constants/colors';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useBannerStore } from '../../stores/bannerStore';
+import { useTranslation } from 'react-i18next';
 import { getMyRequests, getHelpedRequests } from '../../services/helpService';
 import { getChatRooms } from '../../services/chatService';
 import { getDirectChatRooms } from '../../services/directChatService';
@@ -22,6 +23,7 @@ export default function MainLayout() {
   const { unreadCount, incrementUnread, setUnreadCount } = useChatStore();
   const { user } = useAuthStore();
   const { showBanner } = useBannerStore();
+  const { t } = useTranslation();
   const router = useRouter();
   const globalClientRef = useRef<Client | null>(null);
   // 채팅방별 파트너 정보 캐시 (roomId → room info)
@@ -110,22 +112,24 @@ export default function MainLayout() {
               if (!mounted) return;
               try {
                 const msg = JSON.parse(frame.body);
+                if (msg.type === 'READ') return;
+                if (msg.type === 'UNREAD_UPDATE') {
+                  useChatStore.getState().setRoomUnreadCount(roomId, msg.unreadCount ?? 0);
+                  return;
+                }
                 if (msg.content?.startsWith('SYS_LEAVE:')) return;
                 if (msg.content?.startsWith('SYS_CALL_VIDEO:') || msg.content?.startsWith('SYS_CALL_VOICE:')) {
                   const { activeChatroomId } = useChatStore.getState();
                   if (msg.senderId === user?.id || activeChatroomId === roomId) return;
                   const isVideo = msg.content.startsWith('SYS_CALL_VIDEO:');
                   const callerNickname = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
-                  const isKo = user?.preferredLanguage === 'ko';
                   Alert.alert(
-                    isVideo ? '📹 영상통화' : '📞 음성통화',
-                    isKo
-                      ? `${callerNickname}님이 ${isVideo ? '영상' : '음성'}통화를 요청했습니다.`
-                      : `${callerNickname} is calling you (${isVideo ? 'video' : 'voice'}).`,
+                    isVideo ? t('chat.videoCall') : t('chat.voiceCall'),
+                    t('chat.callRequest', { caller: callerNickname, type: isVideo ? 'video' : 'voice' }),
                     [
-                      { text: isKo ? '거절' : 'Decline', style: 'cancel' },
+                      { text: t('chat.decline'), style: 'cancel' },
                       {
-                        text: isKo ? '수락' : 'Accept',
+                        text: t('chat.accept'),
                         onPress: () => router.push({
                           pathname: '/videocall',
                           params: { roomId: String(roomId), partnerNickname: callerNickname, voiceOnly: isVideo ? 'false' : 'true' },
@@ -162,22 +166,23 @@ export default function MainLayout() {
               try {
                 const msg = JSON.parse(frame.body);
                 if (msg.type === 'READ') return;
+                if (msg.type === 'UNREAD_UPDATE') {
+                  useChatStore.getState().setRoomUnreadCount(roomId, msg.unreadCount ?? 0);
+                  return;
+                }
                 if (msg.content?.startsWith('SYS_LEAVE:')) return;
                 if (msg.content?.startsWith('SYS_CALL_VIDEO:') || msg.content?.startsWith('SYS_CALL_VOICE:')) {
                   const { activeChatroomId } = useChatStore.getState();
                   if (msg.senderId === user?.id || activeChatroomId === roomId) return;
                   const isVideo = msg.content.startsWith('SYS_CALL_VIDEO:');
                   const callerNickname = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
-                  const isKo = user?.preferredLanguage === 'ko';
                   Alert.alert(
-                    isVideo ? '📹 영상통화' : '📞 음성통화',
-                    isKo
-                      ? `${callerNickname}님이 ${isVideo ? '영상' : '음성'}통화를 요청했습니다.`
-                      : `${callerNickname} is calling you (${isVideo ? 'video' : 'voice'}).`,
+                    isVideo ? t('chat.videoCall') : t('chat.voiceCall'),
+                    t('chat.callRequest', { caller: callerNickname, type: isVideo ? 'video' : 'voice' }),
                     [
-                      { text: isKo ? '거절' : 'Decline', style: 'cancel' },
+                      { text: t('chat.decline'), style: 'cancel' },
                       {
-                        text: isKo ? '수락' : 'Accept',
+                        text: t('chat.accept'),
                         onPress: () => router.push({
                           pathname: '/videocall',
                           params: { roomId: String(roomId), partnerNickname: callerNickname, voiceOnly: isVideo ? 'false' : 'true' },
@@ -202,6 +207,7 @@ export default function MainLayout() {
                       partnerProfileImage: roomInfo.partnerProfileImage,
                       requestStatus: 'DIRECT',
                       requesterId: '',
+                      isDirect: true,
                     } : undefined,
                   });
                 }

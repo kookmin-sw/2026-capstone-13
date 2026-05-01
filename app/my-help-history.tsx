@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { s } from '../utils/scale';
 import { useHelpHistoryStore, type HelpHistoryItem } from '../stores/helpHistoryStore';
 import { useChatStore } from '../stores/chatStore';
@@ -43,6 +44,7 @@ function formatTime(dateStr: string): string {
 
 export default function MyHelpHistoryScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { helpHistory, isLoading, fetchHelpHistory } = useHelpHistoryStore();
   const { hasLeft } = useChatStore();
   const { user } = useAuthStore();
@@ -91,13 +93,13 @@ export default function MyHelpHistoryScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color="#1E1B4B" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>내 도움 내역</Text>
+        <Text style={styles.headerTitle}>{t('myHistory.title')}</Text>
         <View style={styles.backBtn} />
       </View>
 
 
       {!isLoading && completedHistory.length > 0 && (
-        <Text style={styles.countLabel}>완료 {completedHistory.length}건</Text>
+        <Text style={styles.countLabel}>{t('myHistory.completedCount', { count: completedHistory.length })}</Text>
       )}
 
       {isLoading ? (
@@ -114,8 +116,8 @@ export default function MyHelpHistoryScreen() {
         ListEmptyComponent={isLoading ? null : (
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>🤝</Text>
-            <Text style={styles.emptyText}>완료된 도움 내역이 없어요</Text>
-            <Text style={styles.emptySubtext}>유학생들의 도움 요청에 응해보세요!</Text>
+            <Text style={styles.emptyText}>{t('myHistory.empty')}</Text>
+            <Text style={styles.emptySubtext}>{t('myHistory.emptyDesc')}</Text>
           </View>
         )}
       />

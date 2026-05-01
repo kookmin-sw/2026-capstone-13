@@ -2,7 +2,8 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import type { User } from '../types';
-import { login as loginApi, register as registerApi, getMyProfile, uploadProfileImage, deleteProfileImage, updateBio as updateBioApi, updateProfileDetail as updateProfileDetailApi } from '../services/authService';
+import { login as loginApi, register as registerApi, getMyProfile, uploadProfileImage, deleteProfileImage, updateBio as updateBioApi, updateProfileDetail as updateProfileDetailApi, updatePreferredLanguage } from '../services/authService';
+import { setLanguage, type SupportedLanguage, SUPPORTED_LANGUAGES } from '../i18n';
 
 // 서버 상대경로(/uploads/...)를 절대경로로 변환
 const SERVER_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api').replace('/api', '');
@@ -20,6 +21,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   isGuest: boolean;
+  isNewUser: boolean; // 회원가입 후 첫 로그인 여부
 
   // 액션
   login: (data: LoginRequest) => Promise<boolean>;
@@ -33,6 +35,8 @@ interface AuthState {
   updateProfileImage: (imageUri: string) => Promise<boolean>;
   updateBio: (bio: string) => Promise<void>;
   updateProfileDetail: (data: UpdateProfileRequest) => Promise<void>;
+  setIsNewUser: (value: boolean) => void;
+  setAppLanguage: (lang: SupportedLanguage) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -40,6 +44,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,  // 앱 시작 시 loadUser 완료 전까지 true로 유지
   error: null,
   isGuest: false,
+  isNewUser: false,
 
   // 로그인
   login: async (data: LoginRequest) => {
@@ -48,6 +53,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       const response = await loginApi(data);
       if (response.success) {
         await SecureStore.setItemAsync('accessToken', response.data.accessToken);
+        const lang = response.data.user.preferredLanguage;
+        if (lang && SUPPORTED_LANGUAGES.includes(lang as SupportedLanguage)) {
+          await setLanguage(lang as SupportedLanguage);
+        }
         set({ user: response.data.user, isLoading: false });
         return true;
       } else {
@@ -67,7 +76,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const response = await registerApi(data);
       if (response.success) {
-        set({ isLoading: false });
+        set({ isLoading: false, isNewUser: true });
         return true;
       } else {
         set({ error: response.message, isLoading: false });
@@ -90,6 +99,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   loadUser: async () => {
     try {
       const token = await SecureStore.getItemAsync('accessToken');
+
       if (!token) {
         set({ isLoading: false });
         return;
@@ -97,6 +107,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const response = await getMyProfile();
       if (response.success) {
+        const lang = response.data.preferredLanguage;
+        if (lang && SUPPORTED_LANGUAGES.includes(lang as SupportedLanguage)) {
+          await setLanguage(lang as SupportedLanguage);
+        }
         set({ user: { ...response.data, profileImage: toAbsoluteUrl(response.data.profileImage) }, isLoading: false });
       } else {
         throw new Error(response.message);
@@ -115,6 +129,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   loginAsTestKorean: () => set({ isGuest: false, user: { id: 2, email: 'korean@test.com', nickname: '테스트한국인', userType: 'KOREAN', university: '국민대학교', rating: 0, helpCount: 0, createdAt: '' } }),
 
   clearError: () => set({ error: null }),
+
+  setIsNewUser: (value: boolean) => set({ isNewUser: value }),
+
+  setAppLanguage: async (lang: SupportedLanguage) => {
+    await setLanguage(lang);
+    try {
+      await updatePreferredLanguage(lang);
+    } catch {
+      // 서버 저장 실패해도 로컬 언어는 이미 변경됨
+    }
+    set((state) => ({ user: state.user ? { ...state.user, preferredLanguage: lang } : null }));
+  },
 
   // 자기소개 수정 (로컬 즉시 반영 후 서버 동기화)
   updateBio: async (bio: string) => {

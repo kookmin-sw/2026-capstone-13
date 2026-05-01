@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { s } from '../utils/scale';
 import { MOCK_REQUESTS } from '../constants/mockData';
 import type { HelpRequest, HelpCategory, HelpMethod } from '../types';
@@ -57,6 +58,7 @@ function HighlightText({ text, keyword, style, numberOfLines }: {
 
 export default function SearchScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const [searchMode, setSearchMode] = useState<SearchMode>('TITLE');
@@ -124,7 +126,7 @@ export default function SearchScreen() {
             />
             <View style={[styles.statusBadge, isMatched ? styles.statusMatched : styles.statusOpen]}>
               <Text style={[styles.statusText, isMatched ? styles.statusMatchedText : styles.statusOpenText]}>
-                {isMatched ? '대기중' : '모집중'}
+                {isMatched ? t('home.matched') : t('home.filterMatching')}
               </Text>
             </View>
           </View>
@@ -161,7 +163,7 @@ export default function SearchScreen() {
           <TextInput
             ref={inputRef}
             style={styles.input}
-            placeholder="도움 요청 검색"
+            placeholder={t('search.placeholder')}
             placeholderTextColor="#9CA3AF"
             value={query}
             onChangeText={handleSearch}
@@ -183,7 +185,7 @@ export default function SearchScreen() {
           onPress={() => handleModeChange('TITLE')}
         >
           <Text style={[styles.modeBtnText, searchMode === 'TITLE' && styles.modeBtnTextActive]}>
-            제목
+            {t('search.modeTitle')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -191,7 +193,7 @@ export default function SearchScreen() {
           onPress={() => handleModeChange('TITLE_CONTENT')}
         >
           <Text style={[styles.modeBtnText, searchMode === 'TITLE_CONTENT' && styles.modeBtnTextActive]}>
-            제목 + 내용
+            {t('search.modeTitleContent')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -207,14 +209,14 @@ export default function SearchScreen() {
           hasSearched ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyText}>검색 결과가 없습니다</Text>
-              <Text style={styles.emptySubtext}>다른 키워드로 검색해보세요</Text>
+              <Text style={styles.emptyText}>{t('search.noResults')}</Text>
+              <Text style={styles.emptySubtext}>{t('search.noResultsDesc')}</Text>
             </View>
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyEmoji}>💡</Text>
-              <Text style={styles.emptyText}>어떤 도움이 필요하신가요?</Text>
-              <Text style={styles.emptySubtext}>키워드를 입력하면 도움 요청을 찾아드려요</Text>
+              <Text style={styles.emptyText}>{t('search.prompt')}</Text>
+              <Text style={styles.emptySubtext}>{t('search.promptDesc')}</Text>
             </View>
           )
         }
@@ -224,7 +226,7 @@ export default function SearchScreen() {
       {hasSearched && (
         <View style={styles.resultCount}>
           <Text style={styles.resultCountText}>
-            검색 결과 <Text style={styles.resultCountNum}>{results.length}건</Text>
+            {t('search.resultCount', { count: results.length })}
           </Text>
         </View>
       )}

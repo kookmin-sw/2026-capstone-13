@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Animated,
   Image,
@@ -38,16 +39,18 @@ const DIV    = '#D4E4FF';
 
 
 
-function formatRelativeTime(createdAt: string): string {
+type TFunction = (key: string, opts?: Record<string, unknown>) => string;
+
+function formatRelativeTime(createdAt: string, t: TFunction): string {
   const date = new Date(createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z');
   const diffMs = Date.now() - date.getTime();
   const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return '방금 전';
-  if (diffMin < 60) return `${diffMin}분 전`;
+  if (diffMin < 1) return t('time.justNow');
+  if (diffMin < 60) return t('time.minutesAgo', { m: diffMin });
   const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour}시간 전`;
+  if (diffHour < 24) return t('time.hoursAgo', { h: diffHour });
   const diffDay = Math.floor(diffHour / 24);
-  return `${diffDay}일 전`;
+  return t('time.daysAgo', { d: diffDay });
 }
 
 // ── 한국인용: ~일 연속 접속중 캐러셀 ──
@@ -61,6 +64,7 @@ interface StreakTopCarouselProps {
 }
 
 function StreakTopCarousel({ completedCount, waitingCount, DOTS, loginStreak }: StreakTopCarouselProps) {
+  const { t } = useTranslation();
   const [slide, setSlide] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -86,10 +90,10 @@ function StreakTopCarousel({ completedCount, waitingCount, DOTS, loginStreak }: 
     <Animated.View style={[s.streakTopRow, { opacity: fadeAnim }]}>
       <View style={s.streakTextWrap}>
         {slide === 0 ? (
-          <Text style={s.streakTitle}>{loginStreak}일 연속 접속중!</Text>
+          <Text style={s.streakTitle}>{t('home.streakContinuous', { days: loginStreak })}</Text>
         ) : (
           <View style={s.streakSlide2Row}>
-            <Text style={s.streakSlide2Text}>지금 도움이 필요해요</Text>
+            <Text style={s.streakSlide2Text}>{t('home.helpNeededNow')}</Text>
             <View style={s.streakSlide2Badge}>
               <Text style={s.streakSlide2BadgeText}>{waitingCount}</Text>
             </View>
@@ -110,6 +114,7 @@ function StreakTopCarousel({ completedCount, waitingCount, DOTS, loginStreak }: 
 // ── 외국인용: ~일 연속 접속중 + CTA 슬라이드 캐러셀 ──
 
 function IntlTopCarousel({ activeHelperCount, loginStreak }: { activeHelperCount: number; loginStreak: number }) {
+  const { t } = useTranslation();
   const [slide, setSlide] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -135,13 +140,13 @@ function IntlTopCarousel({ activeHelperCount, loginStreak }: { activeHelperCount
     <Animated.View style={[s.streakTopRow, { opacity: fadeAnim }]}>
       <View style={s.streakTextWrap}>
         {slide === 0 ? (
-          <Text style={s.streakCtaTitle}>{loginStreak}일 연속 접속중!</Text>
+          <Text style={s.streakCtaTitle}>{t('home.streakContinuous', { days: loginStreak })}</Text>
         ) : (
           <View style={s.streakCtaRow}>
             <View style={s.streakCtaTextWrap}>
-              <Text style={s.streakCtaTitle}>지금 바로 도움을 요청해보세요!</Text>
+              <Text style={s.streakCtaTitle}>{t('home.requestHelpNow')}</Text>
               <Text style={s.streakCtaSub}>
-                <Text style={{ fontWeight: '900', color: BLUE }}>{activeHelperCount}명</Text>의 헬퍼가 기다리고 있어요
+                {t('home.helpersWaiting', { count: activeHelperCount })}
               </Text>
             </View>
           </View>
@@ -160,6 +165,7 @@ function IntlTopCarousel({ activeHelperCount, loginStreak }: { activeHelperCount
 
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuthStore();
   const { hasUnread, fetchHasUnread } = useNotificationStore();
@@ -265,7 +271,7 @@ const goTo = (item: HelpRequest) =>
         <View style={s.nav}>
           <View style={s.navLeft}>
             <Text style={s.navGreeting}>
-              안녕하세요, <Text style={s.navGreetingName}>{user?.nickname ?? ''}님</Text>!
+              {t('home.greeting', { name: user?.nickname ?? '' })}
             </Text>
           </View>
           <View style={s.navRight}>
@@ -299,7 +305,7 @@ const goTo = (item: HelpRequest) =>
                   />
                   <View style={s.streakProgressWrap}>
                     <View style={s.streakProgressLabelRow}>
-                      <Text style={s.streakProgressLabel}>이번달 도움 횟수</Text>
+                      <Text style={s.streakProgressLabel}>{t('home.monthlyHelpCount')}</Text>
                       <Text style={s.streakProgressCount}>{completedCount} / {MONTHLY_GOAL}</Text>
                     </View>
                     <View style={s.streakProgressTrack}>
@@ -326,15 +332,15 @@ const goTo = (item: HelpRequest) =>
               }]} />
               <TouchableOpacity style={s.viewTab} onPress={() => switchIntlTab('card')} activeOpacity={0.8}>
                 <Ionicons name="layers-outline" size={14} color={intlTab === 'card' ? '#fff' : '#888'} />
-                <Text style={[s.viewTabText, intlTab === 'card' && s.viewTabTextOn]}>헬퍼 보기</Text>
+                <Text style={[s.viewTabText, intlTab === 'card' && s.viewTabTextOn]}>{t('home.viewHelpers')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.viewTab} onPress={() => switchIntlTab('write')} activeOpacity={0.8}>
                 <Ionicons name="pencil-outline" size={14} color={intlTab === 'write' ? '#fff' : '#888'} />
-                <Text style={[s.viewTabText, intlTab === 'write' && s.viewTabTextOn]}>도움 요청하기</Text>
+                <Text style={[s.viewTabText, intlTab === 'write' && s.viewTabTextOn]}>{t('home.requestHelp')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.viewTab} onPress={() => switchIntlTab('list')} activeOpacity={0.8}>
                 <Ionicons name="list-outline" size={14} color={intlTab === 'list' ? '#fff' : '#888'} />
-                <Text style={[s.viewTabText, intlTab === 'list' && s.viewTabTextOn]}>목록 보기</Text>
+                <Text style={[s.viewTabText, intlTab === 'list' && s.viewTabTextOn]}>{t('home.viewList')}</Text>
               </TouchableOpacity>
             </View>
             <View style={{ display: intlTab === 'card' ? 'flex' : 'none', marginLeft: 6, marginBottom: 10 }}>
@@ -349,12 +355,11 @@ const goTo = (item: HelpRequest) =>
             )}
             <View style={{ display: intlTab === 'list' ? 'flex' : 'none' }}>
               <View style={s.listViewWrap}>
-                {/* 검색창 */}
                 <View style={s.searchBoxRound}>
                   <Ionicons name="search-outline" size={16} color={T2} />
                   <TextInput
                     style={s.searchInput}
-                    placeholder="전체 검색"
+                    placeholder={t('home.searchPlaceholder')}
                     placeholderTextColor={T2}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -368,30 +373,30 @@ const goTo = (item: HelpRequest) =>
                     </TouchableOpacity>
                   )}
                 </View>
-                {/* 필터 칩 */}
                 <View style={s.listFilterRow}>
                   <View style={s.listFilterScroll}>
                     {([
-                      { key: 'ALL',         label: '전체' },
-                      { key: 'IN_PROGRESS', label: '매칭중' },
-                      { key: 'COMPLETED',   label: '완료' },
-                      { key: 'ONLINE',      label: '온라인' },
-                      { key: 'OFFLINE',     label: '오프라인' },
-                    ] as const).map(({ key, label }) => (
+                      { key: 'ALL',         labelKey: 'home.filterAll' },
+                      { key: 'IN_PROGRESS', labelKey: 'home.filterMatching' },
+                      { key: 'COMPLETED',   labelKey: 'home.completed' },
+                      { key: 'ONLINE',      labelKey: 'chat.online' },
+                      { key: 'OFFLINE',     labelKey: 'chat.offline' },
+                    ] as const).map(({ key, labelKey }) => (
                       <TouchableOpacity
                         key={key}
                         style={[s.listFilterChip, statusFilter === key && s.listFilterChipOn]}
                         onPress={() => setStatusFilter(key)}
                         activeOpacity={0.8}
                       >
-                        <Text style={[s.listFilterChipText, statusFilter === key && s.listFilterChipTextOn]}>{label}</Text>
+                        <Text style={[s.listFilterChipText, statusFilter === key && s.listFilterChipTextOn]}>{t(labelKey)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
                 {(() => {
                   const CAT_LABEL: Record<HelpCategory, string> = {
-                    BANK: '은행', HOSPITAL: '병원', SCHOOL: '학교', DAILY: '일상', OTHER: '기타',
+                    BANK: t('home.catBank'), HOSPITAL: t('home.catHospital'),
+                    SCHOOL: t('home.catSchool'), DAILY: t('home.catDaily'), OTHER: t('home.catOther'),
                   };
                   const filtered = requests
                     .filter(r => {
@@ -410,7 +415,7 @@ const goTo = (item: HelpRequest) =>
                   if (filtered.length === 0) {
                     return (
                       <View style={s.listEmpty}>
-                        <Text style={s.listEmptyText}>현재 도움 요청이 없어요</Text>
+                        <Text style={s.listEmptyText}>{t('home.noRequestsNow')}</Text>
                       </View>
                     );
                   }
@@ -433,14 +438,14 @@ const goTo = (item: HelpRequest) =>
                           <View>
                             <Text style={s.listCardName}>{item.requester?.nickname ?? ''}</Text>
                             <Text style={s.listCardTime}>
-                              {formatRelativeTime(item.createdAt)}
+                              {formatRelativeTime(item.createdAt, t)}
                             </Text>
                           </View>
                         </View>
                         <View style={s.listCardRight}>
                           <View style={[s.listMethodBadge, item.helpMethod === 'OFFLINE' ? s.listMethodOffline : s.listMethodOnline]}>
                             <Text style={[s.listMethodText, item.helpMethod === 'OFFLINE' ? s.listMethodOfflineText : s.listMethodOnlineText]}>
-                              {item.helpMethod === 'OFFLINE' ? '오프라인' : '온라인'}
+                              {item.helpMethod === 'OFFLINE' ? t('chat.offline') : t('chat.online')}
                             </Text>
                           </View>
                           <View style={s.listCatBadge}>
@@ -452,7 +457,7 @@ const goTo = (item: HelpRequest) =>
                       <Text style={s.listCardDesc} numberOfLines={3} ellipsizeMode="tail">{item.description.split('\n\n[정보]\n')[0]}</Text>
                       {item.status === 'WAITING' && (
                         <TouchableOpacity style={s.listHelpBtn} activeOpacity={0.8} onPress={() => goTo(item)}>
-                          <Text style={s.listHelpBtnText}>도와주기 ›</Text>
+                          <Text style={s.listHelpBtnText}>{t('home.helpNow')}</Text>
                         </TouchableOpacity>
                       )}
                     </TouchableOpacity>
@@ -474,14 +479,14 @@ const goTo = (item: HelpRequest) =>
               }]} />
               <TouchableOpacity style={s.viewTab} onPress={() => switchTab('card')} activeOpacity={0.8}>
                 <Ionicons name="layers-outline" size={14} color={viewMode === 'card' ? '#fff' : '#888'} />
-                <Text style={[s.viewTabText, viewMode === 'card' && s.viewTabTextOn]}>카드 보기</Text>
+                <Text style={[s.viewTabText, viewMode === 'card' && s.viewTabTextOn]}>{t('home.viewCard')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.viewTab} onPress={() => switchTab('list')} activeOpacity={0.8}>
                 <Ionicons name="list-outline" size={14} color={viewMode === 'list' ? '#fff' : '#888'} />
-                <Text style={[s.viewTabText, viewMode === 'list' && s.viewTabTextOn]}>도움 목록 보기</Text>
+                <Text style={[s.viewTabText, viewMode === 'list' && s.viewTabTextOn]}>{t('home.viewHelpList')}</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ display: viewMode === 'card' ? 'flex' : 'none', marginLeft: 6, marginBottom: 24 }}>
+            <View style={{ display: viewMode === 'card' ? 'flex' : 'none', marginLeft: 6, marginBottom: 24, marginTop: -10 }}>
               <KoreanAccountCardStack
                 requests={requests.filter(r => r.status === 'WAITING')}
                 onAccept={(card) => goTo(card)}
@@ -489,12 +494,11 @@ const goTo = (item: HelpRequest) =>
             </View>
             <View style={{ display: viewMode === 'list' ? 'flex' : 'none' }}>
               <View style={s.listViewWrap}>
-                {/* 검색창 */}
                 <View style={s.searchBoxRound}>
                   <Ionicons name="search-outline" size={16} color={T2} />
                   <TextInput
                     style={s.searchInput}
-                    placeholder="전체 검색"
+                    placeholder={t('home.searchPlaceholder')}
                     placeholderTextColor={T2}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -508,30 +512,30 @@ const goTo = (item: HelpRequest) =>
                     </TouchableOpacity>
                   )}
                 </View>
-                {/* 필터 칩 */}
                 <View style={s.listFilterRow}>
                   <View style={s.listFilterScroll}>
                     {([
-                      { key: 'ALL',         label: '전체' },
-                      { key: 'IN_PROGRESS', label: '매칭중' },
-                      { key: 'COMPLETED',   label: '완료' },
-                      { key: 'ONLINE',      label: '온라인' },
-                      { key: 'OFFLINE',     label: '오프라인' },
-                    ] as const).map(({ key, label }) => (
+                      { key: 'ALL',         labelKey: 'home.filterAll' },
+                      { key: 'IN_PROGRESS', labelKey: 'home.filterMatching' },
+                      { key: 'COMPLETED',   labelKey: 'home.completed' },
+                      { key: 'ONLINE',      labelKey: 'chat.online' },
+                      { key: 'OFFLINE',     labelKey: 'chat.offline' },
+                    ] as const).map(({ key, labelKey }) => (
                       <TouchableOpacity
                         key={key}
                         style={[s.listFilterChip, statusFilter === key && s.listFilterChipOn]}
                         onPress={() => setStatusFilter(key)}
                         activeOpacity={0.8}
                       >
-                        <Text style={[s.listFilterChipText, statusFilter === key && s.listFilterChipTextOn]}>{label}</Text>
+                        <Text style={[s.listFilterChipText, statusFilter === key && s.listFilterChipTextOn]}>{t(labelKey)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
                 {(() => {
                   const CAT_LABEL: Record<HelpCategory, string> = {
-                    BANK: '은행', HOSPITAL: '병원', SCHOOL: '학교', DAILY: '일상', OTHER: '기타',
+                    BANK: t('home.catBank'), HOSPITAL: t('home.catHospital'),
+                    SCHOOL: t('home.catSchool'), DAILY: t('home.catDaily'), OTHER: t('home.catOther'),
                   };
                   const filtered = requests
                     .filter(r => {
@@ -550,7 +554,7 @@ const goTo = (item: HelpRequest) =>
                   if (filtered.length === 0) {
                     return (
                       <View style={s.listEmpty}>
-                        <Text style={s.listEmptyText}>현재 도움 요청이 없어요</Text>
+                        <Text style={s.listEmptyText}>{t('home.noRequestsNow')}</Text>
                       </View>
                     );
                   }
@@ -573,14 +577,14 @@ const goTo = (item: HelpRequest) =>
                           <View>
                             <Text style={s.listCardName}>{item.requester?.nickname ?? ''}</Text>
                             <Text style={s.listCardTime}>
-                              {formatRelativeTime(item.createdAt)}
+                              {formatRelativeTime(item.createdAt, t)}
                             </Text>
                           </View>
                         </View>
                         <View style={s.listCardRight}>
                           <View style={[s.listMethodBadge, item.helpMethod === 'OFFLINE' ? s.listMethodOffline : s.listMethodOnline]}>
                             <Text style={[s.listMethodText, item.helpMethod === 'OFFLINE' ? s.listMethodOfflineText : s.listMethodOnlineText]}>
-                              {item.helpMethod === 'OFFLINE' ? '오프라인' : '온라인'}
+                              {item.helpMethod === 'OFFLINE' ? t('chat.offline') : t('chat.online')}
                             </Text>
                           </View>
                           <View style={s.listCatBadge}>
@@ -592,7 +596,7 @@ const goTo = (item: HelpRequest) =>
                       <Text style={s.listCardDesc} numberOfLines={3} ellipsizeMode="tail">{item.description.split('\n\n[정보]\n')[0]}</Text>
                       {item.status === 'WAITING' && (
                         <TouchableOpacity style={s.listHelpBtn} activeOpacity={0.8} onPress={() => goTo(item)}>
-                          <Text style={s.listHelpBtnText}>도와주기 ›</Text>
+                          <Text style={s.listHelpBtnText}>{t('home.helpNow')}</Text>
                         </TouchableOpacity>
                       )}
                     </TouchableOpacity>

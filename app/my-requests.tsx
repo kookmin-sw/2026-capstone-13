@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { s } from '../utils/scale';
 import { useHelpRequestStore } from '../stores/helpRequestStore';
 import { useChatStore } from '../stores/chatStore';
@@ -49,6 +50,7 @@ function formatTime(createdAt: string): string {
 
 export default function MyRequestsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { myRequests, isLoading, fetchMyRequests } = useHelpRequestStore();
   const { hasLeft } = useChatStore();
   const { user } = useAuthStore();
@@ -107,7 +109,7 @@ export default function MyRequestsScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color="#1E1B4B" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>내 도움 요청</Text>
+        <Text style={styles.headerTitle}>{t('myRequests.title')}</Text>
         <View style={styles.backBtn} />
       </View>
 
@@ -115,18 +117,18 @@ export default function MyRequestsScreen() {
       {displayRequests.length > 0 && (
         <View style={styles.summaryRow}>
           <View style={styles.summaryBadge}>
-            <Text style={styles.summaryText}>전체 {displayRequests.length}건</Text>
+            <Text style={styles.summaryText}>{t('myRequests.total', { count: displayRequests.length })}</Text>
           </View>
           <View style={styles.summaryBadge}>
             <View style={styles.summaryDot} />
             <Text style={styles.summaryText}>
-              모집중 {displayRequests.filter((r) => r.status === 'WAITING' || r.status === 'MATCHED' || r.status === 'IN_PROGRESS').length}건
+              {t('myRequests.active', { count: displayRequests.filter((r) => r.status === 'WAITING' || r.status === 'MATCHED' || r.status === 'IN_PROGRESS').length })}
             </Text>
           </View>
           <View style={styles.summaryBadge}>
             <Ionicons name="checkmark-circle" size={13} color="#10B981" />
             <Text style={styles.summaryText}>
-              완료 {displayRequests.filter((r) => r.status === 'COMPLETED').length}건
+              {t('myRequests.completed', { count: displayRequests.filter((r) => r.status === 'COMPLETED').length })}
             </Text>
           </View>
         </View>
@@ -145,14 +147,14 @@ export default function MyRequestsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyEmoji}>📋</Text>
-            <Text style={styles.emptyText}>아직 작성한 도움 요청이 없어요</Text>
-            <Text style={styles.emptySubtext}>홈 화면에서 도움 요청을 작성해보세요!</Text>
+            <Text style={styles.emptyText}>{t('myRequests.empty')}</Text>
+            <Text style={styles.emptySubtext}>{t('myRequests.emptyDesc')}</Text>
             <TouchableOpacity
               style={styles.goWriteBtn}
               onPress={() => { router.back(); router.push('/(main)/write'); }}
               activeOpacity={0.8}
             >
-              <Text style={styles.goWriteText}>도움 요청하기</Text>
+              <Text style={styles.goWriteText}>{t('myRequests.goWrite')}</Text>
             </TouchableOpacity>
           </View>
         }
