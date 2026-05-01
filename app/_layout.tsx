@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useAppPermissions } from '../hooks/useAppPermissions';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { initI18n } from '../i18n';
+import PermissionsModal from '../components/PermissionsModal';
 
 // 사용자 폰트 크기 설정과 무관하게 앱 내 폰트 크기 고정
 if (Text.defaultProps == null) Text.defaultProps = {};
@@ -17,7 +18,7 @@ TextInput.defaultProps.allowFontScaling = false;
 
 export default function RootLayout() {
   const { user, isLoading, isNewUser, loadUser } = useAuthStore();
-  useAppPermissions();
+  const { modalVisible, handleConfirm } = useAppPermissions();
   usePushNotifications(user?.id);
   const segments = useSegments();
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <PermissionsModal visible={modalVisible} onConfirm={handleConfirm} />
       <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="profile-setup" />

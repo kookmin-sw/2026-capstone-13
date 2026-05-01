@@ -93,13 +93,8 @@ export function usePushNotifications(userId: number | string | null | undefined)
 
     (async () => {
       try {
-        const { status: existing } = await Notifications!.getPermissionsAsync();
-        let finalStatus = existing;
-        if (existing !== 'granted') {
-          const { status } = await Notifications!.requestPermissionsAsync();
-          finalStatus = status;
-        }
-        if (finalStatus !== 'granted') return;
+        const { status } = await Notifications!.getPermissionsAsync();
+        if (status !== 'granted') return;
 
         await setupNotificationChannels();
 
