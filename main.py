@@ -166,7 +166,7 @@ def home():
 def health():
     return {
         "status": "healthy",
-        "azure_speech": not speech_service.dummy_mode,
+        "deepgram_speech": not speech_service.dummy_mode,
         "azure_translator": translation_service.azure_key is not None,
         "gemini_translator": translation_service.gemini_client is not None,
         "translation_mode": "azure" if translation_service.azure_key else ("gemini" if translation_service.gemini_client else "no_key"),
