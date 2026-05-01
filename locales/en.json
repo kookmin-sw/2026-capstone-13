@@ -204,7 +204,12 @@
     "showOriginal": "Show original",
     "showTranslation": "Show translation",
     "hideReplies": "Hide replies",
-    "showReplies": "Show {{count}} more replies"
+    "showReplies": "Show {{count}} more replies",
+    "reportSpam": "Spam/Ads",
+    "reportHate": "Hate speech",
+    "reportInappropriate": "Inappropriate content",
+    "reportFraud": "Fraud/Misinformation",
+    "reportOther": "Other"
   },
   "school": {
     "title": "Campus Life",
@@ -415,7 +420,17 @@
     "helpInProgress": "Help in progress",
     "goToChat": "Go to Chat",
     "lockedAfterMatch": "Cannot edit/delete after matching",
-    "alreadyMatched": "Already matched"
+    "alreadyMatched": "Already matched",
+    "deleteTitle": "Delete Post",
+    "deleteMsg": "Delete this help request?",
+    "deleteDone": "Deleted",
+    "deleteDoneMsg": "The help request has been deleted.",
+    "helpRequestTitle": "Offer Help",
+    "helpRequestMsg": "Offer help for {{name}}'s request?",
+    "myRequest": "This is my request",
+    "online": "Online",
+    "offline": "Offline",
+    "helpCountDetail": "{{count}} helps"
   },
   "userProfile": {
     "notFound": "Profile not found.",
@@ -423,5 +438,11 @@
     "noPosts": "No posts yet",
     "receivedReviews": "Received Reviews",
     "startChat": "Start Chat"
+  },
+  "write": {
+    "schedule": "Schedule",
+    "duration": "Duration",
+    "location": "Location",
+    "language": "Language"
   }
 }

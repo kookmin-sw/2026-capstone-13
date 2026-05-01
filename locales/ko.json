@@ -204,7 +204,12 @@
     "showOriginal": "원문 보기",
     "showTranslation": "번역 보기",
     "hideReplies": "답글 숨기기",
-    "showReplies": "답글 {{count}}개 더 보기"
+    "showReplies": "답글 {{count}}개 더 보기",
+    "reportSpam": "스팸/광고",
+    "reportHate": "욕설/혐오 표현",
+    "reportInappropriate": "부적절한 내용",
+    "reportFraud": "사기/허위 정보",
+    "reportOther": "기타"
   },
   "school": {
     "title": "학교생활",
@@ -415,7 +420,17 @@
     "helpInProgress": "도움이 진행중이에요",
     "goToChat": "채팅방으로 이동",
     "lockedAfterMatch": "매칭 후 수정·삭제 불가",
-    "alreadyMatched": "이미 매칭된 요청입니다"
+    "alreadyMatched": "이미 매칭된 요청입니다",
+    "deleteTitle": "글 삭제",
+    "deleteMsg": "도움 요청을 삭제하시겠어요?",
+    "deleteDone": "삭제 완료",
+    "deleteDoneMsg": "도움 요청이 삭제됐습니다.",
+    "helpRequestTitle": "도움 신청",
+    "helpRequestMsg": "{{name}}님의 요청에 도움을 드릴까요?",
+    "myRequest": "내 요청이에요",
+    "online": "온라인",
+    "offline": "오프라인",
+    "helpCountDetail": "도움 {{count}}회"
   },
   "userProfile": {
     "notFound": "프로필을 찾을 수 없어요.",
@@ -423,5 +438,11 @@
     "noPosts": "작성한 글이 없어요",
     "receivedReviews": "받은 후기",
     "startChat": "채팅하기"
+  },
+  "write": {
+    "schedule": "희망 일정",
+    "duration": "소요 시간",
+    "location": "장소",
+    "language": "언어"
   }
 }

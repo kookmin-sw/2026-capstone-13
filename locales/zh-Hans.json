@@ -204,7 +204,12 @@
     "showOriginal": "查看原文",
     "showTranslation": "查看翻译",
     "hideReplies": "隐藏回复",
-    "showReplies": "查看{{count}}条回复"
+    "showReplies": "查看{{count}}条回复",
+    "reportSpam": "垃圾邮件/广告",
+    "reportHate": "仇恨言论",
+    "reportInappropriate": "不当内容",
+    "reportFraud": "欺诈/虚假信息",
+    "reportOther": "其他"
   },
   "school": {
     "title": "校园生活",
@@ -415,7 +420,17 @@
     "helpInProgress": "帮助进行中",
     "goToChat": "前往聊天室",
     "lockedAfterMatch": "匹配后不能修改或删除",
-    "alreadyMatched": "已经匹配"
+    "alreadyMatched": "已经匹配",
+    "deleteTitle": "删除帖子",
+    "deleteMsg": "确定删除此帮助请求吗？",
+    "deleteDone": "删除完成",
+    "deleteDoneMsg": "帮助请求已删除。",
+    "helpRequestTitle": "申请帮助",
+    "helpRequestMsg": "要帮助{{name}}的请求吗？",
+    "myRequest": "这是我的请求",
+    "online": "在线",
+    "offline": "线下",
+    "helpCountDetail": "帮助{{count}}次"
   },
   "userProfile": {
     "notFound": "找不到该用户的个人资料。",
@@ -423,5 +438,11 @@
     "noPosts": "没有发表的帖子",
     "receivedReviews": "收到的评价",
     "startChat": "发起聊天"
+  },
+  "write": {
+    "schedule": "希望时间",
+    "duration": "所需时间",
+    "location": "地点",
+    "language": "语言"
   }
 }

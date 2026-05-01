@@ -204,7 +204,12 @@
     "showOriginal": "原文を表示",
     "showTranslation": "翻訳を表示",
     "hideReplies": "返信を非表示",
-    "showReplies": "返信を{{count}}件以上表示"
+    "showReplies": "返信を{{count}}件以上表示",
+    "reportSpam": "スパム/広告",
+    "reportHate": "ヘイトスピーチ",
+    "reportInappropriate": "不適切なコンテンツ",
+    "reportFraud": "詐欺/虚偽情報",
+    "reportOther": "その他"
   },
   "school": {
     "title": "キャンパスライフ",
@@ -415,7 +420,17 @@
     "helpInProgress": "サポート進行中",
     "goToChat": "チャットに移動",
     "lockedAfterMatch": "マッチング後は編集・削除不可",
-    "alreadyMatched": "すでにマッチングされています"
+    "alreadyMatched": "すでにマッチングされています",
+    "deleteTitle": "投稿削除",
+    "deleteMsg": "このヘルプリクエストを削除しますか？",
+    "deleteDone": "削除完了",
+    "deleteDoneMsg": "ヘルプリクエストが削除されました。",
+    "helpRequestTitle": "サポート申請",
+    "helpRequestMsg": "{{name}}さんのリクエストをサポートしますか？",
+    "myRequest": "私のリクエストです",
+    "online": "オンライン",
+    "offline": "オフライン",
+    "helpCountDetail": "{{count}}回サポート"
   },
   "userProfile": {
     "notFound": "プロフィールが見つかりません。",
@@ -423,5 +438,11 @@
     "noPosts": "投稿がありません",
     "receivedReviews": "受け取ったレビュー",
     "startChat": "チャットする"
+  },
+  "write": {
+    "schedule": "希望日程",
+    "duration": "所要時間",
+    "location": "場所",
+    "language": "言語"
   }
 }

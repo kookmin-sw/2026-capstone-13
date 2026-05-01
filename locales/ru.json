@@ -204,7 +204,12 @@
     "showOriginal": "Показать оригинал",
     "showTranslation": "Показать перевод",
     "hideReplies": "Скрыть ответы",
-    "showReplies": "Показать {{count}} ответов"
+    "showReplies": "Показать {{count}} ответов",
+    "reportSpam": "Спам/Реклама",
+    "reportHate": "Язык ненависти",
+    "reportInappropriate": "Неприемлемый контент",
+    "reportFraud": "Мошенничество/дезинформация",
+    "reportOther": "Другое"
   },
   "school": {
     "title": "Студенческая жизнь",
@@ -415,7 +420,17 @@
     "helpInProgress": "Помощь в процессе",
     "goToChat": "Перейти в чат",
     "lockedAfterMatch": "Нельзя редактировать/удалять после сопряжения",
-    "alreadyMatched": "Уже сопряжено"
+    "alreadyMatched": "Уже сопряжено",
+    "deleteTitle": "Удалить пост",
+    "deleteMsg": "Удалить этот запрос помощи?",
+    "deleteDone": "Удалено",
+    "deleteDoneMsg": "Запрос помощи удалён.",
+    "helpRequestTitle": "Предложить помощь",
+    "helpRequestMsg": "Помочь с запросом {{name}}?",
+    "myRequest": "Это мой запрос",
+    "online": "Онлайн",
+    "offline": "Офлайн",
+    "helpCountDetail": "{{count}} помощей"
   },
   "userProfile": {
     "notFound": "Профиль не найден.",
@@ -423,5 +438,11 @@
     "noPosts": "Нет публикаций",
     "receivedReviews": "Полученные отзывы",
     "startChat": "Начать чат"
+  },
+  "write": {
+    "schedule": "Желаемое расписание",
+    "duration": "Продолжительность",
+    "location": "Место",
+    "language": "Язык"
   }
 }

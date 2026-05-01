@@ -204,7 +204,12 @@
     "showOriginal": "Эх текст харах",
     "showTranslation": "Орчуулга харах",
     "hideReplies": "Хариултуудыг нуух",
-    "showReplies": "{{count}} хариулт харуулах"
+    "showReplies": "{{count}} хариулт харуулах",
+    "reportSpam": "Спам/Реклам",
+    "reportHate": "Үзэн ядалтын яриа",
+    "reportInappropriate": "Тохиромжгүй агуулга",
+    "reportFraud": "Залилан/Худал мэдээлэл",
+    "reportOther": "Бусад"
   },
   "school": {
     "title": "Кампусын амьдрал",
@@ -415,7 +420,17 @@
     "helpInProgress": "Тусламж явагдаж байна",
     "goToChat": "Чат руу очих",
     "lockedAfterMatch": "Тохирсоны дараа засах/устгах боломжгүй",
-    "alreadyMatched": "Аль хэдийн тохирсон"
+    "alreadyMatched": "Аль хэдийн тохирсон",
+    "deleteTitle": "Пост устгах",
+    "deleteMsg": "Энэ тусламжийн хүсэлтийг устгах уу?",
+    "deleteDone": "Устгалт дууссан",
+    "deleteDoneMsg": "Тусламжийн хүсэлт устгагдлаа.",
+    "helpRequestTitle": "Тусламж санал болгох",
+    "helpRequestMsg": "{{name}}-ийн хүсэлтэд туслах уу?",
+    "myRequest": "Энэ миний хүсэлт",
+    "online": "Онлайн",
+    "offline": "Офлайн",
+    "helpCountDetail": "{{count}} удаа туслалцсан"
   },
   "userProfile": {
     "notFound": "Профайл олдсонгүй.",
@@ -423,5 +438,11 @@
     "noPosts": "Нийтлэл байхгүй",
     "receivedReviews": "Хүлээн авсан үнэлгээ",
     "startChat": "Чат эхлэх"
+  },
+  "write": {
+    "schedule": "Хүссэн хуваарь",
+    "duration": "Зарцуулах хугацаа",
+    "location": "Байршил",
+    "language": "Хэл"
   }
 }

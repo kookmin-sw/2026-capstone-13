@@ -204,7 +204,12 @@
     "showOriginal": "Xem bản gốc",
     "showTranslation": "Xem bản dịch",
     "hideReplies": "Ẩn trả lời",
-    "showReplies": "Xem thêm {{count}} trả lời"
+    "showReplies": "Xem thêm {{count}} trả lời",
+    "reportSpam": "Spam/Quảng cáo",
+    "reportHate": "Ngôn ngữ thù địch",
+    "reportInappropriate": "Nội dung không phù hợp",
+    "reportFraud": "Lừa đảo/Thông tin sai",
+    "reportOther": "Khác"
   },
   "school": {
     "title": "Cuộc sống campus",
@@ -415,7 +420,17 @@
     "helpInProgress": "Đang hỗ trợ",
     "goToChat": "Đến phòng chat",
     "lockedAfterMatch": "Không thể sửa/xóa sau khi ghép đôi",
-    "alreadyMatched": "Đã ghép đôi"
+    "alreadyMatched": "Đã ghép đôi",
+    "deleteTitle": "Xóa bài đăng",
+    "deleteMsg": "Xóa yêu cầu hỗ trợ này?",
+    "deleteDone": "Đã xóa",
+    "deleteDoneMsg": "Yêu cầu hỗ trợ đã được xóa.",
+    "helpRequestTitle": "Đề xuất hỗ trợ",
+    "helpRequestMsg": "Hỗ trợ yêu cầu của {{name}}?",
+    "myRequest": "Đây là yêu cầu của tôi",
+    "online": "Trực tuyến",
+    "offline": "Ngoại tuyến",
+    "helpCountDetail": "{{count}} lần hỗ trợ"
   },
   "userProfile": {
     "notFound": "Không tìm thấy hồ sơ.",
@@ -423,5 +438,11 @@
     "noPosts": "Không có bài đăng",
     "receivedReviews": "Đánh giá đã nhận",
     "startChat": "Bắt đầu chat"
+  },
+  "write": {
+    "schedule": "Lịch mong muốn",
+    "duration": "Thời gian cần thiết",
+    "location": "Địa điểm",
+    "language": "Ngôn ngữ"
   }
 }
