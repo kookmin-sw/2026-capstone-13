@@ -85,6 +85,8 @@ export default function ChatRoomScreen() {
     requesterId?: string;
     roomUnreadCount?: string;
     isDirect?: string;
+    partnerId?: string;
+    partnerPreferredLanguage?: string;
     partnerUserId?: string;
   }>();
 
@@ -94,7 +96,16 @@ export default function ChatRoomScreen() {
   const requestTitle = params.requestTitle ?? '도움 요청';
   const isRequester = user?.id === Number(params.requesterId);
   const isDirect = params.isDirect === 'true';
-  const isKo = user?.preferredLanguage === 'ko';
+  const isKo = user?.userType === 'KOREAN';
+  const myBcp47Language = (() => {
+    if (user?.userType === 'KOREAN') return 'ko-KR';
+    const map: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-Hans': 'zh-CN', ru: 'ru-RU', mn: 'mn-MN', vi: 'vi-VN' };
+    return map[user?.preferredLanguage ?? ''] ?? 'en-US';
+  })();
+  const partnerId = params.partnerId ? Number(params.partnerId) : params.partnerUserId ? Number(params.partnerUserId) : null;
+  const partnerPreferredLanguage = user?.userType !== 'KOREAN'
+    ? 'ko'
+    : (params.partnerPreferredLanguage ?? 'en');
   const partnerUserId = params.partnerUserId ? Number(params.partnerUserId) : null;
   const [partnerImgError, setPartnerImgError] = useState(false);
   const [partnerOnline, setPartnerOnline] = useState<boolean | null>(null);
@@ -235,6 +246,10 @@ export default function ChatRoomScreen() {
                           roomId: String(roomId),
                           partnerNickname: callerNickname,
                           voiceOnly: isVideo ? 'false' : 'true',
+                          myUserId: String(user?.id ?? ''),
+                          partnerUserId: String(partnerId ?? ''),
+                          language: myBcp47Language,
+                          targetLanguage: partnerPreferredLanguage,
                         },
                       }),
                     },
@@ -476,7 +491,15 @@ export default function ChatRoomScreen() {
           }
           router.push({
             pathname: '/videocall',
-            params: { roomId: String(roomId), partnerNickname, voiceOnly: 'true' },
+            params: {
+              roomId: String(roomId),
+              partnerNickname,
+              voiceOnly: 'true',
+              myUserId: String(user?.id ?? ''),
+              partnerUserId: String(partnerId ?? ''),
+              language: myBcp47Language,
+              targetLanguage: partnerPreferredLanguage,
+            },
           });
         },
       },
@@ -508,7 +531,15 @@ export default function ChatRoomScreen() {
           }
           router.push({
             pathname: '/videocall',
-            params: { roomId: String(roomId), partnerNickname, voiceOnly: 'false' },
+            params: {
+              roomId: String(roomId),
+              partnerNickname,
+              voiceOnly: 'false',
+              myUserId: String(user?.id ?? ''),
+              partnerUserId: String(partnerId ?? ''),
+              language: myBcp47Language,
+              targetLanguage: partnerPreferredLanguage,
+            },
           });
         },
       },
