@@ -1,0 +1,19 @@
+# Docker Compose - MySQL + 백엔드 개발용
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: helpboys-mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: helpboys1234
+      MYSQL_DATABASE: helpboys
+      MYSQL_USER: helpboys
+      MYSQL_PASSWORD: helpboys1234
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+volumes:
+  mysql-data:

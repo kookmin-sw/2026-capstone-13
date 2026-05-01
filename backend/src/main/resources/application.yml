@@ -1,0 +1,85 @@
+spring:
+  application:
+    name: helpboys-api
+
+  # MySQL 설정 (로컬: localhost, Railway: 환경변수로 자동 교체)
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/helpboys?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:helpboys}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+      idle-timeout: 30000
+
+  # 파일 업로드 크기 제한
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  # JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+
+# 서버 설정
+server:
+  port: ${PORT:8080}
+
+# JWT 설정
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000  # 24시간 (밀리초)
+
+# AI 서버 설정
+ai:
+  server:
+    url: ${AI_SERVER_URL:http://localhost:8000}
+
+# Agora 설정
+agora:
+  app-id: ${AGORA_APP_ID}
+  app-certificate: ${AGORA_APP_CERTIFICATE}
+
+# 로깅 설정 (Railway 500 logs/sec 제한 대응)
+logging:
+  level:
+    root: WARN
+    com.helpboys: INFO
+    org.springframework.web.socket: WARN
+    org.springframework.messaging: WARN
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+    org.hibernate: WARN
+
+# SendGrid 이메일 API
+sendgrid:
+  api-key: ${SENDGRID_API_KEY}
+  from-email: ${SENDGRID_FROM_EMAIL}
+
+# Firebase FCM 설정 (서비스 계정 JSON 전체를 환경변수로)
+firebase:
+  credentials-json: ${FIREBASE_CREDENTIALS_JSON:}
+
+# Cloudinary 설정
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+  api-key: ${CLOUDINARY_API_KEY:}
+  api-secret: ${CLOUDINARY_API_SECRET:}
+
+# Actuator - 헬스체크 엔드포인트 활성화
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
