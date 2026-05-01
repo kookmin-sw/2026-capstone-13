@@ -112,6 +112,12 @@ public class UserService implements UserDetailsService {
         return userRepository.countActiveKoreanHelpers(startOfDay);
     }
 
+    // WebSocket 기준 현재 접속 중인 한국인 헬퍼 수 (lastSeenAt 5분 이내)
+    public long getOnlineHelperCount() {
+        LocalDateTime threshold = LocalDateTime.now().minusMinutes(5);
+        return userRepository.countOnlineKoreanHelpers(threshold);
+    }
+
     // 이미지 Cloudinary 업로드 (공통)
     public String uploadImage(MultipartFile file, String folder) {
         validateImageFile(file);

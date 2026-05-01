@@ -21,6 +21,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT COUNT(u) FROM User u WHERE u.userType = 'KOREAN' AND u.lastLoginAt >= :since AND u.isDeleted = false")
     long countActiveKoreanHelpers(@Param("since") LocalDateTime since);
 
+    @Query("SELECT COUNT(u) FROM User u WHERE u.userType = 'KOREAN' AND u.lastSeenAt >= :since AND u.isDeleted = false")
+    long countOnlineKoreanHelpers(@Param("since") LocalDateTime since);
+
     @Modifying
     @Query("UPDATE User u SET u.helpCount = u.helpCount + 1 WHERE u.id = :id")
     void incrementHelpCount(@Param("id") Long id);
