@@ -1,4 +1,5 @@
 // 마이페이지 화면
+import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { s as sc } from '../../utils/scale';
 import * as ImagePicker from 'expo-image-picker';
@@ -70,6 +71,7 @@ interface ProfileDetail {
 const EMPTY_DETAIL: ProfileDetail = { bio: '', gender: '', age: '', major: '', mbti: '', hobbies: [], preferredLanguage: 'en' };
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user, updateProfileImage, updateProfileDetail, loadUser } = useAuthStore();
   const { helpHistory, fetchHelpHistory } = useHelpHistoryStore();
@@ -232,10 +234,10 @@ export default function ProfileScreen() {
 
   const handleDeleteImage = () => {
     setImageMenuVisible(false);
-    Alert.alert('프로필 사진 삭제', '프로필 사진을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('profile.deletePhotoTitle'), t('profile.deletePhotoMsg'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           setHasCustomPhoto(false);
           setImageLoadError(false);
@@ -256,7 +258,7 @@ export default function ProfileScreen() {
     }
 
     if (!permissionResult.granted) {
-      Alert.alert('권한 필요', source === 'camera' ? '카메라 접근 권한이 필요합니다.' : '갤러리 접근 권한이 필요합니다.');
+      Alert.alert(t('profile.permissionNeeded'), source === 'camera' ? t('profile.cameraPermission') : t('profile.galleryPermission'));
       return;
     }
 
@@ -274,11 +276,11 @@ export default function ProfileScreen() {
 
   const MENU_ITEMS = [
     isKorean
-      ? { icon: 'heart-outline' as const, label: '내 도움 내역', route: '/my-help-history' }
-      : { icon: 'document-text-outline' as const, label: '내 도움 내역', route: '/my-requests' },
-    { icon: 'star-outline' as const, label: '후기 관리', route: '/my-reviews' },
-    { icon: 'settings-outline' as const, label: '계정 설정', route: '/account-settings' },
-    { icon: 'notifications-outline' as const, label: '알림 설정', route: '/notifications' as const },
+      ? { icon: 'heart-outline' as const, label: t('profile.myHelpHistory'), route: '/my-help-history' }
+      : { icon: 'document-text-outline' as const, label: t('profile.myHelpHistory'), route: '/my-requests' },
+    { icon: 'star-outline' as const, label: t('profile.reviewManagement'), route: '/my-reviews' },
+    { icon: 'settings-outline' as const, label: t('settings.accountSettings'), route: '/account-settings' },
+    { icon: 'notifications-outline' as const, label: t('profile.notificationSettings'), route: '/notifications' as const },
   ];
 
   return (
@@ -306,7 +308,7 @@ export default function ProfileScreen() {
           <View style={styles.profileInfo}>
             <View style={styles.nicknameRow}>
               <Text style={[styles.nickname, { color: '#111111' }]}>
-                {user?.nickname ?? '사용자'}
+                {user?.nickname ?? t('profile.defaultUser')}
               </Text>
               {(user?.studentIdVerified || user?.studentIdStatus === 'APPROVED') && (
                 <Ionicons name="shield-checkmark" size={20} color="#22c55e" />
@@ -321,7 +323,7 @@ export default function ProfileScreen() {
             </View>
             <TouchableOpacity style={styles.editBtn} onPress={handleOpenProfileModal} activeOpacity={0.8}>
               <Ionicons name="pencil" size={13} color="#fff" />
-              <Text style={styles.editBtnText}> 프로필 수정</Text>
+              <Text style={styles.editBtnText}> {t('profile.editProfile')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -339,11 +341,11 @@ export default function ProfileScreen() {
           <View style={styles.activityCard}>
             <View style={styles.activityTopRow}>
               <View style={styles.activityStreakWrap}>
-                <Text style={styles.activityStreak}>이번달 받은 도움</Text>
+                <Text style={styles.activityStreak}>{t('profile.thisMonthReceived')}</Text>
               </View>
               <View style={[styles.activityGoalStepper, { gap: sc(4) }]}>
                 <Text style={[styles.activityGoalValue, { fontSize: sc(26), color: BLUE }]}>{receivedCount}</Text>
-                <Text style={{ fontSize: sc(14), color: BLUE, fontWeight: '800' }}>건</Text>
+                <Text style={{ fontSize: sc(14), color: BLUE, fontWeight: '800' }}>{t('profile.helpCountSuffix')}</Text>
               </View>
             </View>
           </View>
@@ -357,7 +359,7 @@ export default function ProfileScreen() {
           <View style={styles.activityCard}>
             <View style={styles.activityTopRow}>
               <View style={styles.activityStreakWrap}>
-                <Text style={styles.activityStreak}>이번달 도움 목표를 설정해보세요</Text>
+                <Text style={styles.activityStreak}>{t('profile.setMonthlyGoal')}</Text>
               </View>
               <View style={styles.activityGoalStepper}>
                 <TouchableOpacity
@@ -379,7 +381,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.activityProgressWrap}>
               <View style={styles.activityProgressLabelRow}>
-                <Text style={styles.activityProgressLabel}>이번달 도움 횟수</Text>
+                <Text style={styles.activityProgressLabel}>{t('home.monthlyHelpCount')}</Text>
                 <Text style={styles.activityProgressCount}>{completedCount} / {monthlyGoal}</Text>
               </View>
               <View style={styles.activityProgressTrack}>
@@ -395,7 +397,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.activityProgressLabels}>
                 <Text style={styles.activityProgressStart}>0</Text>
-                <Text style={styles.activityProgressEnd}>{monthlyGoal}회 달성</Text>
+                <Text style={styles.activityProgressEnd}>{t('profile.goalAchievement', { goal: monthlyGoal })}</Text>
               </View>
             </View>
           </View>
@@ -409,14 +411,14 @@ export default function ProfileScreen() {
           {user?.studentIdStatus === 'APPROVED' ? (
             <>
               <Ionicons name="shield-checkmark" size={28} color="#22C55E" />
-              <Text style={styles.miniCardTitle}>인증 완료</Text>
-              <Text style={styles.miniCardSub}>학생 인증됨</Text>
+              <Text style={styles.miniCardTitle}>{t('profile.verifiedTitle')}</Text>
+              <Text style={styles.miniCardSub}>{t('profile.verifiedSub')}</Text>
             </>
           ) : (
             <>
               <Ionicons name="shield-outline" size={28} color={BLUE_MID} />
-              <Text style={[styles.miniCardTitle, { color: BLUE_MID }]}>미인증</Text>
-              <Text style={styles.miniCardSub}>학생증 인증 필요</Text>
+              <Text style={[styles.miniCardTitle, { color: BLUE_MID }]}>{t('profile.unverified')}</Text>
+              <Text style={styles.miniCardSub}>{t('profile.verificationNeeded')}</Text>
             </>
           )}
         </View>
@@ -429,7 +431,7 @@ export default function ProfileScreen() {
               <Ionicons key={i} name="star" size={12} color={i <= Math.round(user?.rating ?? 0) ? '#FBBF24' : '#E5E7EB'} />
             ))}
           </View>
-          <Text style={styles.miniCardSub}>내 평점</Text>
+          <Text style={styles.miniCardSub}>{t('profile.myRating')}</Text>
         </View>
       </View>
 
@@ -461,14 +463,14 @@ export default function ProfileScreen() {
               <View style={styles.bottomSheetIconWrap}>
                 <Ionicons name="camera-outline" size={20} color={BLUE} />
               </View>
-              <Text style={styles.bottomSheetItemText}>카메라로 촬영</Text>
+              <Text style={styles.bottomSheetItemText}>{t('profile.takePhoto')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.bottomSheetItem} onPress={() => handlePickImage('gallery')} activeOpacity={0.7}>
               <View style={styles.bottomSheetIconWrap}>
                 <Ionicons name="image-outline" size={20} color={BLUE} />
               </View>
-              <Text style={styles.bottomSheetItemText}>갤러리에서 선택</Text>
+              <Text style={styles.bottomSheetItemText}>{t('profile.selectFromGallery')}</Text>
             </TouchableOpacity>
 
             {hasCustomPhoto && (
@@ -476,12 +478,12 @@ export default function ProfileScreen() {
                 <View style={[styles.bottomSheetIconWrap, { backgroundColor: '#FEF2F2' }]}>
                   <Ionicons name="trash-outline" size={20} color="#EF4444" />
                 </View>
-                <Text style={[styles.bottomSheetItemText, { color: '#EF4444' }]}>삭제하기</Text>
+                <Text style={[styles.bottomSheetItemText, { color: '#EF4444' }]}>{t('common.delete')}</Text>
               </TouchableOpacity>
             )}
 
             <TouchableOpacity style={styles.bottomSheetCancel} onPress={() => setImageMenuVisible(false)} activeOpacity={0.7}>
-              <Text style={styles.bottomSheetCancelText}>취소</Text>
+              <Text style={styles.bottomSheetCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -499,14 +501,14 @@ export default function ProfileScreen() {
             </TouchableOpacity>
             <View style={{ width: sc(40) }} />
             <TouchableOpacity style={styles.profileSaveFloatBtn} onPress={handleSaveProfile} activeOpacity={0.7}>
-              <Text style={styles.profileModalSaveBtn}>저장</Text>
+              <Text style={styles.profileModalSaveBtn}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.profileScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.profileScrollContent} keyboardShouldPersistTaps="handled">
 
               {/* 페이지 타이틀 */}
-              <Text style={[styles.profileModalTitle, { marginBottom: sc(50), marginTop: -sc(35) }]}>프로필 수정</Text>
+              <Text style={[styles.profileModalTitle, { marginBottom: sc(50), marginTop: -sc(35) }]}>{t('profile.editProfile')}</Text>
 
               {/* 1. 프로필 사진 + 이름/학과 */}
               <View style={styles.photoRowWrap}>
@@ -540,12 +542,12 @@ export default function ProfileScreen() {
               <View style={styles.editSectionDivider} />
 
               {/* 2. 한줄 소개 */}
-              <Text style={styles.editSectionTitle}>한줄 소개</Text>
+              <Text style={styles.editSectionTitle}>{t('profile.bioSection')}</Text>
               <TextInput
                 style={[styles.editTextarea, profileInput.bio && { borderColor: BLUE, borderWidth: sc(2) }]}
                 value={profileInput.bio}
                 onChangeText={(text) => setProfileInput((prev) => ({ ...prev, bio: text }))}
-                placeholder={'간단히 나를 소개해보세요.\n소개말이 있으면 호감도가 올라가요.'}
+                placeholder={t('profile.bioPlaceholderLong')}
                 placeholderTextColor="#9AAABF"
                 multiline
                 scrollEnabled={false}
@@ -556,9 +558,9 @@ export default function ProfileScreen() {
               <View style={styles.editSectionDivider} />
 
               {/* 3. 성별 */}
-              <Text style={styles.editSectionTitle}>성별</Text>
+              <Text style={styles.editSectionTitle}>{t('auth.gender')}</Text>
               <View style={[styles.genderRow, { marginTop: sc(8) }]}>
-                {[{ label: '남성', value: '남자' }, { label: '여성', value: '여자' }].map(({ label, value }) => {
+                {[{ label: t('auth.male'), value: '남자' }, { label: t('auth.female'), value: '여자' }].map(({ label, value }) => {
                   const isSelected = profileInput.gender === value;
                   const isLocked = !!user?.gender;
                   return (
@@ -580,26 +582,26 @@ export default function ProfileScreen() {
               <View style={styles.editSectionDivider} />
 
               {/* 4. 나이 */}
-              <Text style={styles.editSectionTitle}>나이</Text>
+              <Text style={styles.editSectionTitle}>{t('auth.age')}</Text>
               <TouchableOpacity
                 style={[styles.editInput, { marginTop: sc(8) }, profileInput.age ? { borderColor: BLUE, borderWidth: sc(2) } : {}]}
                 onPress={handleOpenBirthModal}
                 activeOpacity={0.8}
               >
                 <Text style={{ color: profileInput.age ? T1 : '#9AAABF', fontSize: sc(15) }}>
-                  {profileInput.age ? `${birthYear}년 ${birthMonth}월 ${birthDay}일 (만 ${profileInput.age}세)` : '생년월일을 선택하세요'}
+                  {profileInput.age ? t('profile.birthDateDisplay', { year: birthYear, month: birthMonth, day: birthDay, age: profileInput.age }) : t('profile.selectBirthDate')}
                 </Text>
               </TouchableOpacity>
 
               <View style={styles.editSectionDivider} />
 
               {/* 5. 학과 */}
-              <Text style={styles.editSectionTitle}>학과</Text>
+              <Text style={styles.editSectionTitle}>{t('profile.majorSection')}</Text>
               <TouchableOpacity
                 style={[styles.editInput, { marginTop: sc(8) }, isKorean && { backgroundColor: BORDER, opacity: 0.7 }]}
                 onPress={() => {
                   if (isKorean) {
-                    Alert.alert('학생증 인증 필요', '한국인 학생은 학생증 인증 후 전공을 변경할 수 있습니다.');
+                    Alert.alert(t('profile.verificationNeeded'), t('profile.verificationAlertMsg'));
                     return;
                   }
                   setShowMajorList((v) => !v);
@@ -608,7 +610,7 @@ export default function ProfileScreen() {
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Text style={{ color: profileInput.major ? T1 : '#9AAABF', fontSize: sc(15) }}>
-                    {profileInput.major || '학과를 선택하세요'}
+                    {profileInput.major || t('profile.selectMajor')}
                   </Text>
                   {isKorean
                     ? <Ionicons name="lock-closed-outline" size={16} color={BLUE_MID} />
@@ -617,7 +619,7 @@ export default function ProfileScreen() {
                 </View>
               </TouchableOpacity>
               {isKorean && (
-                <Text style={{ fontSize: sc(11), color: BLUE_MID, marginTop: sc(4) }}>학생증 인증 후 변경 가능합니다.</Text>
+                <Text style={{ fontSize: sc(11), color: BLUE_MID, marginTop: sc(4) }}>{t('profile.majorLocked')}</Text>
               )}
               {showMajorList && !isKorean && (
                 <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: sc(12), marginTop: sc(4), overflow: 'hidden' }}>
@@ -638,7 +640,7 @@ export default function ProfileScreen() {
               <View style={styles.editSectionDivider} />
 
               {/* 6. 번역 언어 */}
-              <Text style={styles.editSectionTitle}>번역 언어</Text>
+              <Text style={styles.editSectionTitle}>{t('profile.languageSection')}</Text>
               <View style={[styles.chipRow, { marginTop: sc(8) }]}>
                 {LANGUAGES.map((lang) => (
                   <TouchableOpacity
@@ -658,7 +660,7 @@ export default function ProfileScreen() {
 
               {/* 7. 키워드 */}
               <View style={[styles.editRowBetween, { marginBottom: sc(8) }]}>
-                <Text style={styles.editSectionTitle}>키워드</Text>
+                <Text style={styles.editSectionTitle}>{t('profile.keywordSection')}</Text>
                 <Text style={styles.editOptional}>({profileInput.hobbies.length}/5)</Text>
               </View>
               {profileInput.hobbies.length < 5 && (
@@ -667,7 +669,7 @@ export default function ProfileScreen() {
                   value={hobbyInput}
                   onChangeText={setHobbyInput}
                   onSubmitEditing={handleAddHobby}
-                  placeholder="나를 표현할 수 있는 단어를 입력해주세요!"
+                  placeholder={t('profile.keywordPlaceholder')}
                   returnKeyType="done"
                   placeholderTextColor="#9AAABF"
                 />
@@ -697,24 +699,24 @@ export default function ProfileScreen() {
                   <View style={styles.bottomSheetIconWrap}>
                     <Ionicons name="camera-outline" size={20} color={BLUE} />
                   </View>
-                  <Text style={styles.bottomSheetItemText}>카메라로 촬영</Text>
+                  <Text style={styles.bottomSheetItemText}>{t('profile.takePhoto')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.bottomSheetItem} onPress={() => handlePickImage('gallery')} activeOpacity={0.7}>
                   <View style={styles.bottomSheetIconWrap}>
                     <Ionicons name="image-outline" size={20} color={BLUE} />
                   </View>
-                  <Text style={styles.bottomSheetItemText}>갤러리에서 선택</Text>
+                  <Text style={styles.bottomSheetItemText}>{t('profile.selectFromGallery')}</Text>
                 </TouchableOpacity>
                 {hasCustomPhoto && (
                   <TouchableOpacity style={styles.bottomSheetItem} onPress={handleDeleteImage} activeOpacity={0.7}>
                     <View style={[styles.bottomSheetIconWrap, { backgroundColor: '#FEF2F2' }]}>
                       <Ionicons name="trash-outline" size={20} color="#EF4444" />
                     </View>
-                    <Text style={[styles.bottomSheetItemText, { color: '#EF4444' }]}>삭제하기</Text>
+                    <Text style={[styles.bottomSheetItemText, { color: '#EF4444' }]}>{t('common.delete')}</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity style={styles.bottomSheetCancel} onPress={() => setImageMenuVisible(false)} activeOpacity={0.7}>
-                  <Text style={styles.bottomSheetCancelText}>취소</Text>
+                  <Text style={styles.bottomSheetCancelText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
             </TouchableOpacity>
@@ -726,7 +728,7 @@ export default function ProfileScreen() {
               <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setBirthModalVisible(false)} />
               <View style={styles.inlineSheet}>
                 <View style={styles.bottomSheetHandle} />
-                <Text style={styles.bottomSheetTitle}>생년월일 선택</Text>
+                <Text style={styles.bottomSheetTitle}>{t('profile.selectBirthDateTitle')}</Text>
                 <View style={{ height: 1, backgroundColor: BORDER, marginBottom: sc(12) }} />
 
                 {/* 슬롯 피커 */}
@@ -754,7 +756,7 @@ export default function ProfileScreen() {
                     >
                       {YEARS.map((y) => (
                         <View key={y} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
-                          <Text style={{ fontSize: sc(15), color: birthYear === y ? BLUE : '#999', fontWeight: birthYear === y ? '700' : '400' }}>{y}년</Text>
+                          <Text style={{ fontSize: sc(15), color: birthYear === y ? BLUE : '#999', fontWeight: birthYear === y ? '700' : '400' }}>{`${y}${t('profile.yearSuffix')}`}</Text>
                         </View>
                       ))}
                     </ScrollView>
@@ -782,7 +784,7 @@ export default function ProfileScreen() {
                     >
                       {MONTHS.map((m) => (
                         <View key={m} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
-                          <Text style={{ fontSize: sc(15), color: birthMonth === m ? BLUE : '#999', fontWeight: birthMonth === m ? '700' : '400' }}>{m}월</Text>
+                          <Text style={{ fontSize: sc(15), color: birthMonth === m ? BLUE : '#999', fontWeight: birthMonth === m ? '700' : '400' }}>{`${m}${t('profile.monthSuffix')}`}</Text>
                         </View>
                       ))}
                     </ScrollView>
@@ -811,7 +813,7 @@ export default function ProfileScreen() {
                     >
                       {Array.from({ length: getDays(birthYear, birthMonth) }, (_, i) => i + 1).map((d) => (
                         <View key={d} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
-                          <Text style={{ fontSize: sc(15), color: birthDay === d ? BLUE : '#999', fontWeight: birthDay === d ? '700' : '400' }}>{d}일</Text>
+                          <Text style={{ fontSize: sc(15), color: birthDay === d ? BLUE : '#999', fontWeight: birthDay === d ? '700' : '400' }}>{`${d}${t('profile.daySuffix')}`}</Text>
                         </View>
                       ))}
                     </ScrollView>
@@ -820,7 +822,7 @@ export default function ProfileScreen() {
                 </View>
 
                 <TouchableOpacity style={[styles.birthConfirmBtn, { borderRadius: sc(30), marginHorizontal: sc(24), marginBottom: sc(16), marginTop: sc(16) }]} onPress={handleConfirmBirth} activeOpacity={0.8}>
-                  <Text style={styles.birthConfirmText}>확인</Text>
+                  <Text style={styles.birthConfirmText}>{t('common.confirm')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
