@@ -106,6 +106,10 @@ export const updateFcmToken = async (fcmToken: string): Promise<void> => {
   await api.patch('/users/fcm-token', { fcmToken });
 };
 
+export const updatePreferredLanguage = async (language: string): Promise<void> => {
+  await api.patch('/users/profile', { preferredLanguage: language });
+};
+
 // 비밀번호 재설정
 export const resetPassword = async (
   email: string,

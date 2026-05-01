@@ -53,6 +53,7 @@ export interface RegisterRequest {
   university: string;
   major?: string;
   nationality?: string;
+  preferredLanguage?: string;
   termsAgreed: boolean;
   privacyAgreed: boolean;
 }

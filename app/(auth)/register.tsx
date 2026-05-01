@@ -20,6 +20,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../stores/authStore';
 import type { UserType } from '../../types';
 import { sendVerificationCode, verifyEmailCode } from '../../services/authService';
+import type { SupportedLanguage } from '../../i18n';
+
+const COUNTRY_TO_LANGUAGE: Record<string, SupportedLanguage> = {
+  JP: 'ja',
+  CN: 'zh-Hans', TW: 'zh-Hans', HK: 'zh-Hans',
+  RU: 'ru', KZ: 'ru', KG: 'ru', TJ: 'ru', TM: 'ru', UZ: 'ru',
+  MN: 'mn',
+  VN: 'vi', LA: 'vi', KH: 'vi',
+};
 
 const BLUE = '#3B6FE8';
 const BLUE_L = '#EEF4FF';
@@ -255,6 +264,10 @@ export default function RegisterScreen() {
       return;
     }
 
+    const preferredLanguage = nationality
+      ? (COUNTRY_TO_LANGUAGE[nationality] ?? 'en')
+      : (userType === 'KOREAN' ? 'ko' : 'en');
+
     const success = await register({
       email,
       password,
@@ -263,6 +276,7 @@ export default function RegisterScreen() {
       university: '국민대학교',
       major: major ?? undefined,
       nationality: nationality ?? undefined,
+      preferredLanguage,
       termsAgreed: true,
       privacyAgreed: true,
     });

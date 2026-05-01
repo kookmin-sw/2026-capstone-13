@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthStore } from '../stores/authStore';
 import { useAppPermissions } from '../hooks/useAppPermissions';
 import { usePushNotifications } from '../hooks/usePushNotifications';
+import { initI18n } from '../i18n';
 
 // 사용자 폰트 크기 설정과 무관하게 앱 내 폰트 크기 고정
 if (Text.defaultProps == null) Text.defaultProps = {};
@@ -22,9 +23,9 @@ export default function RootLayout() {
   const router = useRouter();
   const firstSegment = segments[0];
 
-  // 앱 시작 시 저장된 토큰으로 사용자 정보 로드
+  // 앱 시작 시 i18n 초기화 후 사용자 정보 로드
   useEffect(() => {
-    loadUser();
+    initI18n().then(() => loadUser());
   }, []);
 
   // 로그인 완료 후 isNewUser이면 프로필 설정으로 이동
@@ -46,7 +47,6 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
         <Stack.Screen name="index" />
-        <Stack.Screen name="language-setup" />
         <Stack.Screen name="profile-setup" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(main)" />
