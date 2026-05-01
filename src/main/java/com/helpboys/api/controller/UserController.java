@@ -43,12 +43,6 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("조회 성공", userService.getTodayActiveHelperCount()));
     }
 
-    // GET /api/users/online-helpers-count - 현재 WebSocket 접속 중인 한국인 헬퍼 수 (lastSeenAt 5분 이내)
-    @GetMapping("/online-helpers-count")
-    public ResponseEntity<ApiResponse<Long>> getOnlineHelperCount() {
-        return ResponseEntity.ok(ApiResponse.success("조회 성공", userService.getOnlineHelperCount()));
-    }
-
     // GET /api/users/me - 내 프로필 조회
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getMyProfile(
