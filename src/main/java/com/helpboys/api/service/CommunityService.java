@@ -297,7 +297,7 @@ public class CommunityService {
         return posts.map(post -> CommunityPostResponse.fromList(post, likedPostIds.contains(post.getId())));
     }
 
-    // 게시글 번역 (DB 캐시 → 없으면 Gemini 번역 후 저장)
+    // 게시글 번역 (DB 캐시 → 없으면 번역 후 저장)
     public Map<String, String> translatePost(Long postId, String langCode) {
         // DB 캐시 확인
         java.util.Optional<PostTranslation> cached =
@@ -351,14 +351,14 @@ public class CommunityService {
             String body = objectMapper.writeValueAsString(
                     Map.of("text", text, "target_lang", langCode, "source_lang", "ko"));
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                    .uri(URI.create(aiServerUrl + "/api/translate"))
                     .header("Content-Type", "application/json")
                     .timeout(java.time.Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             JsonNode result = objectMapper.readTree(resp.body());
             if (!result.path("success").asBoolean()) {
-                throw new BusinessException("번역에 실패했습니다: " + result.path("message").asText("Gemini 오류"), HttpStatus.SERVICE_UNAVAILABLE);
+                throw new BusinessException("번역에 실패했습니다: " + result.path("message").asText("번역 오류"), HttpStatus.SERVICE_UNAVAILABLE);
             }
             return result.path("data").path("translated").asText();
         } catch (BusinessException e) {

@@ -80,7 +80,7 @@ public class ChatService {
                             java.util.Map.of("text", content, "target_lang", targetLang)
                     );
                     HttpRequest translateRequest = HttpRequest.newBuilder()
-                            .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                            .uri(URI.create(aiServerUrl + "/api/translate"))
                             .header("Content-Type", "application/json")
                             .timeout(java.time.Duration.ofSeconds(10))
                             .POST(HttpRequest.BodyPublishers.ofString(translateBody))
@@ -374,7 +374,7 @@ public class ChatService {
                         java.util.Map.of("text", recognizedText, "target_lang", targetLang, "source_lang", detectedLanguage)
                 );
                 HttpRequest translateRequest = HttpRequest.newBuilder()
-                        .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                        .uri(URI.create(aiServerUrl + "/api/translate"))
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(translateBody))
                         .build();
@@ -462,7 +462,7 @@ public class ChatService {
                         Map.of("text", recognizedText, "target_lang", targetLang, "source_lang", detectedLanguage)
                 );
                 HttpRequest translateRequest = HttpRequest.newBuilder()
-                        .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                        .uri(URI.create(aiServerUrl + "/api/translate"))
                         .header("Content-Type", "application/json")
                         .timeout(java.time.Duration.ofSeconds(10))
                         .POST(HttpRequest.BodyPublishers.ofString(translateBody))
@@ -492,7 +492,7 @@ public class ChatService {
         log.info("[자막] from={} to={} text={}", fromUserId, toUserId, subtitleText);
     }
 
-    // 채팅 메시지 온디맨드 번역 (translatedContent 없는 경우 Gemini 번역 후 저장)
+    // 채팅 메시지 온디맨드 번역 (translatedContent 없는 경우 번역 후 저장)
     public ChatMessageDto translateMessage(Long messageId, Long userId) {
         ChatMessage message = chatMessageRepository.findById(messageId)
                 .orElseThrow(() -> new BusinessException("메시지를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
@@ -510,14 +510,14 @@ public class ChatService {
             String body = objectMapper.writeValueAsString(
                     java.util.Map.of("text", message.getContent(), "target_lang", targetLang));
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                    .uri(URI.create(aiServerUrl + "/api/translate"))
                     .header("Content-Type", "application/json")
                     .timeout(java.time.Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             JsonNode result = objectMapper.readTree(resp.body());
             if (!result.path("success").asBoolean()) {
-                throw new BusinessException("번역에 실패했습니다: " + result.path("message").asText("Gemini 오류"), HttpStatus.SERVICE_UNAVAILABLE);
+                throw new BusinessException("번역에 실패했습니다: " + result.path("message").asText("번역 오류"), HttpStatus.SERVICE_UNAVAILABLE);
             }
             message.setTranslatedContent(result.path("data").path("translated").asText());
             if (!result.path("data").path("cultural_note").isNull()) {
