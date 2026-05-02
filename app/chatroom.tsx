@@ -233,7 +233,11 @@ export default function ChatRoomScreen() {
               if (msg.content?.startsWith(SYS_CALL_VOICE) || msg.content?.startsWith(SYS_CALL_VIDEO)) {
                 if (msg.senderId === user?.id) return; // 내가 보낸 신호는 무시
                 const isVideo = msg.content.startsWith(SYS_CALL_VIDEO);
-                const callerNickname = msg.content.slice(isVideo ? SYS_CALL_VIDEO.length : SYS_CALL_VOICE.length);
+                const rawCallContent = msg.content.slice(isVideo ? SYS_CALL_VIDEO.length : SYS_CALL_VOICE.length);
+                const lastColon = rawCallContent.lastIndexOf(':');
+                const callerNickname = lastColon > 0 ? rawCallContent.slice(0, lastColon) : rawCallContent;
+                const callerLang = lastColon > 0 ? rawCallContent.slice(lastColon + 1) : null;
+                const callTargetLanguage = isKo ? (callerLang ?? partnerPreferredLanguage) : 'ko';
                 Alert.alert(
                   isVideo ? t('chat.videoCall') : t('chat.voiceCall'),
                   t('chatroom.incomingCall', { name: callerNickname, type: isVideo ? t('chatroom.videoType') : t('chatroom.voiceType') }),
@@ -250,7 +254,7 @@ export default function ChatRoomScreen() {
                           myUserId: String(user?.id ?? ''),
                           partnerUserId: String(partnerId ?? ''),
                           language: myBcp47Language,
-                          targetLanguage: partnerPreferredLanguage,
+                          targetLanguage: callTargetLanguage,
                         },
                       }),
                     },
@@ -485,7 +489,7 @@ export default function ChatRoomScreen() {
                 roomId,
                 senderId: user.id,
                 senderNickname: user.nickname,
-                content: `${SYS_CALL_VOICE}${user.nickname}`,
+                content: `${SYS_CALL_VOICE}${user.nickname}:${user.preferredLanguage ?? 'ko'}`,
                 createdAt: new Date().toISOString(),
               }),
             });
@@ -525,7 +529,7 @@ export default function ChatRoomScreen() {
                 roomId,
                 senderId: user.id,
                 senderNickname: user.nickname,
-                content: `${SYS_CALL_VIDEO}${user.nickname}`,
+                content: `${SYS_CALL_VIDEO}${user.nickname}:${user.preferredLanguage ?? 'ko'}`,
                 createdAt: new Date().toISOString(),
               }),
             });

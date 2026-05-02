@@ -1,6 +1,5 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import * as Localization from 'expo-localization';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import ko from '../locales/ko.json';
@@ -35,13 +34,7 @@ export const LANGUAGE_FLAGS: Record<SupportedLanguage, string> = {
 };
 
 function getDeviceLanguage(): SupportedLanguage {
-  const locale = Localization.getLocales()[0]?.languageTag ?? 'en';
-  const lang = locale.split('-')[0];
-  const map: Record<string, SupportedLanguage> = {
-    ko: 'ko', ja: 'ja', ru: 'ru', mn: 'mn', vi: 'vi',
-    zh: 'zh-Hans',
-  };
-  return map[lang] ?? 'en';
+  return 'en';
 }
 
 export async function initI18n(): Promise<void> {
