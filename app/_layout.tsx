@@ -21,7 +21,7 @@ if (AppTextInput.defaultProps == null) AppTextInput.defaultProps = {};
 AppTextInput.defaultProps.allowFontScaling = false;
 
 export default function RootLayout() {
-  const { user, isLoading, isNewUser, loadUser } = useAuthStore();
+  const { user, isLoading, isNewUser, loadUser, appLanguage } = useAuthStore();
   const { modalVisible, handleConfirm } = useAppPermissions();
   const [isI18nReady, setIsI18nReady] = useState(false);
   usePushNotifications(user?.id);
@@ -56,7 +56,7 @@ export default function RootLayout() {
 
   return (
     <I18nextProvider i18n={i18nInstance}>
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView key={appLanguage} style={{ flex: 1 }}>
       <PermissionsModal visible={modalVisible} onConfirm={handleConfirm} />
       <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
         <Stack.Screen name="index" />
