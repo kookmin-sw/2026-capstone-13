@@ -47,4 +47,7 @@ public class CallSignalDto {
 
     // 번역 자막 (subtitle 시 사용)
     private String subtitleText;
+
+    // 언어 핸드셰이크 (lang_handshake 시 사용)
+    private String lang;
 }
