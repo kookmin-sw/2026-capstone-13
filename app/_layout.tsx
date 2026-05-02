@@ -8,7 +8,8 @@ import { useAuthStore } from '../stores/authStore';
 import { useAppPermissions } from '../hooks/useAppPermissions';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { initI18n } from '../i18n';
-import i18n from 'i18next';
+import i18nInstance from '../i18n';
+import { I18nextProvider } from 'react-i18next';
 import PermissionsModal from '../components/PermissionsModal';
 
 // 사용자 폰트 크기 설정과 무관하게 앱 내 폰트 크기 고정
@@ -23,13 +24,6 @@ export default function RootLayout() {
   const { user, isLoading, isNewUser, loadUser } = useAuthStore();
   const { modalVisible, handleConfirm } = useAppPermissions();
   const [isI18nReady, setIsI18nReady] = useState(false);
-  const [, forceRender] = useState(0);
-
-  useEffect(() => {
-    const handler = () => forceRender((n) => n + 1);
-    i18n.on('languageChanged', handler);
-    return () => i18n.off('languageChanged', handler);
-  }, []);
   usePushNotifications(user?.id);
   const segments = useSegments();
   const router = useRouter();
@@ -61,6 +55,7 @@ export default function RootLayout() {
   if (!isI18nReady) return null;
 
   return (
+    <I18nextProvider i18n={i18nInstance}>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PermissionsModal visible={modalVisible} onConfirm={handleConfirm} />
       <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
@@ -78,5 +73,6 @@ export default function RootLayout() {
       </Stack>
       <StatusBar style="dark" />
     </GestureHandlerRootView>
+    </I18nextProvider>
   );
 }
