@@ -27,37 +27,18 @@ SUPPORTED_LANGUAGES = ["en", "ja", "zh-Hans", "ru", "mn", "vi"]
 
 async def _batch_translate(texts: list[str], target_lang: str, retries: int = 3) -> list[str] | None:
     """
-    언어별 최적 엔진으로 배치 번역 (재시도 포함)
-    - mn(몽골어) → Google Cloud Translation
-    - 나머지 → DeepL → Google → Azure 순 폴백
-    - DeepL 429(속도제한) 시 즉시 Google/Azure로 전환
+    DeepL/Azure로만 배치 번역한다.
+    Google/Gemini는 사용하지 않는다.
     반환: 번역된 텍스트 리스트 (texts와 동일 순서), 실패 시 None
     """
     import requests as req_lib, uuid
     from translator.service import DEEPL_LANG_MAP, DEEPL_SUPPORTED, DEEPL_API_URL
 
-    deepl_skip = False  # DeepL 429 받으면 True → 이후 시도에서 DeepL 스킵
+    deepl_skip = False
 
     for attempt in range(retries):
         try:
-            # 몽골어: Google Cloud Translation
-            if target_lang == "mn" and translation_service.google_key:
-                results = []
-                for text in texts:
-                    resp = await asyncio.to_thread(
-                        lambda t=text: req_lib.post(
-                            "https://translation.googleapis.com/language/translate/v2",
-                            params={"key": translation_service.google_key},
-                            json={"q": t, "target": "mn", "source": "ko", "format": "text"},
-                            timeout=10,
-                        )
-                    )
-                    resp.raise_for_status()
-                    results.append(resp.json()["data"]["translations"][0]["translatedText"])
-                return results
-
-            # DeepL 지원 언어 (한도 초과 또는 429 속도제한 시 Google로 자동 전환)
-            elif target_lang in DEEPL_SUPPORTED and translation_service.deepl_key and not translation_service.deepl_quota_exceeded and not deepl_skip:
+            if target_lang in DEEPL_SUPPORTED and translation_service.deepl_key and not translation_service.deepl_quota_exceeded and not deepl_skip:
                 deepl_target = DEEPL_LANG_MAP[target_lang]
                 resp = await asyncio.to_thread(
                     lambda: req_lib.post(
@@ -68,34 +49,17 @@ async def _batch_translate(texts: list[str], target_lang: str, retries: int = 3)
                     )
                 )
                 if resp.status_code == 456:
-                    print("[DeepL] ⚠️ 월 사용량 초과 (456) → Google Cloud로 전환")
+                    print("[DeepL] ⚠️ 월 사용량 초과 (456) → Azure로 전환")
                     translation_service.deepl_quota_exceeded = True
                     return await _batch_translate(texts, target_lang, retries=1)
                 if resp.status_code == 429:
-                    print(f"[배치번역:{target_lang}] DeepL 429 속도제한 → Google/Azure로 즉시 전환")
+                    print(f"[배치번역:{target_lang}] DeepL 429 속도제한 → Azure로 전환")
                     deepl_skip = True
-                    continue  # 재시도 시 deepl_skip=True이므로 Google/Azure 블록으로 진입
+                    continue
                 resp.raise_for_status()
                 return [t["text"] for t in resp.json()["translations"]]
 
-            # Google Cloud Translation
-            elif translation_service.google_key:
-                results = []
-                for text in texts:
-                    r = await asyncio.to_thread(
-                        lambda t=text: req_lib.post(
-                            "https://translation.googleapis.com/language/translate/v2",
-                            params={"key": translation_service.google_key},
-                            json={"q": t, "target": target_lang, "source": "ko", "format": "text"},
-                            timeout=10,
-                        )
-                    )
-                    r.raise_for_status()
-                    results.append(r.json()["data"]["translations"][0]["translatedText"])
-                return results
-
-            # Azure 폴백
-            elif translation_service.azure_key:
+            if translation_service.azure_key:
                 headers = {
                     "Ocp-Apim-Subscription-Key": translation_service.azure_key,
                     "Ocp-Apim-Subscription-Region": translation_service.azure_region,
@@ -113,8 +77,7 @@ async def _batch_translate(texts: list[str], target_lang: str, retries: int = 3)
                 resp.raise_for_status()
                 return [item["translations"][0]["text"] for item in resp.json()]
 
-            else:
-                return None  # 키 없음
+            return None
 
         except Exception as e:
             print(f"[배치번역:{target_lang}] 시도 {attempt + 1}/{retries} 실패: {e}")
@@ -168,40 +131,18 @@ def health():
         "status": "healthy",
         "deepgram_speech": not speech_service.dummy_mode,
         "azure_translator": translation_service.azure_key is not None,
-        "gemini_translator": translation_service.gemini_client is not None,
-        "translation_mode": "azure" if translation_service.azure_key else ("gemini" if translation_service.gemini_client else "no_key"),
+        "deepl_translator": translation_service.deepl_key is not None and not translation_service.deepl_quota_exceeded,
+        "google_translator": False,
+        "gemini_translator": False,
+        "translation_mode": "deepl" if translation_service.deepl_key and not translation_service.deepl_quota_exceeded else ("azure" if translation_service.azure_key else "no_key"),
     }
 
 
-# ── Gemini 디버그 ──────────────────────────────────────────
+# ── Gemini 비활성화 확인 ───────────────────────────────────
 @app.get("/api/gemini/test")
 async def gemini_test():
-    """Gemini 연결 상태 및 번역 테스트"""
-    import os
-    key = os.getenv("GEMINI_API_KEY")
-    if not key:
-        return {"ok": False, "reason": "GEMINI_API_KEY 환경변수 없음"}
-    try:
-        from google import genai
-        client = genai.Client(api_key=key)
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model=translation_service.model_name,
-            contents="Say 'hello' in English only.",
-        )
-        return {
-            "ok": True,
-            "model": translation_service.model_name,
-            "response": response.text.strip(),
-            "gemini_client_ready": translation_service.gemini_client is not None,
-        }
-    except Exception as e:
-        return {
-            "ok": False,
-            "model": translation_service.model_name,
-            "error": str(e),
-            "error_type": type(e).__name__,
-        }
+    """Gemini는 비용 방지를 위해 비활성화되어 있다."""
+    return {"ok": False, "reason": "Gemini disabled"}
 
 
 # ── Azure 전용 번역 (식단/공지 대량 번역용) ───────────────
@@ -216,58 +157,10 @@ async def azure_translate(request: Request):
     return {"success": True, "data": {"translated": translated}}
 
 
-# ── Gemini 전용 번역 (커뮤니티/채팅용) ───────────────────
-# 폴백 순서: Gemini → DeepL → Google Cloud → Azure
+# ── Gemini 번역 엔드포인트 비활성화 ───────────────────────
 @app.post("/api/gemini/translate")
 async def gemini_translate(request: Request):
-    data = await request.json()
-    text = data.get("text", "")
-    target_lang = data.get("target_lang", "en")
-    source_lang = data.get("source_lang")
-    context = data.get("context")  # 게시글 맥락 (선택)
-
-    # 1. Gemini 시도
-    if translation_service.gemini_client:
-        try:
-            result = await translation_service._gemini_translate(text, target_lang, source_lang, context)
-            return {"success": True, "message": "Gemini 번역 완료", "data": result}
-        except Exception as e:
-            print(f"[번역 폴백] Gemini 실패 → Groq 시도: {e}")
-
-    # 2. Groq 폴백
-    if translation_service.groq_client:
-        try:
-            result = await translation_service._groq_translate(text, target_lang, source_lang, context)
-            return {"success": True, "message": "Groq 번역 완료 (폴백)", "data": result}
-        except Exception as e:
-            print(f"[번역 폴백] Groq 실패 → DeepL 시도: {e}")
-
-    # 3. DeepL 폴백
-    from translator.service import DEEPL_SUPPORTED
-    if translation_service.deepl_key and target_lang in DEEPL_SUPPORTED and not translation_service.deepl_quota_exceeded:
-        try:
-            result = await translation_service._deepl_translate(text, target_lang, source_lang)
-            return {"success": True, "message": "DeepL 번역 완료 (폴백)", "data": result}
-        except Exception as e:
-            print(f"[번역 폴백] DeepL 실패 → Google Cloud 시도: {e}")
-
-    # 4. Google Cloud 폴백
-    if translation_service.google_key:
-        try:
-            result = await translation_service._google_translate(text, target_lang, source_lang)
-            return {"success": True, "message": "Google 번역 완료 (폴백)", "data": result}
-        except Exception as e:
-            print(f"[번역 폴백] Google 실패 → Azure 시도: {e}")
-
-    # 5. Azure 폴백
-    if translation_service.azure_key:
-        try:
-            result = await translation_service._azure_translate(text, target_lang, source_lang)
-            return {"success": True, "message": "Azure 번역 완료 (폴백)", "data": result}
-        except Exception as e:
-            print(f"[번역 폴백] Azure 실패: {e}")
-
-    return {"success": False, "message": "모든 번역 엔진 실패", "data": None}
+    return {"success": False, "message": "Gemini translation endpoint disabled", "data": None}
 
 
 # ── 번역 ──────────────────────────────────────────────────
@@ -280,12 +173,10 @@ async def translate(request: Request):
 
     result = await translation_service.translate_text(text, target_lang, source_lang)
     mode = result.get("mode")
-    if mode == "azure":
-        mode_message = "Azure 번역 완료"
-    elif mode == "gemini":
-        mode_message = "Gemini 번역 완료"
+    if mode == "deepl":
+        mode_message = "DeepL 번역 완료"
     else:
-        mode_message = "더미 모드 번역"
+        mode_message = "번역 완료"
 
     return {"success": True, "message": mode_message, "data": result}
 
@@ -310,29 +201,11 @@ async def crawl_notices():
         result = []
         for notice in raw_notices:
             title_ko = notice["title"]
-            # 10개 언어를 한 번에 요청
-            try:
-                headers = {
-                    "Ocp-Apim-Subscription-Key": translation_service.azure_key,
-                    "Ocp-Apim-Subscription-Region": translation_service.azure_region,
-                    "Content-Type": "application/json",
-                }
-                import requests as req_lib, uuid
-                params = {"api-version": "3.0", "from": "ko", "to": SUPPORTED_LANGUAGES}
-                resp = await asyncio.to_thread(
-                    lambda: req_lib.post(
-                        "https://api.cognitive.microsofttranslator.com/translate",
-                        headers={**headers, "X-ClientTraceId": str(uuid.uuid4())},
-                        params=params,
-                        json=[{"text": title_ko}],
-                        timeout=10,
-                    )
-                )
-                resp.raise_for_status()
-                data = resp.json()
-                translations = {t["to"]: t["text"] for t in data[0]["translations"]}
-            except Exception:
-                translations = {lang: title_ko for lang in SUPPORTED_LANGUAGES}
+            lang_results = await _batch_translate_all_langs([title_ko], SUPPORTED_LANGUAGES)
+            translations = {
+                lang: res[0] if res else title_ko
+                for lang, res in lang_results.items()
+            }
             await asyncio.sleep(0.3)
             result.append({
                 "title_ko": title_ko,
@@ -350,7 +223,7 @@ async def crawl_notices():
 # ── 식단 단건 배치 번역 (retranslate용) ──────────────────
 @app.post("/api/meals/translate-batch")
 async def translate_meal_batch(request: Request):
-    """식당명·코너명·메뉴를 전체 언어로 한 번에 번역 (DeepL+Google+Azure 라우팅)"""
+    """식당명·코너명·메뉴를 전체 언어로 한 번에 번역 (DeepL/Azure only)"""
     try:
         data = await request.json()
         cafeteria = data.get("cafeteria", "")
