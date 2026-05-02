@@ -48,7 +48,7 @@ const buildWavBuffer = (pcm: Uint8Array, sampleRate: number, channels: number): 
   return wav.buffer;
 };
 
-const PCM_TARGET_SIZE = 16000 * 2 * 3; // 3초: 16kHz 16-bit mono
+const PCM_TARGET_SIZE = 16000 * 2 * 1.5; // 1.5초: 16kHz 16-bit mono
 
 const PRIMARY = '#4F46E5';
 const AGORA_APP_ID = process.env.EXPO_PUBLIC_AGORA_APP_ID ?? '';
