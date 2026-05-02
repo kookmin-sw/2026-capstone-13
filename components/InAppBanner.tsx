@@ -73,6 +73,7 @@ export default function InAppBanner() {
           partnerUserId: current.roomParams?.partnerId ?? '',
           partnerPreferredLanguage: current.roomParams?.partnerPreferredLanguage ?? 'en',
           isDirect: current.roomParams?.isDirect ? 'true' : 'false',
+          partnerPreferredLanguage: current.roomParams?.partnerPreferredLanguage ?? 'en',
         },
       });
     } else if (current.type === 'notification') {

@@ -102,7 +102,7 @@ export default function MainLayout() {
       const directRoomIds = new Set<number>();
       helpResults.forEach((result) => {
         if (result.status === 'fulfilled' && result.value.success && Array.isArray(result.value.data)) {
-          result.value.data
+          (result.value.data as { id: number; status: string }[])
             .filter((r) => r.status === 'IN_PROGRESS' || r.status === 'MATCHED')
             .forEach((r) => activeRoomIds.add(r.id));
         }
@@ -138,7 +138,14 @@ export default function MainLayout() {
                   const { activeChatroomId } = useChatStore.getState();
                   if (msg.senderId === user?.id || activeChatroomId === roomId) return;
                   const isVideo = msg.content.startsWith('SYS_CALL_VIDEO:');
-                  const callerNickname = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const rawCallContent = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const lastColon = rawCallContent.lastIndexOf(':');
+                  const callerNickname = lastColon > 0 ? rawCallContent.slice(0, lastColon) : rawCallContent;
+                  const callerLang = lastColon > 0 ? rawCallContent.slice(lastColon + 1) : null;
+                  const bcp47Map: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-Hans': 'zh-CN', ru: 'ru-RU', mn: 'mn-MN', vi: 'vi-VN' };
+                  const myLang = user?.userType === 'KOREAN' ? 'ko-KR' : (bcp47Map[user?.preferredLanguage ?? ''] ?? 'en-US');
+                  const roomInfo = roomCacheRef.current[roomId];
+                  const targetLang = user?.userType !== 'KOREAN' ? 'ko' : (callerLang ?? roomInfo?.partnerPreferredLanguage ?? 'en');
                   Alert.alert(
                     isVideo ? t('chat.videoCall') : t('chat.voiceCall'),
                     t('chat.callRequest', { caller: callerNickname, type: isVideo ? 'video' : 'voice' }),
@@ -152,9 +159,10 @@ export default function MainLayout() {
                             roomId: String(roomId),
                             partnerNickname: callerNickname,
                             voiceOnly: isVideo ? 'false' : 'true',
+                            language: myLang,
                             myUserId: String(user.id),
                             partnerUserId: roomCacheRef.current[roomId]?.partnerId ?? '',
-                            targetLanguage: roomCacheRef.current[roomId]?.partnerPreferredLanguage ?? 'en',
+                            targetLanguage: targetLang,
                           },
                         }),
                       },
@@ -200,7 +208,13 @@ export default function MainLayout() {
                   const { activeChatroomId } = useChatStore.getState();
                   if (msg.senderId === user?.id || activeChatroomId === roomId) return;
                   const isVideo = msg.content.startsWith('SYS_CALL_VIDEO:');
-                  const callerNickname = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const rawCallContentD = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const lastColonD = rawCallContentD.lastIndexOf(':');
+                  const callerNickname = lastColonD > 0 ? rawCallContentD.slice(0, lastColonD) : rawCallContentD;
+                  const callerLangD = lastColonD > 0 ? rawCallContentD.slice(lastColonD + 1) : null;
+                  const bcp47MapD: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-Hans': 'zh-CN', ru: 'ru-RU', mn: 'mn-MN', vi: 'vi-VN' };
+                  const myLangD = user?.userType === 'KOREAN' ? 'ko-KR' : (bcp47MapD[user?.preferredLanguage ?? ''] ?? 'en-US');
+                  const targetLangD = user?.userType !== 'KOREAN' ? 'ko' : (callerLangD ?? 'en');
                   Alert.alert(
                     isVideo ? t('chat.videoCall') : t('chat.voiceCall'),
                     t('chat.callRequest', { caller: callerNickname, type: isVideo ? 'video' : 'voice' }),
@@ -214,8 +228,10 @@ export default function MainLayout() {
                             roomId: String(roomId),
                             partnerNickname: callerNickname,
                             voiceOnly: isVideo ? 'false' : 'true',
+                            language: myLangD,
                             myUserId: String(user.id),
                             partnerUserId: roomCacheRef.current[-(roomId)]?.partnerId ?? '',
+                            targetLanguage: targetLangD,
                           },
                         }),
                       },

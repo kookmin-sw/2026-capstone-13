@@ -18,6 +18,7 @@ export interface BannerItem {
     partnerId?: string;
     partnerPreferredLanguage?: string;
     isDirect?: boolean;
+    partnerPreferredLanguage?: string;
   };
 }
 

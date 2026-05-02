@@ -103,6 +103,10 @@ export default function VideoCallScreen() {
   const isStreamingRef = useRef<boolean>(false);
   const showSubtitlesRef = useRef<boolean>(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const bcp47ToLang: Record<string, string> = { 'ko-KR': 'ko', 'en-US': 'en', 'ja-JP': 'ja', 'zh-CN': 'zh-Hans', 'ru-RU': 'ru', 'mn-MN': 'mn', 'vi-VN': 'vi' };
+  const myLangCode = bcp47ToLang[myLanguage] ?? 'en';
+  const effectiveTargetLangRef = useRef(targetLanguage);
+  const connectWebSocketRef = useRef<() => void>(() => {});
 
   // 통화 시간 타이머
   useEffect(() => {
@@ -285,6 +289,17 @@ export default function VideoCallScreen() {
           console.log('[자막] STOMP 메시지 수신:', frame.body);
           try {
             const msg = JSON.parse(frame.body);
+            if (msg.type === 'lang_handshake') {
+              const partnerLang = msg.lang as string;
+              if (partnerLang && partnerLang !== effectiveTargetLangRef.current) {
+                console.log('[자막] 언어 핸드셰이크 수신, targetLanguage 변경:', partnerLang);
+                effectiveTargetLangRef.current = partnerLang;
+                wsRef.current?.close();
+                wsRef.current = null;
+                connectWebSocketRef.current();
+              }
+              return;
+            }
             if (msg.type === 'subtitle' && msg.subtitleText && showSubtitlesRef.current) {
               setTranscripts((prev) => [...prev, {
                 id: Date.now().toString(),
@@ -296,13 +311,19 @@ export default function VideoCallScreen() {
             // 파싱 오류 무시
           }
         });
+        if (partnerUserId) {
+          client.publish({
+            destination: '/app/call/signal',
+            body: JSON.stringify({ type: 'lang_handshake', fromUserId: myUserId, toUserId: partnerUserId, lang: myLangCode }),
+          });
+        }
       },
       onDisconnect: () => console.log('[자막] STOMP 연결 끊김'),
       onStompError: (frame) => console.log('[자막] STOMP 오류:', frame.headers['message']),
     });
     client.activate();
     stompRef.current = client;
-  }, [myUserId, targetLanguage]);
+  }, [myUserId, targetLanguage, myLangCode, partnerUserId]);
 
   // 통화 시작 시 자동으로 STOMP 구독 (자막 수신 대기)
   useEffect(() => {
@@ -320,9 +341,9 @@ export default function VideoCallScreen() {
     console.log('[자막] AI WebSocket 연결 시도:', WS_SPEECH_URL);
     const ws = new WebSocket(WS_SPEECH_URL);
     ws.onopen = () => {
-      console.log('[자막] AI WebSocket 연결 성공, language:', myLanguage, 'target:', targetLanguage);
+      console.log('[자막] AI WebSocket 연결 성공, language:', myLanguage, 'target:', effectiveTargetLangRef.current);
       setIsConnected(true);
-      ws.send(JSON.stringify({ language: myLanguage, target_language: targetLanguage }));
+      ws.send(JSON.stringify({ language: myLanguage, target_language: effectiveTargetLangRef.current }));
     };
     ws.onerror = (e) => {
       console.log('[자막] AI WebSocket 오류:', e);
@@ -351,7 +372,11 @@ export default function VideoCallScreen() {
     ws.onclose = () => setIsConnected(false);
     ws.onerror = () => setIsConnected(false);
     wsRef.current = ws;
-  }, [myLanguage, targetLanguage, myUserId, partnerUserId]);
+  }, [myLanguage, myUserId, partnerUserId]);
+
+  useEffect(() => {
+    connectWebSocketRef.current = connectWebSocket;
+  }, [connectWebSocket]);
 
   // 채널 입장 시 자동으로 오디오 스트리밍 시작 (자막 버튼과 무관)
   useEffect(() => {
@@ -359,6 +384,16 @@ export default function VideoCallScreen() {
     connectWebSocket();
     isStreamingRef.current = true;
   }, [isJoined, connectWebSocket]);
+
+  // 상대방이 Agora 채널에 입장하면 언어 핸드셰이크 재전송
+  useEffect(() => {
+    if (remoteUid !== null && stompRef.current?.connected && partnerUserId && myUserId) {
+      stompRef.current.publish({
+        destination: '/app/call/signal',
+        body: JSON.stringify({ type: 'lang_handshake', fromUserId: myUserId, toUserId: partnerUserId, lang: myLangCode }),
+      });
+    }
+  }, [remoteUid]);
 
   // 자막 스트리밍 중지
   const stopStreaming = () => {
