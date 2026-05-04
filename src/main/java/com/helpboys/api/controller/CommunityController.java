@@ -214,13 +214,13 @@ public class CommunityController {
     }
 
     private Long extractUserId(String bearerToken) {
-        return jwtUtil.extractUserId(bearerToken.replace("Bearer ", ""));
+        return jwtUtil.extractUserIdFromBearer(bearerToken);
     }
 
     private String resolveLang(String queryLang, String token) {
         if (queryLang != null && !queryLang.isBlank()) return queryLang;
         try {
-            Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+            Long userId = jwtUtil.extractUserIdFromBearer(token);
             return userRepository.findById(userId)
                     .map(u -> u.getPreferredLanguage() != null ? u.getPreferredLanguage() : "en")
                     .orElse("en");

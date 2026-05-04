@@ -56,6 +56,6 @@ public class ReviewController {
     }
 
     private Long extractUserId(String bearerToken) {
-        return jwtUtil.extractUserId(bearerToken.replace("Bearer ", ""));
+        return jwtUtil.extractUserIdFromBearer(bearerToken);
     }
 }

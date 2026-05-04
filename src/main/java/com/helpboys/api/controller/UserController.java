@@ -33,7 +33,7 @@ public class UserController {
     @GetMapping("/list/koreans")
     public ResponseEntity<ApiResponse<List<UserResponse>>> getKoreanUsers(
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         return ResponseEntity.ok(ApiResponse.success("조회 성공", userService.getKoreanUsers(userId)));
     }
 
@@ -47,7 +47,7 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserResponse>> getMyProfile(
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         return ResponseEntity.ok(ApiResponse.success("조회 성공", userService.getUserById(userId)));
     }
 
@@ -63,7 +63,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> updateBio(
             @RequestBody Map<String, String> body,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         return ResponseEntity.ok(ApiResponse.success("수정 완료", userService.updateBio(userId, body.get("bio"))));
     }
 
@@ -72,7 +72,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
             @RequestBody Map<String, String> body,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         return ResponseEntity.ok(ApiResponse.success("수정 완료", userService.updateProfile(userId, body)));
     }
 
@@ -90,7 +90,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> updateFcmToken(
             @RequestBody Map<String, String> body,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         userService.updateFcmToken(userId, body.get("fcmToken"));
         return ResponseEntity.ok(ApiResponse.success("FCM 토큰 저장 완료", null));
     }
@@ -100,7 +100,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> uploadProfileImage(
             @RequestParam("image") MultipartFile file,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         if (!rateLimiter.isAllowed("upload:min:" + userId, 10, 60) ||
             !rateLimiter.isAllowed("upload:day:" + userId, 50, 86400)) {
             throw new BusinessException("업로드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
@@ -114,7 +114,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<String>> uploadStudentId(
             @RequestBody Map<String, String> body,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         userService.uploadStudentId(userId, body.get("imageUrl"));
         return ResponseEntity.ok(ApiResponse.success("학생증이 제출되었습니다. 심사 후 인증됩니다.", null));
     }
@@ -144,7 +144,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @Valid @RequestBody PasswordChangeRequest request,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         userService.changePassword(userId, request);
         return ResponseEntity.ok(ApiResponse.success("비밀번호가 변경되었습니다.", null));
     }
@@ -154,13 +154,13 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> deleteAccount(
             @RequestBody Map<String, String> body,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         userService.deleteAccount(userId, body.get("password"));
         return ResponseEntity.ok(ApiResponse.success("회원 탈퇴가 완료되었습니다.", null));
     }
 
     private void checkAdmin(String bearerToken) {
-        Long userId = jwtUtil.extractUserId(bearerToken.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(bearerToken);
         userService.checkAdmin(userId);
     }
 }

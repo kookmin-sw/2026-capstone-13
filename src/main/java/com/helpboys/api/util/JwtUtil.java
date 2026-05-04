@@ -43,6 +43,11 @@ public class JwtUtil {
         return getClaims(token).get("userId", Long.class);
     }
 
+    // Bearer 접두사 포함 토큰에서 userId 추출
+    public Long extractUserIdFromBearer(String bearerToken) {
+        return extractUserId(bearerToken.replace("Bearer ", ""));
+    }
+
     // 토큰 유효성 검증
     public boolean validateToken(String token) {
         try {
