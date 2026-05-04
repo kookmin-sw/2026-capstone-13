@@ -68,7 +68,7 @@ public class MealController {
     }
 
     private void checkAdmin(String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         userService.checkAdmin(userId);
     }
 
@@ -76,7 +76,7 @@ public class MealController {
         if (queryLang != null && !queryLang.isBlank()) return queryLang;
         if (token != null) {
             try {
-                Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+                Long userId = jwtUtil.extractUserIdFromBearer(token);
                 return userService.getUserPreferredLanguage(userId);
             } catch (Exception ignored) {}
         }
