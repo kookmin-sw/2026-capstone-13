@@ -36,14 +36,19 @@ export default function RootLayout() {
       .finally(() => setIsI18nReady(true));
   }, [loadUser]);
 
-  // 로그인 완료 후 isNewUser이면 프로필 설정으로 이동
+  // 인증 상태에 따라 화면 분기
   useEffect(() => {
     if (!isI18nReady) return;
     if (isLoading) return;
-    if (!user) return;
 
     const inAuth = firstSegment === '(auth)';
     const inProfileSetup = String(firstSegment) === 'profile-setup';
+
+    if (!user) {
+      // 비로그인 상태면 로그인 화면으로
+      if (!inAuth) router.replace('/(auth)/login' as Href);
+      return;
+    }
 
     if (isNewUser && !inProfileSetup) {
       router.replace('/profile-setup' as Href);
