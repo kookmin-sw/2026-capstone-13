@@ -24,7 +24,7 @@
     "password": "Password",
     "login": "Log In",
     "loginFailed": "Login Failed",
-    "loginError": "Login failed. Please try again.",
+    "loginError": "Please enter a valid email or password.",
     "enterEmailPassword": "Please enter your email and password.",
     "forgotPassword": "Forgot your password?",
     "noAccount": "Don't have an account? ",

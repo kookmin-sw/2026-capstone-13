@@ -24,8 +24,9 @@ import { useTranslation } from 'react-i18next';
 import type { User } from '../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CARD_WIDTH  = Math.min(SCREEN_WIDTH, 430) - 90;
-const CARD_HEIGHT = Math.min(Math.round(SCREEN_HEIGHT * 0.53), 480);
+const IS_TABLET   = SCREEN_WIDTH >= 768;
+const CARD_WIDTH  = IS_TABLET ? Math.min(SCREEN_WIDTH * 0.55, 600) : SCREEN_WIDTH - 90;
+const CARD_HEIGHT = IS_TABLET ? Math.min(Math.round(SCREEN_HEIGHT * 0.55), 650) : Math.round(SCREEN_HEIGHT * 0.53);
 const ACCENT      = '#0EA5E9';
 const BLUE        = '#3B6FE8';
 

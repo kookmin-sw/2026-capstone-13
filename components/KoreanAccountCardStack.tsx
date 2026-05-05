@@ -22,8 +22,9 @@ import { useTranslation } from 'react-i18next';
 import type { HelpRequest } from '../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CARD_WIDTH  = Math.min(SCREEN_WIDTH, 430) - 90;
-const CARD_HEIGHT = Math.min(Math.round(SCREEN_HEIGHT * 0.51), 460);
+const IS_TABLET   = SCREEN_WIDTH >= 768;
+const CARD_WIDTH  = IS_TABLET ? Math.min(SCREEN_WIDTH * 0.55, 600) : SCREEN_WIDTH - 90;
+const CARD_HEIGHT = IS_TABLET ? Math.min(Math.round(SCREEN_HEIGHT * 0.53), 630) : Math.round(SCREEN_HEIGHT * 0.51);
 const ACCENT = '#3B6FE8';
 
 // 슬롯별 scale / 오른쪽 peek offset (슬롯 0 = 앞, 1 = 중간, 2 = 뒤)
