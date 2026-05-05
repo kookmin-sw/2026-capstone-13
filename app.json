@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.helpboys.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "음성/영상 통화를 위해 마이크 권한이 필요합니다.",

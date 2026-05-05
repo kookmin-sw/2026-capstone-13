@@ -332,15 +332,15 @@ const goTo = (item: HelpRequest) =>
               }]} />
               <TouchableOpacity style={s.viewTab} onPress={() => switchIntlTab('card')} activeOpacity={0.8}>
                 <Ionicons name="layers-outline" size={14} color={intlTab === 'card' ? '#fff' : '#888'} />
-                <Text style={[s.viewTabText, intlTab === 'card' && s.viewTabTextOn]}>{t('home.viewHelpers')}</Text>
+                <Text style={[s.viewTabText, intlTab === 'card' && s.viewTabTextOn]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('home.viewHelpers')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.viewTab} onPress={() => switchIntlTab('write')} activeOpacity={0.8}>
                 <Ionicons name="pencil-outline" size={14} color={intlTab === 'write' ? '#fff' : '#888'} />
-                <Text style={[s.viewTabText, intlTab === 'write' && s.viewTabTextOn]}>{t('home.requestHelp')}</Text>
+                <Text style={[s.viewTabText, intlTab === 'write' && s.viewTabTextOn]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('home.requestHelp')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.viewTab} onPress={() => switchIntlTab('list')} activeOpacity={0.8}>
                 <Ionicons name="list-outline" size={14} color={intlTab === 'list' ? '#fff' : '#888'} />
-                <Text style={[s.viewTabText, intlTab === 'list' && s.viewTabTextOn]}>{t('home.viewList')}</Text>
+                <Text style={[s.viewTabText, intlTab === 'list' && s.viewTabTextOn]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('home.viewList')}</Text>
               </TouchableOpacity>
             </View>
             <View style={{ display: intlTab === 'card' ? 'flex' : 'none', marginLeft: 6, marginBottom: 10 }}>
@@ -479,11 +479,11 @@ const goTo = (item: HelpRequest) =>
               }]} />
               <TouchableOpacity style={s.viewTab} onPress={() => switchTab('card')} activeOpacity={0.8}>
                 <Ionicons name="layers-outline" size={14} color={viewMode === 'card' ? '#fff' : '#888'} />
-                <Text style={[s.viewTabText, viewMode === 'card' && s.viewTabTextOn]}>{t('home.viewCard')}</Text>
+                <Text style={[s.viewTabText, viewMode === 'card' && s.viewTabTextOn]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('home.viewCard')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.viewTab} onPress={() => switchTab('list')} activeOpacity={0.8}>
                 <Ionicons name="list-outline" size={14} color={viewMode === 'list' ? '#fff' : '#888'} />
-                <Text style={[s.viewTabText, viewMode === 'list' && s.viewTabTextOn]}>{t('home.viewHelpList')}</Text>
+                <Text style={[s.viewTabText, viewMode === 'list' && s.viewTabTextOn]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('home.viewHelpList')}</Text>
               </TouchableOpacity>
             </View>
             <View style={{ display: viewMode === 'card' ? 'flex' : 'none', marginLeft: 6, marginBottom: 24, marginTop: -10 }}>
@@ -1258,8 +1258,8 @@ const s = StyleSheet.create({
   },
   listFilterScroll: { flexDirection: 'row', flexWrap: 'wrap', gap: sc(6), alignItems: 'center' },
   listFilterChip: {
-    width: sc(58),
     paddingVertical: sc(9),
+    paddingHorizontal: sc(12),
     borderRadius: sc(10),
     backgroundColor: '#fff',
     alignItems: 'center',

@@ -57,21 +57,21 @@ export default function RootLayout() {
   return (
     <I18nextProvider i18n={i18nInstance}>
     <GestureHandlerRootView key={appLanguage} style={{ flex: 1 }}>
-      <PermissionsModal visible={modalVisible} onConfirm={handleConfirm} />
-      <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="profile-setup" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(main)" />
-        <Stack.Screen name="request-detail" />
-        <Stack.Screen name="chatroom" />
-        <Stack.Screen name="community-write" />
-        <Stack.Screen name="search" />
-        <Stack.Screen name="my-requests" />
-        <Stack.Screen name="my-help-history" />
-        <Stack.Screen name="change-password" />
-      </Stack>
-      <StatusBar style="dark" />
+        <PermissionsModal visible={modalVisible} onConfirm={handleConfirm} />
+        <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="profile-setup" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(main)" />
+          <Stack.Screen name="request-detail" />
+          <Stack.Screen name="chatroom" />
+          <Stack.Screen name="community-write" />
+          <Stack.Screen name="search" />
+          <Stack.Screen name="my-requests" />
+          <Stack.Screen name="my-help-history" />
+          <Stack.Screen name="change-password" />
+        </Stack>
+        <StatusBar style="dark" />
     </GestureHandlerRootView>
     </I18nextProvider>
   );

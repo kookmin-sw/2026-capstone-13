@@ -22,8 +22,8 @@ import { useTranslation } from 'react-i18next';
 import type { HelpRequest } from '../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CARD_WIDTH  = SCREEN_WIDTH - 90;
-const CARD_HEIGHT = Math.round(SCREEN_HEIGHT * 0.53);
+const CARD_WIDTH  = Math.min(SCREEN_WIDTH, 430) - 90;
+const CARD_HEIGHT = Math.min(Math.round(SCREEN_HEIGHT * 0.51), 460);
 const ACCENT = '#3B6FE8';
 
 // 슬롯별 scale / 오른쪽 peek offset (슬롯 0 = 앞, 1 = 중간, 2 = 뒤)
@@ -293,7 +293,7 @@ export default function KoreanAccountCardStack({ requests, onCardPress, onAccept
 const styles = StyleSheet.create({
   wrapper: {
     alignItems: 'center',
-    marginTop: s(16),
+    marginTop: s(8),
   },
   stack: {
     width: CARD_WIDTH + SLOT_PEEK_X[2],

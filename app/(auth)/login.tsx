@@ -264,49 +264,6 @@ export default function LoginScreen() {
                 transform: [{ translateY: stagger[4].translateY }],
               }}
             >
-              <View style={styles.testTopButtons}>
-                <TouchableOpacity
-                  style={styles.testButtonNew}
-                  onPress={() => router.push('/profile-setup' as Href)}
-                >
-                  <Text style={styles.testButtonNewText}>👤 신규사용자</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.testButtons}>
-                <TouchableOpacity
-                  style={[styles.testButton, styles.testButtonInternational]}
-                  onPress={async () => {
-                    const success = await login({
-                      email: 'sang020531@naver.com',
-                      password: 'sang3036828@',
-                    });
-                    if (success) {
-                      router.replace('/(main)/home');
-                    } else {
-                      Alert.alert('실패', '외국인 테스트 계정 로그인 실패');
-                    }
-                  }}
-                >
-                  <Text style={styles.testButtonText}>🌍 외국인 계정</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.testButton, styles.testButtonKorean]}
-                  onPress={async () => {
-                    const success = await login({
-                      email: 'sang020531@kookmin.ac.kr',
-                      password: 'sang3036828@',
-                    });
-                    if (success) {
-                      router.replace('/(main)/home');
-                    } else {
-                      Alert.alert('실패', '한국인 테스트 계정 로그인 실패');
-                    }
-                  }}
-                >
-                  <Text style={styles.testButtonText}>🇰🇷 한국인 계정</Text>
-                </TouchableOpacity>
-              </View>
             </Animated.View>
 
           </View>
@@ -478,48 +435,6 @@ const styles = StyleSheet.create({
     fontSize: s(14),
     color: BLUE,
     fontWeight: '700',
-  },
-  testTopButtons: {
-    marginTop: s(8),
-    marginBottom: s(6),
-  },
-  testButtonNew: {
-    paddingVertical: s(10),
-    borderRadius: s(10),
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#10B981',
-    backgroundColor: '#ECFDF5',
-  },
-  testButtonNewText: {
-    fontSize: s(13),
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  testButtons: {
-    flexDirection: 'row',
-    gap: s(10),
-    marginTop: s(8),
-  },
-  testButton: {
-    flex: 1,
-    paddingVertical: s(10),
-    borderRadius: s(10),
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  testButtonInternational: {
-    borderColor: BLUE,
-    backgroundColor: '#EBF5FF',
-  },
-  testButtonKorean: {
-    borderColor: '#E53935',
-    backgroundColor: '#FFEBEE',
-  },
-  testButtonText: {
-    fontSize: s(13),
-    fontWeight: '600',
-    color: Colors.textPrimary,
   },
   modalOverlay: {
     flex: 1,
