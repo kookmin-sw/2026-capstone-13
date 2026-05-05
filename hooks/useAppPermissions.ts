@@ -1,28 +1,32 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
-import * as Notifications from 'expo-notifications';
 import { useState, useEffect } from 'react';
 import { InteractionManager, PermissionsAndroid, Platform } from 'react-native';
 
 const PERMISSION_KEY = 'app_permissions_requested_v1';
 
 async function requestAllPermissions() {
-  // 1. 알림
-  if (Platform.OS === 'ios') {
-    const { status } = await Notifications.getPermissionsAsync();
-    if (status !== 'granted') {
-      await Notifications.requestPermissionsAsync();
-    }
-  } else if (Number(Platform.Version) >= 33) {
-    const granted = await PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-    );
-    if (!granted) {
-      await PermissionsAndroid.request(
+  // 1. 알림 (시뮬레이터/에뮬레이터는 푸시 미지원으로 건너뜀)
+  try {
+    const Notifications = await import('expo-notifications');
+    if (Platform.OS === 'ios') {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        await Notifications.requestPermissionsAsync();
+      }
+    } else if (Number(Platform.Version) >= 33) {
+      const granted = await PermissionsAndroid.check(
         PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
       );
+      if (!granted) {
+        await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+      }
     }
+  } catch {
+    // 시뮬레이터 등 푸시 미지원 환경에서는 무시
   }
 
   // 2. 카메라
