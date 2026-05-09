@@ -28,4 +28,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query("UPDATE User u SET u.rating = (SELECT ROUND(AVG(r.rating) * 10) / 10.0 FROM Review r WHERE r.reviewee.id = :id), u.ratingCount = (SELECT COUNT(r) FROM Review r WHERE r.reviewee.id = :id) WHERE u.id = :id")
     void updateRatingFromReviews(@Param("id") Long id);
+
+    @Query("SELECT u FROM User u WHERE u.userType = 'KOREAN' AND u.id NOT IN :excludeIds AND u.isDeleted = false ORDER BY u.rating DESC, u.helpCount DESC")
+    List<User> findTopKoreanHelpersByRating(@Param("excludeIds") List<Long> excludeIds, Pageable pageable);
 }
