@@ -37,4 +37,14 @@ public interface HelpRequestRepository extends JpaRepository<HelpRequest, Long> 
 
     @Query("SELECT h FROM HelpRequest h WHERE h.title LIKE %:keyword% OR h.description LIKE %:keyword% ORDER BY h.createdAt DESC")
     List<HelpRequest> searchByKeyword(@Param("keyword") String keyword);
+
+    @Query("SELECT h.helper, COUNT(h) as cnt FROM HelpRequest h " +
+           "WHERE h.category = :category AND h.status = :status " +
+           "AND h.helper IS NOT NULL AND h.helper.id NOT IN :excludeIds AND h.helper.isDeleted = false " +
+           "GROUP BY h.helper ORDER BY cnt DESC, h.helper.rating DESC")
+    List<Object[]> findTopHelpersByCategory(
+            @Param("category") HelpRequest.HelpCategory category,
+            @Param("status") HelpRequest.RequestStatus status,
+            @Param("excludeIds") List<Long> excludeIds,
+            Pageable pageable);
 }
