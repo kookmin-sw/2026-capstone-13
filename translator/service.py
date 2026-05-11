@@ -146,9 +146,29 @@ Reply "null" or one sentence only."""
         import time
         self._deepl_quota_exceeded_at = time.time() if value else None
 
-    async def translate_text(self, text: str, target_lang: str = "en", source_lang: Optional[str] = None):
-        """단건 번역: DeepL → Groq → Azure. Gemini/Google은 사용하지 않음."""
+    async def translate_text(
+        self,
+        text: str,
+        target_lang: str = "en",
+        source_lang: Optional[str] = None,
+        prefer_llm: bool = False,
+        allow_llm: bool = True,
+        context: Optional[str] = None,
+    ):
+        """단건 번역.
+
+        - prefer_llm=True: 채팅/커뮤니티/통화 자막처럼 말투가 중요한 텍스트. Groq → DeepL → Azure.
+        - allow_llm=False: 공지/식단처럼 정형 텍스트. DeepL → Azure.
+        - 기본값: DeepL → Groq → Azure.
+        Gemini/Google은 사용하지 않음.
+        """
         errors = []
+
+        if prefer_llm and allow_llm and self.groq_client:
+            try:
+                return await self._groq_translate(text, target_lang, source_lang, context)
+            except Exception as e:
+                errors.append(str(e))
 
         if target_lang in DEEPL_SUPPORTED and self.deepl_key and not self.deepl_quota_exceeded:
             try:
@@ -158,9 +178,9 @@ Reply "null" or one sentence only."""
             except Exception as e:
                 errors.append(str(e))
 
-        if self.groq_client:
+        if allow_llm and self.groq_client:
             try:
-                return await self._groq_translate(text, target_lang, source_lang)
+                return await self._groq_translate(text, target_lang, source_lang, context)
             except Exception as e:
                 errors.append(str(e))
 
@@ -245,11 +265,14 @@ Reply "null" or one sentence only."""
             raise RuntimeError("GROQ_API_KEY가 설정되지 않았습니다")
 
         lang_name = LANG_NAMES.get(target_lang, target_lang)
+        source_name = LANG_NAMES.get(source_lang or "", source_lang or "the source language")
         if context:
-            prompt = f"""Translate this Korean comment into natural, colloquial {lang_name}.
-IMPORTANT: This is Korean internet/chat slang. Do NOT translate literally.
-- "개가 뭐래" = "what's their problem" / "what are they on about" (NOT "what does the dog say")
-- "개" as prefix = intensifier meaning "very/super" (NOT "dog")
+            prompt = f"""Translate this comment from {source_name} into natural, colloquial {lang_name}.
+IMPORTANT: This may contain Korean or international student chat slang. Do NOT translate literally.
+- If Korean slang appears, translate the meaning and tone. Examples:
+  - "개가 뭐래" = "what's their problem" / "what are they on about" (NOT "what does the dog say")
+  - "개" as prefix = intensifier meaning "very/super" (NOT "dog")
+  - "킹받다" = "so annoying / drives me crazy" (NOT anything about "king")
 - Translate the MEANING and TONE, not the words literally.
 Use the post context to understand nuance.
 Return ONLY the translation.
@@ -259,11 +282,12 @@ Post context:
 
 Comment to translate: {text}"""
         else:
-            prompt = f"""Translate this Korean text into natural, colloquial {lang_name}.
-IMPORTANT: This is Korean internet/chat slang. Do NOT translate literally.
-- "개가 뭐래" = "what's their problem" / "what are they on about" (NOT "what does the dog say")
-- "개" as prefix = intensifier meaning "very/super" (NOT "dog")
-- "킹받다" = "so annoying / drives me crazy" (NOT anything about "king")
+            prompt = f"""Translate this text from {source_name} into natural, colloquial {lang_name}.
+IMPORTANT: This may contain Korean or international student chat slang. Do NOT translate literally.
+- If Korean slang appears, translate the meaning and tone. Examples:
+  - "개가 뭐래" = "what's their problem" / "what are they on about" (NOT "what does the dog say")
+  - "개" as prefix = intensifier meaning "very/super" (NOT "dog")
+  - "킹받다" = "so annoying / drives me crazy" (NOT anything about "king")
 - Translate the MEANING and TONE, not the words literally.
 Return ONLY the translation.
 
