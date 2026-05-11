@@ -118,6 +118,7 @@ export default function VideoCallScreen() {
   const isStreamingRef = useRef<boolean>(false);
   const showSubtitlesRef = useRef<boolean>(true);
   const subtitleRequestInFlightRef = useRef<boolean>(false);
+  const pendingSubtitleRef = useRef<string[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bcp47ToLang: Record<string, string> = { 'ko-KR': 'ko', 'en-US': 'en', 'ja-JP': 'ja', 'zh-CN': 'zh-Hans', 'ru-RU': 'ru', 'mn-MN': 'mn', 'vi-VN': 'vi' };
   const myLangCode = bcp47ToLang[myLanguage] ?? 'en';
@@ -310,11 +311,26 @@ export default function VideoCallScreen() {
       reconnectDelay: 5000,
       onConnect: () => {
         console.log('[자막] STOMP 연결 성공, 구독:', `/topic/call/${myUserId}`);
+        if (partnerUserId && pendingSubtitleRef.current.length > 0) {
+          pendingSubtitleRef.current.forEach((subtitleText) => {
+            client.publish({
+              destination: '/app/call/signal',
+              body: JSON.stringify({
+                type: 'subtitle',
+                fromUserId: myUserId,
+                toUserId: partnerUserId,
+                subtitleText,
+              }),
+            });
+          });
+          pendingSubtitleRef.current = [];
+        }
         client.subscribe(`/topic/call/${myUserId}`, (frame) => {
           console.log('[자막] STOMP 메시지 수신:', frame.body);
           try {
             const msg = JSON.parse(frame.body);
-            if (msg.type === 'lang_handshake') {
+            const messageType = typeof msg.type === 'string' ? msg.type.toLowerCase() : '';
+            if (messageType === 'lang_handshake') {
               const partnerCaptionLang = msg.lang as string;
               if (partnerCaptionLang && partnerCaptionLang !== effectiveTargetLangRef.current) {
                 console.log('[자막] 언어 핸드셰이크 수신, targetLanguage 변경:', partnerCaptionLang);
@@ -325,10 +341,11 @@ export default function VideoCallScreen() {
               }
               return;
             }
-            if (msg.type === 'subtitle' && msg.subtitleText && showSubtitlesRef.current) {
+            const incomingSubtitle = msg.subtitleText ?? msg.translatedText;
+            if (messageType === 'subtitle' && incomingSubtitle && showSubtitlesRef.current) {
               setTranscripts((prev) => [...prev, {
                 id: Date.now().toString(),
-                text: msg.subtitleText as string,
+                text: incomingSubtitle as string,
                 language: effectiveTargetLangRef.current,
               }].slice(-3));
             }
@@ -391,17 +408,25 @@ export default function VideoCallScreen() {
         if (data.type === 'transcript' || data.type === 'error') {
           subtitleRequestInFlightRef.current = false;
         }
-        if (data.type === 'transcript' && data.translated && partnerUserId && stompRef.current?.connected) {
-          console.log('[자막] STOMP 전송 → partnerUserId:', partnerUserId, '내용:', data.translated);
-          stompRef.current.publish({
-            destination: '/app/call/signal',
-            body: JSON.stringify({
-              type: 'subtitle',
-              fromUserId: myUserId,
-              toUserId: partnerUserId,
-              subtitleText: data.translated,
-            }),
-          });
+        if (data.type === 'transcript') {
+          const subtitleText = (data.translated || data.text || '').trim();
+          if (!subtitleText || !partnerUserId) return;
+
+          if (stompRef.current?.connected) {
+            console.log('[자막] STOMP 전송 → partnerUserId:', partnerUserId, '내용:', subtitleText);
+            stompRef.current.publish({
+              destination: '/app/call/signal',
+              body: JSON.stringify({
+                type: 'subtitle',
+                fromUserId: myUserId,
+                toUserId: partnerUserId,
+                subtitleText,
+              }),
+            });
+          } else {
+            console.log('[자막] STOMP 미연결 - 자막 대기열 저장:', subtitleText);
+            pendingSubtitleRef.current = [...pendingSubtitleRef.current.slice(-2), subtitleText];
+          }
         }
       } catch {
         // 파싱 오류 무시
@@ -446,6 +471,7 @@ export default function VideoCallScreen() {
     pcmBufferRef.current = [];
     pcmBufferSizeRef.current = 0;
     subtitleRequestInFlightRef.current = false;
+    pendingSubtitleRef.current = [];
     wsRef.current?.close();
     wsRef.current = null;
     setIsConnected(false);
