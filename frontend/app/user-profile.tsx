@@ -574,6 +574,9 @@ export default function UserProfileScreen() {
                     partnerProfileImage: toAbsoluteUrl(user.profileImage) ?? '',
                     isDirect: 'true',
                     roomUnreadCount: String(res.data.unreadCount ?? 0),
+                    partnerUserId: String(res.data.partnerId),
+                    partnerId: String(res.data.partnerId),
+                    partnerPreferredLanguage: res.data.partnerPreferredLanguage ?? 'en',
                   },
                 });
               }

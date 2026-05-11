@@ -1,8 +1,12 @@
 import os
 import json
 import asyncio
+import base64
+import hashlib
+import hmac
+import time
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,9 +24,39 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_origin_regex=".*",
 )
 
 SUPPORTED_LANGUAGES = ["en", "ja", "zh-Hans", "ru", "mn", "vi"]
+AI_SHARED_SECRET = os.getenv("AI_SHARED_SECRET")
+AI_AUTH_HEADER = "X-Helpboys-AI-Key"
+
+
+def verify_internal_request(request: Request):
+    if not AI_SHARED_SECRET:
+        raise HTTPException(status_code=503, detail="AI_SHARED_SECRET is not configured")
+    if request.headers.get(AI_AUTH_HEADER) != AI_SHARED_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+def verify_speech_token(token: str | None) -> bool:
+    if not AI_SHARED_SECRET or not token:
+        return False
+    try:
+        user_id, expires_at, signature = token.split(".", 2)
+        if int(expires_at) < int(time.time()):
+            return False
+        payload = f"{user_id}.{expires_at}"
+        expected = base64.urlsafe_b64encode(
+            hmac.new(
+                AI_SHARED_SECRET.encode("utf-8"),
+                payload.encode("utf-8"),
+                hashlib.sha256,
+            ).digest()
+        ).decode("utf-8").rstrip("=")
+        return hmac.compare_digest(signature, expected)
+    except Exception:
+        return False
 
 
 async def _batch_translate(texts: list[str], target_lang: str, retries: int = 3) -> list[str] | None:
@@ -148,6 +182,7 @@ async def gemini_test():
 # ── Azure 전용 번역 (식단/공지 대량 번역용) ───────────────
 @app.post("/api/azure/translate")
 async def azure_translate(request: Request):
+    verify_internal_request(request)
     data = await request.json()
     text = data.get("text", "")
     target_lang = data.get("target_lang", "en")
@@ -160,18 +195,30 @@ async def azure_translate(request: Request):
 # ── Gemini 번역 엔드포인트 비활성화 ───────────────────────
 @app.post("/api/gemini/translate")
 async def gemini_translate(request: Request):
+    verify_internal_request(request)
     return {"success": False, "message": "Gemini translation endpoint disabled", "data": None}
 
 
 # ── 번역 ──────────────────────────────────────────────────
 @app.post("/api/translate")
 async def translate(request: Request):
+    verify_internal_request(request)
     data = await request.json()
     text = data.get("text", "")
     target_lang = data.get("target_lang", "en")
     source_lang = data.get("source_lang")
+    prefer_llm = bool(data.get("prefer_llm", False))
+    allow_llm = bool(data.get("allow_llm", True))
+    context = data.get("context")
 
-    result = await translation_service.translate_text(text, target_lang, source_lang)
+    result = await translation_service.translate_text(
+        text,
+        target_lang,
+        source_lang,
+        prefer_llm=prefer_llm,
+        allow_llm=allow_llm,
+        context=context,
+    )
     mode = result.get("mode")
     if mode == "deepl":
         mode_message = "DeepL 번역 완료"
@@ -184,6 +231,7 @@ async def translate(request: Request):
 # ── 음성→텍스트 (음성 메시지용 REST) ─────────────────────
 @app.post("/api/speech-to-text")
 async def speech_to_text(request: Request):
+    verify_internal_request(request)
     audio_data = await request.body()
     language = request.headers.get("X-Language")
 
@@ -195,7 +243,8 @@ async def speech_to_text(request: Request):
 
 # ── 공지 크롤링 ───────────────────────────────────────────
 @app.get("/api/notices/crawl")
-async def crawl_notices():
+async def crawl_notices(request: Request):
+    verify_internal_request(request)
     try:
         raw_notices = crawl_all()
         result = []
@@ -223,6 +272,7 @@ async def crawl_notices():
 # ── 식단 단건 배치 번역 (retranslate용) ──────────────────
 @app.post("/api/meals/translate-batch")
 async def translate_meal_batch(request: Request):
+    verify_internal_request(request)
     """식당명·코너명·메뉴를 전체 언어로 한 번에 번역 (DeepL/Azure only)"""
     try:
         data = await request.json()
@@ -250,7 +300,8 @@ async def translate_meal_batch(request: Request):
 
 # ── 식단 크롤링 ───────────────────────────────────────────
 @app.get("/api/meals/crawl")
-async def crawl_meals():
+async def crawl_meals(request: Request):
+    verify_internal_request(request)
     try:
         raw_meals = crawl_weekly_menu()
         result = []
@@ -290,51 +341,88 @@ async def crawl_meals():
 
 
 SUPPORTED_SUBTITLE_LANGS = {"ko", "en", "ja", "zh-Hans", "ru", "mn", "vi"}
+LANG_CODE_ALIASES = {
+    "ko-KR": "ko",
+    "en-US": "en",
+    "en-GB": "en",
+    "ja-JP": "ja",
+    "zh-CN": "zh-Hans",
+    "zh-Hans": "zh-Hans",
+    "ru-RU": "ru",
+    "mn-MN": "mn",
+    "vi-VN": "vi",
+}
+
+
+def normalize_subtitle_lang(lang: str | None, fallback: str = "en") -> str:
+    if not lang:
+        return fallback
+    normalized = LANG_CODE_ALIASES.get(lang, lang)
+    return normalized if normalized in SUPPORTED_SUBTITLE_LANGS else fallback
+
+
 
 # ── 실시간 자막 WebSocket ─────────────────────────────────
 @app.websocket("/ws/speech")
 async def websocket_speech(websocket: WebSocket):
+    token = websocket.query_params.get("token")
+    if not verify_speech_token(token):
+        await websocket.close(code=1008)
+        return
+
     await websocket.accept()
-    client = websocket.client
-    print(f"[WebSocket] 연결됨: {client}")
+    client_addr = websocket.client
+    print(f"[WebSocket] 연결됨: {client_addr}")
 
-    language = None        # 내 언어 (STT용)
-    target_language = None # 상대방 언어 (번역 목적어)
+    language = None
+    source_language = None
+    target_language = None
 
+    # 1. 언어 설정 메시지 수신
     try:
         while True:
             message = await websocket.receive()
-
-            # JSON 설정 메시지 (언어 설정)
             if "text" in message:
                 try:
                     config = json.loads(message["text"])
                     if "language" in config:
                         language = config["language"]
+                        source_language = normalize_subtitle_lang(language, "")
                         print(f"[WebSocket] 내 언어: {language}")
                     if "target_language" in config:
-                        tl = config["target_language"]
-                        target_language = tl if tl in SUPPORTED_SUBTITLE_LANGS else "en"
+                        target_language = normalize_subtitle_lang(config["target_language"], "en")
                         print(f"[WebSocket] 번역 목적어: {target_language}")
                     await websocket.send_text(json.dumps({
                         "type": "config_ack",
                         "language": language,
                         "target_language": target_language,
                     }))
+                    break
                 except json.JSONDecodeError:
                     pass
+    except WebSocketDisconnect:
+        return
+    except Exception as e:
+        print(f"[WebSocket] 설정 수신 실패: {e}")
+        return
 
-            # 오디오 청크 (bytes)
-            elif "bytes" in message and message["bytes"]:
+    # 2. 오디오 청크 수신 루프
+    try:
+        while True:
+            message = await websocket.receive()
+
+            if "bytes" in message and message["bytes"]:
                 audio_data = message["bytes"]
-                result = speech_service.transcribe_audio(audio_data, language)
+                result = await asyncio.to_thread(
+                    speech_service.transcribe_audio, audio_data, language
+                )
                 original_text = result.get("text", "")
 
                 translated_text = ""
-                if original_text and target_language and target_language != language:
+                if original_text and target_language and target_language != source_language:
                     try:
                         tr = await translation_service.translate_text(
-                            original_text, target_language, language
+                            original_text, target_language, source_language,
                         )
                         translated_text = tr.get("translated", "")
                     except Exception as e:
@@ -344,13 +432,13 @@ async def websocket_speech(websocket: WebSocket):
                     "type": "transcript",
                     "text": original_text,
                     "translated": translated_text,
-                    "language": result.get("language", "unknown"),
+                    "language": result.get("language", language or "unknown"),
                     "target_language": target_language,
-                    "mode": result.get("mode", "dummy"),
+                    "mode": result.get("mode", "deepgram"),
                 }, ensure_ascii=False))
 
     except WebSocketDisconnect:
-        print(f"[WebSocket] 연결 종료: {client}")
+        print(f"[WebSocket] 연결 종료: {client_addr}")
     except Exception as e:
         print(f"[WebSocket] 오류: {e}")
         try:
