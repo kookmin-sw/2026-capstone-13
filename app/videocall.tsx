@@ -49,8 +49,7 @@ const buildWavBuffer = (pcm: Uint8Array, sampleRate: number, channels: number): 
   return wav.buffer;
 };
 
-const PCM_CHUNK_SECONDS = 0.7;
-const PCM_TARGET_SIZE = Math.floor(16000 * 2 * PCM_CHUNK_SECONDS); // 16kHz 16-bit mono
+const PCM_TARGET_SIZE = 16000 * 2 * 1.5; // 1.5초: 16kHz 16-bit mono
 const PCM_SPEECH_THRESHOLD = 260;
 
 const hasSpeech = (pcm: Uint8Array): boolean => {
@@ -117,7 +116,6 @@ export default function VideoCallScreen() {
   const pcmChannelsRef = useRef<number>(1);
   const isStreamingRef = useRef<boolean>(false);
   const showSubtitlesRef = useRef<boolean>(true);
-  const subtitleRequestInFlightRef = useRef<boolean>(false);
   const pendingSubtitleRef = useRef<string[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bcp47ToLang: Record<string, string> = { 'ko-KR': 'ko', 'en-US': 'en', 'ja-JP': 'ja', 'zh-CN': 'zh-Hans', 'ru-RU': 'ru', 'mn-MN': 'mn', 'vi-VN': 'vi' };
@@ -223,14 +221,9 @@ export default function VideoCallScreen() {
             for (const chunk of pcmBufferRef.current) { combined.set(chunk, offset); offset += chunk.length; }
             pcmBufferRef.current = [];
             pcmBufferSizeRef.current = 0;
-            if (subtitleRequestInFlightRef.current) {
-              console.log('[자막] 이전 청크 처리 중 - 최신성 우선으로 청크 버림');
-              return;
-            }
             if (!hasSpeech(combined)) {
               return;
             }
-            subtitleRequestInFlightRef.current = true;
             console.log('[자막] PCM 전송:', combined.length, 'bytes, sr:', pcmSampleRateRef.current);
             wsRef.current.send(buildWavBuffer(combined, pcmSampleRateRef.current, pcmChannelsRef.current));
           }
@@ -405,9 +398,7 @@ export default function VideoCallScreen() {
       try {
         const data = JSON.parse(event.data as string);
         console.log('[자막] AI 응답:', JSON.stringify(data));
-        if (data.type === 'transcript' || data.type === 'error') {
-          subtitleRequestInFlightRef.current = false;
-        }
+
         if (data.type === 'transcript') {
           const subtitleText = (data.translated || data.text || '').trim();
           if (!subtitleText || !partnerUserId) return;
@@ -433,11 +424,9 @@ export default function VideoCallScreen() {
       }
     };
     ws.onclose = () => {
-      subtitleRequestInFlightRef.current = false;
       setIsConnected(false);
     };
     ws.onerror = () => {
-      subtitleRequestInFlightRef.current = false;
       setIsConnected(false);
     };
     wsRef.current = ws;
@@ -470,7 +459,6 @@ export default function VideoCallScreen() {
     setIsStreaming(false);
     pcmBufferRef.current = [];
     pcmBufferSizeRef.current = 0;
-    subtitleRequestInFlightRef.current = false;
     pendingSubtitleRef.current = [];
     wsRef.current?.close();
     wsRef.current = null;
