@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { s } from '../utils/scale';
 import { CategoryLabels } from '../constants/colors';
 import { getHelpRequestById, acceptHelpRequest, cancelHelpRequest } from '../services/helpService';
+import { reportContent } from '../services/reportService';
 import { useAuthStore } from '../stores/authStore';
 import { useTranslation } from 'react-i18next';
 import type { HelpCategory, HelpMethod, HelpRequest } from '../types';
@@ -218,16 +219,17 @@ export default function RequestDetailScreen() {
 
   const goToChatRoom = () => {
     const isKorean = user?.userType === 'KOREAN';
-    const partnerUserId = isKorean ? item.requester.id : (item.helper?.id ?? item.requester.id);
-    const partnerPreferredLanguage = isKorean
-      ? (item.requester.preferredLanguage ?? 'en')
-      : (item.helper?.preferredLanguage ?? 'en');
+    const partner = isKorean ? item.requester : (item.helper ?? item.requester);
+    const partnerUserId = partner.id;
+    const partnerPreferredLanguage = partner.userType === 'KOREAN'
+      ? 'ko'
+      : (partner.preferredLanguage ?? 'en');
     router.push({
       pathname: '/chatroom',
       params: {
         roomId: item.id,
         requestTitle: item.title,
-        partnerNickname: isKorean ? item.requester.nickname : (item.helper?.nickname ?? ''),
+        partnerNickname: partner.nickname,
         requestStatus: item.status,
         requesterId: item.requester.id,
         partnerUserId: String(partnerUserId),
@@ -244,20 +246,32 @@ export default function RequestDetailScreen() {
     t('community.reportOther'),
   ];
 
-  const handleReport = () => {
+  const handleReport = async () => {
     if (!reportReason) {
       Alert.alert(t('community.selectReportReason'));
       return;
     }
-    Alert.alert(t('community.reportDone'), t('community.reportDoneMsg'), [
-      {
-        text: t('common.confirm'),
-        onPress: () => {
-          setReportVisible(false);
-          setReportReason('');
+    if (!item?.requester.id) return;
+
+    try {
+      await reportContent({
+        targetUserId: item.requester.id,
+        targetType: 'HELP_REQUEST',
+        targetId: item.id,
+        reason: reportReason,
+      });
+      Alert.alert(t('community.reportDone'), t('community.reportDoneMsg'), [
+        {
+          text: t('common.confirm'),
+          onPress: () => {
+            setReportVisible(false);
+            setReportReason('');
+          },
         },
-      },
-    ]);
+      ]);
+    } catch {
+      Alert.alert(t('common.error'), t('community.reportFailed'));
+    }
   };
 
   const handleHelp = () => {
@@ -282,7 +296,9 @@ export default function RequestDetailScreen() {
                     requestStatus: 'MATCHED',
                     requesterId: item.requester.id,
                     partnerUserId: String(item.requester.id),
-                    partnerPreferredLanguage: item.requester.preferredLanguage ?? 'en',
+                    partnerPreferredLanguage: item.requester.userType === 'KOREAN'
+                      ? 'ko'
+                      : (item.requester.preferredLanguage ?? 'en'),
                   },
                 });
               } else {
