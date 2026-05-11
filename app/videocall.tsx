@@ -152,111 +152,148 @@ export default function VideoCallScreen() {
 
   // Agora 초기화 및 채널 입장
   useEffect(() => {
+    let released = false;
+
     const initAgora = async () => {
-      const hasPermission = await requestAndroidPermissions();
-      if (!hasPermission) {
-        Alert.alert('권한 필요', '마이크/카메라 권한을 허용해주세요.');
-        router.back();
-        return;
-      }
+      try {
+        if (!params.roomId) {
+          Alert.alert('통화 오류', '통화방 정보가 없습니다.');
+          router.back();
+          return;
+        }
 
-      if (!AGORA_APP_ID) {
-        Alert.alert('설정 오류', 'Agora App ID가 설정되지 않았습니다.\n.env 파일을 확인해주세요.');
-        return;
-      }
+        const hasPermission = await requestAndroidPermissions();
+        if (!hasPermission) {
+          Alert.alert('권한 필요', '마이크/카메라 권한을 허용해주세요.');
+          router.back();
+          return;
+        }
 
-      const engine = createAgoraRtcEngine();
-      engineRef.current = engine;
+        if (!AGORA_APP_ID) {
+          Alert.alert('설정 오류', 'Agora App ID가 설정되지 않았습니다.\n.env 파일을 확인해주세요.');
+          return;
+        }
 
-      engine.initialize({
-        appId: AGORA_APP_ID,
-        channelProfile: ChannelProfileType.ChannelProfileCommunication,
-      });
+        const engine = createAgoraRtcEngine();
+        if (released) {
+          engine.release();
+          return;
+        }
+        engineRef.current = engine;
 
-      const handler: IRtcEngineEventHandler = {
-        onJoinChannelSuccess: () => {
-          setIsJoined(true);
-          console.log('[Agora] 채널 입장 성공:', channelName);
-        },
-        onError: (err, msg) => {
-          console.error('[Agora] 오류:', err, msg);
-          Alert.alert('Agora 오류', `코드: ${err}\n${msg}`);
-        },
-        onUserJoined: (_connection, uid) => {
-          setRemoteUid(uid);
-        },
-        onUserOffline: () => {
-          setRemoteUid(null);
-          Alert.alert('통화 종료', '상대방이 통화를 종료했습니다.', [
-            { text: '확인', onPress: () => router.back() },
-          ]);
-        },
-      };
+        engine.initialize({
+          appId: AGORA_APP_ID,
+          channelProfile: ChannelProfileType.ChannelProfileCommunication,
+        });
 
-      engine.registerEventHandler(handler);
-      eventHandlerRef.current = handler;
+        const handler: IRtcEngineEventHandler = {
+          onJoinChannelSuccess: () => {
+            setIsJoined(true);
+            console.log('[Agora] 채널 입장 성공:', channelName);
+          },
+          onError: (err, msg) => {
+            console.error('[Agora] 오류:', err, msg);
+            Alert.alert('Agora 오류', `코드: ${err}\n${msg}`);
+          },
+          onUserJoined: (_connection, uid) => {
+            setRemoteUid(uid);
+          },
+          onUserOffline: () => {
+            setRemoteUid(null);
+            Alert.alert('통화 종료', '상대방이 통화를 종료했습니다.', [
+              { text: '확인', onPress: () => router.back() },
+            ]);
+          },
+        };
 
-      engine.enableAudio();
-      engine.setEnableSpeakerphone(true);
+        engine.registerEventHandler(handler);
+        eventHandlerRef.current = handler;
 
-      // 16kHz 모노 16-bit PCM 프레임 요청 (300ms 단위)
-      engine.setRecordingAudioFrameParameters(
-        16000, 1,
-        RawAudioFrameOpModeType.RawAudioFrameOpModeReadOnly,
-        4800
-      );
+        engine.enableAudio();
+        engine.setEnableSpeakerphone(true);
 
-      const audioObserver: IAudioFrameObserver = {
-        onRecordAudioFrame: (_channelId, audioFrame) => {
-          if (!isStreamingRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-          const pcm = audioFrame.buffer;
-          if (!pcm) { console.log('[자막] 오디오 프레임 buffer 없음'); return; }
-          if (audioFrame.samplesPerSec) pcmSampleRateRef.current = audioFrame.samplesPerSec;
-          if (audioFrame.channels) pcmChannelsRef.current = audioFrame.channels;
-          pcmBufferRef.current.push(new Uint8Array(pcm));
-          pcmBufferSizeRef.current += pcm.length;
-          if (pcmBufferSizeRef.current >= PCM_TARGET_SIZE) {
-            const combined = new Uint8Array(pcmBufferSizeRef.current);
-            let offset = 0;
-            for (const chunk of pcmBufferRef.current) { combined.set(chunk, offset); offset += chunk.length; }
-            pcmBufferRef.current = [];
-            pcmBufferSizeRef.current = 0;
-            if (!hasSpeech(combined)) {
-              return;
+        // 16kHz 모노 16-bit PCM 프레임 요청 (300ms 단위)
+        engine.setRecordingAudioFrameParameters(
+          16000, 1,
+          RawAudioFrameOpModeType.RawAudioFrameOpModeReadOnly,
+          4800
+        );
+
+        const audioObserver: IAudioFrameObserver = {
+          onRecordAudioFrame: (_channelId, audioFrame) => {
+            if (!isStreamingRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+            const pcm = audioFrame.buffer;
+            if (!pcm) { console.log('[자막] 오디오 프레임 buffer 없음'); return; }
+            if (audioFrame.samplesPerSec) pcmSampleRateRef.current = audioFrame.samplesPerSec;
+            if (audioFrame.channels) pcmChannelsRef.current = audioFrame.channels;
+            pcmBufferRef.current.push(new Uint8Array(pcm));
+            pcmBufferSizeRef.current += pcm.length;
+            if (pcmBufferSizeRef.current >= PCM_TARGET_SIZE) {
+              const combined = new Uint8Array(pcmBufferSizeRef.current);
+              let offset = 0;
+              for (const chunk of pcmBufferRef.current) { combined.set(chunk, offset); offset += chunk.length; }
+              pcmBufferRef.current = [];
+              pcmBufferSizeRef.current = 0;
+              if (!hasSpeech(combined)) {
+                return;
+              }
+              console.log('[자막] PCM 전송:', combined.length, 'bytes, sr:', pcmSampleRateRef.current);
+              wsRef.current.send(buildWavBuffer(combined, pcmSampleRateRef.current, pcmChannelsRef.current));
             }
-            console.log('[자막] PCM 전송:', combined.length, 'bytes, sr:', pcmSampleRateRef.current);
-            wsRef.current.send(buildWavBuffer(combined, pcmSampleRateRef.current, pcmChannelsRef.current));
+          },
+        };
+        engine.getMediaEngine().registerAudioFrameObserver(audioObserver);
+
+        if (!isVoiceOnly) {
+          engine.enableVideo();
+          engine.startPreview();
+        }
+
+        // 백엔드에서 Agora 토큰 발급
+        const agoraToken = await getAgoraToken(channelName);
+        if (typeof agoraToken !== 'string') {
+          Alert.alert('통화 오류', '통화 토큰을 가져오지 못했습니다.');
+          router.back();
+          return;
+        }
+        if (released) return;
+
+        engine.joinChannel(agoraToken, channelName, 0, {
+          clientRoleType: ClientRoleType.ClientRoleBroadcaster,
+          publishMicrophoneTrack: true,
+          publishCameraTrack: !isVoiceOnly,
+          autoSubscribeAudio: true,
+          autoSubscribeVideo: !isVoiceOnly,
+        });
+      } catch (error) {
+        console.error('[Agora] 초기화 실패:', error);
+        try {
+          if (eventHandlerRef.current) {
+            engineRef.current?.unregisterEventHandler(eventHandlerRef.current);
           }
-        },
-      };
-      engine.getMediaEngine().registerAudioFrameObserver(audioObserver);
-
-      if (!isVoiceOnly) {
-        engine.enableVideo();
-        engine.startPreview();
+          engineRef.current?.leaveChannel();
+          engineRef.current?.release();
+        } catch {
+          // release 실패는 화면 종료로 처리
+        }
+        engineRef.current = null;
+        eventHandlerRef.current = null;
+        Alert.alert('통화 오류', '통화 연결을 시작하지 못했습니다.');
+        router.back();
       }
-
-      // 백엔드에서 Agora 토큰 발급
-      const agoraToken = await getAgoraToken(channelName);
-
-      engine.joinChannel(agoraToken, channelName, 0, {
-        clientRoleType: ClientRoleType.ClientRoleBroadcaster,
-        publishMicrophoneTrack: true,
-        publishCameraTrack: !isVoiceOnly,
-        autoSubscribeAudio: true,
-        autoSubscribeVideo: !isVoiceOnly,
-      });
     };
 
     initAgora();
 
     return () => {
+      released = true;
       if (eventHandlerRef.current) {
         engineRef.current?.unregisterEventHandler(eventHandlerRef.current);
       }
       engineRef.current?.leaveChannel();
       engineRef.current?.release();
       engineRef.current = null;
+      eventHandlerRef.current = null;
     };
   }, []);
 

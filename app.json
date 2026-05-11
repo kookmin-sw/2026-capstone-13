@@ -7,9 +7,10 @@
     "icon": "./assets/images/icon.png",
     "scheme": "helpboys",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.helpboys.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "음성/영상 통화를 위해 마이크 권한이 필요합니다.",

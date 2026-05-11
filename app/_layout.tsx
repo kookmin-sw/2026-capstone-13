@@ -22,7 +22,7 @@ AppTextInput.defaultProps.allowFontScaling = false;
 
 export default function RootLayout() {
   const { user, isLoading, isNewUser, loadUser, appLanguage } = useAuthStore();
-  const { modalVisible, handleConfirm } = useAppPermissions();
+  const { modalVisible, handleConfirm } = useAppPermissions(false);
   const [isI18nReady, setIsI18nReady] = useState(false);
   usePushNotifications(user?.id);
   const segments = useSegments();

@@ -59,10 +59,14 @@ async function requestAllPermissions() {
   }
 }
 
-export function useAppPermissions() {
+export function useAppPermissions(enabled = false) {
   const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
+    if (!enabled) {
+      setModalVisible(false);
+      return;
+    }
     (async () => {
       try {
         const already = await AsyncStorage.getItem(PERMISSION_KEY);
@@ -72,9 +76,10 @@ export function useAppPermissions() {
         // 무시
       }
     })();
-  }, []);
+  }, [enabled]);
 
   const handleConfirm = async () => {
+    if (!enabled) return;
     setModalVisible(false);
     await new Promise<void>((resolve) => {
       InteractionManager.runAfterInteractions(() => resolve());
