@@ -31,7 +31,7 @@ public class ChatRoomResponse {
         if (partner != null) {
             partnerLang = partner.getUserType() == User.UserType.KOREAN
                     ? "ko"
-                    : partner.getPreferredLanguage();
+                    : UserResponse.preferredLanguageFor(partner);
         }
 
         return ChatRoomResponse.builder()

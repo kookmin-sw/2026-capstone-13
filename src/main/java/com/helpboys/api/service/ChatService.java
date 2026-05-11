@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.helpboys.api.dto.ChatMessageDto;
 import com.helpboys.api.dto.ChatRoomResponse;
+import com.helpboys.api.dto.UserResponse;
 import com.helpboys.api.entity.ChatMessage;
 import com.helpboys.api.entity.HelpRequest;
 import com.helpboys.api.entity.User;
@@ -19,7 +20,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -38,6 +38,7 @@ public class ChatService {
     private final SimpMessagingTemplate messagingTemplate;
     private final FcmService fcmService;
     private final HttpClient httpClient;
+    private final AiRequestFactory aiRequestFactory;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${ai.server.url:http://localhost:8000}")
@@ -47,6 +48,7 @@ public class ChatService {
     public ChatMessageDto saveMessage(ChatMessageDto dto) {
         User sender = userRepository.findById(dto.getSenderId())
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        HelpRequest room = findRoomForParticipant(dto.getRoomId(), sender.getId());
 
         String translatedContent = dto.getTranslatedContent();
         String culturalNote = null;
@@ -62,40 +64,28 @@ public class ChatService {
 
         if (!isSystemMessage && content != null && !content.isBlank()) {
             try {
-                HelpRequest room = helpRequestRepository.findById(dto.getRoomId()).orElse(null);
-                if (room != null) {
-                    User partner = room.getRequester().getId().equals(dto.getSenderId())
-                            ? room.getHelper() : room.getRequester();
-                    String targetLang;
-                    if (partner == null) {
-                        targetLang = "en";
-                    } else if (partner.getUserType() == User.UserType.KOREAN) {
-                        targetLang = "ko";
-                    } else {
-                        String preferredLang = partner.getPreferredLanguage();
-                        targetLang = (preferredLang != null && !preferredLang.isBlank()) ? preferredLang : "en";
-                    }
+                User partner = room.getRequester().getId().equals(dto.getSenderId())
+                        ? room.getHelper() : room.getRequester();
+                String targetLang = partner != null ? UserResponse.preferredLanguageFor(partner) : "en";
 
-                    String translateBody = objectMapper.writeValueAsString(
-                            java.util.Map.of("text", content, "target_lang", targetLang)
-                    );
-                    HttpRequest translateRequest = HttpRequest.newBuilder()
-                            .uri(URI.create(aiServerUrl + "/api/translate"))
-                            .header("Content-Type", "application/json")
-                            .timeout(java.time.Duration.ofSeconds(10))
-                            .POST(HttpRequest.BodyPublishers.ofString(translateBody))
-                            .build();
+                String translateBody = objectMapper.writeValueAsString(
+                        java.util.Map.of("text", content, "target_lang", targetLang, "prefer_llm", true)
+                );
+                HttpRequest translateRequest = aiRequestFactory.builder(aiServerUrl + "/api/translate")
+                        .header("Content-Type", "application/json")
+                        .timeout(java.time.Duration.ofSeconds(10))
+                        .POST(HttpRequest.BodyPublishers.ofString(translateBody))
+                        .build();
 
-                    HttpResponse<String> translateResponse = httpClient.send(translateRequest, HttpResponse.BodyHandlers.ofString());
-                    JsonNode result = objectMapper.readTree(translateResponse.body());
+                HttpResponse<String> translateResponse = httpClient.send(translateRequest, HttpResponse.BodyHandlers.ofString());
+                JsonNode result = objectMapper.readTree(translateResponse.body());
 
-                    if (result.path("success").asBoolean()) {
-                        JsonNode data = result.path("data");
-                        translatedContent = data.path("translated").asText(content);
-                        originalLanguage = data.path("source_language").asText(originalLanguage);
-                        if (!data.path("cultural_note").isNull()) {
-                            culturalNote = data.path("cultural_note").asText(null);
-                        }
+                if (result.path("success").asBoolean()) {
+                    JsonNode data = result.path("data");
+                    translatedContent = data.path("translated").asText(content);
+                    originalLanguage = data.path("source_language").asText(originalLanguage);
+                    if (!data.path("cultural_note").isNull()) {
+                        culturalNote = data.path("cultural_note").asText(null);
                     }
                 }
             } catch (Exception e) {
@@ -332,20 +322,19 @@ public class ChatService {
 
         HelpRequest room = helpRequestRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException("채팅방을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        validateParticipant(room, senderId);
 
         // 파트너(상대방) 찾기 → 파트너의 선호 언어로 번역
         User partner = room.getRequester().getId().equals(senderId)
                 ? room.getHelper()
                 : room.getRequester();
-        String preferredLang2 = (partner != null) ? partner.getPreferredLanguage() : null;
-        String targetLang = (preferredLang2 != null && !preferredLang2.isBlank()) ? preferredLang2 : "en";
+        String targetLang = partner != null ? UserResponse.preferredLanguageFor(partner) : "en";
 
         // 1단계: AI 서버에 음성→텍스트 요청
         String recognizedText = "";
         String detectedLanguage = "ko";
         try {
-            HttpRequest speechRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(aiServerUrl + "/api/speech-to-text"))
+            HttpRequest speechRequest = aiRequestFactory.builder(aiServerUrl + "/api/speech-to-text")
                     .header("Content-Type", "audio/wav")
                     .POST(HttpRequest.BodyPublishers.ofByteArray(audioBytes))
                     .build();
@@ -371,10 +360,14 @@ public class ChatService {
         try {
             if (!recognizedText.isBlank() && !detectedLanguage.equals(targetLang)) {
                 String translateBody = objectMapper.writeValueAsString(
-                        java.util.Map.of("text", recognizedText, "target_lang", targetLang, "source_lang", detectedLanguage)
+                        java.util.Map.of(
+                                "text", recognizedText,
+                                "target_lang", targetLang,
+                                "source_lang", detectedLanguage,
+                                "prefer_llm", true
+                        )
                 );
-                HttpRequest translateRequest = HttpRequest.newBuilder()
-                        .uri(URI.create(aiServerUrl + "/api/translate"))
+                HttpRequest translateRequest = aiRequestFactory.builder(aiServerUrl + "/api/translate")
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(translateBody))
                         .build();
@@ -422,15 +415,13 @@ public class ChatService {
         User toUser = userRepository.findById(toUserId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
-        String targetLang = (toUser.getPreferredLanguage() != null && !toUser.getPreferredLanguage().isBlank())
-                ? toUser.getPreferredLanguage() : "en";
+        String targetLang = UserResponse.preferredLanguageFor(toUser);
 
         // 1단계: STT
         String recognizedText = "";
         String detectedLanguage = "ko";
         try {
-            HttpRequest speechRequest = HttpRequest.newBuilder()
-                    .uri(URI.create(aiServerUrl + "/api/speech-to-text"))
+            HttpRequest speechRequest = aiRequestFactory.builder(aiServerUrl + "/api/speech-to-text")
                     .header("Content-Type", "audio/wav")
                     .timeout(java.time.Duration.ofSeconds(10))
                     .POST(HttpRequest.BodyPublishers.ofByteArray(audioBytes))
@@ -459,10 +450,14 @@ public class ChatService {
         try {
             if (!detectedLanguage.equals(targetLang)) {
                 String translateBody = objectMapper.writeValueAsString(
-                        Map.of("text", recognizedText, "target_lang", targetLang, "source_lang", detectedLanguage)
+                        Map.of(
+                                "text", recognizedText,
+                                "target_lang", targetLang,
+                                "source_lang", detectedLanguage,
+                                "prefer_llm", true
+                        )
                 );
-                HttpRequest translateRequest = HttpRequest.newBuilder()
-                        .uri(URI.create(aiServerUrl + "/api/translate"))
+                HttpRequest translateRequest = aiRequestFactory.builder(aiServerUrl + "/api/translate")
                         .header("Content-Type", "application/json")
                         .timeout(java.time.Duration.ofSeconds(10))
                         .POST(HttpRequest.BodyPublishers.ofString(translateBody))
@@ -496,6 +491,7 @@ public class ChatService {
     public ChatMessageDto translateMessage(Long messageId, Long userId) {
         ChatMessage message = chatMessageRepository.findById(messageId)
                 .orElseThrow(() -> new BusinessException("메시지를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        findRoomForParticipant(message.getRoomId(), userId);
 
         if (message.getTranslatedContent() != null) {
             return buildMessageDto(message);
@@ -503,14 +499,12 @@ public class ChatService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-        String targetLang = (user.getPreferredLanguage() != null && !user.getPreferredLanguage().isBlank())
-                ? user.getPreferredLanguage() : "en";
+        String targetLang = UserResponse.preferredLanguageFor(user);
 
         try {
             String body = objectMapper.writeValueAsString(
-                    java.util.Map.of("text", message.getContent(), "target_lang", targetLang));
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(aiServerUrl + "/api/translate"))
+                    java.util.Map.of("text", message.getContent(), "target_lang", targetLang, "prefer_llm", true));
+            HttpRequest req = aiRequestFactory.builder(aiServerUrl + "/api/translate")
                     .header("Content-Type", "application/json")
                     .timeout(java.time.Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
@@ -556,6 +550,21 @@ public class ChatService {
         if (content.startsWith("SYS_CALL_VIDEO:")) return "[영상 통화]";
         if (content.startsWith("SYS_LEAVE:")) return "[채팅방을 나갔습니다]";
         return content;
+    }
+
+    private HelpRequest findRoomForParticipant(Long roomId, Long userId) {
+        HelpRequest room = helpRequestRepository.findById(roomId)
+                .orElseThrow(() -> new BusinessException("채팅방을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+        validateParticipant(room, userId);
+        return room;
+    }
+
+    private void validateParticipant(HelpRequest room, Long userId) {
+        boolean isParticipant = room.getRequester().getId().equals(userId)
+                || (room.getHelper() != null && room.getHelper().getId().equals(userId));
+        if (!isParticipant) {
+            throw new BusinessException("접근 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
     }
 
     // 채팅방 메시지 이력 조회 + 자동 읽음 처리

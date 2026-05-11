@@ -18,6 +18,7 @@ public class DirectChatRoomResponse {
     private String lastMessage;
     private String lastMessageTime;
     private long unreadCount;
+    private String partnerPreferredLanguage;
 
     public static DirectChatRoomResponse from(DirectChatRoom room, Long myUserId,
                                                String lastMessage, String lastMessageTime,
@@ -34,6 +35,9 @@ public class DirectChatRoomResponse {
                 .lastMessage(lastMessage)
                 .lastMessageTime(lastMessageTime)
                 .unreadCount(unreadCount)
+                .partnerPreferredLanguage(partner.getUserType() == User.UserType.KOREAN
+                        ? "ko"
+                        : UserResponse.preferredLanguageFor(partner))
                 .build();
     }
 }

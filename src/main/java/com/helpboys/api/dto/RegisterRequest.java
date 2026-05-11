@@ -31,6 +31,8 @@ public class RegisterRequest {
 
     private String nationality;
 
+    private String preferredLanguage;
+
     private String studentIdImageUrl;
 
     @AssertTrue(message = "이용약관에 동의해주세요.")

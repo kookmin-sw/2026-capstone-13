@@ -34,6 +34,34 @@ public class UserResponse {
     private String lastSeenAt;
     private boolean isProfileSetup;
 
+    public static String preferredLanguageFor(User user) {
+        if (user.getUserType() == User.UserType.KOREAN) {
+            return "ko";
+        }
+
+        String preferred = user.getPreferredLanguage();
+        String nationalityLanguage = languageFromNationality(user.getNationality());
+        if (nationalityLanguage != null && (preferred == null || preferred.isBlank() || "en".equals(preferred))) {
+            return nationalityLanguage;
+        }
+
+        return preferred != null && !preferred.isBlank() ? preferred : "en";
+    }
+
+    private static String languageFromNationality(String nationality) {
+        if (nationality == null || nationality.isBlank()) {
+            return null;
+        }
+        return switch (nationality) {
+            case "CN", "TW", "HK" -> "zh-Hans";
+            case "JP" -> "ja";
+            case "MN" -> "mn";
+            case "VN", "LA", "KH" -> "vi";
+            case "RU", "KZ", "KG", "TJ", "TM", "UZ" -> "ru";
+            default -> null;
+        };
+    }
+
     // 타인 프로필 조회용 (이메일 제외)
     public static UserResponse fromPublic(User user) {
         return UserResponse.builder()
@@ -52,7 +80,7 @@ public class UserResponse {
                 .ratingCount(user.getRatingCount())
                 .helpCount(user.getHelpCount())
                 .createdAt(user.getCreatedAt().toString())
-                .preferredLanguage(user.getPreferredLanguage())
+                .preferredLanguage(preferredLanguageFor(user))
                 .nationality(user.getNationality())
                 .studentIdVerified(user.isStudentIdVerified())
                 .studentIdStatus(user.getStudentIdStatus().name())
@@ -79,7 +107,7 @@ public class UserResponse {
                 .ratingCount(user.getRatingCount())
                 .helpCount(user.getHelpCount())
                 .createdAt(user.getCreatedAt().toString())
-                .preferredLanguage(user.getPreferredLanguage())
+                .preferredLanguage(preferredLanguageFor(user))
                 .nationality(user.getNationality())
                 .emailVerified(user.isEmailVerified())
                 .studentIdVerified(user.isStudentIdVerified())

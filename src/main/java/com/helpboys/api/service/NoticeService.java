@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -33,6 +32,7 @@ public class NoticeService {
     private final NoticeRepository noticeRepository;
     private final TransactionTemplate transactionTemplate;
     private final HttpClient httpClient;
+    private final AiRequestFactory aiRequestFactory;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${ai.server.url:http://localhost:8000}")
@@ -46,8 +46,7 @@ public class NoticeService {
         int savedCount = 0;
 
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(aiServerUrl + "/api/notices/crawl"))
+            HttpRequest request = aiRequestFactory.builder(aiServerUrl + "/api/notices/crawl")
                     .GET()
                     .build();
 
@@ -138,9 +137,13 @@ public class NoticeService {
         for (String lang : SUPPORTED_LANGUAGES) {
             try {
                 String body = objectMapper.writeValueAsString(
-                        Map.of("text", titleKo, "target_lang", lang, "source_lang", "ko"));
-                HttpRequest req = HttpRequest.newBuilder()
-                        .uri(URI.create(aiServerUrl + "/api/translate"))
+                        Map.of(
+                                "text", titleKo,
+                                "target_lang", lang,
+                                "source_lang", "ko",
+                                "allow_llm", false
+                        ));
+                HttpRequest req = aiRequestFactory.builder(aiServerUrl + "/api/translate")
                         .header("Content-Type", "application/json")
                         .timeout(java.time.Duration.ofSeconds(15))
                         .POST(HttpRequest.BodyPublishers.ofString(body)).build();

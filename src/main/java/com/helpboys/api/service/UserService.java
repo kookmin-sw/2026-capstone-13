@@ -76,6 +76,7 @@ public class UserService implements UserDetailsService {
                 .university(request.getUniversity())
                 .major(request.getMajor())
                 .nationality(request.getNationality())
+                .preferredLanguage(request.getPreferredLanguage() != null ? request.getPreferredLanguage() : "en")
                 .emailVerified(true)
                 .studentIdImageUrl(request.getStudentIdImageUrl())
                 .studentIdStatus(User.StudentIdStatus.PENDING)
