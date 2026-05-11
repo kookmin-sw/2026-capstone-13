@@ -60,9 +60,10 @@ public class ChatService {
                 content.startsWith("SYS_CALL_VIDEO:")
         );
 
+        HelpRequest room = helpRequestRepository.findByIdWithUsers(dto.getRoomId()).orElse(null);
+
         if (!isSystemMessage && content != null && !content.isBlank()) {
             try {
-                HelpRequest room = helpRequestRepository.findById(dto.getRoomId()).orElse(null);
                 if (room != null) {
                     User partner = room.getRequester().getId().equals(dto.getSenderId())
                             ? room.getHelper() : room.getRequester();
@@ -116,10 +117,10 @@ public class ChatService {
         ChatMessage saved = chatMessageRepository.save(message);
 
         // 수신자에게 실시간 unreadCount 갱신 이벤트 전송
-        notifyUnreadCount(dto.getRoomId(), dto.getSenderId());
+        notifyUnreadCount(room, dto.getSenderId());
 
         // 수신자에게 FCM 푸시 알림 전송
-        sendChatPushToReceiver(dto.getRoomId(), dto.getSenderId(), sender.getNickname(), content);
+        sendChatPushToReceiver(room, dto.getSenderId(), sender.getNickname(), content);
 
         return ChatMessageDto.builder()
                 .id(saved.getId())
@@ -136,9 +137,8 @@ public class ChatService {
     }
 
     // 수신자의 개인 채널(/topic/user/{receiverId})로 unreadCount 이벤트 전송
-    private void notifyUnreadCount(Long roomId, Long senderId) {
+    private void notifyUnreadCount(HelpRequest room, Long senderId) {
         try {
-            HelpRequest room = helpRequestRepository.findById(roomId).orElse(null);
             if (room == null) return;
 
             User receiver = room.getRequester().getId().equals(senderId)
@@ -147,12 +147,12 @@ public class ChatService {
             if (receiver == null) return;
 
             long unreadCount = chatMessageRepository
-                    .countUnreadMessages(roomId, receiver.getId());
+                    .countUnreadMessages(room.getId(), receiver.getId());
 
             messagingTemplate.convertAndSend("/topic/user/" + receiver.getId(),
                     java.util.Map.of(
                             "type", "UNREAD_UPDATE",
-                            "roomId", roomId,
+                            "roomId", room.getId(),
                             "unreadCount", unreadCount
                     ));
         } catch (Exception e) {
@@ -161,9 +161,8 @@ public class ChatService {
     }
 
     // 수신자에게 FCM 푸시 알림 전송
-    private void sendChatPushToReceiver(Long roomId, Long senderId, String senderNickname, String content) {
+    private void sendChatPushToReceiver(HelpRequest room, Long senderId, String senderNickname, String content) {
         try {
-            HelpRequest room = helpRequestRepository.findById(roomId).orElse(null);
             if (room == null) return;
 
             User receiver = room.getRequester().getId().equals(senderId)
@@ -178,7 +177,7 @@ public class ChatService {
                         "calls",
                         Map.of(
                             "type", "call",
-                            "roomId", String.valueOf(roomId),
+                            "roomId", String.valueOf(room.getId()),
                             "fromUserId", String.valueOf(senderId),
                             "callerNickname", senderNickname,
                             "voiceOnly", isVideo ? "false" : "true"
@@ -193,7 +192,7 @@ public class ChatService {
                     "chat",
                     Map.of(
                         "type", "chat",
-                        "roomId", String.valueOf(roomId),
+                        "roomId", String.valueOf(room.getId()),
                         "senderId", String.valueOf(senderId)
                     ));
         } catch (Exception e) {
