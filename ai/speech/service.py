@@ -22,8 +22,9 @@ class SpeechService:
         if self.dummy_mode:
             print("⚠️  Deepgram 키가 없습니다. 더미 모드로 실행됩니다.")
         else:
-            from deepgram import DeepgramClient
+            from deepgram import DeepgramClient, AsyncDeepgramClient
             self.client = DeepgramClient(api_key=self.api_key)
+            self.async_client = AsyncDeepgramClient(api_key=self.api_key)
             print("✅ Deepgram 연동 완료")
 
     def transcribe_audio(self, audio_data: bytes, language: Optional[str] = None) -> dict:

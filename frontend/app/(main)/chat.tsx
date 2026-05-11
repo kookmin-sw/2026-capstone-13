@@ -237,6 +237,8 @@ export default function ChatScreen() {
         partnerUserId: String(room.partnerId),
         isDirect: 'true',
         roomUnreadCount: String(room.unreadCount ?? 0),
+        partnerId: String(room.partnerId ?? ''),
+        partnerPreferredLanguage: room.partnerPreferredLanguage ?? 'en',
       },
     });
   };

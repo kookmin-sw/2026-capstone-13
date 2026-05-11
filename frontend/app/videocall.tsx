@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Client } from '@stomp/stompjs';
 import * as SecureStore from 'expo-secure-store';
 import { getAgoraToken } from '../services/agoraService';
+import { getAiSpeechToken } from '../services/aiService';
 import {
   createAgoraRtcEngine,
   IRtcEngine,
@@ -49,6 +50,19 @@ const buildWavBuffer = (pcm: Uint8Array, sampleRate: number, channels: number): 
 };
 
 const PCM_TARGET_SIZE = 16000 * 2 * 1.5; // 1.5초: 16kHz 16-bit mono
+const PCM_SPEECH_THRESHOLD = 260;
+
+const hasSpeech = (pcm: Uint8Array): boolean => {
+  let total = 0;
+  let count = 0;
+  for (let i = 0; i + 1 < pcm.length; i += 32) {
+    let sample = pcm[i] | (pcm[i + 1] << 8);
+    if (sample >= 0x8000) sample -= 0x10000;
+    total += Math.abs(sample);
+    count += 1;
+  }
+  return count > 0 && total / count > PCM_SPEECH_THRESHOLD;
+};
 
 const PRIMARY = '#4F46E5';
 const AGORA_APP_ID = process.env.EXPO_PUBLIC_AGORA_APP_ID ?? '';
@@ -86,7 +100,7 @@ export default function VideoCallScreen() {
   const [isSpeaker, setIsSpeaker] = useState(true);
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
   const [remoteUid, setRemoteUid] = useState<number | null>(null);
   const [isJoined, setIsJoined] = useState(false);
@@ -101,12 +115,14 @@ export default function VideoCallScreen() {
   const pcmSampleRateRef = useRef<number>(16000);
   const pcmChannelsRef = useRef<number>(1);
   const isStreamingRef = useRef<boolean>(false);
-  const showSubtitlesRef = useRef<boolean>(false);
+  const showSubtitlesRef = useRef<boolean>(true);
+  const pendingSubtitleRef = useRef<string[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const bcp47ToLang: Record<string, string> = { 'ko-KR': 'ko', 'en-US': 'en', 'ja-JP': 'ja', 'zh-CN': 'zh-Hans', 'ru-RU': 'ru', 'mn-MN': 'mn', 'vi-VN': 'vi' };
   const myLangCode = bcp47ToLang[myLanguage] ?? 'en';
+  const myCaptionLang = myLangCode;
   const effectiveTargetLangRef = useRef(targetLanguage);
-  const connectWebSocketRef = useRef<() => void>(() => {});
+  const connectWebSocketRef = useRef<() => void | Promise<void>>(() => {});
 
   // 통화 시간 타이머
   useEffect(() => {
@@ -200,12 +216,15 @@ export default function VideoCallScreen() {
           pcmBufferRef.current.push(new Uint8Array(pcm));
           pcmBufferSizeRef.current += pcm.length;
           if (pcmBufferSizeRef.current >= PCM_TARGET_SIZE) {
-            console.log('[자막] PCM 전송:', pcmBufferSizeRef.current, 'bytes, sr:', pcmSampleRateRef.current);
             const combined = new Uint8Array(pcmBufferSizeRef.current);
             let offset = 0;
             for (const chunk of pcmBufferRef.current) { combined.set(chunk, offset); offset += chunk.length; }
             pcmBufferRef.current = [];
             pcmBufferSizeRef.current = 0;
+            if (!hasSpeech(combined)) {
+              return;
+            }
+            console.log('[자막] PCM 전송:', combined.length, 'bytes, sr:', pcmSampleRateRef.current);
             wsRef.current.send(buildWavBuffer(combined, pcmSampleRateRef.current, pcmChannelsRef.current));
           }
         },
@@ -285,26 +304,42 @@ export default function VideoCallScreen() {
       reconnectDelay: 5000,
       onConnect: () => {
         console.log('[자막] STOMP 연결 성공, 구독:', `/topic/call/${myUserId}`);
+        if (partnerUserId && pendingSubtitleRef.current.length > 0) {
+          pendingSubtitleRef.current.forEach((subtitleText) => {
+            client.publish({
+              destination: '/app/call/signal',
+              body: JSON.stringify({
+                type: 'subtitle',
+                fromUserId: myUserId,
+                toUserId: partnerUserId,
+                subtitleText,
+              }),
+            });
+          });
+          pendingSubtitleRef.current = [];
+        }
         client.subscribe(`/topic/call/${myUserId}`, (frame) => {
           console.log('[자막] STOMP 메시지 수신:', frame.body);
           try {
             const msg = JSON.parse(frame.body);
-            if (msg.type === 'lang_handshake') {
-              const partnerLang = msg.lang as string;
-              if (partnerLang && partnerLang !== effectiveTargetLangRef.current) {
-                console.log('[자막] 언어 핸드셰이크 수신, targetLanguage 변경:', partnerLang);
-                effectiveTargetLangRef.current = partnerLang;
+            const messageType = typeof msg.type === 'string' ? msg.type.toLowerCase() : '';
+            if (messageType === 'lang_handshake') {
+              const partnerCaptionLang = msg.lang as string;
+              if (partnerCaptionLang && partnerCaptionLang !== effectiveTargetLangRef.current) {
+                console.log('[자막] 언어 핸드셰이크 수신, targetLanguage 변경:', partnerCaptionLang);
+                effectiveTargetLangRef.current = partnerCaptionLang;
                 wsRef.current?.close();
                 wsRef.current = null;
                 connectWebSocketRef.current();
               }
               return;
             }
-            if (msg.type === 'subtitle' && msg.subtitleText && showSubtitlesRef.current) {
+            const incomingSubtitle = msg.subtitleText ?? msg.translatedText;
+            if (messageType === 'subtitle' && incomingSubtitle && showSubtitlesRef.current) {
               setTranscripts((prev) => [...prev, {
                 id: Date.now().toString(),
-                text: msg.subtitleText as string,
-                language: targetLanguage,
+                text: incomingSubtitle as string,
+                language: effectiveTargetLangRef.current,
               }].slice(-3));
             }
           } catch {
@@ -314,7 +349,7 @@ export default function VideoCallScreen() {
         if (partnerUserId) {
           client.publish({
             destination: '/app/call/signal',
-            body: JSON.stringify({ type: 'lang_handshake', fromUserId: myUserId, toUserId: partnerUserId, lang: myLangCode }),
+            body: JSON.stringify({ type: 'lang_handshake', fromUserId: myUserId, toUserId: partnerUserId, lang: myCaptionLang }),
           });
         }
       },
@@ -323,7 +358,7 @@ export default function VideoCallScreen() {
     });
     client.activate();
     stompRef.current = client;
-  }, [myUserId, targetLanguage, myLangCode, partnerUserId]);
+  }, [myUserId, myCaptionLang, partnerUserId]);
 
   // 통화 시작 시 자동으로 STOMP 구독 (자막 수신 대기)
   useEffect(() => {
@@ -337,9 +372,19 @@ export default function VideoCallScreen() {
 
 
   // WebSocket 연결 (AI 자막용)
-  const connectWebSocket = useCallback(() => {
+  const connectWebSocket = useCallback(async () => {
     console.log('[자막] AI WebSocket 연결 시도:', WS_SPEECH_URL);
-    const ws = new WebSocket(WS_SPEECH_URL);
+    let speechToken: string;
+    try {
+      speechToken = await getAiSpeechToken();
+    } catch (e) {
+      console.log('[자막] AI WebSocket 토큰 발급 실패:', e);
+      setIsConnected(false);
+      return;
+    }
+    const separator = WS_SPEECH_URL.includes('?') ? '&' : '?';
+    const wsUrl = `${WS_SPEECH_URL}${separator}token=${encodeURIComponent(speechToken)}`;
+    const ws = new WebSocket(wsUrl);
     ws.onopen = () => {
       console.log('[자막] AI WebSocket 연결 성공, language:', myLanguage, 'target:', effectiveTargetLangRef.current);
       setIsConnected(true);
@@ -353,24 +398,37 @@ export default function VideoCallScreen() {
       try {
         const data = JSON.parse(event.data as string);
         console.log('[자막] AI 응답:', JSON.stringify(data));
-        if (data.type === 'transcript' && data.translated && partnerUserId && stompRef.current?.connected) {
-          console.log('[자막] STOMP 전송 → partnerUserId:', partnerUserId, '내용:', data.translated);
-          stompRef.current.publish({
-            destination: '/app/call/signal',
-            body: JSON.stringify({
-              type: 'subtitle',
-              fromUserId: myUserId,
-              toUserId: partnerUserId,
-              subtitleText: data.translated,
-            }),
-          });
+
+        if (data.type === 'transcript') {
+          const subtitleText = (data.translated || data.text || '').trim();
+          if (!subtitleText || !partnerUserId) return;
+
+          if (stompRef.current?.connected) {
+            console.log('[자막] STOMP 전송 → partnerUserId:', partnerUserId, '내용:', subtitleText);
+            stompRef.current.publish({
+              destination: '/app/call/signal',
+              body: JSON.stringify({
+                type: 'subtitle',
+                fromUserId: myUserId,
+                toUserId: partnerUserId,
+                subtitleText,
+              }),
+            });
+          } else {
+            console.log('[자막] STOMP 미연결 - 자막 대기열 저장:', subtitleText);
+            pendingSubtitleRef.current = [...pendingSubtitleRef.current.slice(-2), subtitleText];
+          }
         }
       } catch {
         // 파싱 오류 무시
       }
     };
-    ws.onclose = () => setIsConnected(false);
-    ws.onerror = () => setIsConnected(false);
+    ws.onclose = () => {
+      setIsConnected(false);
+    };
+    ws.onerror = () => {
+      setIsConnected(false);
+    };
     wsRef.current = ws;
   }, [myLanguage, myUserId, partnerUserId]);
 
@@ -390,7 +448,7 @@ export default function VideoCallScreen() {
     if (remoteUid !== null && stompRef.current?.connected && partnerUserId && myUserId) {
       stompRef.current.publish({
         destination: '/app/call/signal',
-        body: JSON.stringify({ type: 'lang_handshake', fromUserId: myUserId, toUserId: partnerUserId, lang: myLangCode }),
+        body: JSON.stringify({ type: 'lang_handshake', fromUserId: myUserId, toUserId: partnerUserId, lang: myCaptionLang }),
       });
     }
   }, [remoteUid]);
@@ -401,6 +459,7 @@ export default function VideoCallScreen() {
     setIsStreaming(false);
     pcmBufferRef.current = [];
     pcmBufferSizeRef.current = 0;
+    pendingSubtitleRef.current = [];
     wsRef.current?.close();
     wsRef.current = null;
     setIsConnected(false);
@@ -471,7 +530,7 @@ export default function VideoCallScreen() {
       )}
 
       {/* 실시간 자막 */}
-      {transcripts.length > 0 && (
+      {isStreaming && transcripts.length > 0 && (
         <View style={[styles.subtitleArea, isVoiceOnly && styles.subtitleAreaVoice]}>
           {transcripts.map((t) => (
             <View key={t.id} style={styles.subtitleBubble}>

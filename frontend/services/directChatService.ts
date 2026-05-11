@@ -9,6 +9,7 @@ export interface DirectChatRoomResponse {
   lastMessage?: string;
   lastMessageTime?: string;
   unreadCount: number;
+  partnerPreferredLanguage?: string;
 }
 
 export interface DirectChatMessageDto {
