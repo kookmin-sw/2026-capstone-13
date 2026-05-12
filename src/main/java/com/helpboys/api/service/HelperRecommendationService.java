@@ -79,12 +79,22 @@ public class HelperRecommendationService {
             }
         }
 
-        // AI 서버로 유사도 재순위
-        List<ScoredHelper> sorted = scored.stream()
+        // 카테고리 경험 있는 헬퍼: 관련 도움 횟수 + 평점 순서 유지
+        List<ScoredHelper> categoryHelpers = scored.stream()
+                .filter(sh -> foundIds.contains(sh.helper().getId()))
                 .sorted(Comparator.comparingDouble(ScoredHelper::score).reversed())
                 .collect(Collectors.toList());
-        List<ScoredHelper> reRanked = reRankWithAI(
-                request.getTitle() + " " + request.getDescription(), sorted);
+
+        // 카테고리 경험 없는 헬퍼만 AI로 재순위
+        List<ScoredHelper> fallbackHelpers = scored.stream()
+                .filter(sh -> !foundIds.contains(sh.helper().getId()))
+                .collect(Collectors.toList());
+
+        List<ScoredHelper> aiRankedFallbacks = reRankWithAI(
+                request.getTitle() + " " + request.getDescription(), fallbackHelpers);
+
+        List<ScoredHelper> reRanked = new ArrayList<>(categoryHelpers);
+        reRanked.addAll(aiRankedFallbacks);
 
         return reRanked.stream()
                 .limit(RECOMMEND_SIZE)
