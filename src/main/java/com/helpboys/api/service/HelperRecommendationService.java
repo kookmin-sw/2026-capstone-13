@@ -8,10 +8,13 @@ import com.helpboys.api.exception.BusinessException;
 import com.helpboys.api.repository.HelpRequestRepository;
 import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,6 +25,10 @@ public class HelperRecommendationService {
 
     private final HelpRequestRepository helpRequestRepository;
     private final UserRepository userRepository;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${ai.server.url}")
+    private String aiServerUrl;
 
     private static final int CANDIDATE_SIZE = 20;
     private static final int RECOMMEND_SIZE = 5;
@@ -72,14 +79,79 @@ public class HelperRecommendationService {
             }
         }
 
-        return scored.stream()
+        // AI 서버로 유사도 재순위
+        List<ScoredHelper> sorted = scored.stream()
                 .sorted(Comparator.comparingDouble(ScoredHelper::score).reversed())
+                .collect(Collectors.toList());
+        List<ScoredHelper> reRanked = reRankWithAI(
+                request.getTitle() + " " + request.getDescription(), sorted);
+
+        return reRanked.stream()
                 .limit(RECOMMEND_SIZE)
                 .map(s -> HelperRecommendResponse.builder()
                         .helper(UserResponse.fromPublic(s.helper()))
                         .matchReason(s.reason())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<ScoredHelper> reRankWithAI(String requestText, List<ScoredHelper> candidates) {
+        try {
+            List<Map<String, Object>> helpers = candidates.stream()
+                    .map(sh -> {
+                        Map<String, Object> h = new HashMap<>();
+                        h.put("id", sh.helper().getId());
+                        h.put("profile_text", buildProfileText(sh.helper()));
+                        return h;
+                    })
+                    .collect(Collectors.toList());
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("request_text", requestText);
+            body.put("helpers", helpers);
+
+            ResponseEntity<Map<String, Object>> response = restTemplate.postForEntity(
+                    aiServerUrl + "/api/match/recommend", body, (Class<Map<String, Object>>) (Class<?>) Map.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map<String, Object> data = (Map<String, Object>) response.getBody().get("data");
+                if (data != null) {
+                    List<Integer> rankedIds = (List<Integer>) data.get("ranked_ids");
+                    if (rankedIds != null && !rankedIds.isEmpty()) {
+                        Map<Long, ScoredHelper> helperMap = candidates.stream()
+                                .collect(Collectors.toMap(sh -> sh.helper().getId(), sh -> sh));
+                        return rankedIds.stream()
+                                .map(id -> helperMap.get(id.longValue()))
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toList());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("[AI 추천] 실패, 기존 점수 기반 순위 사용: " + e.getMessage());
+        }
+        return candidates;
+    }
+
+    private String buildProfileText(User helper) {
+        StringBuilder sb = new StringBuilder();
+        if (helper.getMajor() != null && !helper.getMajor().isBlank()) {
+            sb.append(helper.getMajor()).append(" 전공");
+        }
+        if (helper.getHelpCount() != null && helper.getHelpCount() > 0) {
+            if (!sb.isEmpty()) sb.append(", ");
+            sb.append("도움 횟수 ").append(helper.getHelpCount()).append("회");
+        }
+        if (helper.getRating() != null && helper.getRating() > 0) {
+            if (!sb.isEmpty()) sb.append(", ");
+            sb.append("평점 ").append(String.format("%.1f", helper.getRating()));
+        }
+        if (helper.getBio() != null && !helper.getBio().isBlank()) {
+            if (!sb.isEmpty()) sb.append(", ");
+            sb.append(helper.getBio());
+        }
+        return sb.isEmpty() ? "한국인 학생" : sb.toString();
     }
 
     private double majorScore(User helper, HelpRequest.HelpCategory category) {
