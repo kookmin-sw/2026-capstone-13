@@ -21,7 +21,7 @@ import KoreanAccountCardStack from '../../components/KoreanAccountCardStack';
 import WriteForm from '../../components/WriteForm';
 import { s as sc } from '../../utils/scale';
 import { getActiveHelperCount, getKoreanUsers } from '../../services/authService';
-import { getHelpedRequests, getHelpRequests } from '../../services/helpService';
+import { getHelpedRequests, getHelpRequests, recommendHelpers } from '../../services/helpService';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useGoalStore } from '../../stores/goalStore';
@@ -215,14 +215,6 @@ export default function HomeScreen() {
   const scrollViewRef                        = useRef<ScrollView>(null);
 
   useEffect(() => {
-    if (user?.userType === 'INTERNATIONAL' || user?.userType === 'EXCHANGE') {
-      getKoreanUsers().then(res => {
-        if (res.success) setKoreanUsers(res.data.filter((u: User) => u.nickname !== '(알 수 없음)'));
-      }).catch(() => {});
-    }
-  }, [user]);
-
-  useEffect(() => {
     if (!isInternational) checkAndUpdateStreak();
   }, []);
 
@@ -233,17 +225,52 @@ export default function HomeScreen() {
         getHelpedRequests(),
         getActiveHelperCount(),
       ]);
-      if (reqRes.status === 'fulfilled' && reqRes.value.success) setRequests(reqRes.value.data);
+
+      let fetchedRequests: HelpRequest[] = [];
+      if (reqRes.status === 'fulfilled' && reqRes.value.success) {
+        fetchedRequests = reqRes.value.data;
+        setRequests(fetchedRequests);
+      }
       if (helpedRes.status === 'fulfilled' && helpedRes.value.success) {
         setCompletedCount(helpedRes.value.data.filter((r: HelpRequest) => r.status === 'COMPLETED').length);
       }
       if (helperCountRes.status === 'fulfilled') setActiveHelperCount(helperCountRes.value);
+
+      if (isInternational) {
+        try {
+          const koreanRes = await getKoreanUsers();
+          if (koreanRes.success) {
+            let users: User[] = koreanRes.data.filter((u: User) => u.nickname !== '(알 수 없음)');
+
+            const myWaiting = fetchedRequests.find(
+              r => r.requester.id === user?.id && r.status === 'WAITING'
+            );
+            if (myWaiting) {
+              try {
+                const recRes = await recommendHelpers(myWaiting.id);
+                if (recRes.success && recRes.data.length > 0) {
+                  const rankedUsers = recRes.data.map(rec => rec.helper);
+                  const rankedIds = new Set(rankedUsers.map(u => u.id));
+                  const remaining = users.filter(u => !rankedIds.has(u.id));
+                  users = [...rankedUsers, ...remaining];
+                }
+              } catch {
+                // AI 실패 시 원래 순서 유지
+              }
+            }
+
+            setKoreanUsers(users);
+          }
+        } catch {
+          // 한국인 목록 실패 시 무시
+        }
+      }
     } catch {
       setRequests([]);
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [isInternational, user?.id]);
 
   useEffect(() => { fetchHasUnread(); }, []);
   useFocusEffect(useCallback(() => { fetchRequests(); }, [fetchRequests]));
