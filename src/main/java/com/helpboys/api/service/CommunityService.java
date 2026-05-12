@@ -29,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -52,7 +53,6 @@ public class CommunityService {
     private final NotificationService notificationService;
 
     private final HttpClient httpClient;
-    private final AiRequestFactory aiRequestFactory;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${ai.server.url:http://localhost:8000}")
@@ -349,13 +349,9 @@ public class CommunityService {
     private String callTranslate(String text, String langCode) {
         try {
             String body = objectMapper.writeValueAsString(
-                    Map.of(
-                            "text", text,
-                            "target_lang", langCode,
-                            "source_lang", "ko",
-                            "prefer_llm", true
-                    ));
-            HttpRequest req = aiRequestFactory.builder(aiServerUrl + "/api/translate")
+                    Map.of("text", text, "target_lang", langCode, "source_lang", "ko"));
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(aiServerUrl + "/api/translate"))
                     .header("Content-Type", "application/json")
                     .timeout(java.time.Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();

@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -29,7 +30,6 @@ public class MealService {
 
     private final MealRepository mealRepository;
     private final HttpClient httpClient;
-    private final AiRequestFactory aiRequestFactory;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${ai.server.url:http://localhost:8000}")
@@ -45,7 +45,8 @@ public class MealService {
         int updatedCount = 0;
 
         try {
-            HttpRequest request = aiRequestFactory.builder(aiServerUrl + "/api/meals/crawl")
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(aiServerUrl + "/api/meals/crawl"))
                     .GET()
                     .build();
 
@@ -179,7 +180,8 @@ public class MealService {
                     "corner",    meal.getCorner(),
                     "menu",      meal.getMenu()
             ));
-            HttpRequest req = aiRequestFactory.builder(aiServerUrl + "/api/meals/translate-batch")
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(aiServerUrl + "/api/meals/translate-batch"))
                     .header("Content-Type", "application/json")
                     .timeout(java.time.Duration.ofSeconds(15))
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
