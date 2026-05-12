@@ -170,8 +170,11 @@ interface SwipeCardProps {
 
 export default function KoreanAccountCardStack({ requests, onCardPress, onAccept }: SwipeCardProps) {
   const n = requests.length;
+  const { t } = useTranslation();
 
   const [order, setOrder] = useState<[number, number, number]>([0, 1, 2]);
+  const [seenCount, setSeenCount] = useState(0);
+  const allSeen = seenCount >= n;
 
   const translateX    = useSharedValue(0);
   const swipeProgress = useSharedValue(0);
@@ -185,6 +188,7 @@ export default function KoreanAccountCardStack({ requests, onCardPress, onAccept
       const nextBack = (a + 3) % n;
       return [b, c, nextBack] as [number, number, number];
     });
+    setSeenCount((prev) => prev + 1);
     // state 업데이트가 커밋된 뒤 리셋해야 깜빡임이 없음
     requestAnimationFrame(() => {
       translateX.value    = 0;
@@ -265,6 +269,25 @@ export default function KoreanAccountCardStack({ requests, onCardPress, onAccept
 
   if (n === 0) return null;
 
+  if (allSeen) {
+    return (
+      <View style={styles.wrapper}>
+        <View style={styles.doneBox}>
+          <Text style={styles.doneEmoji}>🎉</Text>
+          <Text style={styles.doneTitle}>{t('home.allCardsSeen')}</Text>
+          <Text style={styles.doneDesc}>{t('home.allCardsSeenDesc')}</Text>
+          <TouchableOpacity
+            style={styles.restartBtn}
+            onPress={() => { setSeenCount(0); setOrder([0, 1, 2]); }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.restartBtnText}>{t('home.restartCards')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   const card0 = requests[order[0] % n];
   const card1 = n > 1 ? requests[order[1] % n] : requests[0];
   const card2 = n > 2 ? requests[order[2] % n] : requests[0];
@@ -296,6 +319,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: s(8),
   },
+  doneBox: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: s(32),
+    backgroundColor: '#F5F8FF',
+    borderWidth: 1.5,
+    borderColor: '#D0E0F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: s(10),
+    paddingHorizontal: s(28),
+  },
+  doneEmoji: { fontSize: s(48) },
+  doneTitle: { fontSize: s(18), fontWeight: '800', color: '#0C1C3C', textAlign: 'center' },
+  doneDesc:  { fontSize: s(14), color: '#6B7280', textAlign: 'center' },
+  restartBtn: {
+    marginTop: s(8),
+    backgroundColor: '#3B6FE8',
+    borderRadius: s(24),
+    paddingVertical: s(12),
+    paddingHorizontal: s(32),
+  },
+  restartBtnText: { fontSize: s(15), fontWeight: '700', color: '#fff' },
   stack: {
     width: CARD_WIDTH + SLOT_PEEK_X[2],
     height: CARD_HEIGHT + SLOT_PEEK_Y[2],

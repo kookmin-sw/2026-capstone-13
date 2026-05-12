@@ -109,7 +109,10 @@
     "catHospital": "Bệnh viện",
     "catSchool": "Trường học",
     "catDaily": "Đời thường",
-    "catOther": "Khác"
+    "catOther": "Khác",
+    "allCardsSeen": "Bạn đã xem hết tất cả thẻ!",
+    "allCardsSeenDesc": "Bạn có muốn xem lại từ đầu không?",
+    "restartCards": "Xem lại"
   },
   "chat": {
     "title": "Trò chuyện",

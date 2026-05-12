@@ -109,7 +109,10 @@
     "catHospital": "Эмнэлэг",
     "catSchool": "Сургууль",
     "catDaily": "Өдөр тутам",
-    "catOther": "Бусад"
+    "catOther": "Бусад",
+    "allCardsSeen": "Та бүх картыг үзлээ!",
+    "allCardsSeenDesc": "Эхнээс нь дахин үзэх үү?",
+    "restartCards": "Дахин үзэх"
   },
   "chat": {
     "title": "Чат",
