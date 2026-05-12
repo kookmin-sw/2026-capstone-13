@@ -130,7 +130,9 @@ public class HelpRequestService {
     // 도움 수락 (한국인 학생이 매칭)
     @Transactional
     public HelpRequestResponse acceptRequest(Long requestId, Long helperId) {
-        HelpRequest req = findById(requestId);
+        // 동시에 여러 헬퍼가 같은 요청을 수락하는 race condition 방지
+        HelpRequest req = helpRequestRepository.findByIdForUpdate(requestId)
+                .orElseThrow(() -> new BusinessException("요청을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
         User helper = userRepository.findById(helperId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
@@ -138,7 +140,7 @@ public class HelpRequestService {
             throw new BusinessException("도움 수락은 한국인 학생만 할 수 있습니다.");
         }
         if (req.getStatus() != HelpRequest.RequestStatus.WAITING) {
-            throw new BusinessException("이미 매칭된 요청입니다.");
+            throw new BusinessException("이미 다른 사용자가 수락한 요청입니다.");
         }
 
         req.setHelper(helper);
