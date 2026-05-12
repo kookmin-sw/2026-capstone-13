@@ -20,10 +20,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { s } from '../utils/scale';
 import { CategoryLabels } from '../constants/colors';
-import { getHelpRequestById, acceptHelpRequest, cancelHelpRequest } from '../services/helpService';
+import { getHelpRequestById, acceptHelpRequest, cancelHelpRequest, recommendHelpers } from '../services/helpService';
 import { useAuthStore } from '../stores/authStore';
 import { useTranslation } from 'react-i18next';
-import type { HelpCategory, HelpMethod, HelpRequest } from '../types';
+import type { HelpCategory, HelpMethod, HelpRequest, HelperRecommendResponse } from '../types';
 
 const CategoryEmoji: Record<HelpCategory, string> = {
   BANK: '🏦', HOSPITAL: '🏥', SCHOOL: '🏫', DAILY: '🏠', OTHER: '📌',
@@ -119,6 +119,8 @@ export default function RequestDetailScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [reportVisible, setReportVisible] = useState(false);
   const [reportReason, setReportReason] = useState('');
+  const [recommendedHelpers, setRecommendedHelpers] = useState<HelperRecommendResponse[]>([]);
+  const [isLoadingRecommend, setIsLoadingRecommend] = useState(false);
   const reportPanResponder = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: (_, gs) => gs.dy > 10,
@@ -142,6 +144,22 @@ export default function RequestDetailScreen() {
     };
     fetch();
   }, [id]);
+
+  useEffect(() => {
+    if (!item || user?.id !== item.requester.id || item.status !== 'WAITING') return;
+    const fetchRecommended = async () => {
+      setIsLoadingRecommend(true);
+      try {
+        const res = await recommendHelpers(item.id);
+        if (res.success) setRecommendedHelpers(res.data);
+      } catch {
+        // 추천 실패 시 조용히 무시
+      } finally {
+        setIsLoadingRecommend(false);
+      }
+    };
+    fetchRecommended();
+  }, [item?.id, user?.id, item?.status]);
 
   if (isLoading) {
     return (
@@ -422,6 +440,39 @@ export default function RequestDetailScreen() {
                   </View>
                 ));
               })()}
+            </View>
+          </>
+        )}
+
+        {/* ── 추천 헬퍼 ── */}
+        {isMyPost && item.status === 'WAITING' && (
+          <>
+            <View style={styles.divider} />
+            <View style={styles.bodySection}>
+              <Text style={[styles.sectionTitle, { marginBottom: s(12) }]}>추천 헬퍼</Text>
+              {isLoadingRecommend ? (
+                <ActivityIndicator size="small" color={BLUE} />
+              ) : recommendedHelpers.length === 0 ? (
+                <Text style={styles.helperDetail}>추천 가능한 헬퍼가 없습니다.</Text>
+              ) : (
+                recommendedHelpers.map((rec) => (
+                  <View key={rec.helper.id} style={[styles.helperItem, { marginBottom: s(12) }]}>
+                    {toAbsoluteUrl(rec.helper.profileImage) ? (
+                      <Image source={{ uri: toAbsoluteUrl(rec.helper.profileImage)! }} style={styles.helperAvatar} />
+                    ) : (
+                      <View style={[styles.helperAvatar, styles.helperAvatarFallback]}>
+                        <Text style={styles.helperAvatarText}>{getInitial(rec.helper.nickname)}</Text>
+                      </View>
+                    )}
+                    <View style={styles.helperInfo}>
+                      <Text style={styles.helperName}>{rec.helper.nickname}</Text>
+                      <Text style={styles.helperDetail}>{rec.helper.university} · 도움 {rec.helper.helpCount}회</Text>
+                      <Text style={styles.helperRating}>{'★★★★★'} <Text style={styles.helperRatingNum}>{rec.helper.rating.toFixed(1)}</Text></Text>
+                      <Text style={[styles.helperDetail, { marginTop: s(2), color: BLUE }]}>{rec.matchReason}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
           </>
         )}
