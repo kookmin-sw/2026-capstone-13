@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { InteractionManager, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { updateFcmToken } from '../services/authService';
 import { useAuthStore } from '../stores/authStore';
@@ -106,13 +106,10 @@ export function usePushNotifications(userId: number | string | null | undefined)
 
   const registerToken = useCallback(async () => {
     if (!userId || !Notifications) return;
+    if (Platform.OS === 'ios' && Platform.isPad) return;
 
     try {
       let { status } = await Notifications.getPermissionsAsync();
-      if (status !== 'granted') {
-        const requested = await Notifications.requestPermissionsAsync();
-        status = requested.status;
-      }
       if (status !== 'granted') return;
 
       await setupNotificationChannels();
@@ -128,24 +125,31 @@ export function usePushNotifications(userId: number | string | null | undefined)
 
   // 토큰 등록
   useEffect(() => {
-    registerToken();
+    const task = InteractionManager.runAfterInteractions(() => {
+      registerToken();
+    });
+    return () => task.cancel();
   }, [registerToken]);
 
   // 알림 탭 리스너
   useEffect(() => {
     if (!Notifications) return;
 
-    const sub1 = Notifications.addNotificationReceivedListener(() => {});
+    try {
+      const sub1 = Notifications.addNotificationReceivedListener(() => {});
 
-    const sub2 = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as PushNotificationData;
-      navigateFromNotification(router, data);
-    });
+      const sub2 = Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data as PushNotificationData;
+        navigateFromNotification(router, data);
+      });
 
-    return () => {
-      sub1.remove();
-      sub2.remove();
-    };
+      return () => {
+        sub1.remove();
+        sub2.remove();
+      };
+    } catch {
+      return undefined;
+    }
   }, [router]);
 
   // 앱 종료 상태에서 알림 탭으로 열렸을 때
