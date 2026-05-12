@@ -193,6 +193,8 @@ public class HelpRequestService {
             throw new BusinessException("권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
+        validateStatusTransition(req.getStatus(), newStatus);
+
         // 완료 처리 시 helper의 도움 횟수 증가 + 알림 발송
         if (newStatus == HelpRequest.RequestStatus.COMPLETED
                 && req.getStatus() != HelpRequest.RequestStatus.COMPLETED
@@ -247,6 +249,17 @@ public class HelpRequestService {
         req.setStatus(HelpRequest.RequestStatus.WAITING);
         // helper는 유지 → 상대방(비퇴장자)이 findChatRooms 쿼리에서 여전히 방을 볼 수 있음
         return HelpRequestResponse.from(helpRequestRepository.save(req));
+    }
+
+    private void validateStatusTransition(HelpRequest.RequestStatus current, HelpRequest.RequestStatus next) {
+        boolean valid = switch (current) {
+            case MATCHED     -> next == HelpRequest.RequestStatus.IN_PROGRESS || next == HelpRequest.RequestStatus.CANCELLED;
+            case IN_PROGRESS -> next == HelpRequest.RequestStatus.COMPLETED   || next == HelpRequest.RequestStatus.CANCELLED;
+            default          -> false;
+        };
+        if (!valid) {
+            throw new BusinessException("잘못된 상태 변경입니다. (" + current + " → " + next + ")", HttpStatus.BAD_REQUEST);
+        }
     }
 
     private HelpRequest findById(Long id) {
