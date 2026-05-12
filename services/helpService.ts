@@ -1,6 +1,6 @@
 // 도움 요청 관련 API 호출 함수
 import api from './api';
-import type { ApiResponse, HelpRequest, HelpCategory, HelpMethod } from '../types';
+import type { ApiResponse, HelpRequest, HelpCategory, HelpMethod, HelperRecommendResponse } from '../types';
 
 const SERVER_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api').replace('/api', '');
 
@@ -83,6 +83,18 @@ export const startHelpRequest = async (id: number): Promise<ApiResponse<HelpRequ
   const response = await api.patch<ApiResponse<HelpRequest>>(`/requests/${id}/status`, null, {
     params: { status: 'IN_PROGRESS' },
   });
+  return response.data;
+};
+
+// 추천 헬퍼 목록 조회
+export const recommendHelpers = async (
+  id: number,
+  excludeHelperIds: number[] = []
+): Promise<ApiResponse<HelperRecommendResponse[]>> => {
+  const response = await api.post<ApiResponse<HelperRecommendResponse[]>>(
+    `/requests/${id}/recommend-helpers`,
+    { excludeHelperIds }
+  );
   return response.data;
 };
 

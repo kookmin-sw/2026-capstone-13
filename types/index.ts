@@ -144,6 +144,12 @@ export interface AppNotification {
   recipientId: number;
 }
 
+// 헬퍼 추천 응답
+export interface HelperRecommendResponse {
+  helper: User;
+  matchReason: string;
+}
+
 // API 공통 응답 형식
 export interface ApiResponse<T> {
   success: boolean;
