@@ -109,7 +109,10 @@
     "catHospital": "Больница",
     "catSchool": "Школа",
     "catDaily": "Повседневная жизнь",
-    "catOther": "Другое"
+    "catOther": "Другое",
+    "allCardsSeen": "Вы просмотрели все карточки!",
+    "allCardsSeenDesc": "Хотите начать сначала?",
+    "restartCards": "Начать сначала"
   },
   "chat": {
     "title": "Чат",

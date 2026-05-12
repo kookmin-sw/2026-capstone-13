@@ -109,7 +109,10 @@
     "catHospital": "病院",
     "catSchool": "学校",
     "catDaily": "日常",
-    "catOther": "その他"
+    "catOther": "その他",
+    "allCardsSeen": "すべてのカードを見ました！",
+    "allCardsSeenDesc": "最初からもう一度見ますか？",
+    "restartCards": "もう一度見る"
   },
   "chat": {
     "title": "チャット",

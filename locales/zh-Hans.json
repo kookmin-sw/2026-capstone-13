@@ -109,7 +109,10 @@
     "catHospital": "医院",
     "catSchool": "学校",
     "catDaily": "日常生活",
-    "catOther": "其他"
+    "catOther": "其他",
+    "allCardsSeen": "你已经看完所有卡片了！",
+    "allCardsSeenDesc": "要从头再来吗？",
+    "restartCards": "重新开始"
   },
   "chat": {
     "title": "聊天",

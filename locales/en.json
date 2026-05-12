@@ -109,7 +109,10 @@
     "catHospital": "Hospital",
     "catSchool": "School",
     "catDaily": "Daily",
-    "catOther": "Other"
+    "catOther": "Other",
+    "allCardsSeen": "You've seen all cards!",
+    "allCardsSeenDesc": "Want to start over?",
+    "restartCards": "Start over"
   },
   "chat": {
     "title": "Chat",
