@@ -108,7 +108,9 @@ export default function VideoCallScreen() {
 
   const engineRef = useRef<IRtcEngine | null>(null);
   const eventHandlerRef = useRef<IRtcEngineEventHandler | null>(null);
+  const audioObserverRef = useRef<IAudioFrameObserver | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const wsConnectingRef = useRef<boolean>(false);
   const stompRef = useRef<Client | null>(null);
   const pcmBufferRef = useRef<Uint8Array[]>([]);
   const pcmBufferSizeRef = useRef<number>(0);
@@ -123,10 +125,19 @@ export default function VideoCallScreen() {
   const myCaptionLang = myLangCode;
   const effectiveTargetLangRef = useRef(targetLanguage);
   const connectWebSocketRef = useRef<() => void | Promise<void>>(() => {});
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // 통화 시간 타이머
   useEffect(() => {
     timerRef.current = setInterval(() => {
+      if (!isMountedRef.current) return;
       setCallDuration((prev) => prev + 1);
     }, 1000);
     return () => {
@@ -153,6 +164,36 @@ export default function VideoCallScreen() {
   // Agora 초기화 및 채널 입장
   useEffect(() => {
     let released = false;
+
+    const cleanupAgora = () => {
+      const engine = engineRef.current;
+      try {
+        if (engine && audioObserverRef.current) {
+          engine.getMediaEngine().unregisterAudioFrameObserver(audioObserverRef.current);
+        }
+      } catch (error) {
+        console.log('[Agora] 오디오 프레임 옵저버 해제 실패:', error);
+      }
+      audioObserverRef.current = null;
+
+      try {
+        if (engine && eventHandlerRef.current) {
+          engine.unregisterEventHandler(eventHandlerRef.current);
+        }
+      } catch (error) {
+        console.log('[Agora] 이벤트 핸들러 해제 실패:', error);
+      }
+      eventHandlerRef.current = null;
+
+      try {
+        engine?.stopPreview();
+        engine?.leaveChannel();
+        engine?.release();
+      } catch (error) {
+        console.log('[Agora] 엔진 정리 실패:', error);
+      }
+      engineRef.current = null;
+    };
 
     const initAgora = async () => {
       try {
@@ -181,24 +222,31 @@ export default function VideoCallScreen() {
         }
         engineRef.current = engine;
 
-        engine.initialize({
+        const initResult = engine.initialize({
           appId: AGORA_APP_ID,
           channelProfile: ChannelProfileType.ChannelProfileCommunication,
         });
+        if (initResult !== 0) {
+          throw new Error(`Agora initialize failed: ${initResult}`);
+        }
 
         const handler: IRtcEngineEventHandler = {
           onJoinChannelSuccess: () => {
+            if (released || !isMountedRef.current) return;
             setIsJoined(true);
             console.log('[Agora] 채널 입장 성공:', channelName);
           },
           onError: (err, msg) => {
+            if (released || !isMountedRef.current) return;
             console.error('[Agora] 오류:', err, msg);
             Alert.alert('Agora 오류', `코드: ${err}\n${msg}`);
           },
           onUserJoined: (_connection, uid) => {
+            if (released || !isMountedRef.current) return;
             setRemoteUid(uid);
           },
           onUserOffline: () => {
+            if (released || !isMountedRef.current) return;
             setRemoteUid(null);
             Alert.alert('통화 종료', '상대방이 통화를 종료했습니다.', [
               { text: '확인', onPress: () => router.back() },
@@ -221,7 +269,9 @@ export default function VideoCallScreen() {
 
         const audioObserver: IAudioFrameObserver = {
           onRecordAudioFrame: (_channelId, audioFrame) => {
-            if (!isStreamingRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+            if (released || !isMountedRef.current || !isStreamingRef.current) return;
+            const ws = wsRef.current;
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
             const pcm = audioFrame.buffer;
             if (!pcm) { console.log('[자막] 오디오 프레임 buffer 없음'); return; }
             if (audioFrame.samplesPerSec) pcmSampleRateRef.current = audioFrame.samplesPerSec;
@@ -238,11 +288,16 @@ export default function VideoCallScreen() {
                 return;
               }
               console.log('[자막] PCM 전송:', combined.length, 'bytes, sr:', pcmSampleRateRef.current);
-              wsRef.current.send(buildWavBuffer(combined, pcmSampleRateRef.current, pcmChannelsRef.current));
+              try {
+                ws.send(buildWavBuffer(combined, pcmSampleRateRef.current, pcmChannelsRef.current));
+              } catch (error) {
+                console.log('[자막] PCM 전송 실패:', error);
+              }
             }
           },
         };
         engine.getMediaEngine().registerAudioFrameObserver(audioObserver);
+        audioObserverRef.current = audioObserver;
 
         if (!isVoiceOnly) {
           engine.enableVideo();
@@ -251,12 +306,12 @@ export default function VideoCallScreen() {
 
         // 백엔드에서 Agora 토큰 발급
         const agoraToken = await getAgoraToken(channelName);
+        if (released || !isMountedRef.current) return;
         if (typeof agoraToken !== 'string') {
           Alert.alert('통화 오류', '통화 토큰을 가져오지 못했습니다.');
           router.back();
           return;
         }
-        if (released) return;
 
         engine.joinChannel(agoraToken, channelName, 0, {
           clientRoleType: ClientRoleType.ClientRoleBroadcaster,
@@ -267,19 +322,11 @@ export default function VideoCallScreen() {
         });
       } catch (error) {
         console.error('[Agora] 초기화 실패:', error);
-        try {
-          if (eventHandlerRef.current) {
-            engineRef.current?.unregisterEventHandler(eventHandlerRef.current);
-          }
-          engineRef.current?.leaveChannel();
-          engineRef.current?.release();
-        } catch {
-          // release 실패는 화면 종료로 처리
+        cleanupAgora();
+        if (isMountedRef.current) {
+          Alert.alert('통화 오류', '통화 연결을 시작하지 못했습니다.');
+          router.back();
         }
-        engineRef.current = null;
-        eventHandlerRef.current = null;
-        Alert.alert('통화 오류', '통화 연결을 시작하지 못했습니다.');
-        router.back();
       }
     };
 
@@ -287,13 +334,8 @@ export default function VideoCallScreen() {
 
     return () => {
       released = true;
-      if (eventHandlerRef.current) {
-        engineRef.current?.unregisterEventHandler(eventHandlerRef.current);
-      }
-      engineRef.current?.leaveChannel();
-      engineRef.current?.release();
-      engineRef.current = null;
-      eventHandlerRef.current = null;
+      isStreamingRef.current = false;
+      cleanupAgora();
     };
   }, []);
 
@@ -323,6 +365,22 @@ export default function VideoCallScreen() {
     engineRef.current?.switchCamera();
   };
 
+  const closeSpeechWebSocket = useCallback(() => {
+    const ws = wsRef.current;
+    wsRef.current = null;
+    wsConnectingRef.current = false;
+    if (!ws) return;
+    try {
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onerror = null;
+      ws.onclose = null;
+      ws.close();
+    } catch {
+      // 이미 닫힌 소켓은 무시
+    }
+  }, []);
+
   // STOMP 연결 (번역 자막 relay용)
   const connectStomp = useCallback(async () => {
     console.log('[자막] connectStomp 시작, myUserId:', myUserId);
@@ -330,7 +388,11 @@ export default function VideoCallScreen() {
       console.log('[자막] myUserId 없음 - STOMP 연결 중단');
       return;
     }
+    if (stompRef.current?.active || stompRef.current?.connected) {
+      return;
+    }
     const token = await SecureStore.getItemAsync('accessToken');
+    if (!isMountedRef.current) return;
     const client = new Client({
       webSocketFactory: () => new WebSocket(WS_URL),
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
@@ -340,6 +402,7 @@ export default function VideoCallScreen() {
       heartbeatOutgoing: 10000,
       reconnectDelay: 5000,
       onConnect: () => {
+        if (!isMountedRef.current || stompRef.current !== client) return;
         console.log('[자막] STOMP 연결 성공, 구독:', `/topic/call/${myUserId}`);
         if (partnerUserId && pendingSubtitleRef.current.length > 0) {
           pendingSubtitleRef.current.forEach((subtitleText) => {
@@ -365,14 +428,13 @@ export default function VideoCallScreen() {
               if (partnerCaptionLang && partnerCaptionLang !== effectiveTargetLangRef.current) {
                 console.log('[자막] 언어 핸드셰이크 수신, targetLanguage 변경:', partnerCaptionLang);
                 effectiveTargetLangRef.current = partnerCaptionLang;
-                wsRef.current?.close();
-                wsRef.current = null;
+                closeSpeechWebSocket();
                 connectWebSocketRef.current();
               }
               return;
             }
             const incomingSubtitle = msg.subtitleText ?? msg.translatedText;
-            if (messageType === 'subtitle' && incomingSubtitle && showSubtitlesRef.current) {
+            if (messageType === 'subtitle' && incomingSubtitle && showSubtitlesRef.current && isMountedRef.current) {
               setTranscripts((prev) => [...prev, {
                 id: Date.now().toString(),
                 text: incomingSubtitle as string,
@@ -395,43 +457,68 @@ export default function VideoCallScreen() {
     });
     client.activate();
     stompRef.current = client;
-  }, [myUserId, myCaptionLang, partnerUserId]);
+  }, [myUserId, myCaptionLang, partnerUserId, closeSpeechWebSocket]);
 
   // 통화 시작 시 자동으로 STOMP 구독 (자막 수신 대기)
   useEffect(() => {
     if (!myUserId) return;
     connectStomp();
     return () => {
-      stompRef.current?.deactivate();
+      const client = stompRef.current;
       stompRef.current = null;
+      client?.deactivate().catch((error) => {
+        console.log('[자막] STOMP 해제 실패:', error);
+      });
     };
   }, [myUserId, connectStomp]);
 
 
   // WebSocket 연결 (AI 자막용)
   const connectWebSocket = useCallback(async () => {
+    const existing = wsRef.current;
+    if (
+      wsConnectingRef.current ||
+      existing?.readyState === WebSocket.OPEN ||
+      existing?.readyState === WebSocket.CONNECTING
+    ) {
+      return;
+    }
+    wsConnectingRef.current = true;
     console.log('[자막] AI WebSocket 연결 시도:', WS_SPEECH_URL);
     let speechToken: string;
     try {
       speechToken = await getAiSpeechToken();
     } catch (e) {
       console.log('[자막] AI WebSocket 토큰 발급 실패:', e);
-      setIsConnected(false);
+      wsConnectingRef.current = false;
+      if (isMountedRef.current) setIsConnected(false);
+      return;
+    }
+    if (!isMountedRef.current) {
+      wsConnectingRef.current = false;
       return;
     }
     const separator = WS_SPEECH_URL.includes('?') ? '&' : '?';
     const wsUrl = `${WS_SPEECH_URL}${separator}token=${encodeURIComponent(speechToken)}`;
     const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
     ws.onopen = () => {
+      if (!isMountedRef.current || wsRef.current !== ws) {
+        ws.close();
+        return;
+      }
+      wsConnectingRef.current = false;
       console.log('[자막] AI WebSocket 연결 성공, language:', myLanguage, 'target:', effectiveTargetLangRef.current);
       setIsConnected(true);
       ws.send(JSON.stringify({ language: myLanguage, target_language: effectiveTargetLangRef.current }));
     };
     ws.onerror = (e) => {
       console.log('[자막] AI WebSocket 오류:', e);
-      setIsConnected(false);
+      wsConnectingRef.current = false;
+      if (isMountedRef.current && wsRef.current === ws) setIsConnected(false);
     };
     ws.onmessage = (event) => {
+      if (!isMountedRef.current || wsRef.current !== ws) return;
       try {
         const data = JSON.parse(event.data as string);
         console.log('[자막] AI 응답:', JSON.stringify(data));
@@ -461,12 +548,12 @@ export default function VideoCallScreen() {
       }
     };
     ws.onclose = () => {
-      setIsConnected(false);
+      wsConnectingRef.current = false;
+      if (wsRef.current === ws) {
+        wsRef.current = null;
+      }
+      if (isMountedRef.current) setIsConnected(false);
     };
-    ws.onerror = () => {
-      setIsConnected(false);
-    };
-    wsRef.current = ws;
   }, [myLanguage, myUserId, partnerUserId]);
 
   useEffect(() => {
@@ -478,7 +565,13 @@ export default function VideoCallScreen() {
     if (!isJoined) return;
     connectWebSocket();
     isStreamingRef.current = true;
-  }, [isJoined, connectWebSocket]);
+    return () => {
+      isStreamingRef.current = false;
+      pcmBufferRef.current = [];
+      pcmBufferSizeRef.current = 0;
+      closeSpeechWebSocket();
+    };
+  }, [isJoined, connectWebSocket, closeSpeechWebSocket]);
 
   // 상대방이 Agora 채널에 입장하면 언어 핸드셰이크 재전송
   useEffect(() => {
@@ -493,14 +586,15 @@ export default function VideoCallScreen() {
   // 자막 스트리밍 중지
   const stopStreaming = () => {
     isStreamingRef.current = false;
-    setIsStreaming(false);
+    if (isMountedRef.current) setIsStreaming(false);
     pcmBufferRef.current = [];
     pcmBufferSizeRef.current = 0;
     pendingSubtitleRef.current = [];
-    wsRef.current?.close();
-    wsRef.current = null;
-    setIsConnected(false);
-    setTranscripts([]);
+    closeSpeechWebSocket();
+    if (isMountedRef.current) {
+      setIsConnected(false);
+      setTranscripts([]);
+    }
   };
 
   // 통화 종료
