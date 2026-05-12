@@ -42,7 +42,6 @@ jwt:
 ai:
   server:
     url: ${AI_SERVER_URL:http://localhost:8000}
-  shared-secret: ${AI_SHARED_SECRET:}
 
 # Agora 설정
 agora:
