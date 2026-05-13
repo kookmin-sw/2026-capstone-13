@@ -23,7 +23,7 @@ import {
 } from 'react-native';
 import { s } from '../utils/scale';
 import { getChatMessages, sendVoiceMessage, translateChatMessage, type ChatMessageDto } from '../services/chatService';
-import { getDirectMessages, leaveDirectRoom } from '../services/directChatService';
+import { getDirectMessages, leaveDirectRoom, translateDirectChatMessage } from '../services/directChatService';
 import { leaveHelpRequest, completeHelpRequest, rejectHelper, startHelpRequest } from '../services/helpService';
 import { hasReviewed } from '../services/reviewService';
 import { useAuthStore } from '../stores/authStore';
@@ -587,7 +587,9 @@ export default function ChatRoomScreen() {
 
   const handleTranslateMessage = async (messageId: number) => {
     try {
-      const res = await translateChatMessage(messageId);
+      const res = isDirect
+        ? await translateDirectChatMessage(messageId)
+        : await translateChatMessage(messageId);
       if (res.success && res.data) {
         setMessages((prev) =>
           prev.map((m) => m.id === messageId
