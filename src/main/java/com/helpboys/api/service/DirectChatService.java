@@ -1,7 +1,10 @@
 package com.helpboys.api.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.helpboys.api.dto.ChatMessageDto;
 import com.helpboys.api.dto.DirectChatRoomResponse;
+import com.helpboys.api.dto.UserResponse;
 import com.helpboys.api.entity.DirectChatMessage;
 import com.helpboys.api.entity.DirectChatRoom;
 import com.helpboys.api.entity.User;
@@ -13,13 +16,19 @@ import com.helpboys.api.repository.UserBlockRepository;
 import com.helpboys.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -36,6 +45,11 @@ public class DirectChatService {
     private final UserBlockRepository userBlockRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final FcmService fcmService;
+    private final HttpClient httpClient;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${ai.server.url:http://localhost:8000}")
+    private String aiServerUrl;
 
     // 두 유저 간 채팅방 생성 또는 조회
     @Transactional
@@ -220,6 +234,56 @@ public class DirectChatService {
         else room.setLeftByUser2(true);
         room.setUpdatedAt(LocalDateTime.now());
         roomRepository.save(room);
+    }
+
+    @Transactional(readOnly = true)
+    public ChatMessageDto translateMessage(Long messageId, Long userId) {
+        DirectChatMessage message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new BusinessException("메시지를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
+
+        DirectChatRoom room = message.getRoom();
+        if (!isParticipant(room, userId)) {
+            throw new BusinessException("접근 권한이 없습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        User user = findUser(userId);
+        String targetLang = UserResponse.preferredLanguageFor(user);
+        String sourceLang = UserResponse.preferredLanguageFor(message.getSender());
+        ChatMessageDto dto = toDto(message);
+
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("text", message.getContent());
+            payload.put("target_lang", targetLang);
+            payload.put("source_lang", sourceLang);
+            payload.put("prefer_llm", true);
+
+            String body = objectMapper.writeValueAsString(payload);
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(aiServerUrl + "/api/translate"))
+                    .header("Content-Type", "application/json")
+                    .timeout(java.time.Duration.ofSeconds(30))
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            JsonNode result = objectMapper.readTree(resp.body());
+            if (!result.path("success").asBoolean()) {
+                throw new BusinessException("번역에 실패했습니다: " + result.path("message").asText("번역 오류"), HttpStatus.SERVICE_UNAVAILABLE);
+            }
+
+            JsonNode data = result.path("data");
+            dto.setTranslatedContent(data.path("translated").asText(message.getContent()));
+            dto.setOriginalLanguage(data.path("source_language").asText(sourceLang));
+            if (!data.path("cultural_note").isNull()) {
+                dto.setCulturalNote(data.path("cultural_note").asText(null));
+            }
+            return dto;
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("[DM 번역] 실패: {}", e.getMessage());
+            throw new BusinessException("번역 서버 연결에 실패했습니다", HttpStatus.SERVICE_UNAVAILABLE);
+        }
     }
 
     private DirectChatRoom findRoom(Long roomId) {

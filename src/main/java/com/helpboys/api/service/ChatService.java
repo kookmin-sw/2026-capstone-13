@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.helpboys.api.dto.ChatMessageDto;
 import com.helpboys.api.dto.ChatRoomResponse;
+import com.helpboys.api.dto.UserResponse;
 import com.helpboys.api.entity.ChatMessage;
 import com.helpboys.api.entity.HelpRequest;
 import com.helpboys.api.entity.User;
@@ -23,6 +24,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -67,18 +69,16 @@ public class ChatService {
                 if (room != null) {
                     User partner = room.getRequester().getId().equals(dto.getSenderId())
                             ? room.getHelper() : room.getRequester();
-                    String targetLang;
-                    if (partner == null) {
-                        targetLang = "en";
-                    } else if (partner.getUserType() == User.UserType.KOREAN) {
-                        targetLang = "ko";
-                    } else {
-                        String preferredLang = partner.getPreferredLanguage();
-                        targetLang = (preferredLang != null && !preferredLang.isBlank()) ? preferredLang : "en";
-                    }
+                    String targetLang = partner != null ? UserResponse.preferredLanguageFor(partner) : "en";
+                    String sourceLang = UserResponse.preferredLanguageFor(sender);
 
+                    Map<String, Object> translatePayload = new HashMap<>();
+                    translatePayload.put("text", content);
+                    translatePayload.put("target_lang", targetLang);
+                    translatePayload.put("source_lang", sourceLang);
+                    translatePayload.put("prefer_llm", true);
                     String translateBody = objectMapper.writeValueAsString(
-                            java.util.Map.of("text", content, "target_lang", targetLang)
+                            translatePayload
                     );
                     HttpRequest translateRequest = HttpRequest.newBuilder()
                             .uri(URI.create(aiServerUrl + "/api/translate"))
@@ -502,12 +502,17 @@ public class ChatService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-        String targetLang = (user.getPreferredLanguage() != null && !user.getPreferredLanguage().isBlank())
-                ? user.getPreferredLanguage() : "en";
+        String targetLang = UserResponse.preferredLanguageFor(user);
+        String sourceLang = UserResponse.preferredLanguageFor(message.getSender());
 
         try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("text", message.getContent());
+            payload.put("target_lang", targetLang);
+            payload.put("source_lang", sourceLang);
+            payload.put("prefer_llm", true);
             String body = objectMapper.writeValueAsString(
-                    java.util.Map.of("text", message.getContent(), "target_lang", targetLang));
+                    payload);
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(aiServerUrl + "/api/translate"))
                     .header("Content-Type", "application/json")
