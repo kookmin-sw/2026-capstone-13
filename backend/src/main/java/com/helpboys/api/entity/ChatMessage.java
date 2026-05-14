@@ -37,7 +37,7 @@ public class ChatMessage {
     @Column(name = "translated_content", columnDefinition = "TEXT")
     private String translatedContent;
 
-    // 한국어 문화적 뉘앙스 설명 (Gemini AI 감지)
+    // 한국어 문화적 뉘앙스 설명 (AI 감지)
     @Column(name = "cultural_note", columnDefinition = "TEXT")
     private String culturalNote;
 

@@ -87,7 +87,17 @@ public class DirectChatController {
         return ResponseEntity.ok(ApiResponse.success("채팅방을 나갔습니다.", null));
     }
 
+    // POST /api/direct-chat/messages/{messageId}/translate - DM 메시지 온디맨드 번역
+    @PostMapping("/messages/{messageId}/translate")
+    @ResponseBody
+    public ResponseEntity<ApiResponse<ChatMessageDto>> translateMessage(
+            @PathVariable Long messageId,
+            @RequestHeader("Authorization") String token) {
+        Long userId = extractUserId(token);
+        return ResponseEntity.ok(ApiResponse.success("번역 완료", directChatService.translateMessage(messageId, userId)));
+    }
+
     private Long extractUserId(String bearerToken) {
-        return jwtUtil.extractUserId(bearerToken.replace("Bearer ", ""));
+        return jwtUtil.extractUserIdFromBearer(bearerToken);
     }
 }

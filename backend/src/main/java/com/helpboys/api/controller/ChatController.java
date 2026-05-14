@@ -51,7 +51,7 @@ public class ChatController {
     @ResponseBody
     public ResponseEntity<ApiResponse<List<ChatRoomResponse>>> getChatRooms(
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         return ResponseEntity.ok(ApiResponse.success("조회 성공", chatService.getChatRooms(userId)));
     }
 
@@ -61,7 +61,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<List<ChatRoomResponse>>> searchChatRooms(
             @RequestParam String keyword,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         return ResponseEntity.ok(ApiResponse.success("검색 성공", chatService.searchChatRooms(keyword, userId)));
     }
 
@@ -71,7 +71,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<ChatRoomResponse>> getChatRoom(
             @PathVariable Long roomId,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         return ResponseEntity.ok(ApiResponse.success("조회 성공", chatService.getChatRoom(roomId, userId)));
     }
 
@@ -81,7 +81,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<List<ChatMessageDto>>> getMessages(
             @PathVariable Long roomId,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         return ResponseEntity.ok(ApiResponse.success("조회 성공", chatService.getMessages(roomId, userId)));
     }
 
@@ -91,7 +91,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<Void>> markAsRead(
             @PathVariable Long roomId,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         chatService.markAsRead(roomId, userId);
         return ResponseEntity.ok(ApiResponse.success("읽음 처리 완료", null));
     }
@@ -102,7 +102,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<ChatMessageDto>> translateMessage(
             @PathVariable Long messageId,
             @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         return ResponseEntity.ok(ApiResponse.success("번역 완료", chatService.translateMessage(messageId, userId)));
     }
 
@@ -114,7 +114,7 @@ public class ChatController {
             @RequestParam("audio") MultipartFile audioFile,
             @RequestHeader("Authorization") String token) {
         try {
-            Long senderId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+            Long senderId = jwtUtil.extractUserIdFromBearer(token);
             if (!rateLimiter.isAllowed("voice:min:" + senderId, 10, 60) ||
                 !rateLimiter.isAllowed("voice:day:" + senderId, 100, 86400)) {
                 throw new BusinessException("음성 메시지 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");

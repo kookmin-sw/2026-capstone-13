@@ -1,11 +1,14 @@
 package com.helpboys.api.controller;
 
 import com.helpboys.api.dto.ApiResponse;
+import com.helpboys.api.dto.HelperRecommendRequest;
+import com.helpboys.api.dto.HelperRecommendResponse;
 import com.helpboys.api.dto.HelpRequestRequest;
 import com.helpboys.api.dto.HelpRequestResponse;
 import com.helpboys.api.dto.ReviewRequest;
 import com.helpboys.api.dto.ReviewResponse;
 import com.helpboys.api.entity.HelpRequest;
+import com.helpboys.api.service.HelperRecommendationService;
 import com.helpboys.api.service.HelpRequestService;
 import com.helpboys.api.service.ReviewService;
 import com.helpboys.api.util.JwtUtil;
@@ -16,12 +19,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/requests")
 @RequiredArgsConstructor
 public class HelpRequestController {
 
     private final HelpRequestService helpRequestService;
+    private final HelperRecommendationService helperRecommendationService;
     private final ReviewService reviewService;
     private final JwtUtil jwtUtil;
 
@@ -159,6 +165,16 @@ public class HelpRequestController {
         return ResponseEntity.ok(ApiResponse.success("상태가 변경되었습니다.", helpRequestService.updateStatus(id, status, userId)));
     }
 
+    // POST /api/requests/{id}/recommend-helpers - 헬퍼 추천 (유학생용)
+    @PostMapping("/{id}/recommend-helpers")
+    public ResponseEntity<ApiResponse<List<HelperRecommendResponse>>> recommendHelpers(
+            @PathVariable Long id,
+            @RequestBody(required = false) HelperRecommendRequest request,
+            @RequestHeader("Authorization") String token) {
+        if (request == null) request = new HelperRecommendRequest();
+        return ResponseEntity.ok(ApiResponse.success("추천 완료", helperRecommendationService.recommend(id, request.getExcludeHelperIds())));
+    }
+
     // POST /api/requests/{id}/review - 리뷰 작성 (요청자만, 완료된 요청에 한해)
     @PostMapping("/{id}/review")
     public ResponseEntity<ApiResponse<ReviewResponse>> createReview(
@@ -171,7 +187,6 @@ public class HelpRequestController {
     }
 
     private Long extractUserId(String bearerToken) {
-        String token = bearerToken.replace("Bearer ", "");
-        return jwtUtil.extractUserId(token);
+        return jwtUtil.extractUserIdFromBearer(bearerToken);
     }
 }

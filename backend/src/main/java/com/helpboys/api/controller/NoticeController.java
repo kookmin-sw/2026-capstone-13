@@ -60,7 +60,7 @@ public class NoticeController {
     }
 
     private void checkAdmin(String token) {
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         userService.checkAdmin(userId);
     }
 
@@ -68,7 +68,7 @@ public class NoticeController {
         if (queryLang != null && !queryLang.isBlank()) return queryLang;
         if (token != null) {
             try {
-                Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+                Long userId = jwtUtil.extractUserIdFromBearer(token);
                 return userService.getUserPreferredLanguage(userId);
             } catch (Exception ignored) {}
         }

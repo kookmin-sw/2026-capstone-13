@@ -43,6 +43,7 @@ public class AdminController {
             @AuthenticationPrincipal UserDetails userDetails) {
         checkAdmin(userDetails);
         userService.rejectStudentId(userId);
+
         return ResponseEntity.ok(ApiResponse.success("학생증이 거절되었습니다.", null));
     }
 

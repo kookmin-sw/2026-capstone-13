@@ -70,7 +70,6 @@ public class ReportController {
     }
 
     private Long extractUserId(String bearerToken) {
-        String token = bearerToken.replace("Bearer ", "");
-        return jwtUtil.extractUserId(token);
+        return jwtUtil.extractUserIdFromBearer(bearerToken);
     }
 }

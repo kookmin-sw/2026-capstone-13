@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.helpboys.api.dto.ChatMessageDto;
 import com.helpboys.api.dto.ChatRoomResponse;
+import com.helpboys.api.dto.UserResponse;
 import com.helpboys.api.entity.ChatMessage;
 import com.helpboys.api.entity.HelpRequest;
 import com.helpboys.api.entity.User;
@@ -23,6 +24,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -60,27 +62,26 @@ public class ChatService {
                 content.startsWith("SYS_CALL_VIDEO:")
         );
 
+        HelpRequest room = helpRequestRepository.findByIdWithUsers(dto.getRoomId()).orElse(null);
+
         if (!isSystemMessage && content != null && !content.isBlank()) {
             try {
-                HelpRequest room = helpRequestRepository.findById(dto.getRoomId()).orElse(null);
                 if (room != null) {
                     User partner = room.getRequester().getId().equals(dto.getSenderId())
                             ? room.getHelper() : room.getRequester();
-                    String targetLang;
-                    if (partner == null) {
-                        targetLang = "en";
-                    } else if (partner.getUserType() == User.UserType.KOREAN) {
-                        targetLang = "ko";
-                    } else {
-                        String preferredLang = partner.getPreferredLanguage();
-                        targetLang = (preferredLang != null && !preferredLang.isBlank()) ? preferredLang : "en";
-                    }
+                    String targetLang = partner != null ? UserResponse.preferredLanguageFor(partner) : "en";
+                    String sourceLang = UserResponse.preferredLanguageFor(sender);
 
+                    Map<String, Object> translatePayload = new HashMap<>();
+                    translatePayload.put("text", content);
+                    translatePayload.put("target_lang", targetLang);
+                    translatePayload.put("source_lang", sourceLang);
+                    translatePayload.put("prefer_llm", true);
                     String translateBody = objectMapper.writeValueAsString(
-                            java.util.Map.of("text", content, "target_lang", targetLang)
+                            translatePayload
                     );
                     HttpRequest translateRequest = HttpRequest.newBuilder()
-                            .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                            .uri(URI.create(aiServerUrl + "/api/translate"))
                             .header("Content-Type", "application/json")
                             .timeout(java.time.Duration.ofSeconds(10))
                             .POST(HttpRequest.BodyPublishers.ofString(translateBody))
@@ -116,10 +117,10 @@ public class ChatService {
         ChatMessage saved = chatMessageRepository.save(message);
 
         // 수신자에게 실시간 unreadCount 갱신 이벤트 전송
-        notifyUnreadCount(dto.getRoomId(), dto.getSenderId());
+        notifyUnreadCount(room, dto.getSenderId());
 
         // 수신자에게 FCM 푸시 알림 전송
-        sendChatPushToReceiver(dto.getRoomId(), dto.getSenderId(), sender.getNickname(), content);
+        sendChatPushToReceiver(room, dto.getSenderId(), sender.getNickname(), content);
 
         return ChatMessageDto.builder()
                 .id(saved.getId())
@@ -136,9 +137,8 @@ public class ChatService {
     }
 
     // 수신자의 개인 채널(/topic/user/{receiverId})로 unreadCount 이벤트 전송
-    private void notifyUnreadCount(Long roomId, Long senderId) {
+    private void notifyUnreadCount(HelpRequest room, Long senderId) {
         try {
-            HelpRequest room = helpRequestRepository.findById(roomId).orElse(null);
             if (room == null) return;
 
             User receiver = room.getRequester().getId().equals(senderId)
@@ -147,12 +147,12 @@ public class ChatService {
             if (receiver == null) return;
 
             long unreadCount = chatMessageRepository
-                    .countUnreadMessages(roomId, receiver.getId());
+                    .countUnreadMessages(room.getId(), receiver.getId());
 
             messagingTemplate.convertAndSend("/topic/user/" + receiver.getId(),
                     java.util.Map.of(
                             "type", "UNREAD_UPDATE",
-                            "roomId", roomId,
+                            "roomId", room.getId(),
                             "unreadCount", unreadCount
                     ));
         } catch (Exception e) {
@@ -161,15 +161,29 @@ public class ChatService {
     }
 
     // 수신자에게 FCM 푸시 알림 전송
-    private void sendChatPushToReceiver(Long roomId, Long senderId, String senderNickname, String content) {
+    private void sendChatPushToReceiver(HelpRequest room, Long senderId, String senderNickname, String content) {
         try {
-            HelpRequest room = helpRequestRepository.findById(roomId).orElse(null);
             if (room == null) return;
 
             User receiver = room.getRequester().getId().equals(senderId)
                     ? room.getHelper()
                     : room.getRequester();
             if (receiver == null || receiver.getFcmToken() == null) return;
+
+            if (content != null && (content.startsWith("SYS_CALL_VOICE:") || content.startsWith("SYS_CALL_VIDEO:"))) {
+                boolean isVideo = content.startsWith("SYS_CALL_VIDEO:");
+                fcmService.sendPushWithData(receiver.getFcmToken(), senderNickname,
+                        isVideo ? "영상통화가 왔습니다" : "음성통화가 왔습니다",
+                        "calls",
+                        Map.of(
+                            "type", "call",
+                            "roomId", String.valueOf(room.getId()),
+                            "fromUserId", String.valueOf(senderId),
+                            "callerNickname", senderNickname,
+                            "voiceOnly", isVideo ? "false" : "true"
+                        ));
+                return;
+            }
 
             String preview = content != null && content.length() > 50
                     ? content.substring(0, 50) + "…"
@@ -178,7 +192,7 @@ public class ChatService {
                     "chat",
                     Map.of(
                         "type", "chat",
-                        "roomId", String.valueOf(roomId),
+                        "roomId", String.valueOf(room.getId()),
                         "senderId", String.valueOf(senderId)
                     ));
         } catch (Exception e) {
@@ -359,7 +373,7 @@ public class ChatService {
                         java.util.Map.of("text", recognizedText, "target_lang", targetLang, "source_lang", detectedLanguage)
                 );
                 HttpRequest translateRequest = HttpRequest.newBuilder()
-                        .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                        .uri(URI.create(aiServerUrl + "/api/translate"))
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(translateBody))
                         .build();
@@ -447,7 +461,7 @@ public class ChatService {
                         Map.of("text", recognizedText, "target_lang", targetLang, "source_lang", detectedLanguage)
                 );
                 HttpRequest translateRequest = HttpRequest.newBuilder()
-                        .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                        .uri(URI.create(aiServerUrl + "/api/translate"))
                         .header("Content-Type", "application/json")
                         .timeout(java.time.Duration.ofSeconds(10))
                         .POST(HttpRequest.BodyPublishers.ofString(translateBody))
@@ -477,7 +491,7 @@ public class ChatService {
         log.info("[자막] from={} to={} text={}", fromUserId, toUserId, subtitleText);
     }
 
-    // 채팅 메시지 온디맨드 번역 (translatedContent 없는 경우 Gemini 번역 후 저장)
+    // 채팅 메시지 온디맨드 번역 (translatedContent 없는 경우 번역 후 저장)
     public ChatMessageDto translateMessage(Long messageId, Long userId) {
         ChatMessage message = chatMessageRepository.findById(messageId)
                 .orElseThrow(() -> new BusinessException("메시지를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
@@ -488,21 +502,26 @@ public class ChatService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
-        String targetLang = (user.getPreferredLanguage() != null && !user.getPreferredLanguage().isBlank())
-                ? user.getPreferredLanguage() : "en";
+        String targetLang = UserResponse.preferredLanguageFor(user);
+        String sourceLang = UserResponse.preferredLanguageFor(message.getSender());
 
         try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("text", message.getContent());
+            payload.put("target_lang", targetLang);
+            payload.put("source_lang", sourceLang);
+            payload.put("prefer_llm", true);
             String body = objectMapper.writeValueAsString(
-                    java.util.Map.of("text", message.getContent(), "target_lang", targetLang));
+                    payload);
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(aiServerUrl + "/api/gemini/translate"))
+                    .uri(URI.create(aiServerUrl + "/api/translate"))
                     .header("Content-Type", "application/json")
                     .timeout(java.time.Duration.ofSeconds(30))
                     .POST(HttpRequest.BodyPublishers.ofString(body)).build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             JsonNode result = objectMapper.readTree(resp.body());
             if (!result.path("success").asBoolean()) {
-                throw new BusinessException("번역에 실패했습니다: " + result.path("message").asText("Gemini 오류"), HttpStatus.SERVICE_UNAVAILABLE);
+                throw new BusinessException("번역에 실패했습니다: " + result.path("message").asText("번역 오류"), HttpStatus.SERVICE_UNAVAILABLE);
             }
             message.setTranslatedContent(result.path("data").path("translated").asText());
             if (!result.path("data").path("cultural_note").isNull()) {

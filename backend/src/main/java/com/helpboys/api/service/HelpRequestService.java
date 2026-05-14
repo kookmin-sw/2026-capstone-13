@@ -130,7 +130,9 @@ public class HelpRequestService {
     // 도움 수락 (한국인 학생이 매칭)
     @Transactional
     public HelpRequestResponse acceptRequest(Long requestId, Long helperId) {
-        HelpRequest req = findById(requestId);
+        // 동시에 여러 헬퍼가 같은 요청을 수락하는 race condition 방지
+        HelpRequest req = helpRequestRepository.findByIdForUpdate(requestId)
+                .orElseThrow(() -> new BusinessException("요청을 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
         User helper = userRepository.findById(helperId)
                 .orElseThrow(() -> new BusinessException("사용자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND));
 
@@ -138,7 +140,7 @@ public class HelpRequestService {
             throw new BusinessException("도움 수락은 한국인 학생만 할 수 있습니다.");
         }
         if (req.getStatus() != HelpRequest.RequestStatus.WAITING) {
-            throw new BusinessException("이미 매칭된 요청입니다.");
+            throw new BusinessException("이미 다른 사용자가 수락한 요청입니다.");
         }
 
         req.setHelper(helper);
@@ -190,6 +192,8 @@ public class HelpRequestService {
         if (!isRequester && !isHelper) {
             throw new BusinessException("권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
+
+        validateStatusTransition(req.getStatus(), newStatus);
 
         // 완료 처리 시 helper의 도움 횟수 증가 + 알림 발송
         if (newStatus == HelpRequest.RequestStatus.COMPLETED
@@ -245,6 +249,17 @@ public class HelpRequestService {
         req.setStatus(HelpRequest.RequestStatus.WAITING);
         // helper는 유지 → 상대방(비퇴장자)이 findChatRooms 쿼리에서 여전히 방을 볼 수 있음
         return HelpRequestResponse.from(helpRequestRepository.save(req));
+    }
+
+    private void validateStatusTransition(HelpRequest.RequestStatus current, HelpRequest.RequestStatus next) {
+        boolean valid = switch (current) {
+            case MATCHED     -> next == HelpRequest.RequestStatus.IN_PROGRESS || next == HelpRequest.RequestStatus.CANCELLED;
+            case IN_PROGRESS -> next == HelpRequest.RequestStatus.COMPLETED   || next == HelpRequest.RequestStatus.CANCELLED;
+            default          -> false;
+        };
+        if (!valid) {
+            throw new BusinessException("잘못된 상태 변경입니다. (" + current + " → " + next + ")", HttpStatus.BAD_REQUEST);
+        }
     }
 
     private HelpRequest findById(Long id) {

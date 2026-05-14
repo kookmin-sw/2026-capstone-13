@@ -106,11 +106,12 @@ public class EmailService {
     @Transactional
     public boolean verifyCodeForPasswordReset(String email, String code) {
         Optional<EmailVerification> opt =
-                verificationRepository.findTopByEmailOrderByCreatedAtDesc(email);
+                verificationRepository.findTopByEmailAndUsedFalseOrderByCreatedAtDesc(email);
 
         if (opt.isEmpty()) return false;
 
         EmailVerification v = opt.get();
+        if (v.isUsed()) return false;
         if (!v.getCode().equals(code)) return false;
         if (v.getCreatedAt().plusMinutes(10).isBefore(LocalDateTime.now())) return false;
 

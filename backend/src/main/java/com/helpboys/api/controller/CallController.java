@@ -87,7 +87,9 @@ public class
                             Map.of(
                                 "type", "call",
                                 "fromUserId", String.valueOf(signal.getFromUserId()),
-                                "roomId", signal.getRoomId() != null ? String.valueOf(signal.getRoomId()) : ""
+                                "roomId", signal.getRoomId() != null ? String.valueOf(signal.getRoomId()) : "",
+                                "callerNickname", callerName,
+                                "voiceOnly", "false"
                             )
                     );
                 }
@@ -115,7 +117,7 @@ public class
             @RequestParam("toUserId") Long toUserId,
             @RequestHeader("Authorization") String token) {
         try {
-            Long fromUserId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+            Long fromUserId = jwtUtil.extractUserIdFromBearer(token);
             chatService.processCallSubtitle(audioFile.getBytes(), fromUserId, toUserId);
             return ResponseEntity.ok(ApiResponse.success("자막 처리 완료", null));
         } catch (Exception e) {

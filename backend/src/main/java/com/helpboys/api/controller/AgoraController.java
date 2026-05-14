@@ -26,7 +26,7 @@ public class AgoraController {
             @RequestParam String channelName,
             @RequestHeader("Authorization") String token) {
 
-        Long userId = jwtUtil.extractUserId(token.replace("Bearer ", ""));
+        Long userId = jwtUtil.extractUserIdFromBearer(token);
         if (!rateLimiter.isAllowed("agora:min:" + userId, 5, 60) ||
             !rateLimiter.isAllowed("agora:day:" + userId, 20, 86400)) {
             throw new BusinessException("토큰 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.", HttpStatus.TOO_MANY_REQUESTS);
