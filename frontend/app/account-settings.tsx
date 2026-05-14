@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -117,7 +117,7 @@ export default function AccountSettingsScreen() {
         <View style={styles.menuDivider} />
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => router.push('/change-password')}
+          onPress={() => router.push('/change-password' as Href)}
           activeOpacity={0.7}
         >
           <Ionicons name="lock-closed-outline" size={20} color={T1} />

@@ -20,11 +20,13 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import type { User } from '../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CARD_WIDTH  = SCREEN_WIDTH - 90;
-const CARD_HEIGHT = Math.round(SCREEN_HEIGHT * 0.53);
+const IS_TABLET   = SCREEN_WIDTH >= 768;
+const CARD_WIDTH  = IS_TABLET ? Math.min(SCREEN_WIDTH * 0.55, 600) : SCREEN_WIDTH - 90;
+const CARD_HEIGHT = IS_TABLET ? Math.min(Math.round(SCREEN_HEIGHT * 0.55), 650) : Math.round(SCREEN_HEIGHT * 0.53);
 const ACCENT      = '#0EA5E9';
 const BLUE        = '#3B6FE8';
 
@@ -62,13 +64,6 @@ const GRADIENT_LAYERS = Array.from({ length: GRAD_STEPS }, (_, i) => {
   );
 });
 
-function getLevel(count: number): { label: string; color: string } {
-  if (count >= 31) return { label: '마스터', color: '#F97316' };
-  if (count >= 16) return { label: '전문가', color: '#8B5CF6' };
-  if (count >= 6)  return { label: '도우미', color: '#3B6FE8' };
-  return                  { label: '새싹',   color: '#22C55E' };
-}
-
 const SERVER_BASE_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://backend-production-0a6f.up.railway.app/api').replace('/api', '');
 
 function toAbsoluteUrl(url: string | undefined): string | undefined {
@@ -83,12 +78,12 @@ const truncatedCache = new Map<string | number, boolean>();
 // ── 카드 한 장 ─────────────────────────────────────────────
 const CardContent = memo(
   function CardContent({ user, onPress, onSkip, onProfilePress }: { user: User; onPress?: () => void; onSkip?: () => void; onProfilePress?: () => void }) {
+    const { t } = useTranslation();
     const [imgError, setImgError] = useState(false);
     const [isTruncated, setIsTruncated] = useState(() => truncatedCache.get(user.id) ?? false);
     const profileUri = toAbsoluteUrl(user.profileImage?.trim());
     const showImage  = !!profileUri && !imgError;
     const initial    = getInitial(user.nickname);
-    const lv         = getLevel(user.helpCount);
     const isVerified = user.studentIdVerified || user.studentIdStatus === 'APPROVED';
 
     return (
@@ -134,7 +129,7 @@ const CardContent = memo(
               <>
                 <Text style={styles.statsDot}>·</Text>
                 <Ionicons name="heart" size={13} color={ACCENT} />
-                <Text style={styles.statsText}>도움 {user.helpCount}회</Text>
+                <Text style={styles.statsText}>{t('requestDetail.helpCountDetail', { count: user.helpCount })}</Text>
               </>
             )}
           </View>
@@ -152,7 +147,7 @@ const CardContent = memo(
                 }}
               >
                 {user.bio ?? ''}
-                {isTruncated && <Text style={styles.bubbleMore}>  ...더보기</Text>}
+                {isTruncated && <Text style={styles.bubbleMore}>  ...{t('home.more')}</Text>}
               </Text>
             </View>
           </View>
@@ -162,7 +157,7 @@ const CardContent = memo(
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.acceptBtn} onPress={onPress} activeOpacity={0.75}>
             <View style={styles.pillBtn}>
-              <Text style={styles.btnLabel}>요청하기</Text>
+              <Text style={styles.btnLabel}>{t('home.requestAction')}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -183,8 +178,11 @@ const SWIPE_THRESHOLD = 80;
 
 export default function ForeignAccountCardStack({ users, onPress, onProfilePress }: ForeignAccountCardStackProps) {
   const n = users.length;
+  const { t } = useTranslation();
 
   const [order, setOrder] = useState<[number, number, number]>([0, 1, 2]);
+  const [seenCount, setSeenCount] = useState(0);
+  const allSeen = seenCount >= n;
 
   const translateX    = useSharedValue(0);
   const swipeProgress = useSharedValue(0);
@@ -198,6 +196,7 @@ export default function ForeignAccountCardStack({ users, onPress, onProfilePress
       const nextBack = (a + 3) % n;
       return [b, c, nextBack] as [number, number, number];
     });
+    setSeenCount((prev) => prev + 1);
     requestAnimationFrame(() => {
       translateX.value    = 0;
       swipeProgress.value = 0;
@@ -276,6 +275,25 @@ export default function ForeignAccountCardStack({ users, onPress, onProfilePress
 
   if (n === 0) return null;
 
+  if (allSeen) {
+    return (
+      <View style={styles.wrapper}>
+        <View style={styles.doneBox}>
+          <Text style={styles.doneEmoji}>🎉</Text>
+          <Text style={styles.doneTitle}>{t('home.allCardsSeen')}</Text>
+          <Text style={styles.doneDesc}>{t('home.allCardsSeenDesc')}</Text>
+          <TouchableOpacity
+            style={styles.restartBtn}
+            onPress={() => { setSeenCount(0); setOrder([0, 1, 2]); }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.restartBtnText}>{t('home.restartCards')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   const user0 = users[order[0] % n];
   const user1 = n > 1 ? users[order[1] % n] : users[0];
   const user2 = n > 2 ? users[order[2] % n] : users[0];
@@ -309,6 +327,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: s(16),
   },
+  doneBox: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: s(32),
+    backgroundColor: '#F5F8FF',
+    borderWidth: 1.5,
+    borderColor: '#D0E0F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: s(10),
+    paddingHorizontal: s(28),
+  },
+  doneEmoji: { fontSize: s(48) },
+  doneTitle: { fontSize: s(18), fontWeight: '800', color: '#0C1C3C', textAlign: 'center' },
+  doneDesc:  { fontSize: s(14), color: '#6B7280', textAlign: 'center' },
+  restartBtn: {
+    marginTop: s(8),
+    backgroundColor: '#3B6FE8',
+    borderRadius: s(24),
+    paddingVertical: s(12),
+    paddingHorizontal: s(32),
+  },
+  restartBtnText: { fontSize: s(15), fontWeight: '700', color: '#fff' },
   stack: {
     width: CARD_WIDTH + SLOT_PEEK_X[2],
     height: CARD_HEIGHT + SLOT_PEEK_Y[2],

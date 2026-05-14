@@ -7,30 +7,19 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { s } from '../utils/scale';
 import { Colors } from '../constants/colors';
 import { createCommunityPost, updateCommunityPost, uploadCommunityImage } from '../services/communityService';
-import { useAuthStore } from '../stores/authStore';
 import type { PostCategory } from '../types';
 
 const PRIMARY = '#3B6FE8';
 const MAX_IMAGES = 4;
 
-const BOARD_TITLE: Record<PostCategory, string> = {
-  INFO: '자유게시판', QUESTION: '로컬게시판', CHAT: '모임게시판', CULTURE: '장터게시판',
-};
-
-const BOARD_PLACEHOLDER: Record<PostCategory, string> = {
-  INFO: '자유롭게 이야기해보세요 😊',
-  QUESTION: '우리 지역 이야기를 나눠보세요 📍',
-  CHAT: '같이 만날 사람을 모아보세요 🤝',
-  CULTURE: '사고 팔고 나눠요 🛍️',
-};
-
 export default function CommunityWriteScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ id?: string; category?: string; title?: string; content?: string }>();
   const editId = params.id ? Number(params.id) : null;
   const isEditMode = editId !== null;
@@ -44,29 +33,29 @@ export default function CommunityWriteScreen() {
 
   const isSubmitEnabled = content.trim().length > 0 && !uploadingImage;
 
-  const boardTitle = selectedCategory ? BOARD_TITLE[selectedCategory] : '게시판';
-  const placeholder = selectedCategory ? BOARD_PLACEHOLDER[selectedCategory] : '내용을 입력해주세요';
+  const boardTitle = selectedCategory ? t(`community.board_${selectedCategory}`) : t('community.title');
+  const placeholder = selectedCategory ? t(`community.boardPlaceholder_${selectedCategory}`) : t('community.postPlaceholder');
 
   const pickImage = async () => {
     if (images.length >= MAX_IMAGES) {
-      Alert.alert('알림', `사진은 최대 ${MAX_IMAGES}장까지 첨부할 수 있습니다.`);
+      Alert.alert(t('common.confirm'), t('community.maxImagesReached', { count: MAX_IMAGES }));
       return;
     }
-    Alert.alert('사진 첨부', '방법을 선택해주세요', [
+    Alert.alert(t('community.attachPhoto'), t('community.choosePhotoMethod'), [
       {
-        text: '카메라',
+        text: t('profile.takePhoto'),
         onPress: async () => {
           const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) { Alert.alert('권한 필요', '카메라 접근 권한이 필요합니다.'); return; }
+          if (!perm.granted) { Alert.alert(t('profile.permissionNeeded'), t('profile.cameraPermission')); return; }
           const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
           if (!result.canceled && result.assets[0]) await uploadAndAdd(result.assets[0].uri);
         },
       },
       {
-        text: '갤러리',
+        text: t('profile.selectFromGallery'),
         onPress: async () => {
           const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) { Alert.alert('권한 필요', '갤러리 접근 권한이 필요합니다.'); return; }
+          if (!perm.granted) { Alert.alert(t('profile.permissionNeeded'), t('profile.galleryPermission')); return; }
           const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true, quality: 0.8,
@@ -74,7 +63,7 @@ export default function CommunityWriteScreen() {
           if (!result.canceled && result.assets[0]) await uploadAndAdd(result.assets[0].uri);
         },
       },
-      { text: '취소', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   };
 
@@ -84,7 +73,7 @@ export default function CommunityWriteScreen() {
       const url = await uploadCommunityImage(uri);
       setImages((prev) => [...prev, url]);
     } catch {
-      Alert.alert('오류', '이미지 업로드에 실패했습니다.');
+      Alert.alert(t('common.error'), t('errors.imageUploadFailed'));
     } finally {
       setUploadingImage(false);
     }
@@ -106,7 +95,7 @@ export default function CommunityWriteScreen() {
       }
       router.back();
     } catch {
-      Alert.alert('오류', isEditMode ? '수정에 실패했습니다.' : '게시글 등록에 실패했습니다.');
+      Alert.alert(t('common.error'), isEditMode ? t('community.updateFailed') : t('community.createFailed'));
     }
   };
 
@@ -119,7 +108,7 @@ export default function CommunityWriteScreen() {
           <Ionicons name="close" size={22} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {isEditMode ? '게시글 수정' : `${boardTitle} 글쓰기`}
+          {isEditMode ? t('community.editPost') : `${boardTitle} ${t('community.write')}`}
         </Text>
         <TouchableOpacity
           style={[styles.submitBtn, !isSubmitEnabled && styles.submitBtnDisabled]}
@@ -127,7 +116,7 @@ export default function CommunityWriteScreen() {
           disabled={!isSubmitEnabled}
         >
           <Text style={[styles.submitBtnText, !isSubmitEnabled && styles.submitBtnTextDisabled]}>
-            {isEditMode ? '수정' : '게시'}
+            {isEditMode ? t('common.edit') : t('community.publish')}
           </Text>
         </TouchableOpacity>
       </View>

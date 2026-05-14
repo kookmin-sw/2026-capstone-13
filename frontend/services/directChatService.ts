@@ -9,6 +9,7 @@ export interface DirectChatRoomResponse {
   lastMessage?: string;
   lastMessageTime?: string;
   unreadCount: number;
+  partnerPreferredLanguage?: string;
 }
 
 export interface DirectChatMessageDto {
@@ -19,6 +20,9 @@ export interface DirectChatMessageDto {
   content: string;
   createdAt: string;
   isRead?: boolean;
+  originalLanguage?: string;
+  translatedContent?: string;
+  culturalNote?: string;
 }
 
 export const getOrCreateDirectRoom = async (targetUserId: number): Promise<ApiResponse<DirectChatRoomResponse>> => {
@@ -42,4 +46,13 @@ export const markDirectAsRead = async (roomId: number): Promise<void> => {
 
 export const leaveDirectRoom = async (roomId: number): Promise<void> => {
   await api.post(`/direct-chat/rooms/${roomId}/leave`);
+};
+
+export const translateDirectChatMessage = async (messageId: number): Promise<ApiResponse<DirectChatMessageDto>> => {
+  const res = await api.post<ApiResponse<DirectChatMessageDto>>(
+    `/direct-chat/messages/${messageId}/translate`,
+    undefined,
+    { timeout: 35000 }
+  );
+  return res.data;
 };

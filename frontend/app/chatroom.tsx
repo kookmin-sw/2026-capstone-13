@@ -23,10 +23,11 @@ import {
 } from 'react-native';
 import { s } from '../utils/scale';
 import { getChatMessages, sendVoiceMessage, translateChatMessage, type ChatMessageDto } from '../services/chatService';
-import { getDirectMessages, leaveDirectRoom } from '../services/directChatService';
+import { getDirectMessages, leaveDirectRoom, translateDirectChatMessage } from '../services/directChatService';
 import { leaveHelpRequest, completeHelpRequest, rejectHelper, startHelpRequest } from '../services/helpService';
 import { hasReviewed } from '../services/reviewService';
 import { useAuthStore } from '../stores/authStore';
+import { useTranslation } from 'react-i18next';
 import { useChatStore } from '../stores/chatStore';
 
 const PRIMARY = '#3B6FE8';
@@ -51,23 +52,24 @@ function formatTime(iso: string): string {
   }
 }
 
-function todayLabel(isKo: boolean): string {
+type TFunction = (key: string, opts?: Record<string, unknown>) => string;
+
+function todayLabel(t: TFunction): string {
   const d = new Date();
-  if (isKo) return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-function formatLastSeen(iso: string | null, isKo: boolean): string {
+function formatLastSeen(iso: string | null, t: TFunction): string {
   if (!iso) return '';
   try {
     const d = new Date(iso.includes('Z') || iso.includes('+') ? iso : iso + 'Z');
     const diffMin = Math.floor((Date.now() - d.getTime()) / 60000);
-    if (diffMin < 1) return isKo ? '방금 전 접속' : 'Active just now';
-    if (diffMin < 60) return isKo ? `${diffMin}분 전 접속` : `Active ${diffMin}m ago`;
+    if (diffMin < 1) return t('chatroom.lastSeenJustNow');
+    if (diffMin < 60) return t('chatroom.lastSeenMinutes', { m: diffMin });
     const diffHour = Math.floor(diffMin / 60);
-    if (diffHour < 24) return isKo ? `${diffHour}시간 전 접속` : `Active ${diffHour}h ago`;
+    if (diffHour < 24) return t('chatroom.lastSeenHours', { h: diffHour });
     const diffDay = Math.floor(diffHour / 24);
-    return isKo ? `${diffDay}일 전 접속` : `Active ${diffDay}d ago`;
+    return t('chatroom.lastSeenDays', { d: diffDay });
   } catch {
     return '';
   }
@@ -90,10 +92,11 @@ export default function ChatRoomScreen() {
     partnerUserId?: string;
   }>();
 
+  const { t } = useTranslation();
   const roomId = Number(params.roomId);
-  const partnerNickname = params.partnerNickname ?? '상대방';
+  const partnerNickname = params.partnerNickname ?? t('chatroom.partner');
   const partnerProfileImage = params.partnerProfileImage || null;
-  const requestTitle = params.requestTitle ?? '도움 요청';
+  const requestTitle = params.requestTitle ?? t('requests.helpRequest');
   const isRequester = user?.id === Number(params.requesterId);
   const isDirect = params.isDirect === 'true';
   const isKo = user?.userType === 'KOREAN';
@@ -230,16 +233,18 @@ export default function ChatRoomScreen() {
               if (msg.content?.startsWith(SYS_CALL_VOICE) || msg.content?.startsWith(SYS_CALL_VIDEO)) {
                 if (msg.senderId === user?.id) return; // 내가 보낸 신호는 무시
                 const isVideo = msg.content.startsWith(SYS_CALL_VIDEO);
-                const callerNickname = msg.content.slice(isVideo ? SYS_CALL_VIDEO.length : SYS_CALL_VOICE.length);
+                const rawCallContent = msg.content.slice(isVideo ? SYS_CALL_VIDEO.length : SYS_CALL_VOICE.length);
+                const lastColon = rawCallContent.lastIndexOf(':');
+                const callerNickname = lastColon > 0 ? rawCallContent.slice(0, lastColon) : rawCallContent;
+                const callerLang = lastColon > 0 ? rawCallContent.slice(lastColon + 1) : null;
+                const callTargetLanguage = isKo ? (callerLang ?? partnerPreferredLanguage) : 'ko';
                 Alert.alert(
-                  isVideo ? '📹 영상통화' : '📞 음성통화',
-                  isKo
-                    ? `${callerNickname}님이 ${isVideo ? '영상' : '음성'}통화를 요청했습니다.`
-                    : `${callerNickname} is calling you (${isVideo ? 'video' : 'voice'}).`,
+                  isVideo ? t('chat.videoCall') : t('chat.voiceCall'),
+                  t('chatroom.incomingCall', { name: callerNickname, type: isVideo ? t('chatroom.videoType') : t('chatroom.voiceType') }),
                   [
-                    { text: isKo ? '거절' : 'Decline', style: 'cancel' },
+                    { text: t('common.cancel'), style: 'cancel' },
                     {
-                      text: isKo ? '수락' : 'Accept',
+                      text: t('chatroom.accept'),
                       onPress: () => router.push({
                         pathname: '/videocall',
                         params: {
@@ -249,7 +254,7 @@ export default function ChatRoomScreen() {
                           myUserId: String(user?.id ?? ''),
                           partnerUserId: String(partnerId ?? ''),
                           language: myBcp47Language,
-                          targetLanguage: partnerPreferredLanguage,
+                          targetLanguage: callTargetLanguage,
                         },
                       }),
                     },
@@ -266,7 +271,7 @@ export default function ChatRoomScreen() {
                 setChatEnded(true);
                 setSystemMessages((prev) => [
                   ...prev,
-                  { type: 'system', content: `${nickname}님이 채팅방을 나갔습니다`, id: `sys-leave-${Date.now()}` },
+                  { type: 'system', content: t('chat.partnerLeft', { name: nickname }), id: `sys-leave-${Date.now()}` },
                 ]);
                 setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 100);
                 return;
@@ -325,8 +330,8 @@ export default function ChatRoomScreen() {
     const client = clientRef.current;
     if (!client?.connected) {
       Alert.alert(
-        isKo ? '연결 오류' : 'Connection Error',
-        isKo ? '채팅 서버에 연결되지 않았습니다.\n잠시 후 다시 시도해주세요.' : 'Not connected to chat server.\nPlease try again.',
+        t('chatroom.connectionError'),
+        t('chatroom.notConnected'),
       );
       return;
     }
@@ -349,12 +354,12 @@ export default function ChatRoomScreen() {
 
   const handleLeave = () => {
     Alert.alert(
-      isKo ? '채팅방 나가기' : 'Leave Chat',
-      isKo ? '채팅방을 나가시겠어요?' : 'Are you sure you want to leave?',
+      t('chatroom.leaveChat'),
+      t('chatroom.leaveConfirm'),
       [
-      { text: isKo ? '취소' : 'Cancel', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: isKo ? '나가기' : 'Leave',
+        text: t('chatroom.leave'),
         style: 'destructive',
         onPress: () => {
           if (isDirect) {
@@ -391,14 +396,14 @@ export default function ChatRoomScreen() {
         setHelpStatus('IN_PROGRESS');
         setSystemMessages((prev) => [
           ...prev,
-          { type: 'system', content: isKo ? '✅ 도움이 수락되었습니다! 채팅을 시작해보세요 🎉' : '✅ Help accepted! Start chatting 🎉', id: `sys-${Date.now()}` },
+          { type: 'system', content: t('chatroom.helpAccepted'), id: `sys-${Date.now()}` },
         ]);
         setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 150);
       } else {
-        Alert.alert(isKo ? '실패' : 'Failed', res.message);
+        Alert.alert(t('chatroom.failed'), res.message);
       }
     } catch {
-      Alert.alert(isKo ? '오류' : 'Error', isKo ? '서버 오류가 발생했습니다.' : 'A server error occurred.');
+      Alert.alert(t('common.error'), t('errors.serverError'));
     } finally {
       setIsActing(false);
     }
@@ -411,15 +416,15 @@ export default function ChatRoomScreen() {
       if (res.success) {
         setHelpStatus('WAITING');
         Alert.alert(
-          isKo ? '거절 완료' : 'Rejected',
-          isKo ? '도움 신청을 거절했어요.' : 'Help request rejected.',
-          [{ text: isKo ? '확인' : 'OK', onPress: () => router.back() }],
+          t('chatroom.rejected'),
+          t('chatroom.rejectedMsg'),
+          [{ text: t('common.confirm'), onPress: () => router.back() }],
         );
       } else {
-        Alert.alert(isKo ? '실패' : 'Failed', res.message);
+        Alert.alert(t('chatroom.failed'), res.message);
       }
     } catch {
-      Alert.alert(isKo ? '오류' : 'Error', isKo ? '서버 오류가 발생했습니다.' : 'A server error occurred.');
+      Alert.alert(t('common.error'), t('errors.serverError'));
     } finally {
       setIsActing(false);
     }
@@ -439,10 +444,10 @@ export default function ChatRoomScreen() {
         setIsSendingVoice(true);
         const res = await sendVoiceMessage(roomId, uri);
         if (!res.success) {
-          Alert.alert(isKo ? '오류' : 'Error', isKo ? '음성 메시지 전송에 실패했습니다.' : 'Failed to send voice message.');
+          Alert.alert(t('common.error'), t('chatroom.voiceFailed'));
         }
       } catch (e) {
-        Alert.alert(isKo ? '오류' : 'Error', isKo ? '음성 메시지 처리 중 오류가 발생했습니다.' : 'Error processing voice message.');
+        Alert.alert(t('common.error'), t('chatroom.voiceError'));
       } finally {
         setIsSendingVoice(false);
       }
@@ -451,7 +456,7 @@ export default function ChatRoomScreen() {
       try {
         const { granted } = await Audio.requestPermissionsAsync();
         if (!granted) {
-          Alert.alert(isKo ? '권한 필요' : 'Permission Required', isKo ? '마이크 권한을 허용해주세요.' : 'Please allow microphone access.');
+          Alert.alert(t('chatroom.permissionRequired'), t('chatroom.micPermission'));
           return;
         }
         await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
@@ -461,30 +466,30 @@ export default function ChatRoomScreen() {
         recordingRef.current = recording;
         setIsRecording(true);
       } catch (e) {
-        Alert.alert(isKo ? '오류' : 'Error', isKo ? '녹음을 시작할 수 없습니다.' : 'Unable to start recording.');
+        Alert.alert(t('common.error'), t('chatroom.recordError'));
       }
     }
   };
 
   const handleVoiceCall = () => {
     Alert.alert(
-      isKo ? '음성통화' : 'Voice Call',
-      isKo ? `${partnerNickname}님과 음성통화를 시작할까요?` : `Start a voice call with ${partnerNickname}?`,
+      t('chat.voiceCall'),
+      t('chatroom.startVoiceCall', { name: partnerNickname }),
       [
-      { text: isKo ? '취소' : 'Cancel', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: isKo ? '시작' : 'Start',
+        text: t('chatroom.start'),
         onPress: () => {
           // 상대방에게 통화 요청 신호 전송
           const client = clientRef.current;
           if (client?.connected && user) {
             client.publish({
-              destination: '/app/chat/send',
+              destination: isDirect ? '/app/direct-chat/send' : '/app/chat/send',
               body: JSON.stringify({
                 roomId,
                 senderId: user.id,
                 senderNickname: user.nickname,
-                content: `${SYS_CALL_VOICE}${user.nickname}`,
+                content: `${SYS_CALL_VOICE}${user.nickname}:${user.preferredLanguage ?? 'ko'}`,
                 createdAt: new Date().toISOString(),
               }),
             });
@@ -508,23 +513,23 @@ export default function ChatRoomScreen() {
 
   const handleVideoCall = () => {
     Alert.alert(
-      isKo ? '영상통화' : 'Video Call',
-      isKo ? `${partnerNickname}님과 영상통화를 시작할까요?` : `Start a video call with ${partnerNickname}?`,
+      t('chat.videoCall'),
+      t('chatroom.startVideoCall', { name: partnerNickname }),
       [
-      { text: isKo ? '취소' : 'Cancel', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: isKo ? '시작' : 'Start',
+        text: t('chatroom.start'),
         onPress: () => {
           // 상대방에게 통화 요청 신호 전송
           const client = clientRef.current;
           if (client?.connected && user) {
             client.publish({
-              destination: '/app/chat/send',
+              destination: isDirect ? '/app/direct-chat/send' : '/app/chat/send',
               body: JSON.stringify({
                 roomId,
                 senderId: user.id,
                 senderNickname: user.nickname,
-                content: `${SYS_CALL_VIDEO}${user.nickname}`,
+                content: `${SYS_CALL_VIDEO}${user.nickname}:${user.preferredLanguage ?? 'ko'}`,
                 createdAt: new Date().toISOString(),
               }),
             });
@@ -548,12 +553,12 @@ export default function ChatRoomScreen() {
 
   const handleComplete = () => {
     Alert.alert(
-      isKo ? '매칭 완료' : 'Complete Help',
-      isKo ? '도움이 완료되었나요? 매칭을 완료 처리합니다.' : 'Has the help been completed?',
+      t('chatroom.completeHelpTitle'),
+      t('chatroom.completeHelpMsg'),
       [
-        { text: isKo ? '취소' : 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: isKo ? '완료' : 'Complete',
+          text: t('common.done'),
           onPress: async () => {
             setIsActing(true);
             try {
@@ -563,14 +568,14 @@ export default function ChatRoomScreen() {
                 setAlreadyReviewed(false);
                 setSystemMessages((prev) => [
                   ...prev,
-                  { type: 'system', content: isKo ? '🎉 매칭이 완료되었습니다!' : '🎉 Help completed!', id: `sys-complete-${Date.now()}` },
+                  { type: 'system', content: t('chatroom.helpCompleted'), id: `sys-complete-${Date.now()}` },
                 ]);
                 setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 150);
               } else {
-                Alert.alert(isKo ? '실패' : 'Failed', res.message);
+                Alert.alert(t('chatroom.failed'), res.message);
               }
             } catch {
-              Alert.alert(isKo ? '오류' : 'Error', isKo ? '서버 오류가 발생했습니다.' : 'A server error occurred.');
+              Alert.alert(t('common.error'), t('errors.serverError'));
             } finally {
               setIsActing(false);
             }
@@ -582,7 +587,9 @@ export default function ChatRoomScreen() {
 
   const handleTranslateMessage = async (messageId: number) => {
     try {
-      const res = await translateChatMessage(messageId);
+      const res = isDirect
+        ? await translateDirectChatMessage(messageId)
+        : await translateChatMessage(messageId);
       if (res.success && res.data) {
         setMessages((prev) =>
           prev.map((m) => m.id === messageId
@@ -591,15 +598,15 @@ export default function ChatRoomScreen() {
           )
         );
       } else {
-        Alert.alert(isKo ? '번역 실패' : 'Translation Failed', res.message ?? (isKo ? '번역에 실패했습니다. 잠시 후 다시 시도해주세요.' : 'Translation failed. Please try again.'));
+        Alert.alert(t('chatroom.translationFailed'), res.message ?? (t('chatroom.translationError')));
       }
     } catch {
-      Alert.alert(isKo ? '번역 실패' : 'Translation Failed', isKo ? '번역 서버에 연결할 수 없습니다.' : 'Unable to connect to translation server.');
+      Alert.alert(t('chatroom.translationFailed'), t('chatroom.translationServerError'));
     }
   };
 
   const listData: ListItem[] = [
-    { type: 'date', label: todayLabel(isKo), id: 'date-today' },
+    { type: 'date', label: todayLabel(t), id: 'date-today' },
     ...messages,
     ...systemMessages,
   ];
@@ -691,7 +698,7 @@ export default function ChatRoomScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name="language-outline" size={12} color="#6B9DF0" />
-              <Text style={styles.translateBtnText}>{isKo ? '번역하기' : 'Translate'}</Text>
+              <Text style={styles.translateBtnText}>{t('chatroom.translate')}</Text>
             </TouchableOpacity>
           )}
           {/* 뉘앙스 말풍선 */}
@@ -723,11 +730,11 @@ export default function ChatRoomScreen() {
           {partnerOnline === true && (
             <View style={styles.headerOnlineRow}>
               <View style={styles.headerOnlineDot} />
-              <Text style={styles.headerOnlineText}>{isKo ? '접속 중' : 'Online'}</Text>
+              <Text style={styles.headerOnlineText}>{t('chatroom.online')}</Text>
             </View>
           )}
           {partnerOnline === false && partnerLastSeen && (
-            <Text style={styles.headerLastSeen}>{formatLastSeen(partnerLastSeen, isKo)}</Text>
+            <Text style={styles.headerLastSeen}>{formatLastSeen(partnerLastSeen, t)}</Text>
           )}
         </View>
 
@@ -770,7 +777,7 @@ export default function ChatRoomScreen() {
                   onPress={() => { setMenuVisible(false); handleComplete(); }}
                 >
                   <Ionicons name="checkmark-circle-outline" size={18} color={PRIMARY} />
-                  <Text style={styles.menuItemText}>{isKo ? '매칭완료하기' : 'Complete Help'}</Text>
+                  <Text style={styles.menuItemText}>{t('chatroom.completeHelp')}</Text>
                 </TouchableOpacity>
                 <View style={styles.menuDivider} />
               </>
@@ -793,7 +800,7 @@ export default function ChatRoomScreen() {
                   }}
                 >
                   <Ionicons name="star-outline" size={18} color="#F97316" />
-                  <Text style={styles.menuItemText}>{isKo ? '후기 작성' : 'Write Review'}</Text>
+                  <Text style={styles.menuItemText}>{t('chatroom.writeReview')}</Text>
                 </TouchableOpacity>
                 <View style={styles.menuDivider} />
               </>
@@ -802,7 +809,7 @@ export default function ChatRoomScreen() {
               <>
                 <View style={styles.menuItem}>
                   <Ionicons name="star" size={18} color="#F97316" />
-                  <Text style={[styles.menuItemText, { color: '#A8C8FA' }]}>{isKo ? '후기 작성 완료' : 'Review Written'}</Text>
+                  <Text style={[styles.menuItemText, { color: '#A8C8FA' }]}>{t('chatroom.reviewWritten')}</Text>
                 </View>
                 <View style={styles.menuDivider} />
               </>
@@ -812,7 +819,7 @@ export default function ChatRoomScreen() {
               onPress={() => { setMenuVisible(false); handleLeave(); }}
             >
               <Ionicons name="exit-outline" size={18} color="#EF4444" />
-              <Text style={[styles.menuItemText, styles.menuItemDanger]}>{isKo ? '나가기' : 'Leave'}</Text>
+              <Text style={[styles.menuItemText, styles.menuItemDanger]}>{t('chatroom.leave')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -826,10 +833,10 @@ export default function ChatRoomScreen() {
           </View>
           <View style={styles.contextBody}>
             <Text style={styles.contextText} numberOfLines={1}>{requestTitle}</Text>
-            <Text style={styles.contextSub}>진행중 · 국민대학교</Text>
+            <Text style={styles.contextSub}>{t('chatroom.inProgress')}</Text>
           </View>
           <View style={styles.contextBadge}>
-            <Text style={styles.contextBadgeText}>진행중</Text>
+            <Text style={styles.contextBadgeText}>{t('chatroom.inProgress')}</Text>
           </View>
         </View>
       )}
@@ -860,11 +867,11 @@ export default function ChatRoomScreen() {
               <View style={styles.noticeHeader}>
                 <Text style={styles.noticeIcon}>🤝</Text>
                 <View style={styles.noticeTextWrap}>
-                  <Text style={styles.noticeTitle}>{isKo ? '도움 신청이 도착했어요!' : 'Help offer received!'}</Text>
+                  <Text style={styles.noticeTitle}>{t('chatroom.helpArrived')}</Text>
                   <Text style={styles.noticeSub}>
                     {isRequester
-                      ? (isKo ? `${partnerNickname}님이 도움을 드리겠다고 했어요.` : `${partnerNickname} offered to help you.`)
-                      : (isKo ? `${partnerNickname}님의 수락을 기다리고 있어요.` : `Waiting for ${partnerNickname} to accept.`)}
+                      ? (t('chatroom.helperOffered', { name: partnerNickname }))
+                      : (t('chatroom.waitingAccept', { name: partnerNickname }))}
                   </Text>
                 </View>
               </View>
@@ -875,7 +882,7 @@ export default function ChatRoomScreen() {
                     onPress={handleReject}
                     disabled={isActing}
                   >
-                    <Text style={styles.rejectBtnText}>{isKo ? '거절' : 'Decline'}</Text>
+                    <Text style={styles.rejectBtnText}>{t('chat.decline')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.acceptBtn, isActing && styles.actionBtnDisabled]}
@@ -884,7 +891,7 @@ export default function ChatRoomScreen() {
                   >
                     {isActing
                       ? <ActivityIndicator size="small" color="#FFFFFF" />
-                      : <Text style={styles.acceptBtnText}>{isKo ? '수락' : 'Accept'}</Text>
+                      : <Text style={styles.acceptBtnText}>{t('chat.accept')}</Text>
                     }
                   </TouchableOpacity>
                 </View>
@@ -894,7 +901,7 @@ export default function ChatRoomScreen() {
           ListEmptyComponent={
             <View style={styles.emptyChat}>
               <Text style={styles.emptyChatText}>
-                {isKo ? '첫 메시지를 보내보세요! 👋' : 'Send your first message! 👋'}
+                {t('chatroom.firstMessage')}
               </Text>
             </View>
           }
@@ -907,9 +914,7 @@ export default function ChatRoomScreen() {
         <View style={styles.inputBarLocked}>
           <Ionicons name={chatEnded ? 'close-circle-outline' : 'lock-closed-outline'} size={14} color="#9CA3AF" />
           <Text style={styles.inputLockedText}>
-            {chatEnded
-              ? (isKo ? '채팅이 종료되었습니다' : 'Chat has ended')
-              : (isKo ? '수락 후 채팅이 가능해요' : 'Chat available after acceptance')}
+            {chatEnded ? t('chatroom.chatEnded') : t('chatroom.acceptFirst')}
           </Text>
         </View>
       )}
@@ -921,7 +926,7 @@ export default function ChatRoomScreen() {
           style={styles.input}
           value={input}
           onChangeText={setInput}
-          placeholder={isKo ? '메시지를 입력하세요...' : 'Type a message...'}
+          placeholder={t('chat.typeMessage')}
           placeholderTextColor="#9CA3AF"
           multiline
           maxLength={500}

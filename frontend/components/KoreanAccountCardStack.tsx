@@ -18,19 +18,19 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import type { HelpRequest } from '../types';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const CARD_WIDTH  = SCREEN_WIDTH - 90;
-const CARD_HEIGHT = Math.round(SCREEN_HEIGHT * 0.53);
+const IS_TABLET   = SCREEN_WIDTH >= 768;
+const CARD_WIDTH  = IS_TABLET ? Math.min(SCREEN_WIDTH * 0.55, 600) : SCREEN_WIDTH - 90;
+const CARD_HEIGHT = IS_TABLET ? Math.min(Math.round(SCREEN_HEIGHT * 0.53), 630) : Math.round(SCREEN_HEIGHT * 0.51);
 const ACCENT = '#3B6FE8';
 
 // 슬롯별 scale / 오른쪽 peek offset (슬롯 0 = 앞, 1 = 중간, 2 = 뒤)
 const SLOT_SCALE:  [number, number, number] = [1,    1,    1];
 const SLOT_PEEK_X: [number, number, number] = [0,    18,   32];
 const SLOT_PEEK_Y: [number, number, number] = [0,    0,    0];
-
-const SWIPE_THRESHOLD = 80;
 
 const GRAD_START = 0;
 const GRAD_MAX_A = 0.95;
@@ -60,14 +60,16 @@ const GRADIENT_LAYERS = Array.from({ length: GRAD_STEPS }, (_, i) => {
   );
 });
 
-function formatTime(iso: string): string {
+type TFunction = (key: string, opts?: Record<string, unknown>) => string;
+
+function formatTime(iso: string, t: TFunction): string {
   const ms = Date.now() - new Date(iso.includes('Z') ? iso : iso + 'Z').getTime();
   const m = Math.floor(ms / 60000);
-  if (m < 1)  return '방금 전';
-  if (m < 60) return `${m}분 전`;
+  if (m < 1)  return t('time.justNow');
+  if (m < 60) return t('time.minutesAgo', { m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
+  if (h < 24) return t('time.hoursAgo', { h });
+  return t('time.daysAgo', { d: Math.floor(h / 24) });
 }
 
 // card.id → 말줄임 여부 캐시 (컴포넌트 외부에서 측정 결과 보존)
@@ -75,6 +77,7 @@ const truncatedCache = new Map<string | number, boolean>();
 
 const CardContent = memo(
   function CardContent({ card, onSkip, onAccept, onCardPress }: { card: HelpRequest; onSkip?: () => void; onAccept?: () => void; onCardPress?: () => void }) {
+    const { t } = useTranslation();
     const [imgError, setImgError] = useState(false);
     const [isTruncated, setIsTruncated] = useState(() => truncatedCache.get(card.id) ?? false);
     const profileUri = card.requester.profileImage?.trim();
@@ -116,7 +119,7 @@ const CardContent = memo(
 
           <View style={styles.timeRow}>
             <Ionicons name="time-outline" size={17} color="rgba(255,255,255,0.95)" />
-            <Text style={styles.timeSmall}>{formatTime(card.createdAt)}</Text>
+            <Text style={styles.timeSmall}>{formatTime(card.createdAt, t)}</Text>
           </View>
 
           <View style={styles.bubbleWrap}>
@@ -132,7 +135,7 @@ const CardContent = memo(
                 }}
               >
                 {card.description}
-                {isTruncated && <Text style={styles.bubbleMore}>  ...더보기</Text>}
+                {isTruncated && <Text style={styles.bubbleMore}>  ...{t('home.more')}</Text>}
               </Text>
             </View>
           </View>
@@ -148,7 +151,7 @@ const CardContent = memo(
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.acceptBtn} onPress={onAccept} activeOpacity={0.75}>
             <View style={styles.pillBtn}>
-              <Text style={styles.btnLabel}>도와주기</Text>
+              <Text style={styles.btnLabel}>{t('home.helpAction')}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -167,8 +170,11 @@ interface SwipeCardProps {
 
 export default function KoreanAccountCardStack({ requests, onCardPress, onAccept }: SwipeCardProps) {
   const n = requests.length;
+  const { t } = useTranslation();
 
   const [order, setOrder] = useState<[number, number, number]>([0, 1, 2]);
+  const [seenCount, setSeenCount] = useState(0);
+  const allSeen = seenCount >= n;
 
   const translateX    = useSharedValue(0);
   const swipeProgress = useSharedValue(0);
@@ -182,6 +188,7 @@ export default function KoreanAccountCardStack({ requests, onCardPress, onAccept
       const nextBack = (a + 3) % n;
       return [b, c, nextBack] as [number, number, number];
     });
+    setSeenCount((prev) => prev + 1);
     // state 업데이트가 커밋된 뒤 리셋해야 깜빡임이 없음
     requestAnimationFrame(() => {
       translateX.value    = 0;
@@ -262,6 +269,25 @@ export default function KoreanAccountCardStack({ requests, onCardPress, onAccept
 
   if (n === 0) return null;
 
+  if (allSeen) {
+    return (
+      <View style={styles.wrapper}>
+        <View style={styles.doneBox}>
+          <Text style={styles.doneEmoji}>🎉</Text>
+          <Text style={styles.doneTitle}>{t('home.allCardsSeen')}</Text>
+          <Text style={styles.doneDesc}>{t('home.allCardsSeenDesc')}</Text>
+          <TouchableOpacity
+            style={styles.restartBtn}
+            onPress={() => { setSeenCount(0); setOrder([0, 1, 2]); }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.restartBtnText}>{t('home.restartCards')}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   const card0 = requests[order[0] % n];
   const card1 = n > 1 ? requests[order[1] % n] : requests[0];
   const card2 = n > 2 ? requests[order[2] % n] : requests[0];
@@ -291,8 +317,31 @@ export default function KoreanAccountCardStack({ requests, onCardPress, onAccept
 const styles = StyleSheet.create({
   wrapper: {
     alignItems: 'center',
-    marginTop: s(16),
+    marginTop: s(8),
   },
+  doneBox: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: s(32),
+    backgroundColor: '#F5F8FF',
+    borderWidth: 1.5,
+    borderColor: '#D0E0F8',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: s(10),
+    paddingHorizontal: s(28),
+  },
+  doneEmoji: { fontSize: s(48) },
+  doneTitle: { fontSize: s(18), fontWeight: '800', color: '#0C1C3C', textAlign: 'center' },
+  doneDesc:  { fontSize: s(14), color: '#6B7280', textAlign: 'center' },
+  restartBtn: {
+    marginTop: s(8),
+    backgroundColor: '#3B6FE8',
+    borderRadius: s(24),
+    paddingVertical: s(12),
+    paddingHorizontal: s(32),
+  },
+  restartBtnText: { fontSize: s(15), fontWeight: '700', color: '#fff' },
   stack: {
     width: CARD_WIDTH + SLOT_PEEK_X[2],
     height: CARD_HEIGHT + SLOT_PEEK_Y[2],

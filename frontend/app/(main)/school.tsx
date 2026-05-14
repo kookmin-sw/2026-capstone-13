@@ -53,8 +53,20 @@ interface SchoolNotice {
   pubDate: string | null;
 }
 
-// 괄호 및 그 안의 내용 제거 (예: "Staff Cafeteria (1st floor)" → "Staff Cafeteria")
 const stripParens = (name: string) => name.replace(/\s*\(.*?\)/g, '').trim();
+
+const formatMealDate = (dateStr: string): string => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
+};
+
+const parseMenuItem = (line: string): { name: string; price: string | null } => {
+  const match = line.match(/^(.*?)\s+([\d,]+원)\s*$/);
+  if (match) return { name: match[1].trim(), price: match[2] };
+  return { name: line.trim(), price: null };
+};
 
 const CATEGORY_COLOR: Record<string, string> = {
   장학: '#10B981', 학사: BLUE, 행사: '#8B5CF6', 취업: '#F59E0B', 시설: '#A8C8FA',
@@ -249,6 +261,12 @@ export default function SchoolScreen() {
             ) : (
               <>
               <View style={s.sectionCard}>
+                {/* 날짜 헤더 */}
+                <View style={s.mealCardHeader}>
+                  <Text style={s.mealCardTitle}>오늘의 학식</Text>
+                  <Text style={s.mealCardDate}>{formatMealDate(selectedDate)}</Text>
+                </View>
+
                 {/* 식당 선택 - < 이름 > 방식 */}
                 {cafeteriaList.length > 0 && (() => {
                   const currentIdx = cafeteriaList.indexOf(selectedCafeteria ?? cafeteriaList[0]);
@@ -277,16 +295,24 @@ export default function SchoolScreen() {
                   <Text style={s.cafeteriaLocation}>{selectedMeals[0].cafeteria}</Text>
                 ) : null}
 
-                {/* 4. 코너별 메뉴 */}
+                {/* 코너별 메뉴 */}
                 {selectedMeals.map((meal, idx) => (
                   <View
                     key={meal.id}
                     style={[s.cornerBlock, idx < selectedMeals.length - 1 && s.cornerBlockDivider]}
                   >
-                    <Text style={s.cornerName}>{meal.corner}</Text>
-                    <Text style={s.menuText}>
-                      {meal.menu.split('\n').filter(Boolean).join('\n')}
-                    </Text>
+                    <View style={s.cornerBadge}>
+                      <Text style={s.cornerBadgeText}>{meal.corner}</Text>
+                    </View>
+                    {meal.menu.split('\n').filter(Boolean).map((line, i) => {
+                      const { name, price } = parseMenuItem(line);
+                      return (
+                        <View key={i} style={[s.menuRow, i > 0 && s.menuRowBorder]}>
+                          <Text style={s.menuItemName}>{name}</Text>
+                          {price ? <Text style={s.menuItemPrice}>{price}</Text> : null}
+                        </View>
+                      );
+                    })}
                   </View>
                 ))}
               </View>
@@ -485,6 +511,41 @@ const s = StyleSheet.create({
     color: '#3B4A6B',
     lineHeight: sc(22),
     fontWeight: '400',
+  },
+  cornerBadge: {
+    backgroundColor: BLUE_L,
+    paddingHorizontal: sc(10),
+    paddingVertical: sc(4),
+    borderRadius: sc(8),
+    alignSelf: 'flex-start',
+    marginBottom: sc(12),
+  },
+  cornerBadgeText: {
+    fontSize: sc(13),
+    fontWeight: '800',
+    color: BLUE,
+  },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: sc(6),
+  },
+  menuRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: '#F4F5F8',
+  },
+  menuItemName: {
+    flex: 1,
+    fontSize: sc(14),
+    color: '#3B4A6B',
+    lineHeight: sc(20),
+  },
+  menuItemPrice: {
+    fontSize: sc(13),
+    color: BLUE,
+    fontWeight: '700',
+    marginLeft: sc(12),
   },
 
   // ── 공지사항 상단 고정 헤더 ──

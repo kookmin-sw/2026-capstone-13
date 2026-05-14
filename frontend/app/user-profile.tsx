@@ -25,6 +25,7 @@ import { getUserHelpHistory, getUserRequestHistory } from '../services/helpServi
 import type { ReviewResponse } from '../services/reviewService';
 import { getMyReviews } from '../services/reviewService';
 import { useAuthStore } from '../stores/authStore';
+import { useTranslation } from 'react-i18next';
 import type { HelpCategory, HelpRequest, RequestStatus, User } from '../types';
 import { getInitial } from '../utils/getInitial';
 import { s as sc } from '../utils/scale';
@@ -64,11 +65,6 @@ const NATIONALITY_MAP: Record<string, { flag: string; name: string }> = {
   KZ: { flag: '🇰🇿', name: '카자흐스탄' },
 };
 
-const USER_TYPE_LABEL: Record<string, string> = {
-  KOREAN: '한국인',
-  INTERNATIONAL: '유학생',
-  EXCHANGE: '교환학생',
-};
 
 const CATEGORY_ICON: Record<HelpCategory, { name: string; color: string; bg: string }> = {
   BANK:     { name: 'business-outline',                   color: '#3B6FE8', bg: '#EEF4FF' },
@@ -77,18 +73,12 @@ const CATEGORY_ICON: Record<HelpCategory, { name: string; color: string; bg: str
   DAILY:    { name: 'home-outline',                       color: '#3B6FE8', bg: '#EEF4FF' },
   OTHER:    { name: 'ellipsis-horizontal-circle-outline', color: '#3B6FE8', bg: '#EEF4FF' },
 };
-const CATEGORY_LABEL: Record<HelpCategory, string> = {
-  BANK: '은행', HOSPITAL: '병원', SCHOOL: '학교', DAILY: '생활', OTHER: '기타',
-};
-const STATUS_CONFIG: Record<RequestStatus, { label: string; color: string; bg: string }> = {
-  WAITING:     { label: '모집중',    bg: '#D1FAE5', color: '#065F46' },
-  MATCHED:     { label: '대기중',    bg: '#EEF4FF', color: BLUE },
-  IN_PROGRESS: { label: '진행중',    bg: '#FEF3C7', color: '#92400E' },
-  COMPLETED:   { label: '도움 완료', bg: '#D1FAE5', color: '#065F46' },
-  CANCELLED:   { label: '취소됨',    bg: '#FEE2E2', color: '#991B1B' },
-};
-const POST_CATEGORY_LABEL: Record<string, string> = {
-  INFO: '자유게시판', QUESTION: '로컬게시판', CHAT: '모임게시판', CULTURE: '장터게시판',
+const STATUS_CONFIG: Record<RequestStatus, { color: string; bg: string }> = {
+  WAITING:     { bg: '#D1FAE5', color: '#065F46' },
+  MATCHED:     { bg: '#EEF4FF', color: BLUE },
+  IN_PROGRESS: { bg: '#FEF3C7', color: '#92400E' },
+  COMPLETED:   { bg: '#D1FAE5', color: '#065F46' },
+  CANCELLED:   { bg: '#FEE2E2', color: '#991B1B' },
 };
 const POST_CATEGORY_ICON: Record<string, { name: string; color: string }> = {
   INFO:     { name: 'chatbubbles-outline', color: '#3B6FE8' },
@@ -97,15 +87,17 @@ const POST_CATEGORY_ICON: Record<string, { name: string; color: string }> = {
   CULTURE:  { name: 'storefront-outline', color: '#8B5CF6' },
 };
 
-function formatTime(dateStr: string): string {
+type TFunction = (key: string, opts?: Record<string, unknown>) => string;
+
+function formatTime(dateStr: string, t: TFunction): string {
   const utc = dateStr.includes('Z') || dateStr.includes('+') ? dateStr : dateStr + 'Z';
   const diff = Date.now() - new Date(utc).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1) return '방금 전';
-  if (m < 60) return `${m}분 전`;
+  if (m < 1) return t('time.justNow');
+  if (m < 60) return t('time.minutesAgo', { m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  return `${Math.floor(h / 24)}일 전`;
+  if (h < 24) return t('time.hoursAgo', { h });
+  return t('time.daysAgo', { d: Math.floor(h / 24) });
 }
 
 const AVATAR_COLORS = ['#F0A040', '#F06060', BLUE, '#90C4F0', '#A0A8B0'];
@@ -125,6 +117,7 @@ function toAbsoluteUrl(path?: string): string | null {
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
   const currentUser = useAuthStore((state) => state.user);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -197,9 +190,9 @@ export default function UserProfileScreen() {
   if (!user) {
     return (
       <View style={s.centered}>
-        <Text style={s.notFoundText}>프로필을 찾을 수 없어요.</Text>
+        <Text style={s.notFoundText}>{t('userProfile.notFound')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 12 }}>
-          <Text style={s.backLink}>돌아가기</Text>
+          <Text style={s.backLink}>{t('common.back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -216,24 +209,24 @@ export default function UserProfileScreen() {
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={20} color={T1} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>프로필</Text>
+        <Text style={s.headerTitle}>{t('profile.title')}</Text>
         <TouchableOpacity
           style={s.blockHeaderBtn}
           activeOpacity={0.8}
           disabled={blockLoading}
           onPress={() => {
             if (isBlocked) {
-              Alert.alert('차단 해제', '이 사용자의 차단을 해제하시겠어요?', [
-                { text: '취소', style: 'cancel' },
+              Alert.alert(t('blockedUsers.unblockTitle'), t('blockedUsers.unblockMsg'), [
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                  text: '해제',
+                  text: t('blockedUsers.unblock'),
                   onPress: async () => {
                     setBlockLoading(true);
                     try {
                       await unblockUser(Number(id));
                       setIsBlocked(false);
                     } catch {
-                      Alert.alert('오류', '차단 해제에 실패했습니다.');
+                      Alert.alert(t('common.error'), t('blockedUsers.unblockFailed'));
                     } finally {
                       setBlockLoading(false);
                     }
@@ -241,10 +234,10 @@ export default function UserProfileScreen() {
                 },
               ]);
             } else {
-              Alert.alert('차단하기', '이 사용자를 차단하시겠어요?\n차단한 사용자의 글과 메시지가 보이지 않습니다.', [
-                { text: '취소', style: 'cancel' },
+              Alert.alert(t('community.block'), t('community.blockMsg', { name: user?.nickname ?? '' }), [
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                  text: '차단',
+                  text: t('community.blockConfirm'),
                   style: 'destructive',
                   onPress: async () => {
                     setBlockLoading(true);
@@ -252,7 +245,7 @@ export default function UserProfileScreen() {
                       await blockUser(Number(id));
                       setIsBlocked(true);
                     } catch {
-                      Alert.alert('오류', '차단에 실패했습니다.');
+                      Alert.alert(t('common.error'), t('community.blockFailed'));
                     } finally {
                       setBlockLoading(false);
                     }
@@ -263,7 +256,7 @@ export default function UserProfileScreen() {
           }}
         >
           <Ionicons name="ban-outline" size={14} color="#EF4444" />
-          <Text style={s.blockHeaderText}>{isBlocked ? '차단해제' : '차단하기'}</Text>
+          <Text style={s.blockHeaderText}>{isBlocked ? t('blockedUsers.unblock') : t('community.block')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -300,7 +293,7 @@ export default function UserProfileScreen() {
                 <View style={s.schoolRow}>
                   <Ionicons name="flag-outline" size={14} color={T2} />
                   <Text style={s.schoolText}>
-                    {nationality ? nationality.name : '대한민국'}
+                    {nationality ? nationality.name : t('userProfile.korea')}
                   </Text>
                 </View>
               ) : null}
@@ -381,12 +374,12 @@ export default function UserProfileScreen() {
         <View style={s.tabBtnRow}>
           <TouchableOpacity style={[s.tabBtn, s.tabBtnLeft]} activeOpacity={0.8} onPress={() => setActiveTab('help')}>
             <Text style={[s.tabBtnText, activeTab === 'help' && s.tabBtnActive]}>
-              {`도움내역${user?.helpCount != null ? ` (${user.helpCount})` : ''}`}
+              {`${t('userProfile.tabHelp')}${user?.helpCount != null ? ` (${user.helpCount})` : ''}`}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.tabBtn} activeOpacity={0.8} onPress={() => setActiveTab('community')}>
             <Text style={[s.tabBtnText, activeTab === 'community' && s.tabBtnActive]}>
-              {`커뮤니티${communityCount != null ? ` (${communityCount})` : ''}`}
+              {`${t('nav.community')}${communityCount != null ? ` (${communityCount})` : ''}`}
             </Text>
           </TouchableOpacity>
         </View>
@@ -398,7 +391,7 @@ export default function UserProfileScreen() {
         ) : activeTab === 'help' ? (
           helpHistory.length === 0 ? (
             <View style={s.emptyTab}>
-              <Text style={s.emptyTabText}>도움 내역이 없어요</Text>
+              <Text style={s.emptyTabText}>{t('userProfile.noHelpHistory')}</Text>
             </View>
           ) : (
             helpHistory.map((item) => {
@@ -416,7 +409,7 @@ export default function UserProfileScreen() {
                     <Ionicons name={CATEGORY_ICON[item.category].name as never} size={22} color={CATEGORY_ICON[item.category].color} />
                   </View>
                   <View style={s.listCardBody}>
-                    <Text style={s.listCardCategory}>{CATEGORY_LABEL[item.category]}</Text>
+                    <Text style={s.listCardCategory}>{t(`home.cat${item.category.charAt(0) + item.category.slice(1).toLowerCase().replace('_', '')}`)}</Text>
                     <Text style={s.listCardTitle} numberOfLines={1}>{item.title}</Text>
                     <View style={s.listCardBottomRow}>
                       {review ? (
@@ -426,7 +419,7 @@ export default function UserProfileScreen() {
                           ))}
                         </View>
                       ) : <View />}
-                      <Text style={s.listCardTime}>{formatTime(item.createdAt)}</Text>
+                      <Text style={s.listCardTime}>{formatTime(item.createdAt, t)}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -444,7 +437,7 @@ export default function UserProfileScreen() {
             });
             return filtered.length === 0 ? (
             <View style={s.emptyTab}>
-              <Text style={s.emptyTabText}>작성한 글이 없어요</Text>
+              <Text style={s.emptyTabText}>{t('userProfile.noPosts')}</Text>
             </View>
           ) : (
             filtered.map((item) => (
@@ -460,9 +453,9 @@ export default function UserProfileScreen() {
                       {POST_CATEGORY_ICON[item.category] && (
                         <Ionicons name={POST_CATEGORY_ICON[item.category].name as never} size={13} color={POST_CATEGORY_ICON[item.category].color} />
                       )}
-                      <Text style={[s.listCardCategory, { color: T1 }]}>{POST_CATEGORY_LABEL[item.category] ?? item.category}</Text>
+                      <Text style={[s.listCardCategory, { color: T1 }]}>{t(`community.board_${item.category}`) ?? item.category}</Text>
                     </View>
-                    <Text style={s.listCardTime}>{formatTime(item.createdAt)}</Text>
+                    <Text style={s.listCardTime}>{formatTime(item.createdAt, t)}</Text>
                   </View>
                   <Text style={s.listCardDesc} numberOfLines={2}>{item.content}</Text>
                 </View>
@@ -478,7 +471,7 @@ export default function UserProfileScreen() {
         <View style={s.reviewOverlay}>
           <View style={s.reviewSheet}>
             <View style={s.reviewSheetHeader}>
-              <Text style={s.reviewSheetTitle}>받은 후기</Text>
+              <Text style={s.reviewSheetTitle}>{t('userProfile.receivedReviews')}</Text>
               <TouchableOpacity onPress={() => setReviewModal(false)} activeOpacity={0.7}>
                 <Ionicons name="close" size={22} color={T1} />
               </TouchableOpacity>
@@ -487,7 +480,7 @@ export default function UserProfileScreen() {
               <ActivityIndicator color={BLUE} style={{ marginTop: 40 }} />
             ) : reviews.length === 0 ? (
               <View style={s.reviewEmpty}>
-                <Text style={s.reviewEmptyText}>아직 받은 후기가 없어요</Text>
+                <Text style={s.reviewEmptyText}>{t('reviews.empty')}</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 12 }}>
@@ -499,7 +492,7 @@ export default function UserProfileScreen() {
                           <Ionicons key={i} name="star" size={14} color={i <= r.rating ? '#F59E0B' : '#E5E7EB'} />
                         ))}
                       </View>
-                      <Text style={s.reviewTime}>{formatTime(r.createdAt)}</Text>
+                      <Text style={s.reviewTime}>{formatTime(r.createdAt, t)}</Text>
                     </View>
                     {r.helpRequestTitle ? (
                       <Text style={s.reviewRequestTitle} numberOfLines={1}>{r.helpRequestTitle}</Text>
@@ -523,7 +516,7 @@ export default function UserProfileScreen() {
             <View style={s.reviewDetailHeader}>
               <View style={s.reviewDetailTitleRow}>
                 <View style={s.reviewDetailBadge}>
-                  <Text style={s.reviewDetailTitle}>받은 후기</Text>
+                  <Text style={s.reviewDetailTitle}>{t('userProfile.receivedReviews')}</Text>
                 </View>
                 <View style={s.reviewDetailStars}>
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -539,10 +532,10 @@ export default function UserProfileScreen() {
             {selectedReview?.comment ? (
               <Text style={s.reviewDetailComment}>{selectedReview.comment}</Text>
             ) : (
-              <Text style={s.reviewDetailNoComment}>작성된 후기 내용이 없어요.</Text>
+              <Text style={s.reviewDetailNoComment}>{t('reviews.noComment')}</Text>
             )}
             <Text style={s.reviewDetailFrom}>
-              {selectedReview?.reviewer.nickname} · {selectedReview ? formatTime(selectedReview.createdAt) : ''}
+              {selectedReview?.reviewer.nickname} · {selectedReview ? formatTime(selectedReview.createdAt, t) : ''}
             </Text>
           </Pressable>
         </Pressable>
@@ -581,6 +574,9 @@ export default function UserProfileScreen() {
                     partnerProfileImage: toAbsoluteUrl(user.profileImage) ?? '',
                     isDirect: 'true',
                     roomUnreadCount: String(res.data.unreadCount ?? 0),
+                    partnerUserId: String(res.data.partnerId),
+                    partnerId: String(res.data.partnerId),
+                    partnerPreferredLanguage: res.data.partnerPreferredLanguage ?? 'en',
                   },
                 });
               }
@@ -592,7 +588,7 @@ export default function UserProfileScreen() {
           }}
         >
           <Ionicons name="chatbubble-outline" size={18} color="#fff" />
-          <Text style={s.chatBtnText}>채팅하기</Text>
+          <Text style={s.chatBtnText}>{t('userProfile.startChat')}</Text>
         </TouchableOpacity>
       </View>
     </View>

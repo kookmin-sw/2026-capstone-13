@@ -64,6 +64,7 @@ const EMPTY_DETAIL: ProfileDetail = { bio: '', gender: '', age: '', major: '', m
 
 export default function ProfileSetupScreen() {
   const router = useRouter();
+  const { setIsNewUser } = useAuthStore();
   const { user, updateProfileImage, updateProfileDetail } = useAuthStore();
 
   const [profileInput, setProfileInput] = useState<ProfileDetail>(EMPTY_DETAIL);
@@ -98,7 +99,7 @@ export default function ProfileSetupScreen() {
   const canStart = profileInput.bio.trim().length > 0 && profileInput.gender.length > 0;
 
 
-  const scrollToIndex = (ref: React.RefObject<ScrollView>, index: number, animated = true) => {
+  const scrollToIndex = (ref: React.RefObject<ScrollView | null>, index: number, animated = true) => {
     ref.current?.scrollTo({ y: index * ITEM_HEIGHT, animated });
   };
 
@@ -164,6 +165,7 @@ export default function ProfileSetupScreen() {
         hobbies: profileInput.hobbies.join(','),
         preferredLanguage: profileInput.preferredLanguage,
       });
+      setIsNewUser(false);
       router.replace('/(main)/home');
     } catch {
       Alert.alert('오류', '프로필 저장에 실패했습니다.');
@@ -176,7 +178,7 @@ export default function ProfileSetupScreen() {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
       <View style={styles.pageTitleWrap}>
-        <Text style={styles.pageTitle}>프로필 설정하고 <Text style={{ color: BLUE }}>Tutoring</Text> 시작하기</Text>
+        <Text style={styles.pageTitle}>프로필 설정하고 <Text style={{ color: BLUE }}>Kutoring</Text> 시작하기</Text>
       </View>
 
       <ScrollView ref={scrollViewRef} style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">

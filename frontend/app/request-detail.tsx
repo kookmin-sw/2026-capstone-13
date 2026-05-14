@@ -20,9 +20,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { s } from '../utils/scale';
 import { CategoryLabels } from '../constants/colors';
-import { getHelpRequestById, acceptHelpRequest, cancelHelpRequest } from '../services/helpService';
+import { getHelpRequestById, acceptHelpRequest, cancelHelpRequest, recommendHelpers } from '../services/helpService';
+import { reportContent } from '../services/reportService';
 import { useAuthStore } from '../stores/authStore';
-import type { HelpCategory, HelpMethod, HelpRequest } from '../types';
+import { useTranslation } from 'react-i18next';
+import type { HelpCategory, HelpMethod, HelpRequest, HelperRecommendResponse } from '../types';
 
 const CategoryEmoji: Record<HelpCategory, string> = {
   BANK: '🏦', HOSPITAL: '🏥', SCHOOL: '🏫', DAILY: '🏠', OTHER: '📌',
@@ -59,11 +61,6 @@ const CATEGORY_COLOR: Record<HelpCategory, string> = {
   BANK: '#D97706', HOSPITAL: '#DC2626', SCHOOL: '#7C3AED', DAILY: '#059669', OTHER: '#6B7280',
 };
 
-const METHOD_LABEL: Record<HelpMethod, string> = {
-  CHAT: '채팅',
-  VIDEO_CALL: '영상통화',
-  OFFLINE: '오프라인 대면',
-};
 
 function parseDescription(raw: string) {
   const parts = raw.split('\n\n[정보]\n');
@@ -78,15 +75,17 @@ function parseDescription(raw: string) {
   return { body: raw, meta: {} };
 }
 
-function formatTime(createdAt: string): string {
+type TFunction = (key: string, opts?: Record<string, unknown>) => string;
+
+function formatTime(createdAt: string, t: TFunction): string {
   const date = new Date(createdAt.includes('Z') || createdAt.includes('+') ? createdAt : createdAt + 'Z');
   const diff = Date.now() - date.getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return '방금 전';
-  if (minutes < 60) return `${minutes}분 전`;
+  if (minutes < 1) return t('time.justNow');
+  if (minutes < 60) return t('time.minutesAgo', { m: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  return `${Math.floor(hours / 24)}일 전`;
+  if (hours < 24) return t('time.hoursAgo', { h: hours });
+  return t('time.daysAgo', { d: Math.floor(hours / 24) });
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -111,6 +110,7 @@ const STATUS_COLOR: Record<string, string> = {
 export default function RequestDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useTranslation();
   const { user } = useAuthStore();
 
   const [item, setItem] = useState<HelpRequest | null>(null);
@@ -120,6 +120,8 @@ export default function RequestDetailScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [reportVisible, setReportVisible] = useState(false);
   const [reportReason, setReportReason] = useState('');
+  const [recommendedHelpers, setRecommendedHelpers] = useState<HelperRecommendResponse[]>([]);
+  const [isLoadingRecommend, setIsLoadingRecommend] = useState(false);
   const reportPanResponder = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: (_, gs) => gs.dy > 10,
@@ -136,13 +138,29 @@ export default function RequestDetailScreen() {
         const response = await getHelpRequestById(Number(id));
         if (response.success) setItem(response.data);
       } catch {
-        Alert.alert('오류', '게시글을 불러오지 못했습니다.');
+        Alert.alert(t('common.error'), t('errors.serverError'));
       } finally {
         setIsLoading(false);
       }
     };
     fetch();
   }, [id]);
+
+  useEffect(() => {
+    if (!item || user?.id !== item.requester.id || item.status !== 'WAITING') return;
+    const fetchRecommended = async () => {
+      setIsLoadingRecommend(true);
+      try {
+        const res = await recommendHelpers(item.id);
+        if (res.success) setRecommendedHelpers(res.data);
+      } catch {
+        // 추천 실패 시 조용히 무시
+      } finally {
+        setIsLoadingRecommend(false);
+      }
+    };
+    fetchRecommended();
+  }, [item?.id, user?.id, item?.status]);
 
   if (isLoading) {
     return (
@@ -155,9 +173,9 @@ export default function RequestDetailScreen() {
   if (!item) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>게시글을 찾을 수 없습니다.</Text>
+        <Text style={styles.errorText}>{t('community.postNotFound')}</Text>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.errorBack}>돌아가기</Text>
+          <Text style={styles.errorBack}>{t('common.back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -176,23 +194,23 @@ export default function RequestDetailScreen() {
   const allMethods: HelpMethod[] = ['OFFLINE', 'CHAT', 'VIDEO_CALL'];
 
   const handleDelete = () => {
-    Alert.alert('글 삭제', '도움 요청을 삭제하시겠어요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('requestDetail.deleteTitle'), t('requestDetail.deleteMsg'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             const response = await cancelHelpRequest(item.id);
             if (response.success) {
-              Alert.alert('삭제 완료', '도움 요청이 삭제됐습니다.', [
-                { text: '확인', onPress: () => router.back() },
+              Alert.alert(t('requestDetail.deleteDone'), t('requestDetail.deleteDoneMsg'), [
+                { text: t('common.confirm'), onPress: () => router.back() },
               ]);
             } else {
-              Alert.alert('실패', response.message);
+              Alert.alert(t('common.error'), response.message);
             }
           } catch {
-            Alert.alert('오류', '서버 오류가 발생했습니다.');
+            Alert.alert(t('common.error'), t('errors.serverError'));
           }
         },
       },
@@ -219,16 +237,17 @@ export default function RequestDetailScreen() {
 
   const goToChatRoom = () => {
     const isKorean = user?.userType === 'KOREAN';
-    const partnerUserId = isKorean ? item.requester.id : (item.helper?.id ?? item.requester.id);
-    const partnerPreferredLanguage = isKorean
-      ? (item.requester.preferredLanguage ?? 'en')
-      : (item.helper?.preferredLanguage ?? 'en');
+    const partner = isKorean ? item.requester : (item.helper ?? item.requester);
+    const partnerUserId = partner.id;
+    const partnerPreferredLanguage = partner.userType === 'KOREAN'
+      ? 'ko'
+      : (partner.preferredLanguage ?? 'en');
     router.push({
       pathname: '/chatroom',
       params: {
         roomId: item.id,
         requestTitle: item.title,
-        partnerNickname: isKorean ? item.requester.nickname : (item.helper?.nickname ?? ''),
+        partnerNickname: partner.nickname,
         requestStatus: item.status,
         requesterId: item.requester.id,
         partnerUserId: String(partnerUserId),
@@ -237,32 +256,50 @@ export default function RequestDetailScreen() {
     });
   };
 
-  const REPORT_REASONS = ['스팸/광고', '욕설/혐오 표현', '부적절한 내용', '사기/허위 정보', '기타'];
+  const REPORT_REASONS = [
+    t('community.reportSpam'),
+    t('community.reportHate'),
+    t('community.reportInappropriate'),
+    t('community.reportFraud'),
+    t('community.reportOther'),
+  ];
 
-  const handleReport = () => {
+  const handleReport = async () => {
     if (!reportReason) {
-      Alert.alert('신고 사유를 선택해주세요.');
+      Alert.alert(t('community.selectReportReason'));
       return;
     }
-    Alert.alert('신고 완료', '신고가 접수되었습니다. 검토 후 조치하겠습니다.', [
-      {
-        text: '확인',
-        onPress: () => {
-          setReportVisible(false);
-          setReportReason('');
+    if (!item?.requester.id) return;
+
+    try {
+      await reportContent({
+        targetUserId: item.requester.id,
+        targetType: 'HELP_REQUEST',
+        targetId: item.id,
+        reason: reportReason,
+      });
+      Alert.alert(t('community.reportDone'), t('community.reportDoneMsg'), [
+        {
+          text: t('common.confirm'),
+          onPress: () => {
+            setReportVisible(false);
+            setReportReason('');
+          },
         },
-      },
-    ]);
+      ]);
+    } catch {
+      Alert.alert(t('common.error'), t('community.reportFailed'));
+    }
   };
 
   const handleHelp = () => {
     Alert.alert(
-      '도움 신청',
-      `${item.requester.nickname}님의 요청에 도움을 드릴까요?`,
+      t('requestDetail.helpRequestTitle'),
+      t('requestDetail.helpRequestMsg', { name: item.requester.nickname }),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '도와드릴게요!',
+          text: t('home.acceptRequest'),
           onPress: async () => {
             setIsAccepting(true);
             try {
@@ -277,14 +314,16 @@ export default function RequestDetailScreen() {
                     requestStatus: 'MATCHED',
                     requesterId: item.requester.id,
                     partnerUserId: String(item.requester.id),
-                    partnerPreferredLanguage: item.requester.preferredLanguage ?? 'en',
+                    partnerPreferredLanguage: item.requester.userType === 'KOREAN'
+                      ? 'ko'
+                      : (item.requester.preferredLanguage ?? 'en'),
                   },
                 });
               } else {
-                Alert.alert('실패', response.message);
+                Alert.alert(t('common.error'), response.message);
               }
             } catch {
-              Alert.alert('오류', '서버 오류가 발생했습니다.');
+              Alert.alert(t('common.error'), t('errors.serverError'));
             } finally {
               setIsAccepting(false);
             }
@@ -360,7 +399,7 @@ export default function RequestDetailScreen() {
           <View style={styles.metaRow}>
             <Text style={styles.metaTime}>{CategoryLabels[item.category].replace(/\S+\s/, '')}</Text>
             <Text style={styles.metaTime}>·</Text>
-            <Text style={styles.metaTime}>{formatTime(item.createdAt)}</Text>
+            <Text style={styles.metaTime}>{formatTime(item.createdAt, t)}</Text>
           </View>
           <Text style={styles.bodyText}>{body}</Text>
         </View>
@@ -370,12 +409,12 @@ export default function RequestDetailScreen() {
         {/* ── 매칭 방식 ── */}
         <View style={styles.bodySection}>
           <View style={styles.methodTitleRow}>
-            <Text style={styles.sectionTitle}>매칭 방식</Text>
+            <Text style={styles.sectionTitle}>{t('requestDetail.matchMethod')}</Text>
             <View style={styles.methodRow}>
               {(['ONLINE', 'OFFLINE'] as const).map((m) => {
                 const isSelected = m === 'OFFLINE' ? item.helpMethod === 'OFFLINE' : item.helpMethod !== 'OFFLINE';
                 const color = m === 'OFFLINE' ? ORANGE : BLUE;
-                const label = m === 'OFFLINE' ? '오프라인' : '온라인';
+                const label = m === 'OFFLINE' ? t('requestDetail.offline') : t('requestDetail.online');
                 return (
                   <View
                     key={m}
@@ -402,13 +441,13 @@ export default function RequestDetailScreen() {
           <>
             <View style={styles.divider} />
             <View style={styles.bodySection}>
-              <Text style={[styles.sectionTitle, { marginBottom: s(8) }]}>요청 정보</Text>
+              <Text style={[styles.sectionTitle, { marginBottom: s(8) }]}>{t('requestDetail.requestInfo')}</Text>
               {(() => {
                 const rows = [
-                  meta['희망일정'] ? { label: '희망 일정', value: meta['희망일정'] } : null,
-                  meta['소요시간'] ? { label: '소요 시간', value: meta['소요시간'] } : null,
-                  meta['장소']    ? { label: '장소',      value: meta['장소'] }    : null,
-                  meta['언어']    ? { label: '언어',      value: meta['언어'] }    : null,
+                  meta['희망일정'] ? { label: t('write.schedule'), value: meta['희망일정'] } : null,
+                  meta['소요시간'] ? { label: t('write.duration'), value: meta['소요시간'] } : null,
+                  meta['장소']    ? { label: t('write.location'), value: meta['장소'] }    : null,
+                  meta['언어']    ? { label: t('write.language'), value: meta['언어'] }    : null,
                 ].filter(Boolean);
                 return rows.map((row, i) => (
                   <View key={row!.label} style={[styles.infoRow, i === 0 && { borderTopWidth: 0 }]}>
@@ -421,12 +460,45 @@ export default function RequestDetailScreen() {
           </>
         )}
 
+        {/* ── 추천 헬퍼 ── */}
+        {isMyPost && item.status === 'WAITING' && (
+          <>
+            <View style={styles.divider} />
+            <View style={styles.bodySection}>
+              <Text style={[styles.sectionTitle, { marginBottom: s(12) }]}>추천 헬퍼</Text>
+              {isLoadingRecommend ? (
+                <ActivityIndicator size="small" color={BLUE} />
+              ) : recommendedHelpers.length === 0 ? (
+                <Text style={styles.helperDetail}>추천 가능한 헬퍼가 없습니다.</Text>
+              ) : (
+                recommendedHelpers.map((rec) => (
+                  <View key={rec.helper.id} style={[styles.helperItem, { marginBottom: s(12) }]}>
+                    {toAbsoluteUrl(rec.helper.profileImage) ? (
+                      <Image source={{ uri: toAbsoluteUrl(rec.helper.profileImage)! }} style={styles.helperAvatar} />
+                    ) : (
+                      <View style={[styles.helperAvatar, styles.helperAvatarFallback]}>
+                        <Text style={styles.helperAvatarText}>{getInitial(rec.helper.nickname)}</Text>
+                      </View>
+                    )}
+                    <View style={styles.helperInfo}>
+                      <Text style={styles.helperName}>{rec.helper.nickname}</Text>
+                      <Text style={styles.helperDetail}>{rec.helper.university} · 도움 {rec.helper.helpCount}회</Text>
+                      <Text style={styles.helperRating}>{'★★★★★'} <Text style={styles.helperRatingNum}>{rec.helper.rating.toFixed(1)}</Text></Text>
+                      <Text style={[styles.helperDetail, { marginTop: s(2), color: BLUE }]}>{rec.matchReason}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          </>
+        )}
+
         {/* ── 매칭된 헬퍼 ── */}
         {item.helper && item.status !== 'COMPLETED' && item.status !== 'IN_PROGRESS' && (
           <>
             <View style={styles.divider} />
             <View style={styles.bodySection}>
-              <Text style={[styles.sectionTitle, { marginBottom: s(12) }]}>도움을 주는 학생</Text>
+              <Text style={[styles.sectionTitle, { marginBottom: s(12) }]}>{t('requestDetail.helperStudent')}</Text>
               <View style={styles.helperItem}>
                 {toAbsoluteUrl(item.helper.profileImage) ? (
                   <Image source={{ uri: toAbsoluteUrl(item.helper.profileImage)! }} style={styles.helperAvatar} />
@@ -437,7 +509,7 @@ export default function RequestDetailScreen() {
                 )}
                 <View style={styles.helperInfo}>
                   <Text style={styles.helperName}>{item.helper.nickname}</Text>
-                  <Text style={styles.helperDetail}>{item.helper.university} · 도움 {item.helper.helpCount}회</Text>
+                  <Text style={styles.helperDetail}>{item.helper.university} · {t('requestDetail.helpCountDetail', { count: item.helper.helpCount })}</Text>
                   <Text style={styles.helperRating}>{'★★★★★'} <Text style={styles.helperRatingNum}>{item.helper.rating.toFixed(1)}</Text></Text>
                 </View>
               </View>
@@ -469,33 +541,33 @@ export default function RequestDetailScreen() {
       <View style={styles.cta}>
 {item.status === 'COMPLETED' ? (
           <View style={[styles.helpBtn, styles.helpBtnOutline]}>
-            <Text style={styles.helpBtnOutlineText}>도움이 완료됐어요</Text>
+            <Text style={styles.helpBtnOutlineText}>{t('requestDetail.helpCompleted')}</Text>
           </View>
         ) : (item.status === 'IN_PROGRESS' || item.status === 'MATCHED') && !isInChat ? (
           <View style={[styles.helpBtn, styles.helpBtnOutline]}>
-            <Text style={styles.helpBtnOutlineText}>도움이 진행중이에요</Text>
+            <Text style={styles.helpBtnOutlineText}>{t('requestDetail.helpInProgress')}</Text>
           </View>
         ) : isInChat ? (
           <TouchableOpacity style={styles.helpBtn} onPress={goToChatRoom}>
             <Ionicons name="chatbubble-outline" size={16} color={BLUE} />
-            <Text style={styles.helpBtnText}>채팅방으로 이동</Text>
+            <Text style={styles.helpBtnText}>{t('requestDetail.goToChat')}</Text>
           </TouchableOpacity>
         ) : isMyPost && item.status === 'WAITING' ? (
           <View style={styles.myPostActions}>
             <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
-              <Text style={styles.deleteBtnText}>삭제</Text>
+              <Text style={styles.deleteBtnText}>{t('common.delete')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.editBtn} onPress={handleEdit}>
-              <Text style={styles.editBtnText}>수정</Text>
+              <Text style={styles.editBtnText}>{t('common.edit')}</Text>
             </TouchableOpacity>
           </View>
         ) : isMyPost ? (
           <View style={styles.closedBtn}>
-            <Text style={styles.closedBtnText}>매칭 후 수정·삭제 불가</Text>
+            <Text style={styles.closedBtnText}>{t('requestDetail.lockedAfterMatch')}</Text>
           </View>
         ) : item.status !== 'WAITING' ? (
           <View style={styles.closedBtn}>
-            <Text style={styles.closedBtnText}>이미 매칭된 요청입니다</Text>
+            <Text style={styles.closedBtnText}>{t('requestDetail.alreadyMatched')}</Text>
           </View>
         ) : (
           <TouchableOpacity
@@ -507,7 +579,7 @@ export default function RequestDetailScreen() {
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.helpBtnText}>
-                {user?.userType !== 'KOREAN' ? '내 요청이에요' : '도와드릴게요!'}
+                {user?.userType !== 'KOREAN' ? t('requestDetail.myRequest') : t('home.acceptRequest')}
               </Text>
             )}
           </TouchableOpacity>
@@ -521,7 +593,7 @@ export default function RequestDetailScreen() {
             <View style={styles.reportHandleWrap} {...reportPanResponder.panHandlers}>
               <View style={styles.reportHandle} />
             </View>
-            <Text style={styles.reportTitle}>신고하기</Text>
+            <Text style={styles.reportTitle}>{t('community.report')}</Text>
             <View style={styles.reportDivider} />
             {REPORT_REASONS.map((reason) => (
               <TouchableOpacity
@@ -541,10 +613,10 @@ export default function RequestDetailScreen() {
             <View style={styles.reportDivider} />
             <View style={styles.reportBtnRow}>
               <TouchableOpacity style={styles.reportCancelBtn} onPress={() => { setReportVisible(false); setReportReason(''); }}>
-                <Text style={styles.reportCancelText}>취소</Text>
+                <Text style={styles.reportCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.reportSubmitBtn, !reportReason && styles.reportSubmitBtnOff]} onPress={handleReport}>
-                <Text style={styles.reportSubmitText}>신고하기</Text>
+                <Text style={styles.reportSubmitText}>{t('community.report')}</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>

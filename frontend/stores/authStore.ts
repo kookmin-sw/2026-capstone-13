@@ -22,6 +22,7 @@ interface AuthState {
   error: string | null;
   isGuest: boolean;
   isNewUser: boolean; // 회원가입 후 첫 로그인 여부
+  appLanguage: string;
 
   // 액션
   login: (data: LoginRequest) => Promise<boolean>;
@@ -45,6 +46,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   error: null,
   isGuest: false,
   isNewUser: false,
+  appLanguage: 'ko',
 
   // 로그인
   login: async (data: LoginRequest) => {
@@ -134,12 +136,12 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setAppLanguage: async (lang: SupportedLanguage) => {
     await setLanguage(lang);
+    set((state) => ({ appLanguage: lang, user: state.user ? { ...state.user, preferredLanguage: lang } : null }));
     try {
       await updatePreferredLanguage(lang);
     } catch {
       // 서버 저장 실패해도 로컬 언어는 이미 변경됨
     }
-    set((state) => ({ user: state.user ? { ...state.user, preferredLanguage: lang } : null }));
   },
 
   // 자기소개 수정 (로컬 즉시 반영 후 서버 동기화)

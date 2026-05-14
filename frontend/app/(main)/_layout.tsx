@@ -27,7 +27,16 @@ export default function MainLayout() {
   const router = useRouter();
   const globalClientRef = useRef<Client | null>(null);
   // 채팅방별 파트너 정보 캐시 (roomId → room info)
-  const roomCacheRef = useRef<Record<number, { requestTitle: string; partnerNickname: string; partnerProfileImage?: string; requestStatus: string; requesterId: string }>>({});
+  const roomCacheRef = useRef<Record<number, {
+    requestTitle: string;
+    partnerNickname: string;
+    partnerProfileImage?: string;
+    requestStatus: string;
+    requesterId: string;
+    partnerId?: string;
+    partnerPreferredLanguage?: string;
+    isDirect?: boolean;
+  }>>({});
 
   // 앱 시작 시 전체 unread 합산 + 방 정보 캐시 (나간 방 제외)
   useEffect(() => {
@@ -47,6 +56,8 @@ export default function MainLayout() {
             partnerProfileImage: r.partnerProfileImage,
             requestStatus: r.status,
             requesterId: '',
+            partnerId: String(r.partnerId ?? ''),
+            partnerPreferredLanguage: r.partnerPreferredLanguage ?? 'en',
           };
         });
       }
@@ -61,6 +72,8 @@ export default function MainLayout() {
             partnerProfileImage: r.partnerProfileImage,
             requestStatus: 'DIRECT',
             requesterId: '',
+            partnerId: String(r.partnerId ?? ''),
+            isDirect: true,
           };
         });
       }
@@ -78,19 +91,22 @@ export default function MainLayout() {
       if (!mounted) return;
 
       // 활성 채팅방 ID 수집
-      const results = await Promise.allSettled([getMyRequests(), getHelpedRequests(), getDirectChatRooms()]);
+      const helpResults = await Promise.allSettled([getMyRequests(), getHelpedRequests()]);
+      const directResult = await getDirectChatRooms().then(
+        (value) => ({ status: 'fulfilled' as const, value }),
+        (reason) => ({ status: 'rejected' as const, reason }),
+      );
       if (!mounted) return;
 
       const activeRoomIds = new Set<number>();
       const directRoomIds = new Set<number>();
-      results.slice(0, 2).forEach((result) => {
+      helpResults.forEach((result) => {
         if (result.status === 'fulfilled' && result.value.success && Array.isArray(result.value.data)) {
-          result.value.data
+          (result.value.data as { id: number; status: string }[])
             .filter((r) => r.status === 'IN_PROGRESS' || r.status === 'MATCHED')
             .forEach((r) => activeRoomIds.add(r.id));
         }
       });
-      const directResult = results[2];
       if (directResult.status === 'fulfilled' && directResult.value.success && Array.isArray(directResult.value.data)) {
         directResult.value.data.forEach((r) => directRoomIds.add(r.id));
       }
@@ -122,7 +138,14 @@ export default function MainLayout() {
                   const { activeChatroomId } = useChatStore.getState();
                   if (msg.senderId === user?.id || activeChatroomId === roomId) return;
                   const isVideo = msg.content.startsWith('SYS_CALL_VIDEO:');
-                  const callerNickname = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const rawCallContent = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const lastColon = rawCallContent.lastIndexOf(':');
+                  const callerNickname = lastColon > 0 ? rawCallContent.slice(0, lastColon) : rawCallContent;
+                  const callerLang = lastColon > 0 ? rawCallContent.slice(lastColon + 1) : null;
+                  const bcp47Map: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-Hans': 'zh-CN', ru: 'ru-RU', mn: 'mn-MN', vi: 'vi-VN' };
+                  const myLang = user?.userType === 'KOREAN' ? 'ko-KR' : (bcp47Map[user?.preferredLanguage ?? ''] ?? 'en-US');
+                  const roomInfo = roomCacheRef.current[roomId];
+                  const targetLang = user?.userType !== 'KOREAN' ? 'ko' : (callerLang ?? roomInfo?.partnerPreferredLanguage ?? 'en');
                   Alert.alert(
                     isVideo ? t('chat.videoCall') : t('chat.voiceCall'),
                     t('chat.callRequest', { caller: callerNickname, type: isVideo ? 'video' : 'voice' }),
@@ -132,7 +155,15 @@ export default function MainLayout() {
                         text: t('chat.accept'),
                         onPress: () => router.push({
                           pathname: '/videocall',
-                          params: { roomId: String(roomId), partnerNickname: callerNickname, voiceOnly: isVideo ? 'false' : 'true' },
+                          params: {
+                            roomId: String(roomId),
+                            partnerNickname: callerNickname,
+                            voiceOnly: isVideo ? 'false' : 'true',
+                            language: myLang,
+                            myUserId: String(user.id),
+                            partnerUserId: roomCacheRef.current[roomId]?.partnerId ?? '',
+                            targetLanguage: targetLang,
+                          },
                         }),
                       },
                     ]
@@ -154,6 +185,8 @@ export default function MainLayout() {
                       partnerProfileImage: roomInfo.partnerProfileImage,
                       requestStatus: roomInfo.requestStatus,
                       requesterId: roomInfo.requesterId,
+                      partnerId: roomInfo.partnerId,
+                      partnerPreferredLanguage: roomInfo.partnerPreferredLanguage,
                     } : undefined,
                   });
                 }
@@ -175,7 +208,13 @@ export default function MainLayout() {
                   const { activeChatroomId } = useChatStore.getState();
                   if (msg.senderId === user?.id || activeChatroomId === roomId) return;
                   const isVideo = msg.content.startsWith('SYS_CALL_VIDEO:');
-                  const callerNickname = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const rawCallContentD = msg.content.slice(isVideo ? 'SYS_CALL_VIDEO:'.length : 'SYS_CALL_VOICE:'.length);
+                  const lastColonD = rawCallContentD.lastIndexOf(':');
+                  const callerNickname = lastColonD > 0 ? rawCallContentD.slice(0, lastColonD) : rawCallContentD;
+                  const callerLangD = lastColonD > 0 ? rawCallContentD.slice(lastColonD + 1) : null;
+                  const bcp47MapD: Record<string, string> = { ko: 'ko-KR', en: 'en-US', ja: 'ja-JP', 'zh-Hans': 'zh-CN', ru: 'ru-RU', mn: 'mn-MN', vi: 'vi-VN' };
+                  const myLangD = user?.userType === 'KOREAN' ? 'ko-KR' : (bcp47MapD[user?.preferredLanguage ?? ''] ?? 'en-US');
+                  const targetLangD = user?.userType !== 'KOREAN' ? 'ko' : (callerLangD ?? 'en');
                   Alert.alert(
                     isVideo ? t('chat.videoCall') : t('chat.voiceCall'),
                     t('chat.callRequest', { caller: callerNickname, type: isVideo ? 'video' : 'voice' }),
@@ -185,7 +224,15 @@ export default function MainLayout() {
                         text: t('chat.accept'),
                         onPress: () => router.push({
                           pathname: '/videocall',
-                          params: { roomId: String(roomId), partnerNickname: callerNickname, voiceOnly: isVideo ? 'false' : 'true' },
+                          params: {
+                            roomId: String(roomId),
+                            partnerNickname: callerNickname,
+                            voiceOnly: isVideo ? 'false' : 'true',
+                            language: myLangD,
+                            myUserId: String(user.id),
+                            partnerUserId: roomCacheRef.current[-(roomId)]?.partnerId ?? '',
+                            targetLanguage: targetLangD,
+                          },
                         }),
                       },
                     ]
@@ -208,6 +255,7 @@ export default function MainLayout() {
                       requestStatus: 'DIRECT',
                       requesterId: '',
                       isDirect: true,
+                      partnerId: roomInfo.partnerId,
                     } : undefined,
                   });
                 }

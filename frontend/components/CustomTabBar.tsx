@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/authStore';
 import { s } from '../utils/scale';
@@ -30,10 +31,11 @@ const TAB_CONFIG: TabConfig[] = [
 export default function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { user } = useAuthStore();
   const { t } = useTranslation();
+  const { bottom: bottomInset } = useSafeAreaInsets();
   const isKorean = user?.userType === 'KOREAN';
 
   const visibleRoutes = state.routes.filter((route) => {
-    if (descriptors[route.key].options.href === null) return false;
+    if ((descriptors[route.key].options as { href?: unknown }).href === null) return false;
     if (isKorean && route.name === 'school') return false;
     return true;
   });
@@ -91,7 +93,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
   if (currentRouteName === 'write') return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { bottom: Math.max(bottomInset, 20) }]}>
       <Animated.View
         style={[styles.activePill, { width: pillWidth, transform: [{ translateX: pillX }] }]}
         pointerEvents="none"
@@ -128,7 +130,12 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
                 </View>
               )}
             </View>
-            <Text style={[styles.label, isFocused && styles.labelActive]}>
+            <Text
+              style={[styles.label, isFocused && styles.labelActive]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
               {t(tabCfg.labelKey)}
             </Text>
           </TouchableOpacity>
@@ -141,7 +148,6 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 20,
     left: 20,
     right: 20,
     flexDirection: 'row',
@@ -180,9 +186,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: {
-    fontSize: s(11),
+    fontSize: s(10),
     fontWeight: '700',
     color: INACTIVE_COLOR,
+    textAlign: 'center',
   },
   labelActive: {
     color: '#fff',

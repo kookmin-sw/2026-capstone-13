@@ -18,6 +18,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
+import { useTranslation } from 'react-i18next';
 import { createHelpRequest, updateHelpRequest } from '../../services/helpService';
 import { useHelpRequestStore } from '../../stores/helpRequestStore';
 import type { HelpCategory, HelpMethod } from '../../types';
@@ -53,11 +54,8 @@ const BG     = '#F0F4FA';
 const DIV    = '#D4E4FF';
 
 const CATEGORIES: HelpCategory[] = ['BANK', 'SCHOOL', 'DAILY', 'OTHER'];
-const METHODS: HelpMethod[] = ['CHAT', 'OFFLINE'];
+const METHODS = ['CHAT', 'OFFLINE'] as const satisfies readonly HelpMethod[];
 
-const CATEGORY_LABEL: Record<HelpCategory, string> = {
-  BANK: '행정', HOSPITAL: '병원', SCHOOL: '학업', DAILY: '생활', OTHER: '기타',
-};
 const CATEGORY_ICON: Record<HelpCategory, { name: React.ComponentProps<typeof Ionicons>['name']; color: string }> = {
   BANK:     { name: 'business-outline',                   color: '#3B6FE8' },
   HOSPITAL: { name: 'medkit-outline',                     color: '#EF4444' },
@@ -65,12 +63,10 @@ const CATEGORY_ICON: Record<HelpCategory, { name: React.ComponentProps<typeof Io
   DAILY:    { name: 'home-outline',                       color: '#F97316' },
   OTHER:    { name: 'ellipsis-horizontal-circle-outline', color: '#6B7280' },
 };
-const METHOD_LABEL: Record<string, string> = {
-  CHAT: '온라인', OFFLINE: '오프라인',
-};
-const SCHEDULE_OPTIONS = ['오늘', '이번 주', '아무때나'];
+const SCHEDULE_OPTIONS = ['오늘', '이번 주', '아무때나'] as const;
 
 export default function WriteScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { addRequest } = useHelpRequestStore();
   const params = useLocalSearchParams<{
@@ -98,10 +94,29 @@ export default function WriteScreen() {
   const [isUploading, setIsUploading]           = useState(false);
   const [isSubmitting, setIsSubmitting]         = useState(false);
 
+  const categoryLabel: Record<HelpCategory, string> = {
+    BANK: t('write.categoryAdmin'),
+    HOSPITAL: t('requests.category.hospital'),
+    SCHOOL: t('write.categoryAcademic'),
+    DAILY: t('write.categoryLife'),
+    OTHER: t('requests.category.other'),
+  };
+
+  const methodLabel: Record<(typeof METHODS)[number], string> = {
+    CHAT: t('write.methodOnline'),
+    OFFLINE: t('write.methodOffline'),
+  };
+
+  const scheduleLabel: Record<(typeof SCHEDULE_OPTIONS)[number], string> = {
+    오늘: t('write.scheduleToday'),
+    '이번 주': t('write.scheduleThisWeek'),
+    아무때나: t('write.scheduleAnytime'),
+  };
+
   const handlePickImage = async () => {
-    if (images.length >= 3) { Alert.alert('알림', '사진은 최대 3장까지 첨부할 수 있어요.'); return; }
+    if (images.length >= 3) { Alert.alert(t('changePassword.notice'), t('write.maxImages', { count: 3 })); return; }
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('권한 필요', '갤러리 접근 권한이 필요해요.'); return; }
+    if (status !== 'granted') { Alert.alert(t('profile.permissionNeeded'), t('profile.galleryPermission')); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
@@ -112,7 +127,7 @@ export default function WriteScreen() {
       const url = await uploadImage(result.assets[0].uri);
       setImages(prev => [...prev, url]);
     } catch {
-      Alert.alert('오류', '이미지 업로드에 실패했어요.');
+      Alert.alert(t('common.error'), t('errors.imageUploadFailed'));
     } finally {
       setIsUploading(false);
     }
@@ -121,12 +136,12 @@ export default function WriteScreen() {
   const isValid = !!selectedCategory && title.trim().length > 0 && description.trim().length > 0 && !!selectedMethod && language.trim().length > 0 && !!schedule;
 
   const handleSubmit = async () => {
-    if (!selectedCategory)    { Alert.alert('알림', '카테고리를 선택해주세요.'); return; }
-    if (!title.trim())        { Alert.alert('알림', '제목을 입력해주세요.'); return; }
-    if (!description.trim())  { Alert.alert('알림', '자세한 설명을 입력해주세요.'); return; }
-    if (!selectedMethod)      { Alert.alert('알림', '도움 방식을 선택해주세요.'); return; }
-    if (!language.trim())     { Alert.alert('알림', '희망 언어를 입력해주세요.'); return; }
-    if (!schedule)            { Alert.alert('알림', '희망 일정을 선택해주세요.'); return; }
+    if (!selectedCategory)    { Alert.alert(t('changePassword.notice'), t('write.selectCategory')); return; }
+    if (!title.trim())        { Alert.alert(t('changePassword.notice'), t('write.enterTitle')); return; }
+    if (!description.trim())  { Alert.alert(t('changePassword.notice'), t('write.enterDescription')); return; }
+    if (!selectedMethod)      { Alert.alert(t('changePassword.notice'), t('write.selectMethod')); return; }
+    if (!language.trim())     { Alert.alert(t('changePassword.notice'), t('write.enterLanguage')); return; }
+    if (!schedule)            { Alert.alert(t('changePassword.notice'), t('write.selectSchedule')); return; }
 
     setIsSubmitting(true);
 
@@ -153,20 +168,20 @@ export default function WriteScreen() {
 
       if (response.success) {
         if (!isEditMode) addRequest(response.data);
-        Alert.alert('완료', isEditMode ? '수정이 완료됐습니다!' : '도움 요청이 등록되었습니다!', [
-          { text: '확인', onPress: () => router.back() },
+        Alert.alert(t('common.done'), isEditMode ? t('write.requestUpdated') : t('write.requestCreated'), [
+          { text: t('common.confirm'), onPress: () => router.back() },
         ]);
       } else {
-        Alert.alert('실패', response.message ?? '등록에 실패했습니다.');
+        Alert.alert(t('chat.failed'), response.message ?? t('write.registerFailed'));
       }
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { message?: string } } };
       const status = err?.response?.status;
       const serverMsg = err?.response?.data?.message;
       if (status === 401 || status === 403) {
-        Alert.alert('로그인 필요', '실제 계정으로 로그인해야 요청을 올릴 수 있습니다.');
+        Alert.alert(t('write.loginRequired'), t('write.loginRequiredDesc'));
       } else {
-        Alert.alert('오류', `서버 오류 (${status ?? '?'}): ${serverMsg ?? '잠시 후 다시 시도해주세요.'}`);
+        Alert.alert(t('common.error'), t('write.serverErrorWithStatus', { status: status ?? '?', message: serverMsg ?? t('write.tryLater') }));
       }
     } finally {
       setIsSubmitting(false);
@@ -180,7 +195,7 @@ export default function WriteScreen() {
         <TouchableOpacity style={styles.headerBtn} onPress={() => router.back()}>
           <Ionicons name="close" size={24} color={T1} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isEditMode ? '도움 요청 수정' : '도움 요청하기'}</Text>
+        <Text style={styles.headerTitle}>{isEditMode ? t('write.editTitle') : t('write.createTitle')}</Text>
         <View style={styles.headerBtn} />
       </View>
 
@@ -190,7 +205,7 @@ export default function WriteScreen() {
           <View style={styles.section}>
 
             {/* 1. 도움 종류 */}
-            <Text style={styles.sectionTitle}>도움 종류</Text>
+            <Text style={styles.sectionTitle}>{t('write.category')}</Text>
             <View style={styles.divider} />
             <View style={styles.categoryGrid}>
               {CATEGORIES.map((cat) => (
@@ -205,18 +220,18 @@ export default function WriteScreen() {
                     color={selectedCategory === cat ? CATEGORY_ICON[cat].color : T2}
                   />
                   <Text style={[styles.catChipText, selectedCategory === cat && styles.catChipTextActive]}>
-                    {CATEGORY_LABEL[cat]}
+                    {categoryLabel[cat]}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             {/* 2. 제목 + 설명 */}
-            <Text style={[styles.sectionTitle, { marginTop: s(20) }]}>도움 요청글</Text>
+            <Text style={[styles.sectionTitle, { marginTop: s(20) }]}>{t('write.post')}</Text>
             <View style={styles.divider} />
             <TextInput
               style={styles.input}
-              placeholder="제목을 입력해주세요."
+              placeholder={t('write.titlePlaceholder')}
               placeholderTextColor={T2}
               value={title}
               onChangeText={setTitle}
@@ -225,7 +240,7 @@ export default function WriteScreen() {
             <View style={styles.divider} />
             <TextInput
               style={styles.textarea}
-              placeholder={'어떤 도움이 필요한지 자세히 적어주세요.\n\n상황을 자세히 설명할수록 더 빠르게 매칭됩니다.'}
+              placeholder={t('write.descriptionPlaceholder')}
               placeholderTextColor={T2}
               value={description}
               onChangeText={setDescription}
@@ -239,7 +254,7 @@ export default function WriteScreen() {
 
             {/* 3. 사진 첨부 */}
             <View style={styles.rowBetween}>
-              <Text style={styles.sectionTitle}>사진 첨부 <Text style={styles.optional}>(선택)</Text></Text>
+              <Text style={styles.sectionTitle}>{t('write.photo')} <Text style={styles.optional}>({t('write.optional')})</Text></Text>
               <TouchableOpacity
                 style={styles.photoAddBtn}
                 onPress={handlePickImage}
@@ -273,7 +288,7 @@ export default function WriteScreen() {
 
             {/* 4. 도움 방식 */}
             <View style={styles.rowBetween}>
-              <Text style={styles.sectionTitle}>도움 방식</Text>
+              <Text style={styles.sectionTitle}>{t('write.helpMethod')}</Text>
               <View style={styles.methodRow}>
                 {METHODS.map((method) => {
                   const isSelected = selectedMethod === method;
@@ -291,7 +306,7 @@ export default function WriteScreen() {
                     >
                       <View style={[styles.methodDot, { backgroundColor: isSelected ? color : '#D1D5DB' }]} />
                       <Text style={[styles.methodChipText, isSelected ? { color } : styles.methodChipTextOff]}>
-                        {METHOD_LABEL[method]}
+                        {methodLabel[method]}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -302,10 +317,10 @@ export default function WriteScreen() {
             <View style={styles.sectionDivider} />
 
             {/* 5. 희망 언어 */}
-            <Text style={styles.sectionTitle}>희망 언어</Text>
+            <Text style={styles.sectionTitle}>{t('write.desiredLanguage')}</Text>
             <TextInput
               style={[styles.input, { marginTop: s(12) }]}
-              placeholder="예: 영어"
+              placeholder={t('write.languageExample')}
               placeholderTextColor={T2}
               value={language}
               onChangeText={setLanguage}
@@ -315,10 +330,10 @@ export default function WriteScreen() {
             {selectedMethod === 'OFFLINE' && (
               <>
                 <View style={styles.sectionDivider} />
-                <Text style={styles.sectionTitle}>만날 장소</Text>
+                <Text style={styles.sectionTitle}>{t('write.meetPlace')}</Text>
                 <TextInput
                   style={[styles.input, { marginTop: s(12) }]}
-                  placeholder="예: 국민대 도서관, 정문 카페"
+                  placeholder={t('write.placeExample')}
                   placeholderTextColor={T2}
                   value={location}
                   onChangeText={setLocation}
@@ -330,7 +345,7 @@ export default function WriteScreen() {
 
             {/* 7. 희망 일정 */}
             <View style={styles.rowBetween}>
-              <Text style={styles.sectionTitle}>희망 일정</Text>
+              <Text style={styles.sectionTitle}>{t('write.schedule')}</Text>
               <View style={styles.chipRow}>
                 {SCHEDULE_OPTIONS.map((opt) => (
                   <TouchableOpacity
@@ -338,7 +353,7 @@ export default function WriteScreen() {
                     style={[styles.optionChip, schedule === opt && styles.optionChipActive]}
                     onPress={() => setSchedule(schedule === opt ? null : opt)}
                   >
-                    <Text style={[styles.optionChipText, schedule === opt && styles.optionChipTextActive]}>{opt}</Text>
+                    <Text style={[styles.optionChipText, schedule === opt && styles.optionChipTextActive]}>{scheduleLabel[opt]}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -359,7 +374,7 @@ export default function WriteScreen() {
       >
         {isSubmitting
           ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.submitBtnText}>{isEditMode ? '수정 완료' : '작성 완료'}</Text>
+          : <Text style={styles.submitBtnText}>{isEditMode ? t('write.editDone') : t('write.submitDone')}</Text>
         }
       </TouchableOpacity>
     </View>
