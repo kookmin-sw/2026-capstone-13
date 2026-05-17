@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kutoring | 외국인 유학생 생활 도움 매칭 플랫폼</title>
+  <meta
+    name="description"
+    content="Kutoring은 외국인 유학생과 한국인 헬퍼를 연결하는 P2P 생활 도움 매칭 플랫폼입니다."
+  />
+
+  <style>
+    :root {
+      --bg: #f6f8ff;
+      --bg-soft: #eef4ff;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --secondary: #14b8a6;
+      --accent: #f97316;
+      --text: #111827;
+      --muted: #6b7280;
+      --card: rgba(255, 255, 255, 0.82);
+      --border: rgba(148, 163, 184, 0.28);
+      --shadow: 0 24px 70px rgba(15, 23, 42, 0.14);
+      --radius-xl: 32px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Pretendard",
+        "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.20), transparent 34%),
+        radial-gradient(circle at top right, rgba(20, 184, 166, 0.22), transparent 32%),
+        linear-gradient(180deg, #f8fbff 0%, #f6f8ff 45%, #ffffff 100%);
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      min-height: 100vh;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(18px);
+      background: rgba(255, 255, 255, 0.72);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    .nav-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 16px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      font-size: 22px;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: grid;
+      place-items: center;
+      color: white;
+      box-shadow: 0 12px 32px rgba(37, 99, 235, 0.32);
+      font-weight: 900;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      color: #475569;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .hero {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 86px 22px 70px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+      gap: 52px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.09);
+      color: var(--primary-dark);
+      font-size: 14px;
+      font-weight: 800;
+      border: 1px solid rgba(37, 99, 235, 0.16);
+      margin-bottom: 24px;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--secondary);
+      box-shadow: 0 0 0 6px rgba(20, 184, 166, 0.14);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(42px, 6vw, 76px);
+      line-height: 1.02;
+      letter-spacing: -0.07em;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #1d4ed8 0%, #14b8a6 70%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-desc {
+      margin: 24px 0 34px;
+      max-width: 650px;
+      color: #475569;
+      font-size: 20px;
+      line-height: 1.75;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 0 20px;
+      border-radius: 999px;
+      font-weight: 900;
+      transition: 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      box-shadow: 0 16px 34px rgba(37, 99, 235, 0.28);
+    }
+
+    .button-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 20px 42px rgba(37, 99, 235, 0.35);
+    }
+
+    .button-ghost {
+      background: rgba(255, 255, 255, 0.72);
+      border-color: rgba(148, 163, 184, 0.34);
+      color: #334155;
+    }
+
+    .button-ghost:hover {
+      border-color: rgba(37, 99, 235, 0.35);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .phone-stage {
+      position: relative;
+      min-height: 620px;
+      display: grid;
+      place-items: center;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(4px);
+      opacity: 0.8;
+    }
+
+    .orb.one {
+      width: 220px;
+      height: 220px;
+      background: rgba(37, 99, 235, 0.16);
+      top: 40px;
+      left: 0;
+    }
+
+    .orb.two {
+      width: 260px;
+      height: 260px;
+      background: rgba(20, 184, 166, 0.16);
+      right: 8px;
+      bottom: 70px;
+    }
+
+    .phone {
+      width: 310px;
+      height: 600px;
+      border-radius: 44px;
+      background: #0f172a;
+      padding: 14px;
+      box-shadow:
+        0 44px 90px rgba(15, 23, 42, 0.32),
+        inset 0 0 0 1px rgba(255,255,255,0.08);
+      position: relative;
+      transform: rotate(3deg);
+    }
+
+    .phone::before {
+      content: "";
+      position: absolute;
+      width: 92px;
+      height: 26px;
+      border-radius: 999px;
+      background: #0f172a;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+
+    .screen {
+      height: 100%;
+      border-radius: 34px;
+      background:
+        linear-gradient(180deg, #eff6ff 0%, #ffffff 52%, #ecfeff 100%);
+      overflow: hidden;
+      padding: 34px 18px 18px;
+      position: relative;
+    }
+
+    .app-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 22px;
+    }
+
+    .app-title {
+      font-weight: 950;
+      font-size: 22px;
+      letter-spacing: -0.04em;
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #fed7aa, #bfdbfe);
+    }
+
+    .search-card {
+      background: white;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 24px;
+      padding: 18px;
+      box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+      margin-bottom: 16px;
+    }
+
+    .search-card strong {
+      display: block;
+      font-size: 18px;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+
+    .search-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .category-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .mini-card {
+      border-radius: 20px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      min-height: 88px;
+    }
+
+    .mini-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      background: rgba(37, 99, 235, 0.12);
+      margin-bottom: 9px;
+    }
+
+    .mini-card b {
+      font-size: 13px;
+    }
+
+    .helper-card {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: #0f172a;
+      color: white;
+      border-radius: 24px;
+      padding: 16px;
+      box-shadow: 0 18px 36px rgba(15, 23, 42, 0.2);
+    }
+
+    .helper-photo {
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #60a5fa, #2dd4bf);
+    }
+
+    .helper-card p {
+      margin: 4px 0 0;
+      color: #cbd5e1;
+      font-size: 12px;
+    }
+
+    .floating {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow: var(--shadow);
+      border-radius: 22px;
+      padding: 16px 18px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+
+    .floating small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .floating.left {
+      left: 18px;
+      top: 120px;
+    }
+
+    .floating.right {
+      right: 0;
+      bottom: 145px;
+    }
+
+    section {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 72px 22px;
+    }
+
+    .section-head {
+      max-width: 760px;
+      margin-bottom: 34px;
+    }
+
+    .eyebrow {
+      color: var(--primary);
+      font-size: 14px;
+      font-weight: 950;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: clamp(32px, 4vw, 48px);
+      line-height: 1.15;
+      letter-spacing: -0.06em;
+    }
+
+    .section-desc {
+      color: #64748b;
+      font-size: 18px;
+      line-height: 1.75;
+      margin: 16px 0 0;
+      letter-spacing: -0.02em;
+    }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .glass-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      box-shadow: 0 18px 54px rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(18px);
+    }
+
+    .glass-card h3 {
+      margin: 0 0 10px;
+      font-size: 22px;
+      letter-spacing: -0.04em;
+    }
+
+    .glass-card p {
+      margin: 0;
+      color: #64748b;
+      line-height: 1.7;
+      letter-spacing: -0.02em;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .feature-card {
+      position: relative;
+      overflow: hidden;
+      background: white;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      box-shadow: 0 16px 48px rgba(15, 23, 42, 0.08);
+      transition: 0.2s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+    }
+
+    .feature-card::after {
+      content: "";
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      right: -44px;
+      top: -44px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.08);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(20,184,166,0.14));
+      color: var(--primary);
+      font-size: 22px;
+      font-weight: 950;
+      margin-bottom: 18px;
+    }
+
+    .feature-card h3 {
+      margin: 0 0 10px;
+      font-size: 21px;
+      letter-spacing: -0.04em;
+    }
+
+    .feature-card p {
+      margin: 0;
+      color: #64748b;
+      line-height: 1.68;
+      letter-spacing: -0.02em;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .flow-step {
+      position: relative;
+      background: #0f172a;
+      color: white;
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      min-height: 190px;
+      overflow: hidden;
+    }
+
+    .flow-step::after {
+      content: "";
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      right: -70px;
+      bottom: -70px;
+      background: rgba(20, 184, 166, 0.28);
+      border-radius: 999px;
+    }
+
+    .step-num {
+      color: #67e8f9;
+      font-size: 14px;
+      font-weight: 950;
+      margin-bottom: 38px;
+    }
+
+    .flow-step h3 {
+      margin: 0 0 8px;
+      letter-spacing: -0.04em;
+    }
+
+    .flow-step p {
+      margin: 0;
+      color: #cbd5e1;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .stack-wrap {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+    }
+
+    .stack-card {
+      background: white;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      box-shadow: 0 16px 48px rgba(15, 23, 42, 0.07);
+    }
+
+    .stack-card h3 {
+      margin: 0 0 18px;
+      letter-spacing: -0.04em;
+      font-size: 23px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      padding: 9px 13px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-weight: 850;
+      font-size: 13px;
+      border: 1px solid #dbeafe;
+    }
+
+    .chip.green {
+      background: #ecfdf5;
+      color: #047857;
+      border-color: #d1fae5;
+    }
+
+    .chip.orange {
+      background: #fff7ed;
+      color: #c2410c;
+      border-color: #fed7aa;
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+    }
+
+    .member {
+      background: white;
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      border-radius: 22px;
+      padding: 22px;
+      text-align: center;
+      box-shadow: 0 14px 36px rgba(15, 23, 42, 0.06);
+    }
+
+    .member-avatar {
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 14px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(37,99,235,0.92), rgba(20,184,166,0.92));
+    }
+
+    .member h3 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      letter-spacing: -0.04em;
+    }
+
+    .member p {
+      margin: 0;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .cta {
+      padding-bottom: 92px;
+    }
+
+    .cta-box {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-xl);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.28), transparent 32%),
+        linear-gradient(135deg, #1d4ed8, #0f766e);
+      color: white;
+      padding: 58px;
+      box-shadow: 0 30px 80px rgba(37, 99, 235, 0.28);
+      display: flex;
+      justify-content: space-between;
+      gap: 32px;
+      align-items: center;
+    }
+
+    .cta-box::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      border-radius: 999px;
+      right: -80px;
+      bottom: -120px;
+      background: rgba(255, 255, 255, 0.13);
+    }
+
+    .cta-box h2 {
+      max-width: 720px;
+    }
+
+    .cta-box p {
+      margin: 14px 0 0;
+      color: #dbeafe;
+      font-size: 18px;
+      line-height: 1.7;
+    }
+
+    .cta .button {
+      background: white;
+      color: #1d4ed8;
+      flex: 0 0 auto;
+      z-index: 1;
+    }
+
+    footer {
+      border-top: 1px solid rgba(226, 232, 240, 0.9);
+      padding: 32px 22px;
+      color: #64748b;
+      text-align: center;
+      font-weight: 700;
+      background: white;
+    }
+
+    @media (max-width: 960px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding-top: 58px;
+      }
+
+      .phone-stage {
+        min-height: 560px;
+      }
+
+      .problem-grid,
+      .feature-grid,
+      .flow,
+      .stack-wrap {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .team-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .cta-box {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .nav-links {
+        display: none;
+      }
+
+      .hero {
+        padding-bottom: 32px;
+      }
+
+      .hero-desc {
+        font-size: 17px;
+      }
+
+      .phone-stage {
+        min-height: 500px;
+      }
+
+      .phone {
+        width: 270px;
+        height: 530px;
+      }
+
+      .floating {
+        display: none;
+      }
+
+      .problem-grid,
+      .feature-grid,
+      .flow,
+      .stack-wrap,
+      .team-grid {
+        grid-template-columns: 1fr;
+      }
+
+      section {
+        padding: 54px 20px;
+      }
+
+      .cta-box {
+        padding: 34px 26px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <nav class="nav">
+      <div class="nav-inner">
+        <a class="brand" href="#">
+          <span class="brand-mark">K</span>
+          <span>Kutoring</span>
+        </a>
+
+        <div class="nav-links">
+          <a href="#about">소개</a>
+          <a href="#features">기능</a>
+          <a href="#flow">사용 흐름</a>
+          <a href="#tech">기술 스택</a>
+          <a href="#team">팀</a>
+        </div>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div>
+        <div class="badge">
+          <span class="badge-dot"></span>
+          국민대학교 캡스톤 디자인 13조
+        </div>
+
+        <h1>
+          외국인 유학생을 위한<br />
+          <span class="gradient-text">생활 도움 매칭 플랫폼</span>
+        </h1>
+
+        <p class="hero-desc">
+          Kutoring은 한국 생활에 어려움을 겪는 외국인 유학생과
+          도움을 줄 수 있는 한국인 헬퍼를 연결합니다.
+          병원 동행, 행정 처리, 통역, 일상 심부름까지
+          필요한 도움을 더 쉽고 빠르게 요청할 수 있습니다.
+        </p>
+
+        <div class="hero-actions">
+          <a class="button button-primary" href="#features">서비스 기능 보기</a>
+          <a
+            class="button button-ghost"
+            href="https://github.com/kookmin-sw/2026-capstone-13"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub Repository
+          </a>
+        </div>
+      </div>
+
+      <div class="phone-stage" aria-label="Kutoring app preview">
+        <div class="orb one"></div>
+        <div class="orb two"></div>
+
+        <div class="floating left">
+          AI 헬퍼 추천
+          <small>상황에 맞는 도움 연결</small>
+        </div>
+
+        <div class="floating right">
+          실시간 채팅
+          <small>매칭 후 바로 소통</small>
+        </div>
+
+        <div class="phone">
+          <div class="screen">
+            <div class="app-top">
+              <div class="app-title">Kutoring</div>
+              <div class="avatar"></div>
+            </div>
+
+            <div class="search-card">
+              <strong>어떤 도움이 필요하세요?</strong>
+              <p>병원, 행정, 통역, 생활 도움 요청을 등록하고 헬퍼를 찾아보세요.</p>
+            </div>
+
+            <div class="category-grid">
+              <div class="mini-card">
+                <div class="mini-icon"></div>
+                <b>병원 동행</b>
+              </div>
+              <div class="mini-card">
+                <div class="mini-icon"></div>
+                <b>행정 처리</b>
+              </div>
+              <div class="mini-card">
+                <div class="mini-icon"></div>
+                <b>통역 도움</b>
+              </div>
+              <div class="mini-card">
+                <div class="mini-icon"></div>
+                <b>생활 심부름</b>
+              </div>
+            </div>
+
+            <div class="helper-card">
+              <div class="helper-photo"></div>
+              <div>
+                <strong>추천 헬퍼 매칭 완료</strong>
+                <p>한국어 · 영어 가능 / 응답 빠름</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section id="about">
+      <div class="section-head">
+        <div class="eyebrow">About</div>
+        <h2>낯선 한국 생활에서 필요한 도움을 더 가깝게 연결합니다.</h2>
+        <p class="section-desc">
+          외국인 유학생은 언어, 행정 절차, 병원 이용, 학교 생활 정보 등에서
+          불편을 겪을 수 있습니다. Kutoring은 이러한 문제를 단순 게시판이 아니라
+          요청, 매칭, 소통, 리뷰까지 이어지는 하나의 서비스 흐름으로 해결합니다.
+        </p>
+      </div>
+
+      <div class="problem-grid">
+        <div class="glass-card">
+          <h3>언어 장벽</h3>
+          <p>
+            병원, 관공서, 학교 생활에서 생기는 의사소통 문제를 헬퍼와 번역 기능으로 보완합니다.
+          </p>
+        </div>
+
+        <div class="glass-card">
+          <h3>정보 부족</h3>
+          <p>
+            유학생이 필요한 학교 공지, 식단, 생활 정보를 한 곳에서 확인할 수 있도록 돕습니다.
+          </p>
+        </div>
+
+        <div class="glass-card">
+          <h3>신뢰 문제</h3>
+          <p>
+            리뷰, 신고, 관리자 기능을 통해 더 안전하고 신뢰할 수 있는 매칭 환경을 목표로 합니다.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="section-head">
+        <div class="eyebrow">Features</div>
+        <h2>도움 요청부터 커뮤니티까지 연결되는 핵심 기능</h2>
+        <p class="section-desc">
+          README에 정리된 주요 기능을 기준으로, 실제 서비스 소개 페이지에서 보이기 좋은 구조로 재구성했습니다.
+        </p>
+      </div>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">01</div>
+          <h3>회원가입 / 로그인</h3>
+          <p>이메일 인증 기반 회원가입과 JWT 인증을 통해 사용자를 안전하게 관리합니다.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">02</div>
+          <h3>AI 헬퍼 추천</h3>
+          <p>요청자의 상황과 도움 카테고리에 맞춰 적합한 헬퍼를 추천합니다.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">03</div>
+          <h3>도움 요청 매칭</h3>
+          <p>병원 동행, 행정 처리, 통역, 생활 도움 등 카테고리별 요청을 등록합니다.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">04</div>
+          <h3>실시간 채팅</h3>
+          <p>WebSocket 기반 1:1 채팅으로 매칭 이후 빠르게 세부 내용을 조율합니다.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">05</div>
+          <h3>영상 통화</h3>
+          <p>Agora SDK 기반 영상 통화로 원격 상황에서도 직접적인 도움을 받을 수 있습니다.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">06</div>
+          <h3>커뮤니티</h3>
+          <p>외국인 유학생이 학교생활과 한국 생활 정보를 공유할 수 있는 게시판을 제공합니다.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">07</div>
+          <h3>리뷰 & 신고</h3>
+          <p>도움 이후 리뷰를 남기고 문제가 있는 사용자는 신고할 수 있습니다.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">08</div>
+          <h3>식단 / 공지 자동 수집</h3>
+          <p>학내 식단과 공지사항을 자동으로 수집해 유학생에게 필요한 정보를 제공합니다.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">09</div>
+          <h3>관리자 기능</h3>
+          <p>사용자 관리, 신고 처리 등 운영에 필요한 어드민 기능을 제공합니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="flow">
+      <div class="section-head">
+        <div class="eyebrow">Service Flow</div>
+        <h2>Kutoring의 사용 흐름</h2>
+        <p class="section-desc">
+          유학생이 도움을 요청하고 헬퍼와 연결된 뒤, 채팅과 통화로 문제를 해결하는 구조입니다.
+        </p>
+      </div>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="step-num">STEP 01</div>
+          <h3>요청 등록</h3>
+          <p>필요한 도움의 종류와 상황을 선택해 요청을 작성합니다.</p>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num">STEP 02</div>
+          <h3>헬퍼 추천</h3>
+          <p>카테고리와 조건에 맞는 헬퍼를 추천받고 매칭합니다.</p>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num">STEP 03</div>
+          <h3>실시간 소통</h3>
+          <p>채팅과 영상 통화로 세부 내용을 조율하고 도움을 진행합니다.</p>
+        </div>
+
+        <div class="flow-step">
+          <div class="step-num">STEP 04</div>
+          <h3>리뷰 작성</h3>
+          <p>도움이 끝난 뒤 리뷰를 남겨 신뢰 기반 매칭 환경을 만듭니다.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="tech">
+      <div class="section-head">
+        <div class="eyebrow">Tech Stack</div>
+        <h2>모바일, 백엔드, AI 서버를 나누어 개발했습니다.</h2>
+        <p class="section-desc">
+          프론트엔드, 백엔드, AI, 배포 환경을 분리해 각 파트별 역할을 명확하게 구성했습니다.
+        </p>
+      </div>
+
+      <div class="stack-wrap">
+        <div class="stack-card">
+          <h3>Frontend</h3>
+          <div class="chips">
+            <span class="chip">TypeScript</span>
+            <span class="chip">React Native</span>
+            <span class="chip">Expo</span>
+            <span class="chip">Expo Router</span>
+            <span class="chip">Zustand</span>
+            <span class="chip">STOMP</span>
+            <span class="chip">Agora</span>
+            <span class="chip">i18next</span>
+          </div>
+        </div>
+
+        <div class="stack-card">
+          <h3>Backend</h3>
+          <div class="chips">
+            <span class="chip green">Java</span>
+            <span class="chip green">Spring Boot</span>
+            <span class="chip green">Gradle</span>
+            <span class="chip green">REST API</span>
+            <span class="chip green">MySQL</span>
+            <span class="chip green">JWT</span>
+            <span class="chip green">WebSocket</span>
+            <span class="chip green">Cloudinary</span>
+          </div>
+        </div>
+
+        <div class="stack-card">
+          <h3>AI</h3>
+          <div class="chips">
+            <span class="chip orange">Python</span>
+            <span class="chip orange">FastAPI</span>
+            <span class="chip orange">Google Gemini</span>
+            <span class="chip orange">Groq</span>
+            <span class="chip orange">Deepgram</span>
+            <span class="chip orange">Azure Translation</span>
+            <span class="chip orange">BeautifulSoup</span>
+          </div>
+        </div>
+
+        <div class="stack-card">
+          <h3>Deployment & Collaboration</h3>
+          <div class="chips">
+            <span class="chip">Railway</span>
+            <span class="chip">Docker</span>
+            <span class="chip">Git</span>
+            <span class="chip">GitHub</span>
+            <span class="chip">Figma</span>
+            <span class="chip">Discord</span>
+            <span class="chip">Notion</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="team">
+      <div class="section-head">
+        <div class="eyebrow">Team</div>
+        <h2>국민대학교 캡스톤 디자인 13조</h2>
+        <p class="section-desc">
+          프론트엔드, 백엔드, AI 파트로 역할을 나누어 Kutoring 서비스를 개발했습니다.
+        </p>
+      </div>
+
+      <div class="team-grid">
+        <div class="member">
+          <div class="member-avatar"></div>
+          <h3>박상범</h3>
+          <p>팀장 · Frontend</p>
+        </div>
+
+        <div class="member">
+          <div class="member-avatar"></div>
+          <h3>김영일</h3>
+          <p>Backend</p>
+        </div>
+
+        <div class="member">
+          <div class="member-avatar"></div>
+          <h3>이상윤</h3>
+          <p>Backend</p>
+        </div>
+
+        <div class="member">
+          <div class="member-avatar"></div>
+          <h3>이준서</h3>
+          <p>Frontend</p>
+        </div>
+
+        <div class="member">
+          <div class="member-avatar"></div>
+          <h3>조보국</h3>
+          <p>AI</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="cta-box">
+        <div>
+          <h2>외국인 유학생의 한국 생활을 더 안전하고 쉽게.</h2>
+          <p>
+            Kutoring은 도움 요청, 헬퍼 매칭, 실시간 소통, 리뷰까지 이어지는
+            생활 밀착형 P2P 헬프 매칭 서비스를 지향합니다.
+          </p>
+        </div>
+
+        <a
+          class="button"
+          href="https://github.com/kookmin-sw/2026-capstone-13"
+          target="_blank"
+          rel="noreferrer"
+        >
+          GitHub에서 보기
+        </a>
+      </div>
+    </section>
+
+    <footer>
+      Kutoring · 국민대학교 소프트웨어학부 캡스톤 디자인 13조
+    </footer>
+  </div>
+</body>
+</html>
