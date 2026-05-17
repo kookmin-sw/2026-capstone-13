@@ -3,31 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kutoring — Help for international students in Korea</title>
+  <title>Kutoring | 외국인 유학생 생활 도움 매칭 앱</title>
   <meta
     name="description"
-    content="Kutoring is a help-matching app for international students living in Korea."
+    content="Kutoring은 외국인 유학생과 한국인 헬퍼를 연결하는 생활 도움 매칭 앱입니다."
   />
 
   <style>
     :root {
-      --black: #111111;
-      --gray-900: #1f1f1f;
-      --gray-700: #4b5563;
-      --gray-500: #777777;
-      --gray-300: #dddddd;
-      --gray-200: #eeeeee;
-      --gray-100: #f7f6f3;
-      --white: #ffffff;
-      --yellow: #ffd84d;
-      --orange: #ff8a3d;
-      --mint: #5bd6b2;
-      --blue: #4f8cff;
-      --radius-xl: 36px;
-      --radius-lg: 26px;
-      --radius-md: 18px;
-      --shadow-soft: 0 24px 70px rgba(0, 0, 0, 0.08);
-      --shadow-card: 0 14px 38px rgba(0, 0, 0, 0.07);
+      --bg: #000;
+      --panel: #0a0a0a;
+      --panel-2: #111;
+      --line: #242424;
+      --line-soft: #1a1a1a;
+      --text: #fafafa;
+      --muted: #a1a1aa;
+      --muted-2: #71717a;
+      --white: #fff;
+      --green: #00dc82;
+      --blue: #3291ff;
+      --purple: #7928ca;
+      --yellow: #f5d90a;
+      --red: #ff4d4f;
+      --radius: 18px;
+      --radius-lg: 28px;
+      --max: 1180px;
     }
 
     * {
@@ -40,17 +40,20 @@
 
     body {
       margin: 0;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255,255,255,0.11), transparent 30%),
+        radial-gradient(circle at 80% 15%, rgba(50,145,255,0.16), transparent 28%),
+        #000;
+      color: var(--text);
       font-family:
-        Inter,
         -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
         "Apple SD Gothic Neo",
         "Noto Sans KR",
+        Pretendard,
         sans-serif;
-      color: var(--black);
-      background: var(--gray-100);
-      letter-spacing: -0.02em;
+      letter-spacing: -0.03em;
     }
 
     a {
@@ -58,19 +61,32 @@
       text-decoration: none;
     }
 
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image:
+        linear-gradient(to right, rgba(255,255,255,0.045) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.045) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: linear-gradient(to bottom, black 0%, black 48%, transparent 100%);
+      pointer-events: none;
+    }
+
     .nav {
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(247, 246, 243, 0.82);
-      backdrop-filter: blur(18px);
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      border-bottom: 1px solid var(--line);
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(20px);
     }
 
     .nav-inner {
-      max-width: 1180px;
+      max-width: var(--max);
       margin: 0 auto;
-      padding: 18px 22px;
+      height: 68px;
+      padding: 0 22px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -79,716 +95,845 @@
     .brand {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-weight: 900;
-      font-size: 22px;
-      letter-spacing: -0.05em;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
     }
 
     .brand-mark {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      background: var(--black);
-      color: var(--white);
+      width: 30px;
+      height: 30px;
+      position: relative;
       display: grid;
       place-items: center;
-      font-weight: 900;
+    }
+
+    .brand-mark::before {
+      content: "";
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-bottom: 26px solid white;
+      transform: translateY(-2px);
+    }
+
+    .brand span:last-child {
+      font-size: 19px;
     }
 
     .nav-links {
       display: flex;
       align-items: center;
       gap: 26px;
-      color: var(--gray-700);
+      color: var(--muted);
       font-size: 14px;
-      font-weight: 700;
+      font-weight: 600;
     }
 
     .nav-links a:hover {
-      color: var(--black);
+      color: white;
     }
 
-    .nav-cta {
-      padding: 10px 16px;
+    .nav-button {
+      padding: 9px 14px;
+      border: 1px solid var(--line);
       border-radius: 999px;
-      background: var(--black);
-      color: var(--white);
-      font-weight: 800;
+      color: white;
+      background: #111;
     }
 
     .hero {
-      max-width: 1180px;
+      max-width: var(--max);
       margin: 0 auto;
-      padding: 72px 22px 54px;
-      display: grid;
-      grid-template-columns: 1.05fr 0.95fr;
-      gap: 56px;
-      align-items: center;
+      padding: 96px 22px 48px;
+      text-align: center;
     }
 
-    .eyebrow {
+    .badge {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 13px;
-      border: 1px solid rgba(0, 0, 0, 0.08);
+      height: 34px;
+      padding: 0 13px;
+      border: 1px solid var(--line);
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.72);
-      font-size: 14px;
-      font-weight: 800;
-      color: var(--gray-900);
-      margin-bottom: 22px;
+      background: rgba(255,255,255,0.04);
+      color: #d4d4d8;
+      font-size: 13px;
+      font-weight: 650;
+      margin-bottom: 28px;
     }
 
-    .eyebrow-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--mint);
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 99px;
+      background: var(--green);
+      box-shadow: 0 0 18px rgba(0,220,130,0.75);
     }
 
     .hero h1 {
-      margin: 0;
-      font-size: clamp(48px, 7vw, 86px);
+      margin: 0 auto;
+      max-width: 980px;
+      font-size: clamp(48px, 8vw, 104px);
       line-height: 0.96;
       letter-spacing: -0.085em;
-      font-weight: 950;
+      font-weight: 850;
     }
 
-    .hero h1 span {
-      position: relative;
-      display: inline-block;
+    .hero .gradient {
+      background: linear-gradient(90deg, #fff 0%, #a1a1aa 42%, #fff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
-    .hero h1 span::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 7px;
-      height: 22px;
-      background: var(--yellow);
-      z-index: -1;
-      border-radius: 999px;
-      transform: rotate(-1deg);
-    }
-
-    .hero-copy {
-      margin: 28px 0 34px;
-      max-width: 650px;
-      color: var(--gray-700);
+    .hero p {
+      max-width: 720px;
+      margin: 26px auto 0;
+      color: var(--muted);
       font-size: 20px;
       line-height: 1.72;
       letter-spacing: -0.035em;
+      word-break: keep-all;
     }
 
     .hero-actions {
       display: flex;
+      justify-content: center;
       flex-wrap: wrap;
       gap: 12px;
-      align-items: center;
+      margin-top: 34px;
     }
 
     .btn {
+      height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: 50px;
-      padding: 0 20px;
-      border-radius: 999px;
-      font-weight: 900;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      font-size: 14px;
+      font-weight: 750;
+      transition: 0.18s ease;
+    }
+
+    .btn-primary {
+      background: white;
+      color: black;
+      border: 1px solid white;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.04);
+      color: white;
+      border: 1px solid var(--line);
     }
 
     .btn:hover {
       transform: translateY(-2px);
     }
 
-    .btn-primary {
-      background: var(--black);
-      color: var(--white);
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+    .showcase {
+      max-width: var(--max);
+      margin: 42px auto 0;
+      padding: 0 22px 86px;
     }
 
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.78);
-      color: var(--black);
-    }
-
-    .hero-note {
-      margin-top: 18px;
-      color: var(--gray-500);
-      font-size: 14px;
-      font-weight: 650;
-    }
-
-    .visual-wrap {
+    .product-frame {
       position: relative;
-      min-height: 650px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)),
+        #050505;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.03),
+        0 40px 120px rgba(0,0,0,0.75);
+    }
+
+    .frame-top {
+      height: 46px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      color: var(--muted-2);
+      font-size: 13px;
+    }
+
+    .traffic {
+      display: flex;
+      gap: 8px;
+    }
+
+    .traffic span {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #333;
+    }
+
+    .traffic span:nth-child(1) {
+      background: #ff5f56;
+    }
+
+    .traffic span:nth-child(2) {
+      background: #ffbd2e;
+    }
+
+    .traffic span:nth-child(3) {
+      background: #27c93f;
+    }
+
+    .frame-content {
+      display: grid;
+      grid-template-columns: 0.85fr 1.15fr;
+      min-height: 560px;
+    }
+
+    .phone-panel {
+      border-right: 1px solid var(--line);
+      padding: 44px 24px;
       display: grid;
       place-items: center;
-    }
-
-    .visual-bg {
-      position: absolute;
-      width: 520px;
-      height: 520px;
-      border-radius: 50%;
       background:
-        radial-gradient(circle at 30% 30%, rgba(255, 216, 77, 0.9), transparent 32%),
-        radial-gradient(circle at 72% 34%, rgba(91, 214, 178, 0.75), transparent 34%),
-        radial-gradient(circle at 46% 76%, rgba(255, 138, 61, 0.55), transparent 34%);
-      filter: blur(8px);
-      opacity: 0.85;
+        radial-gradient(circle at 30% 10%, rgba(50,145,255,0.17), transparent 32%),
+        radial-gradient(circle at 80% 80%, rgba(0,220,130,0.1), transparent 30%);
     }
 
     .phone {
-      position: relative;
-      width: 318px;
-      height: 640px;
-      border-radius: 46px;
-      background: #111;
-      padding: 13px;
-      box-shadow: 0 38px 80px rgba(0, 0, 0, 0.28);
-      transform: rotate(-2deg);
+      width: 290px;
+      height: 570px;
+      border: 1px solid #333;
+      border-radius: 42px;
+      background: #050505;
+      padding: 12px;
+      box-shadow: 0 28px 80px rgba(0,0,0,0.6);
     }
 
-    .phone::before {
-      content: "";
-      position: absolute;
-      top: 13px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 94px;
-      height: 26px;
-      border-radius: 999px;
-      background: #111;
-      z-index: 3;
-    }
-
-    .screen {
+    .phone-screen {
       height: 100%;
-      border-radius: 36px;
-      background: #fffaf0;
+      border-radius: 32px;
+      background: #080808;
+      border: 1px solid #1f1f1f;
       overflow: hidden;
-      padding: 38px 18px 18px;
+      padding: 22px 16px;
     }
 
-    .app-header {
+    .app-top {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 18px;
+      margin-bottom: 22px;
     }
 
-    .app-logo {
-      font-size: 23px;
-      font-weight: 950;
-      letter-spacing: -0.06em;
+    .app-top strong {
+      font-size: 20px;
+      letter-spacing: -0.05em;
     }
 
-    .app-avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 13px;
-      background: linear-gradient(135deg, var(--orange), var(--yellow));
+    .app-user {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), var(--green));
     }
 
-    .location-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 8px 12px;
+    .app-card {
+      border: 1px solid #262626;
+      border-radius: 22px;
       background: #111;
-      color: #fff;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 850;
-      margin-bottom: 14px;
+      padding: 18px;
+      margin-bottom: 12px;
     }
 
-    .request-card {
-      background: var(--white);
-      border-radius: 28px;
-      padding: 20px;
-      box-shadow: var(--shadow-card);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      margin-bottom: 14px;
-    }
-
-    .request-card h3 {
-      margin: 0 0 8px;
-      font-size: 22px;
-      line-height: 1.16;
-      letter-spacing: -0.06em;
-    }
-
-    .request-card p {
+    .app-card h3 {
       margin: 0;
-      color: var(--gray-700);
+      font-size: 20px;
+      line-height: 1.24;
+      letter-spacing: -0.055em;
+    }
+
+    .app-card p {
+      margin: 9px 0 0;
+      color: var(--muted);
       font-size: 13px;
       line-height: 1.55;
     }
 
-    .quick-grid {
+    .category-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin-bottom: 14px;
-    }
-
-    .quick-card {
-      min-height: 102px;
-      padding: 14px;
-      border-radius: 22px;
-      background: var(--white);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.05);
-    }
-
-    .quick-icon {
-      width: 30px;
-      height: 30px;
-      border-radius: 11px;
       margin-bottom: 12px;
-      background: var(--yellow);
+    }
+
+    .category {
+      min-height: 96px;
+      border: 1px solid #262626;
+      border-radius: 19px;
+      background: #0d0d0d;
+      padding: 13px;
+    }
+
+    .category-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 9px;
       display: grid;
       place-items: center;
-      font-weight: 950;
-      font-size: 13px;
-    }
-
-    .quick-card:nth-child(2) .quick-icon {
-      background: var(--mint);
-    }
-
-    .quick-card:nth-child(3) .quick-icon {
-      background: #c7d2fe;
-    }
-
-    .quick-card:nth-child(4) .quick-icon {
-      background: #fed7aa;
-    }
-
-    .quick-card b {
-      display: block;
-      font-size: 13px;
-      letter-spacing: -0.04em;
-    }
-
-    .match-card {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      padding: 14px;
-      border-radius: 24px;
-      background: #111;
-      color: #fff;
-    }
-
-    .match-face {
-      width: 52px;
-      height: 52px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, #fef08a, #5bd6b2);
-    }
-
-    .match-card strong {
-      display: block;
-      font-size: 14px;
-      letter-spacing: -0.035em;
-    }
-
-    .match-card span {
-      display: block;
-      margin-top: 3px;
-      color: #cfcfcf;
       font-size: 12px;
-      line-height: 1.4;
+      font-weight: 800;
+      margin-bottom: 13px;
+      background: white;
+      color: black;
     }
 
-    .float-card {
-      position: absolute;
-      background: rgba(255, 255, 255, 0.86);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      border-radius: 24px;
-      box-shadow: var(--shadow-soft);
-      padding: 16px 18px;
-      max-width: 210px;
+    .category:nth-child(2) .category-icon {
+      background: var(--green);
     }
 
-    .float-card b {
+    .category:nth-child(3) .category-icon {
+      background: var(--blue);
+      color: white;
+    }
+
+    .category:nth-child(4) .category-icon {
+      background: var(--yellow);
+    }
+
+    .category b {
       display: block;
-      font-size: 16px;
-      letter-spacing: -0.04em;
-      margin-bottom: 5px;
-    }
-
-    .float-card p {
-      margin: 0;
-      color: var(--gray-700);
       font-size: 13px;
-      line-height: 1.45;
+      letter-spacing: -0.04em;
     }
 
-    .float-one {
-      left: 4px;
-      top: 120px;
+    .match {
+      border: 1px solid rgba(0,220,130,0.35);
+      background: rgba(0,220,130,0.08);
     }
 
-    .float-two {
-      right: 0;
-      bottom: 130px;
-    }
-
-    section {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 76px 22px;
-    }
-
-    .section-head {
-      max-width: 760px;
-      margin-bottom: 34px;
-    }
-
-    .section-kicker {
-      color: var(--gray-500);
-      font-size: 14px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 12px;
-    }
-
-    h2 {
-      margin: 0;
-      font-size: clamp(34px, 4.2vw, 56px);
-      line-height: 1.05;
-      letter-spacing: -0.075em;
-      font-weight: 950;
-    }
-
-    .section-desc {
-      margin: 18px 0 0;
-      color: var(--gray-700);
-      font-size: 18px;
-      line-height: 1.7;
-      letter-spacing: -0.035em;
-    }
-
-    .bento {
-      display: grid;
-      grid-template-columns: 1.25fr 0.75fr;
-      gap: 18px;
-    }
-
-    .bento-left {
-      display: grid;
-      gap: 18px;
-    }
-
-    .bento-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 18px;
-    }
-
-    .tile {
-      background: var(--white);
-      border-radius: var(--radius-xl);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      box-shadow: var(--shadow-card);
-      padding: 30px;
-      min-height: 260px;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .tile.dark {
-      background: #111;
-      color: #fff;
-    }
-
-    .tile.yellow {
-      background: #ffe680;
-    }
-
-    .tile.mint {
-      background: #dff8ef;
-    }
-
-    .tile h3 {
-      margin: 0 0 12px;
-      font-size: 27px;
-      line-height: 1.1;
-      letter-spacing: -0.065em;
-    }
-
-    .tile p {
-      margin: 0;
-      color: var(--gray-700);
-      line-height: 1.65;
-      font-size: 16px;
-    }
-
-    .tile.dark p {
-      color: #d1d1d1;
-    }
-
-    .tile-visual {
-      position: absolute;
-      right: 24px;
-      bottom: 24px;
-      left: 24px;
-      height: 96px;
-      border-radius: 26px;
-      background: rgba(255, 255, 255, 0.62);
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px;
-    }
-
-    .bubble {
-      width: 46px;
-      height: 46px;
-      border-radius: 17px;
-      background: #111;
-      flex: 0 0 auto;
-    }
-
-    .line-group {
-      flex: 1;
-    }
-
-    .line {
-      height: 10px;
-      border-radius: 999px;
-      background: rgba(0, 0, 0, 0.14);
-      margin-bottom: 9px;
-    }
-
-    .line.short {
-      width: 58%;
-    }
-
-    .use-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-    }
-
-    .use-card {
-      background: var(--white);
-      border-radius: 28px;
-      padding: 24px;
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.055);
-    }
-
-    .use-card .num {
-      width: 38px;
-      height: 38px;
-      display: grid;
-      place-items: center;
-      border-radius: 14px;
-      background: var(--gray-100);
-      font-weight: 950;
-      margin-bottom: 18px;
-    }
-
-    .use-card h3 {
-      margin: 0 0 10px;
-      font-size: 21px;
-      letter-spacing: -0.055em;
-    }
-
-    .use-card p {
-      margin: 0;
-      color: var(--gray-700);
-      line-height: 1.62;
-      font-size: 15px;
-    }
-
-    .split {
-      display: grid;
-      grid-template-columns: 0.9fr 1.1fr;
-      gap: 22px;
-      align-items: stretch;
-    }
-
-    .quote-card {
-      background: #111;
-      color: #fff;
-      border-radius: var(--radius-xl);
-      padding: 38px;
-      min-height: 430px;
+    .dashboard-panel {
+      padding: 42px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
     }
 
-    .quote-card h2 {
-      color: #fff;
+    .dash-title {
+      max-width: 560px;
     }
 
-    .quote-card p {
-      color: #d4d4d4;
+    .dash-title .small {
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    .dash-title h2 {
+      margin: 0;
+      font-size: clamp(32px, 4vw, 56px);
+      line-height: 1.05;
+      letter-spacing: -0.075em;
+    }
+
+    .dash-title p {
+      color: var(--muted);
+      font-size: 17px;
       line-height: 1.7;
-      font-size: 18px;
+      margin: 18px 0 0;
+      word-break: keep-all;
     }
 
-    .feature-list {
-      background: var(--white);
-      border-radius: var(--radius-xl);
+    .terminal {
+      margin-top: 34px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      background: #050505;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .terminal-header {
+      height: 38px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      color: var(--muted-2);
+      font-size: 12px;
+    }
+
+    .terminal-body {
       padding: 18px;
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      box-shadow: var(--shadow-card);
+      font-size: 13px;
+      line-height: 1.75;
+      color: #d4d4d8;
     }
 
-    .feature-item {
+    .terminal-body .green {
+      color: var(--green);
+    }
+
+    .terminal-body .blue {
+      color: var(--blue);
+    }
+
+    .metrics {
       display: grid;
-      grid-template-columns: 54px 1fr;
-      gap: 16px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 26px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.03);
       padding: 18px;
-      border-radius: 24px;
     }
 
-    .feature-item + .feature-item {
-      border-top: 1px solid rgba(0, 0, 0, 0.06);
+    .metric strong {
+      display: block;
+      font-size: 26px;
+      letter-spacing: -0.06em;
     }
 
-    .feature-item:nth-child(odd) {
-      background: #fbfaf8;
+    .metric span {
+      display: block;
+      color: var(--muted-2);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    section {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 86px 22px;
+      border-top: 1px solid var(--line-soft);
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: 0.65fr 1.35fr;
+      gap: 40px;
+      align-items: start;
+      margin-bottom: 34px;
+    }
+
+    .section-label {
+      color: var(--muted-2);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 750;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: clamp(34px, 4.2vw, 58px);
+      line-height: 1.05;
+      letter-spacing: -0.075em;
+      font-weight: 800;
+    }
+
+    .section-head p {
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.72;
+      word-break: keep-all;
+    }
+
+    .three-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: #050505;
+    }
+
+    .info-card {
+      min-height: 280px;
+      padding: 28px;
+      border-right: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .info-card:last-child {
+      border-right: none;
+    }
+
+    .info-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -30% -45% auto;
+      width: 230px;
+      height: 230px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.09), transparent 62%);
+    }
+
+    .info-card .num {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 72px;
+    }
+
+    .info-card h3 {
+      margin: 0 0 12px;
+      font-size: 26px;
+      letter-spacing: -0.06em;
+    }
+
+    .info-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.68;
+      font-size: 15px;
+      word-break: keep-all;
+    }
+
+    .feature-table {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: #050505;
+    }
+
+    .feature-row {
+      display: grid;
+      grid-template-columns: 260px 1fr 180px;
+      border-bottom: 1px solid var(--line);
+      min-height: 104px;
+    }
+
+    .feature-row:last-child {
+      border-bottom: none;
+    }
+
+    .feature-name,
+    .feature-desc,
+    .feature-status {
+      padding: 24px;
+      display: flex;
+      align-items: center;
+    }
+
+    .feature-name {
+      gap: 12px;
+      font-weight: 760;
+      border-right: 1px solid var(--line);
     }
 
     .feature-icon {
-      width: 54px;
-      height: 54px;
-      border-radius: 19px;
-      background: var(--yellow);
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
       display: grid;
       place-items: center;
-      font-weight: 950;
+      color: white;
+      font-size: 13px;
+      background: #111;
     }
 
-    .feature-item:nth-child(2) .feature-icon {
-      background: var(--mint);
+    .feature-desc {
+      color: var(--muted);
+      line-height: 1.65;
+      border-right: 1px solid var(--line);
+      word-break: keep-all;
     }
 
-    .feature-item:nth-child(3) .feature-icon {
-      background: #c7d2fe;
+    .feature-status {
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 750;
+      justify-content: center;
     }
 
-    .feature-item:nth-child(4) .feature-icon {
-      background: #fed7aa;
+    .split-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
     }
 
-    .feature-item h3 {
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: #050505;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      height: 52px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .panel-body {
+      padding: 26px;
+    }
+
+    .steps {
+      display: grid;
+      gap: 14px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #0a0a0a;
+    }
+
+    .step-num {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: white;
+      color: black;
+      display: grid;
+      place-items: center;
+      font-weight: 850;
+    }
+
+    .step h3 {
       margin: 0 0 6px;
+      font-size: 18px;
+      letter-spacing: -0.05em;
+    }
+
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 14px;
+      word-break: keep-all;
+    }
+
+    .code-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.04), transparent),
+        #0a0a0a;
+      padding: 20px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      color: #d4d4d8;
+      line-height: 1.8;
+      min-height: 370px;
+    }
+
+    .code-card .comment {
+      color: #737373;
+    }
+
+    .code-card .key {
+      color: var(--blue);
+    }
+
+    .code-card .string {
+      color: var(--green);
+    }
+
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .tech-card {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: #050505;
+      padding: 24px;
+      min-height: 220px;
+    }
+
+    .tech-card h3 {
+      margin: 0 0 18px;
+      font-size: 20px;
+      letter-spacing: -0.05em;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: var(--muted);
+      background: #0d0d0d;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+    }
+
+    .member {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: #050505;
+      padding: 22px;
+      min-height: 190px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .member-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.03));
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 800;
+    }
+
+    .member h3 {
+      margin: 0 0 7px;
       font-size: 20px;
       letter-spacing: -0.055em;
     }
 
-    .feature-item p {
+    .member p {
       margin: 0;
-      color: var(--gray-700);
-      line-height: 1.58;
-      font-size: 15px;
-    }
-
-    .mini-stack {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 28px;
-    }
-
-    .chip {
-      background: rgba(255, 255, 255, 0.78);
-      border: 1px solid rgba(0, 0, 0, 0.08);
-      padding: 9px 13px;
-      border-radius: 999px;
+      color: var(--muted);
       font-size: 13px;
-      font-weight: 850;
-      color: var(--gray-900);
+      line-height: 1.45;
     }
 
-    .final {
-      padding-bottom: 96px;
+    .cta {
+      padding-bottom: 100px;
     }
 
-    .final-box {
-      border-radius: 42px;
+    .cta-box {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 34px;
       background:
-        radial-gradient(circle at 20% 20%, rgba(255, 216, 77, 0.95), transparent 28%),
-        radial-gradient(circle at 80% 30%, rgba(91, 214, 178, 0.8), transparent 30%),
-        #111;
-      color: #fff;
+        radial-gradient(circle at 50% 0%, rgba(255,255,255,0.18), transparent 30%),
+        linear-gradient(180deg, #111, #030303);
       padding: 58px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 28px;
-      align-items: center;
-      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.22);
+      text-align: center;
     }
 
-    .final-box h2 {
-      color: #fff;
-      max-width: 780px;
+    .cta-box::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: radial-gradient(circle at center, black, transparent 70%);
+      pointer-events: none;
     }
 
-    .final-box p {
-      color: #e5e5e5;
-      margin: 16px 0 0;
-      max-width: 690px;
-      line-height: 1.7;
+    .cta-box h2 {
+      position: relative;
+      margin: 0 auto;
+      max-width: 760px;
+      font-size: clamp(34px, 4.5vw, 64px);
+      line-height: 1.03;
+      letter-spacing: -0.08em;
+    }
+
+    .cta-box p {
+      position: relative;
+      margin: 20px auto 0;
+      max-width: 680px;
+      color: var(--muted);
+      line-height: 1.72;
       font-size: 18px;
+      word-break: keep-all;
     }
 
-    .final-box .btn {
-      background: #fff;
-      color: #111;
-      border: none;
-      white-space: nowrap;
+    .cta-box .hero-actions {
+      position: relative;
     }
 
     footer {
+      border-top: 1px solid var(--line);
       padding: 34px 22px;
-      border-top: 1px solid rgba(0, 0, 0, 0.08);
-      color: var(--gray-500);
+      color: var(--muted-2);
       text-align: center;
-      font-weight: 700;
-      background: #f1f0ed;
+      font-size: 14px;
     }
 
     @media (max-width: 980px) {
-      .hero {
-        grid-template-columns: 1fr;
-        padding-top: 54px;
-      }
-
-      .visual-wrap {
-        min-height: 610px;
-      }
-
-      .bento,
-      .split,
-      .final-box {
+      .frame-content,
+      .section-head,
+      .split-grid {
         grid-template-columns: 1fr;
       }
 
-      .use-grid {
+      .phone-panel {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .three-grid,
+      .tech-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .team-grid {
         grid-template-columns: repeat(2, 1fr);
       }
 
-      .final-box {
-        padding: 42px;
+      .feature-row {
+        grid-template-columns: 1fr;
+      }
+
+      .feature-name,
+      .feature-desc {
+        border-right: none;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .feature-status {
+        justify-content: flex-start;
       }
     }
 
@@ -798,76 +943,61 @@
       }
 
       .hero {
-        padding-top: 42px;
+        padding-top: 68px;
       }
 
-      .hero-copy {
+      .hero p {
         font-size: 17px;
       }
 
-      .visual-wrap {
-        min-height: 520px;
+      .showcase {
+        padding-bottom: 58px;
       }
 
-      .visual-bg {
-        width: 360px;
-        height: 360px;
+      .dashboard-panel {
+        padding: 26px;
       }
 
       .phone {
-        width: 282px;
-        height: 570px;
+        width: 260px;
+        height: 520px;
       }
 
-      .float-card {
-        display: none;
-      }
-
-      .bento-row,
-      .use-grid {
+      .metrics,
+      .three-grid,
+      .tech-grid,
+      .team-grid {
         grid-template-columns: 1fr;
       }
 
       section {
-        padding: 58px 20px;
+        padding: 64px 20px;
       }
 
-      .tile {
-        min-height: 245px;
-        padding: 24px;
-      }
-
-      .quote-card {
-        min-height: auto;
-        padding: 30px;
-      }
-
-      .feature-item {
-        grid-template-columns: 1fr;
-      }
-
-      .final-box {
-        padding: 32px 24px;
-        border-radius: 32px;
+      .cta-box {
+        padding: 38px 24px;
       }
     }
   </style>
 </head>
 
 <body>
+  <div class="grid-bg"></div>
+
   <nav class="nav">
     <div class="nav-inner">
-      <a class="brand" href="#">
-        <span class="brand-mark">K</span>
+      <a href="#" class="brand">
+        <span class="brand-mark"></span>
         <span>Kutoring</span>
       </a>
 
       <div class="nav-links">
-        <a href="#why">Why</a>
-        <a href="#how">How it works</a>
-        <a href="#features">Features</a>
-        <a href="#tech">Tech</a>
-        <a class="nav-cta" href="https://github.com/kookmin-sw/2026-capstone-13" target="_blank" rel="noreferrer">
+        <a href="#problem">문제</a>
+        <a href="#features">기능</a>
+        <a href="#flow">사용 흐름</a>
+        <a href="#tech">기술스택</a>
+        <a href="#team">팀</a>
+        <a class="nav-button" href="https://github.com/kookmin-sw/2026-capstone-13" target="_blank" rel="noreferrer">
           GitHub
         </a>
       </div>
@@ -876,251 +1006,333 @@
 
   <main>
     <header class="hero">
-      <div>
-        <div class="eyebrow">
-          <span class="eyebrow-dot"></span>
-          Built for international students in Korea
-        </div>
-
-        <h1>
-          Korea life,<br />
-          made <span>easier.</span>
-        </h1>
-
-        <p class="hero-copy">
-          Kutoring connects international students with Korean helpers for everyday problems —
-          from hospital visits and paperwork to translation, campus life, and quick local help.
-        </p>
-
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="#how">See how it works</a>
-          <a class="btn btn-secondary" href="#features">Explore features</a>
-        </div>
-
-        <div class="hero-note">
-          Help matching · Real-time chat · Video call · Community · Campus info
-        </div>
+      <div class="badge">
+        <span class="badge-dot"></span>
+        외국인 유학생을 위한 생활 도움 매칭 앱
       </div>
 
-      <div class="visual-wrap">
-        <div class="visual-bg"></div>
+      <h1>
+        한국 생활의 막막함을<br />
+        <span class="gradient">도움 요청 하나로.</span>
+      </h1>
 
-        <div class="float-card float-one">
-          <b>Need help now?</b>
-          <p>Post a request and find a helper who understands your situation.</p>
-        </div>
+      <p>
+        Kutoring은 외국인 유학생이 병원 동행, 행정 처리, 통역, 생활 도움을
+        더 쉽게 요청하고 한국인 헬퍼와 연결될 수 있도록 만든 앱 서비스입니다.
+      </p>
 
-        <div class="float-card float-two">
-          <b>Made for Korea</b>
-          <p>Designed around real problems international students face every day.</p>
-        </div>
-
-        <div class="phone">
-          <div class="screen">
-            <div class="app-header">
-              <div class="app-logo">Kutoring</div>
-              <div class="app-avatar"></div>
-            </div>
-
-            <div class="location-pill">
-              Seoul · Kookmin Univ.
-            </div>
-
-            <div class="request-card">
-              <h3>What do you need help with?</h3>
-              <p>
-                Choose a category, describe your situation, and connect with a helper.
-              </p>
-            </div>
-
-            <div class="quick-grid">
-              <div class="quick-card">
-                <div class="quick-icon">H</div>
-                <b>Hospital visit</b>
-              </div>
-
-              <div class="quick-card">
-                <div class="quick-icon">P</div>
-                <b>Paperwork</b>
-              </div>
-
-              <div class="quick-card">
-                <div class="quick-icon">T</div>
-                <b>Translation</b>
-              </div>
-
-              <div class="quick-card">
-                <div class="quick-icon">L</div>
-                <b>Local help</b>
-              </div>
-            </div>
-
-            <div class="match-card">
-              <div class="match-face"></div>
-              <div>
-                <strong>Helper matched</strong>
-                <span>English · Korean · Available today</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#features">서비스 기능 보기</a>
+        <a class="btn btn-secondary" href="#flow">사용 흐름 보기</a>
       </div>
     </header>
 
-    <section id="why">
-      <div class="section-head">
-        <div class="section-kicker">Why Kutoring</div>
-        <h2>Not just translation. Real help from real people.</h2>
-        <p class="section-desc">
-          Many services translate words. Kutoring focuses on situations — when a student needs
-          someone who can explain, guide, accompany, or solve a problem together.
-        </p>
-      </div>
+    <div class="showcase">
+      <div class="product-frame">
+        <div class="frame-top">
+          <div class="traffic">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div>kutoring.app / service-preview</div>
+          <div>v1.0</div>
+        </div>
 
-      <div class="bento">
-        <div class="bento-left">
-          <div class="tile yellow">
-            <h3>When Korean systems feel complicated</h3>
-            <p>
-              Hospital reservations, school notices, immigration tasks, and public offices
-              can be hard to handle alone. Kutoring turns those moments into simple requests.
-            </p>
+        <div class="frame-content">
+          <div class="phone-panel">
+            <div class="phone">
+              <div class="phone-screen">
+                <div class="app-top">
+                  <strong>Kutoring</strong>
+                  <div class="app-user"></div>
+                </div>
 
-            <div class="tile-visual">
-              <div class="bubble"></div>
-              <div class="line-group">
-                <div class="line"></div>
-                <div class="line short"></div>
+                <div class="app-card">
+                  <h3>어떤 도움이 필요하신가요?</h3>
+                  <p>상황을 선택하고 요청을 등록하면 헬퍼와 연결됩니다.</p>
+                </div>
+
+                <div class="category-grid">
+                  <div class="category">
+                    <div class="category-icon">H</div>
+                    <b>병원 동행</b>
+                  </div>
+
+                  <div class="category">
+                    <div class="category-icon">P</div>
+                    <b>행정 처리</b>
+                  </div>
+
+                  <div class="category">
+                    <div class="category-icon">T</div>
+                    <b>통역 도움</b>
+                  </div>
+
+                  <div class="category">
+                    <div class="category-icon">L</div>
+                    <b>생활 도움</b>
+                  </div>
+                </div>
+
+                <div class="app-card match">
+                  <h3>헬퍼 매칭 대기 중</h3>
+                  <p>요청 내용을 확인한 헬퍼와 채팅을 시작할 수 있습니다.</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="bento-row">
-            <div class="tile">
-              <h3>Find help by situation</h3>
-              <p>
-                Students can request help by category instead of searching random posts or group chats.
-              </p>
+          <div class="dashboard-panel">
+            <div>
+              <div class="dash-title">
+                <div class="small">App Overview</div>
+                <h2>요청, 매칭, 소통, 리뷰까지 하나의 흐름으로.</h2>
+                <p>
+                  단순 번역 앱이 아니라 실제 상황을 해결하기 위한 생활 밀착형 도움 매칭 서비스입니다.
+                  유학생은 도움을 요청하고, 헬퍼는 요청을 확인한 뒤 채팅과 영상통화로 세부 내용을 조율합니다.
+                </p>
+              </div>
+
+              <div class="terminal">
+                <div class="terminal-header">kutoring-request.log</div>
+                <div class="terminal-body">
+                  <div><span class="green">●</span> 요청 등록됨: 병원 동행</div>
+                  <div><span class="blue">→</span> 위치: 국민대학교 근처</div>
+                  <div><span class="blue">→</span> 언어: 한국어 / 영어 도움 필요</div>
+                  <div><span class="green">✓</span> 헬퍼 추천 완료</div>
+                  <div><span class="green">✓</span> 실시간 채팅 연결 가능</div>
+                </div>
+              </div>
             </div>
 
-            <div class="tile mint">
-              <h3>Talk before meeting</h3>
-              <p>
-                Real-time chat and video call make it easier to explain the problem before getting help.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="tile dark">
-          <h3>Designed for trust</h3>
-          <p>
-            Reviews, reports, and admin tools help build a safer environment for both students
-            and helpers.
-          </p>
-
-          <div class="tile-visual">
-            <div class="bubble" style="background:#ffd84d;"></div>
-            <div class="line-group">
-              <div class="line" style="background:rgba(255,255,255,0.24);"></div>
-              <div class="line short" style="background:rgba(255,255,255,0.18);"></div>
+            <div class="metrics">
+              <div class="metric">
+                <strong>01</strong>
+                <span>도움 요청</span>
+              </div>
+              <div class="metric">
+                <strong>02</strong>
+                <span>헬퍼 매칭</span>
+              </div>
+              <div class="metric">
+                <strong>03</strong>
+                <span>채팅 / 통화</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <section id="how">
+    <section id="problem">
       <div class="section-head">
-        <div class="section-kicker">How it works</div>
-        <h2>From request to support in four steps.</h2>
-        <p class="section-desc">
-          Kutoring keeps the flow simple so students can get help without learning a complicated system.
-        </p>
+        <div class="section-label">Problem</div>
+        <div>
+          <h2>유학생이 혼자 해결하기 어려운 순간을 줄입니다.</h2>
+          <p>
+            한국 생활에서 가장 어려운 건 정보가 없는 것이 아니라,
+            실제 상황에서 누구에게 어떻게 도움을 요청해야 하는지 모르는 순간입니다.
+          </p>
+        </div>
       </div>
 
-      <div class="use-grid">
-        <div class="use-card">
+      <div class="three-grid">
+        <div class="info-card">
           <div class="num">1</div>
-          <h3>Choose a category</h3>
-          <p>Select hospital, paperwork, translation, campus life, or local help.</p>
+          <h3>언어 장벽</h3>
+          <p>
+            병원, 관공서, 학교 행정 상황에서 한국어 표현이 어려워 정확한 의사소통이 힘들 수 있습니다.
+          </p>
         </div>
 
-        <div class="use-card">
+        <div class="info-card">
           <div class="num">2</div>
-          <h3>Post a request</h3>
-          <p>Write what happened, where help is needed, and when it should be done.</p>
+          <h3>생활 정보 부족</h3>
+          <p>
+            학교 공지, 식단, 지역 정보, 생활 절차를 여러 곳에서 따로 찾아야 하는 불편함이 있습니다.
+          </p>
         </div>
 
-        <div class="use-card">
+        <div class="info-card">
           <div class="num">3</div>
-          <h3>Match with a helper</h3>
-          <p>Connect with a Korean helper who can understand the request.</p>
-        </div>
-
-        <div class="use-card">
-          <div class="num">4</div>
-          <h3>Chat, call, and review</h3>
-          <p>Use chat or video call, complete the help, then leave a review.</p>
+          <h3>신뢰 문제</h3>
+          <p>
+            무작정 오픈채팅이나 커뮤니티에 의존하면 도움을 받을 사람을 신뢰하기 어렵습니다.
+          </p>
         </div>
       </div>
     </section>
 
     <section id="features">
-      <div class="split">
-        <div class="quote-card">
-          <div>
-            <div class="section-kicker">App experience</div>
-            <h2>One app for the small problems that become big abroad.</h2>
-          </div>
-
+      <div class="section-head">
+        <div class="section-label">Features</div>
+        <div>
+          <h2>앱 서비스에 필요한 핵심 기능을 하나로 묶었습니다.</h2>
           <p>
-            Kutoring is built around practical moments: asking for help, understanding Korean,
-            finding campus information, and communicating with helpers in real time.
+            Kutoring은 도움 요청, 헬퍼 추천, 실시간 소통, 커뮤니티, 리뷰와 신고까지
+            실제 서비스 운영에 필요한 기능을 포함합니다.
           </p>
         </div>
+      </div>
 
-        <div class="feature-list">
-          <div class="feature-item">
+      <div class="feature-table">
+        <div class="feature-row">
+          <div class="feature-name">
             <div class="feature-icon">01</div>
-            <div>
-              <h3>Help request matching</h3>
-              <p>
-                Students can create requests for hospital visits, paperwork, translation,
-                and everyday errands.
-              </p>
-            </div>
+            회원가입 / 로그인
           </div>
+          <div class="feature-desc">
+            이메일 인증과 JWT 기반 인증으로 사용자를 안전하게 구분하고 관리합니다.
+          </div>
+          <div class="feature-status">Core</div>
+        </div>
 
-          <div class="feature-item">
+        <div class="feature-row">
+          <div class="feature-name">
             <div class="feature-icon">02</div>
-            <div>
-              <h3>Real-time chat and video call</h3>
-              <p>
-                Matched users can communicate through chat and video call before or during help.
-              </p>
-            </div>
+            도움 요청 매칭
           </div>
+          <div class="feature-desc">
+            병원 동행, 행정 처리, 통역, 생활 도움 등 상황별 요청을 등록하고 헬퍼와 연결됩니다.
+          </div>
+          <div class="feature-status">Matching</div>
+        </div>
 
-          <div class="feature-item">
+        <div class="feature-row">
+          <div class="feature-name">
             <div class="feature-icon">03</div>
-            <div>
-              <h3>Community and campus information</h3>
-              <p>
-                Students can share information and check useful campus content such as notices
-                and cafeteria menus.
-              </p>
-            </div>
+            AI 헬퍼 추천
+          </div>
+          <div class="feature-desc">
+            요청자의 상황과 도움 카테고리를 바탕으로 적합한 헬퍼를 추천하는 흐름을 제공합니다.
+          </div>
+          <div class="feature-status">AI</div>
+        </div>
+
+        <div class="feature-row">
+          <div class="feature-name">
+            <div class="feature-icon">04</div>
+            실시간 채팅
+          </div>
+          <div class="feature-desc">
+            매칭 이후 요청자와 헬퍼가 WebSocket 기반 채팅으로 세부 내용을 조율합니다.
+          </div>
+          <div class="feature-status">Realtime</div>
+        </div>
+
+        <div class="feature-row">
+          <div class="feature-name">
+            <div class="feature-icon">05</div>
+            영상 통화
+          </div>
+          <div class="feature-desc">
+            직접 만나기 전이나 원격 도움이 필요한 경우 영상 통화를 통해 상황을 확인할 수 있습니다.
+          </div>
+          <div class="feature-status">Call</div>
+        </div>
+
+        <div class="feature-row">
+          <div class="feature-name">
+            <div class="feature-icon">06</div>
+            커뮤니티 / 공지 / 식단
+          </div>
+          <div class="feature-desc">
+            유학생이 필요한 학교생활 정보, 커뮤니티 게시글, 공지사항, 식단 정보를 확인할 수 있습니다.
+          </div>
+          <div class="feature-status">Info</div>
+        </div>
+
+        <div class="feature-row">
+          <div class="feature-name">
+            <div class="feature-icon">07</div>
+            리뷰 / 신고 / 관리자
+          </div>
+          <div class="feature-desc">
+            도움 이후 리뷰를 남기고, 문제가 있는 사용자는 신고하며, 관리자는 운영 상태를 관리합니다.
+          </div>
+          <div class="feature-status">Trust</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="flow">
+      <div class="section-head">
+        <div class="section-label">Flow</div>
+        <div>
+          <h2>사용자는 복잡한 절차 없이 도움을 요청합니다.</h2>
+          <p>
+            앱 소개 페이지에서는 기능을 길게 설명하는 것보다,
+            사용자가 어떤 순서로 문제를 해결하는지 보여주는 게 더 중요합니다.
+          </p>
+        </div>
+      </div>
+
+      <div class="split-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <span>사용자 흐름</span>
+            <span>4 steps</span>
           </div>
 
-          <div class="feature-item">
-            <div class="feature-icon">04</div>
-            <div>
-              <h3>Review, report, and admin management</h3>
-              <p>
-                Review and report features support safer matching, while admin tools help manage
-                service operations.
-              </p>
+          <div class="panel-body">
+            <div class="steps">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div>
+                  <h3>도움 카테고리 선택</h3>
+                  <p>병원, 행정, 통역, 생활 도움 중 필요한 상황을 선택합니다.</p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-num">2</div>
+                <div>
+                  <h3>요청 내용 작성</h3>
+                  <p>장소, 시간, 필요한 언어, 구체적인 상황을 입력합니다.</p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-num">3</div>
+                <div>
+                  <h3>헬퍼와 연결</h3>
+                  <p>요청에 맞는 헬퍼와 연결되고 채팅을 시작합니다.</p>
+                </div>
+              </div>
+
+              <div class="step">
+                <div class="step-num">4</div>
+                <div>
+                  <h3>도움 완료 후 리뷰</h3>
+                  <p>도움이 끝난 뒤 리뷰를 남겨 신뢰 기반 매칭 환경을 만듭니다.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <span>서비스 구조</span>
+            <span>system</span>
+          </div>
+
+          <div class="panel-body">
+            <div class="code-card">
+              <div><span class="comment">// Kutoring service architecture</span></div>
+              <br />
+              <div><span class="key">사용자 앱</span> = <span class="string">React Native + Expo</span></div>
+              <div><span class="key">인증</span> = <span class="string">Email Verification + JWT</span></div>
+              <div><span class="key">백엔드</span> = <span class="string">Java Spring Boot REST API</span></div>
+              <div><span class="key">실시간 통신</span> = <span class="string">WebSocket Chat</span></div>
+              <div><span class="key">AI 서버</span> = <span class="string">FastAPI 기반 추천/번역 흐름</span></div>
+              <div><span class="key">데이터</span> = <span class="string">MySQL</span></div>
+              <div><span class="key">배포</span> = <span class="string">Railway + Docker</span></div>
+              <br />
+              <div><span class="comment">// Goal</span></div>
+              <div>외국인 유학생의 실제 생활 문제를</div>
+              <div>요청 → 매칭 → 소통 → 완료 흐름으로 해결</div>
             </div>
           </div>
         </div>
@@ -1129,52 +1341,141 @@
 
     <section id="tech">
       <div class="section-head">
-        <div class="section-kicker">Built with</div>
-        <h2>Mobile app, backend server, and AI server.</h2>
-        <p class="section-desc">
-          The project is structured as a real service: a mobile frontend, Spring Boot backend,
-          AI server, database, and deployment pipeline.
-        </p>
+        <div class="section-label">Tech Stack</div>
+        <div>
+          <h2>앱, 백엔드, AI 서버를 분리해 실제 서비스 구조로 개발했습니다.</h2>
+          <p>
+            기술스택은 전면에 과하게 내세우지 않고, 서비스 신뢰도를 보여주는 섹션으로 배치했습니다.
+          </p>
+        </div>
+      </div>
 
-        <div class="mini-stack">
-          <span class="chip">React Native</span>
-          <span class="chip">Expo</span>
-          <span class="chip">TypeScript</span>
-          <span class="chip">Java</span>
-          <span class="chip">Spring Boot</span>
-          <span class="chip">MySQL</span>
-          <span class="chip">JWT</span>
-          <span class="chip">WebSocket</span>
-          <span class="chip">FastAPI</span>
-          <span class="chip">Railway</span>
-          <span class="chip">Docker</span>
+      <div class="tech-grid">
+        <div class="tech-card">
+          <h3>Frontend</h3>
+          <div class="chips">
+            <span class="chip">React Native</span>
+            <span class="chip">Expo</span>
+            <span class="chip">TypeScript</span>
+            <span class="chip">Expo Router</span>
+            <span class="chip">Zustand</span>
+            <span class="chip">STOMP</span>
+          </div>
+        </div>
+
+        <div class="tech-card">
+          <h3>Backend</h3>
+          <div class="chips">
+            <span class="chip">Java</span>
+            <span class="chip">Spring Boot</span>
+            <span class="chip">Gradle</span>
+            <span class="chip">REST API</span>
+            <span class="chip">JWT</span>
+            <span class="chip">WebSocket</span>
+            <span class="chip">MySQL</span>
+          </div>
+        </div>
+
+        <div class="tech-card">
+          <h3>AI / Data</h3>
+          <div class="chips">
+            <span class="chip">Python</span>
+            <span class="chip">FastAPI</span>
+            <span class="chip">Gemini</span>
+            <span class="chip">Translation</span>
+            <span class="chip">Crawling</span>
+            <span class="chip">BeautifulSoup</span>
+          </div>
+        </div>
+
+        <div class="tech-card">
+          <h3>Deploy / Tools</h3>
+          <div class="chips">
+            <span class="chip">Railway</span>
+            <span class="chip">Docker</span>
+            <span class="chip">GitHub</span>
+            <span class="chip">Figma</span>
+            <span class="chip">Discord</span>
+            <span class="chip">Notion</span>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="final">
-      <div class="final-box">
+    <section id="team">
+      <div class="section-head">
+        <div class="section-label">Team</div>
         <div>
-          <h2>Helping international students feel less alone in Korea.</h2>
+          <h2>국민대학교 소프트웨어학부 캡스톤 디자인 13조</h2>
           <p>
-            Kutoring connects people, language, and local knowledge into one simple app experience.
+            프론트엔드, 백엔드, AI 파트로 역할을 나누어 Kutoring 서비스를 개발했습니다.
           </p>
         </div>
+      </div>
 
-        <a
-          class="btn"
-          href="https://github.com/kookmin-sw/2026-capstone-13"
-          target="_blank"
-          rel="noreferrer"
-        >
-          View GitHub
-        </a>
+      <div class="team-grid">
+        <div class="member">
+          <div class="member-mark">박</div>
+          <div>
+            <h3>박상범</h3>
+            <p>팀장<br />Frontend</p>
+          </div>
+        </div>
+
+        <div class="member">
+          <div class="member-mark">김</div>
+          <div>
+            <h3>김영일</h3>
+            <p>Backend<br />API / 서버 기능</p>
+          </div>
+        </div>
+
+        <div class="member">
+          <div class="member-mark">이</div>
+          <div>
+            <h3>이상윤</h3>
+            <p>Backend<br />서버 / 데이터 처리</p>
+          </div>
+        </div>
+
+        <div class="member">
+          <div class="member-mark">이</div>
+          <div>
+            <h3>이준서</h3>
+            <p>Frontend<br />앱 화면 / UX</p>
+          </div>
+        </div>
+
+        <div class="member">
+          <div class="member-mark">조</div>
+          <div>
+            <h3>조보국</h3>
+            <p>AI<br />추천 / 번역 / 자동화</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="cta-box">
+        <h2>외국인 유학생의 한국 생활을 더 쉽게 만드는 앱.</h2>
+        <p>
+          Kutoring은 언어와 정보의 장벽 때문에 혼자 해결하기 어려웠던 생활 문제를
+          사람과 기술을 통해 연결하는 도움 매칭 서비스입니다.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="https://github.com/kookmin-sw/2026-capstone-13" target="_blank" rel="noreferrer">
+            GitHub 저장소 보기
+          </a>
+          <a class="btn btn-secondary" href="#">맨 위로 이동</a>
+        </div>
       </div>
     </section>
   </main>
 
   <footer>
-    Kutoring · Kookmin University Capstone Design Team 13
+    Kutoring · 국민대학교 소프트웨어학부 캡스톤 디자인 13조
   </footer>
 </body>
 </html>
